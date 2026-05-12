@@ -1,0 +1,64 @@
+import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
+import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
+import type { EventRecord } from "@/src/features/events/components/explorer/types";
+
+export const dynamic = "force-dynamic";
+
+type EventsPageProps = {
+  searchParams: Promise<{
+    q?: string;
+    industry?: string;
+    region?: string;
+    type?: string;
+    start?: string;
+    end?: string;
+  }>;
+};
+
+export default async function EventsPageRoute({ searchParams }: EventsPageProps) {
+  const { q, industry, region, type, start, end } = await searchParams;
+  const data = await getEventExplorerData({
+    query: q,
+    industry,
+    region,
+    type,
+    startDate: start,
+    endDate: end,
+  });
+  const events: EventRecord[] = (data.editions ?? []).map((edition) => ({
+    id: String(edition.id),
+    slug: edition.slug ?? null,
+    name: edition.name ?? null,
+    start_date: edition.start_date ?? null,
+    end_date: edition.end_date ?? null,
+    event_series: edition.event_series
+      ? {
+          name: edition.event_series.name ?? null,
+        }
+      : null,
+    cities: edition.cities
+      ? {
+          name: edition.cities.name ?? null,
+          countries: edition.cities.countries
+            ? {
+                name: edition.cities.countries.name ?? null,
+              }
+            : null,
+        }
+      : null,
+  }));
+
+  return (
+    <EventExplorerPage
+      events={events}
+      initialFilters={{
+        query: data.filters.query ?? "",
+        industry: data.filters.industry ?? "all",
+        region: data.filters.region ?? "all",
+        type: data.filters.type ?? "all",
+        startDate: data.filters.startDate ?? "",
+        endDate: data.filters.endDate ?? "",
+      }}
+    />
+  );
+}
