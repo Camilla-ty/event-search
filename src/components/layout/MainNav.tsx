@@ -1,12 +1,19 @@
-import { marketingNavItems } from "@/src/lib/constants/navigation";
-import { Navbar } from "@/src/components/layout/Navbar";
+import type { ReactNode } from "react";
 
-export function MainNav() {
+import { Navbar } from "@/src/components/layout/Navbar";
+import { marketingNavItems } from "@/src/lib/constants/navigation";
+
+type MainNavProps = {
+  sessionSlot?: ReactNode;
+};
+
+export function MainNav({ sessionSlot }: MainNavProps) {
   return (
     <Navbar
       brand={<span>HandsShakes</span>}
       items={marketingNavItems}
       orientation="vertical"
+      rightSlot={sessionSlot}
     />
   );
 }

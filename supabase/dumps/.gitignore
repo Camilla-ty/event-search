@@ -1,0 +1,4 @@
+# Store local-only schema or data dumps here. Nothing in this directory is tracked
+# except this file — keeps exports out of Git while documenting where they belong.
+*
+!.gitignore

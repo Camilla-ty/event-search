@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ---------------------------------------------------------------------------
+# Local database / Supabase exports (schema, RLS, data — never commit)
+# ---------------------------------------------------------------------------
+# Root or nested manual exports from `pg_dump`, Supabase CLI, dashboard, etc.
+schema_dump.sql
+**/schema_dump.sql
+*_schema_dump.sql
+*_pg_dump.sql
+/pg_dump*.sql
+# Supabase CLI local temp state
+supabase/.temp/
+
