@@ -4,6 +4,7 @@ import {
   createCompany,
   enrichCompanyLogo,
 } from "@/src/features/companies/server/createCompanyWithLogo";
+import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { createClient } from "@/src/lib/supabase/server";
 
 type CreateCompanyBody = {
@@ -41,6 +42,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized." },
       { status: 401 },
+    );
+  }
+
+  const role = await getProfileRoleForUserId(supabase, user.id);
+  if (!isAdminRole(role)) {
+    return NextResponse.json(
+      { ok: false, error: "Forbidden." },
+      { status: 403 },
     );
   }
 

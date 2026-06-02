@@ -3,7 +3,9 @@
 import { FormEvent, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { EmailOtpAuthModal } from "@/src/components/auth/EmailOtpAuthModal";
 import { Button } from "@/src/components/common";
+import { fetchAuthUserExists } from "@/src/lib/auth/fetchAuthUserExists";
 import { safeRedirectTarget } from "@/src/lib/auth/safeRedirect";
 import { createClient } from "@/src/lib/supabase/client";
 
@@ -24,10 +26,13 @@ export default function LoginForm() {
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [signUpModalOpen, setSignUpModalOpen] = useState(false);
 
   async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setAccountNotFound(false);
     setIsSubmitting(true);
 
     const trimmedEmail = email.trim();
@@ -38,11 +43,21 @@ export default function LoginForm() {
     }
 
     try {
+      const { exists, error: checkError } = await fetchAuthUserExists(trimmedEmail);
+      if (checkError) {
+        setError(checkError);
+        return;
+      }
+      if (!exists) {
+        setAccountNotFound(true);
+        return;
+      }
+
       const supabase = createClient();
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: trimmedEmail,
         options: {
-          shouldCreateUser: true,
+          shouldCreateUser: false,
         },
       });
 
@@ -108,91 +123,136 @@ export default function LoginForm() {
     }
   }
 
+  function handleSignUpSuccess() {
+    router.replace(redirectTo);
+    router.refresh();
+  }
+
   return (
-    <LoginCard>
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          Log in with email
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Enter your email, get a one-time code, then verify. No password.
-        </p>
-      </header>
-
-      {step === "email" ? (
-        <form onSubmit={handleSendOtp} className="mt-6 space-y-4" noValidate>
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Email
-            </span>
-            <input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              disabled={isSubmitting}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="you@example.com"
-            />
-          </label>
-
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Sending code…" : "Get OTP Code"}
-          </Button>
-        </form>
-      ) : (
-        <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4" noValidate>
+    <>
+      <LoginCard>
+        <header className="space-y-1">
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            Log in with email
+          </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Enter the code sent to <span className="font-medium">{email.trim()}</span>.
+            For existing members only. Enter your email to receive a one-time code.
           </p>
+        </header>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Verification code
-            </span>
-            <input
-              id="login-otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={otp}
-              onChange={(event) => setOtp(event.target.value)}
-              required
-              disabled={isSubmitting}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="123456"
-            />
-          </label>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
+        {accountNotFound ? (
+          <div className="mt-6 space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              No account found for{" "}
+              <span className="font-medium">{email.trim()}</span>.
+            </p>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                setSignUpModalOpen(true);
+                setAccountNotFound(false);
+              }}
+            >
+              Sign up instead
+            </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="w-full"
               onClick={() => {
-                setStep("email");
-                setOtp("");
+                setAccountNotFound(false);
                 setError(null);
               }}
             >
-              Back
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
-              {isSubmitting ? "Verifying…" : "Verify OTP"}
+              Try a different email
             </Button>
           </div>
-        </form>
-      )}
+        ) : step === "email" ? (
+          <form onSubmit={handleSendOtp} className="mt-6 space-y-4" noValidate>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Email
+              </span>
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setAccountNotFound(false);
+                }}
+                required
+                disabled={isSubmitting}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                placeholder="you@example.com"
+              />
+            </label>
 
-      {error ? (
-        <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100">
-          {error}
-        </div>
-      ) : null}
-    </LoginCard>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "Sending code…" : "Get OTP Code"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4" noValidate>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Enter the code sent to <span className="font-medium">{email.trim()}</span>.
+            </p>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Verification code
+              </span>
+              <input
+                id="login-otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otp}
+                onChange={(event) => setOtp(event.target.value)}
+                required
+                disabled={isSubmitting}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                placeholder="123456"
+              />
+            </label>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setStep("email");
+                  setOtp("");
+                  setError(null);
+                }}
+              >
+                Back
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
+                {isSubmitting ? "Verifying…" : "Verify OTP"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100">
+            {error}
+          </div>
+        ) : null}
+      </LoginCard>
+
+      <EmailOtpAuthModal
+        open={signUpModalOpen}
+        onClose={() => setSignUpModalOpen(false)}
+        onSuccess={handleSignUpSuccess}
+        initialEmail={email}
+      />
+    </>
   );
 }
 

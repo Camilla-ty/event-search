@@ -1,13 +1,22 @@
 import { createClient } from "@/src/lib/supabase/server";
+import {
+  getProfileRoleForUserId,
+  isAdminRole,
+  type AppProfileRole,
+} from "@/src/lib/auth/appProfile";
 
 export type MarketingNavSession = {
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  role: AppProfileRole | null;
   label: string | null;
   email: string | null;
 };
 
 const loggedOut: MarketingNavSession = {
   isAuthenticated: false,
+  isAdmin: false,
+  role: null,
   label: null,
   email: null,
 };
@@ -45,10 +54,14 @@ export async function getMarketingNavSession(): Promise<MarketingNavSession> {
       ? profile.display_name.trim()
       : null;
 
+  const role = await getProfileRoleForUserId(supabase, user.id);
   const label = displayName ?? email;
+  const isAdmin = isAdminRole(role);
 
   return {
     isAuthenticated: true,
+    isAdmin,
+    role,
     label,
     email,
   };

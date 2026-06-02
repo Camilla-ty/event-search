@@ -12,14 +12,19 @@ export const dynamic = "force-dynamic";
 
 const adminActions = [
   {
+    href: "/admin",
+    title: "Admin Dashboard/Home",
+    description: "Return to the central admin workspace and content actions.",
+  },
+  {
     href: "/admin/companies/new",
-    title: "New Company",
-    description: "Create a company record. Logo enrichment runs in the background.",
+    title: "Create Company",
+    description: "Add a company profile used across sponsor and event experiences.",
   },
   {
     href: "/admin/events/new",
-    title: "New Event Edition",
-    description: "Create an event edition under an existing series.",
+    title: "Create Event",
+    description: "Create a new event edition under an existing event series.",
   },
 ];
 
@@ -28,14 +33,14 @@ export default function AdminHomePage() {
     <section className="space-y-6 p-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-          Admin
+          Admin Dashboard
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Manual data entry for HandShakes.
+          Manage HandShakes content from one place.
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {adminActions.map((action) => (
           <Link key={action.href} href={action.href} className="block">
             <Card className="transition hover:border-slate-400 dark:hover:border-slate-600">

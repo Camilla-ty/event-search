@@ -13,7 +13,10 @@ export default async function MarketingLayout({ children }: MarketingLayoutProps
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 w-64">
-        <MainNav sessionSlot={<NavSessionBar initial={navSession} />} />
+        <MainNav
+          isAdmin={navSession.isAdmin}
+          sessionSlot={<NavSessionBar initial={navSession} />}
+        />
       </aside>
       <div className="ml-64">
         <header className="border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-950">

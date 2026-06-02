@@ -44,6 +44,8 @@ export function NavSessionBar({ initial, className }: NavSessionBarProps) {
       await supabase.auth.signOut();
       setSession({
         isAuthenticated: false,
+        isAdmin: false,
+        role: null,
         label: null,
         email: null,
       });
@@ -66,6 +68,14 @@ export function NavSessionBar({ initial, className }: NavSessionBarProps) {
     >
       {session.isAuthenticated ? (
         <>
+          {session.isAdmin ? (
+            <Link
+              href="/admin"
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-violet-300 bg-violet-50 px-3 text-sm font-medium text-violet-700 transition hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 dark:border-violet-700 dark:bg-violet-900/20 dark:text-violet-300 dark:hover:bg-violet-900/40"
+            >
+              Admin
+            </Link>
+          ) : null}
           <div className="min-w-0 text-right sm:text-left">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Signed in

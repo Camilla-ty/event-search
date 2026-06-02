@@ -56,7 +56,7 @@ export function EventSponsorsSection({
         {!isAuthenticated ? (
           <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Additional sponsor tiers are available after you sign in.
+              Additional sponsor tiers are available after you sign up.
             </p>
             <Button type="button" className="mt-3 w-full sm:w-auto" onClick={() => setAuthModalOpen(true)}>
               View More Sponsors
@@ -69,8 +69,8 @@ export function EventSponsorsSection({
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onSuccess={handleAuthSuccess}
-        title="View more sponsors"
-        description="Sign in with a one-time code to see additional sponsor tiers for this event."
+        title="Sign up"
+        description="Create your account to view additional sponsor tiers for this event."
       />
     </>
   );

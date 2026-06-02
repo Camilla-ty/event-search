@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/src/components/common";
+import { fetchAuthUserExists } from "@/src/lib/auth/fetchAuthUserExists";
 import { createClient } from "@/src/lib/supabase/client";
 
 type Step = "credentials" | "verify";
@@ -11,6 +12,8 @@ export type EmailOtpAuthModalProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /** Pre-fill email when opened from login "Sign up instead". */
+  initialEmail?: string;
   title?: string;
   description?: string;
 };
@@ -19,8 +22,9 @@ export function EmailOtpAuthModal({
   open,
   onClose,
   onSuccess,
-  title = "Sign in to continue",
-  description = "We will email you a one-time code. No password required.",
+  initialEmail = "",
+  title = "Sign up",
+  description = "Create your account with email and display name. We will send a one-time verification code.",
 }: EmailOtpAuthModalProps) {
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
@@ -37,8 +41,14 @@ export function EmailOtpAuthModal({
       setOtp("");
       setError(null);
       setIsSubmitting(false);
+      return;
     }
-  }, [open]);
+
+    const prefilled = initialEmail.trim();
+    if (prefilled) {
+      setEmail(prefilled);
+    }
+  }, [open, initialEmail]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +83,12 @@ export function EmailOtpAuthModal({
     }
 
     try {
+      const { error: checkError } = await fetchAuthUserExists(trimmedEmail);
+      if (checkError) {
+        setError(checkError);
+        return;
+      }
+
       const supabase = createClient();
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: trimmedEmail,

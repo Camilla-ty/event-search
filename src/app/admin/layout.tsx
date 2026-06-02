@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { createClient } from "@/src/lib/supabase/server";
 
 import AdminLogoutButton from "./AdminLogoutButton";
@@ -25,6 +26,11 @@ export default async function AdminLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  const role = await getProfileRoleForUserId(supabase, user.id);
+  if (!isAdminRole(role)) {
+    redirect("/");
   }
 
   return (
