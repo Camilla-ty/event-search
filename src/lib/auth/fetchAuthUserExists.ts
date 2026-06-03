@@ -1,3 +1,7 @@
+import {
+  AUTH_EMAIL_REQUIRED,
+  normalizeAuthCheckError,
+} from "@/src/lib/auth/authMessages";
 import { normalizeAuthEmail } from "@/src/lib/auth/normalizeAuthEmail";
 
 type CheckEmailResponse = {
@@ -13,7 +17,7 @@ export async function fetchAuthUserExists(
 ): Promise<{ exists: boolean; error: string | null }> {
   const email = normalizeAuthEmail(rawEmail);
   if (!email) {
-    return { exists: false, error: "Email is required." };
+    return { exists: false, error: AUTH_EMAIL_REQUIRED };
   }
 
   try {
@@ -28,12 +32,12 @@ export async function fetchAuthUserExists(
     if (!response.ok) {
       return {
         exists: false,
-        error: payload.error ?? "Could not verify account.",
+        error: normalizeAuthCheckError(payload.error),
       };
     }
 
     return { exists: payload.exists === true, error: null };
   } catch {
-    return { exists: false, error: "Could not verify account." };
+    return { exists: false, error: normalizeAuthCheckError(null) };
   }
 }

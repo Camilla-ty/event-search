@@ -1,0 +1,37 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
+export function SignupBackLink() {
+  const router = useRouter();
+
+  function handleBack() {
+    const referrer = document.referrer;
+    let sameOriginReferrer = false;
+    if (referrer) {
+      try {
+        sameOriginReferrer =
+          new URL(referrer).origin === window.location.origin;
+      } catch {
+        sameOriginReferrer = false;
+      }
+    }
+
+    if (sameOriginReferrer && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleBack}
+      className="mb-6 text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+    >
+      ← Back
+    </button>
+  );
+}

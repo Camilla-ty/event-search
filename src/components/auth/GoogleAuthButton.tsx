@@ -3,11 +3,15 @@
 import { useState } from "react";
 
 import { Button } from "@/src/components/common";
+import { AUTH_GOOGLE_START_FAILED } from "@/src/lib/auth/authMessages";
+import { resolveOAuthErrorFromMessage } from "@/src/lib/auth/resolveOAuthError";
 import type { AuthCallbackFlow } from "@/src/lib/auth/buildAuthCallbackUrl";
 import { buildAuthCallbackUrl } from "@/src/lib/auth/buildAuthCallbackUrl";
 import { setOAuthRedirectStateCookies } from "@/src/lib/auth/oauthRedirectState";
 import { safeRedirectTarget } from "@/src/lib/auth/safeRedirect";
 import { createClient } from "@/src/lib/supabase/client";
+
+import { AuthOAuthErrorBanner } from "./AuthOAuthErrorBanner";
 
 export type GoogleAuthButtonProps = {
   redirectTo?: string;
@@ -54,7 +58,7 @@ export function GoogleAuthButton({
       const message =
         caught instanceof Error && caught.message.trim() !== ""
           ? caught.message.trim()
-          : "Could not start Google sign-in.";
+          : AUTH_GOOGLE_START_FAILED;
       setError(message);
       setIsLoading(false);
     }
@@ -71,9 +75,10 @@ export function GoogleAuthButton({
       >
         {isLoading ? "Redirecting to Google…" : "Continue with Google"}
       </Button>
-      {error ? (
-        <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{error}</p>
-      ) : null}
+      <AuthOAuthErrorBanner
+        error={resolveOAuthErrorFromMessage(error)}
+        className="mt-2"
+      />
     </div>
   );
 }

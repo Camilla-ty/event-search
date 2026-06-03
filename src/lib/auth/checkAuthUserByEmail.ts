@@ -113,20 +113,24 @@ export async function checkAuthUserExistsByEmail(
       return { exists: rpcResult.exists, email, error: null };
     }
 
-    const profileResult = await authUserExistsViaProfiles(admin, email);
-    if (profileResult.error) {
-      return { exists: false, email, error: profileResult.error };
-    }
-    if (profileResult.exists) {
+    const [profileResult, authListResult] = await Promise.all([
+      authUserExistsViaProfiles(admin, email),
+      authUserExistsViaAuthAdminList(admin, email),
+    ]);
+
+    if (profileResult.exists || authListResult.exists) {
       return { exists: true, email, error: null };
     }
 
-    const authListResult = await authUserExistsViaAuthAdminList(admin, email);
     if (authListResult.error) {
       return { exists: false, email, error: authListResult.error };
     }
 
-    return { exists: authListResult.exists, email, error: null };
+    if (profileResult.error) {
+      return { exists: false, email, error: profileResult.error };
+    }
+
+    return { exists: false, email, error: null };
   } catch (caught) {
     const message =
       caught instanceof Error && caught.message.trim() !== ""

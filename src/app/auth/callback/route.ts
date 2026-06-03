@@ -5,6 +5,7 @@ import {
   parseAuthCallbackQuery,
   type AuthCallbackFlow,
 } from "@/src/lib/auth/buildAuthCallbackUrl";
+import { buildAuthEntryUrlWithOAuthError } from "@/src/lib/auth/resolveOAuthError";
 import { clearOAuthRedirectStateOnResponse } from "@/src/lib/auth/oauthRedirectState";
 import { waitForAuthCookieFlush } from "@/src/lib/auth/oauthCallbackServer";
 import { supabasePkceVerifierCookieName } from "@/src/lib/auth/supabaseCookieStorageKey";
@@ -16,9 +17,8 @@ function buildErrorRedirect(
   message: string,
 ): NextResponse {
   const errorPath = flow === "login" ? "/login" : "/signup";
-  const redirectUrl = new URL(errorPath, origin);
-  redirectUrl.searchParams.set("error", message);
-  redirectUrl.searchParams.set("redirect", next);
+  const entryPath = buildAuthEntryUrlWithOAuthError(errorPath, next, message);
+  const redirectUrl = new URL(entryPath, origin);
   const response = NextResponse.redirect(redirectUrl);
   clearOAuthRedirectStateOnResponse(response);
   response.cookies.set(supabasePkceVerifierCookieName(), "", { maxAge: 0, path: "/" });

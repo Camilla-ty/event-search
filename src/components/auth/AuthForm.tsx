@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/src/components/common";
+import {
+  AUTH_GO_TO_LOGIN,
+  AUTH_REDIRECTING_AFTER_AUTH,
+  AUTH_REDIRECTING_TO_LOGIN,
+} from "@/src/lib/auth/authMessages";
+import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
+import { applyPostAuthRedirect } from "@/src/lib/auth/resolvePostAuthRedirect";
 
 import { AuthFormError } from "./AuthFormError";
+import { AuthIntentRedirectOverlay } from "./AuthIntentRedirectOverlay";
 import { GoogleAuthButton } from "./GoogleAuthButton";
-import { useSignupEmailOtp } from "./useSignupEmailOtp";
+import { useEmailOtpAuth } from "./useEmailOtpAuth";
 
 export type AuthFormProps = {
   initialEmail?: string;
@@ -26,6 +34,7 @@ export function AuthForm({
   idPrefix = "auth-form",
 }: AuthFormProps) {
   const router = useRouter();
+  const [isCompletingAuth, setIsCompletingAuth] = useState(false);
   const {
     step,
     setStep,
@@ -35,13 +44,21 @@ export function AuthForm({
     setDisplayName,
     otp: otpCode,
     setOtp,
-    isSubmitting,
+    isBusy,
+    isNavigatingAway,
+    intentRedirectMessage,
     error,
     setError,
     applyInitialEmail,
     handleSendOtp,
     handleVerifyOtp,
-  } = useSignupEmailOtp(initialEmail);
+  } = useEmailOtpAuth({
+    intent: "signup",
+    initialEmail,
+    redirectTo,
+  });
+
+  const formBusy = isBusy || isCompletingAuth;
 
   useEffect(() => {
     applyInitialEmail(initialEmail);
@@ -58,15 +75,43 @@ export function AuthForm({
       return;
     }
 
-    router.replace(redirectTo);
-    router.refresh();
+    setIsCompletingAuth(true);
+    applyPostAuthRedirect(router, redirectTo);
   }
 
-  const loginHref = `/login?redirect=${encodeURIComponent(redirectTo)}`;
+  const loginHref = buildLoginEntryUrl(redirectTo, {
+    email: email.trim() !== "" ? email.trim() : undefined,
+  });
+
+  if (isCompletingAuth) {
+    return (
+      <div className="space-y-5">
+        <AuthIntentRedirectOverlay
+          message="Your account is ready."
+          statusLine={AUTH_REDIRECTING_AFTER_AUTH}
+        />
+      </div>
+    );
+  }
+
+  if (isNavigatingAway && intentRedirectMessage) {
+    return (
+      <div className="space-y-5">
+        <AuthIntentRedirectOverlay
+          message={intentRedirectMessage}
+          statusLine={AUTH_REDIRECTING_TO_LOGIN}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
-      <GoogleAuthButton redirectTo={redirectTo} flow="signup" />
+      <GoogleAuthButton
+        redirectTo={redirectTo}
+        flow="signup"
+        disabled={formBusy}
+      />
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -79,7 +124,7 @@ export function AuthForm({
         </div>
       </div>
 
-      {step === "credentials" ? (
+      {step === "collect" ? (
         <form onSubmit={handleSendOtp} className="space-y-4" noValidate>
           <label className="block space-y-2">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -92,7 +137,7 @@ export function AuthForm({
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={formBusy}
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               placeholder="you@example.com"
             />
@@ -109,14 +154,14 @@ export function AuthForm({
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={formBusy}
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               placeholder="Your name"
             />
           </label>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Sending code…" : "Send verification code"}
+          <Button type="submit" disabled={formBusy} className="w-full">
+            {formBusy ? "Sending code…" : "Send verification code"}
           </Button>
         </form>
       ) : (
@@ -138,7 +183,7 @@ export function AuthForm({
               value={otpCode}
               onChange={(event) => setOtp(event.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={formBusy}
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               placeholder="123456"
             />
@@ -148,18 +193,18 @@ export function AuthForm({
             <Button
               type="button"
               variant="secondary"
-              disabled={isSubmitting}
+              disabled={formBusy}
               className="w-full sm:w-auto"
               onClick={() => {
-                setStep("credentials");
+                setStep("collect");
                 setOtp("");
                 setError(null);
               }}
             >
               Back
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
-              {isSubmitting ? "Verifying…" : "Verify and continue"}
+            <Button type="submit" disabled={formBusy} className="w-full sm:flex-1">
+              {formBusy ? "Verifying…" : "Verify and continue"}
             </Button>
           </div>
         </form>
@@ -174,7 +219,7 @@ export function AuthForm({
             href={loginHref}
             className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
           >
-            Log in
+            {AUTH_GO_TO_LOGIN}
           </Link>
         </p>
       ) : null}
