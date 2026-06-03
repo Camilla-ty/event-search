@@ -1,5 +1,5 @@
 -- Map Google/OAuth metadata into profiles.display_name on signup.
--- OTP signup sends display_name; Google often sends full_name or name.
+-- Email OTP signup leaves display_name null (onboarding later); Google uses full_name or name.
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger

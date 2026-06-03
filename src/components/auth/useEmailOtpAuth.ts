@@ -4,7 +4,6 @@ import { FormEvent, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
-  AUTH_DISPLAY_NAME_REQUIRED,
   AUTH_EMAIL_REQUIRED,
   AUTH_NO_SESSION_AFTER_VERIFY,
   AUTH_OTP_CODE_REQUIRED,
@@ -49,12 +48,9 @@ export function useEmailOtpAuth({
     null,
   );
 
-  const requiresDisplayName = intent === "signup";
-
   const reset = useCallback((prefilledEmail = "") => {
     setStep("collect");
     setEmail(prefilledEmail);
-    setDisplayName("");
     setOtp("");
     setError(null);
     setIntentBlock(null);
@@ -86,15 +82,9 @@ export function useEmailOtpAuth({
     let didNavigateAway = false;
 
     const trimmedEmail = email.trim();
-    const trimmedDisplayName = displayName.trim();
 
     if (!trimmedEmail) {
       setError(AUTH_EMAIL_REQUIRED);
-      setIsSubmitting(false);
-      return;
-    }
-    if (requiresDisplayName && !trimmedDisplayName) {
-      setError(AUTH_DISPLAY_NAME_REQUIRED);
       setIsSubmitting(false);
       return;
     }
@@ -136,9 +126,6 @@ export function useEmailOtpAuth({
         email: trimmedEmail,
         options: {
           shouldCreateUser: intent === "signup",
-          ...(intent === "signup"
-            ? { data: { display_name: trimmedDisplayName } }
-            : {}),
         },
       });
 
@@ -214,13 +201,10 @@ export function useEmailOtpAuth({
 
   return {
     intent,
-    requiresDisplayName,
     step,
     setStep,
     email,
     setEmail,
-    displayName,
-    setDisplayName,
     otp,
     setOtp,
     isSubmitting,

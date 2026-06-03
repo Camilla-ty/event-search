@@ -11,8 +11,6 @@ export const AUTH_NOTICE_EMAIL_ALREADY_REGISTERED = "email_already_registered";
 
 export const AUTH_EMAIL_REQUIRED = "Email is required.";
 
-export const AUTH_DISPLAY_NAME_REQUIRED = "Display name is required.";
-
 export const AUTH_OTP_CODE_REQUIRED = "Enter the code from your email.";
 
 export const AUTH_OTP_SEND_FAILED = "Could not send verification code.";

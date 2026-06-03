@@ -40,8 +40,6 @@ export function AuthForm({
     setStep,
     email,
     setEmail,
-    displayName,
-    setDisplayName,
     otp: otpCode,
     setOtp,
     isBusy,
@@ -140,23 +138,6 @@ export function AuthForm({
               disabled={formBusy}
               className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               placeholder="you@example.com"
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Display name
-            </span>
-            <input
-              id={`${idPrefix}-display-name`}
-              type="text"
-              autoComplete="name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              required
-              disabled={formBusy}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-              placeholder="Your name"
             />
           </label>
 
