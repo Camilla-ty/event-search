@@ -99,35 +99,13 @@ export async function getSponsorDetailData(
   const key = identifier.trim();
   if (!key) return null;
 
-  const debug =
-    process.env.DEBUG_SPONSOR_DETAIL === "true" ||
-    process.env.DEBUG_SPONSOR_DETAIL === "1";
-  if (debug) {
-    console.info("[getSponsorDetailData] start", { identifier: key });
-  }
-
   let company = await getCompanyBySlug(key);
-  if (debug) {
-    console.info("[getSponsorDetailData] after_slug_lookup", {
-      identifier: key,
-      found: Boolean(company),
-      id: company?.id ?? null,
-    });
-  }
 
   if (!company && UUID_REGEX.test(key)) {
     company = await getCompanyById(key);
-    if (debug) {
-      console.info("[getSponsorDetailData] after_uuid_fallback", {
-        identifier: key,
-        found: Boolean(company),
-        id: company?.id ?? null,
-      });
-    }
   }
 
   if (!company) {
-    if (debug) console.info("[getSponsorDetailData] not_found", { identifier: key });
     return null;
   }
 
@@ -144,18 +122,6 @@ export async function getSponsorDetailData(
   }
 
   const eventSeriesGroups = groupEditionsBySeries([...byEditionId.values()]);
-
-  if (debug) {
-    console.info("[getSponsorDetailData] ok", {
-      identifier: key,
-      companyId: company.id,
-      seriesGroupsCount: eventSeriesGroups.length,
-      editionsTotal: eventSeriesGroups.reduce(
-        (sum, group) => sum + group.editions.length,
-        0,
-      ),
-    });
-  }
 
   return { company, eventSeriesGroups };
 }

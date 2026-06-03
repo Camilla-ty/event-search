@@ -1,0 +1,35 @@
+import { isSupabaseGoogleExchangeError } from "@/src/lib/auth/oauthRedirectState";
+
+export function OAuthProviderErrorHelp({ message }: { message: string }) {
+  if (!isSupabaseGoogleExchangeError(message)) {
+    return null;
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const projectHost = supabaseUrl ? new URL(supabaseUrl).hostname : "YOUR_PROJECT.supabase.co";
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+      <p className="font-medium">Google sign-in failed at Supabase (before your app received a session).</p>
+      <p>This is not a double-exchange in the app. Supabase could not trade Google&apos;s authorization code for tokens.</p>
+      <ul className="list-disc space-y-1 pl-5">
+        <li>
+          Google Cloud → OAuth client → Authorized redirect URI must be exactly:{" "}
+          <code className="text-xs">
+            https://{projectHost}/auth/v1/callback
+          </code>
+        </li>
+        <li>
+          Supabase Dashboard → Auth → Providers → Google: Client ID and Client Secret must match that Google
+          OAuth client (re-paste if the secret was rotated).
+        </li>
+        <li>
+          Supabase Dashboard → Auth → URL Configuration: Site URL{" "}
+          <code className="text-xs">http://localhost:3000</code> and Redirect URLs{" "}
+          <code className="text-xs">http://localhost:3000/**</code>
+        </li>
+        <li>Check Supabase Dashboard → Auth → Logs for the underlying oauth2 error.</li>
+      </ul>
+    </div>
+  );
+}

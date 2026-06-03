@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { EmailOtpAuthModal } from "@/src/components/auth/EmailOtpAuthModal";
@@ -20,6 +20,7 @@ export function EventSponsorsSection({
   isAuthenticated,
 }: EventSponsorsSectionProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   function handleAuthSuccess() {
@@ -69,6 +70,7 @@ export function EventSponsorsSection({
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onSuccess={handleAuthSuccess}
+        redirectTo={pathname}
         title="Sign up"
         description="Create your account to view additional sponsor tiers for this event."
       />

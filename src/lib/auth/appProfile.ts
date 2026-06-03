@@ -25,10 +25,6 @@ async function readProfileRoleWithAdmin(userId: string): Promise<AppProfileRole 
     .maybeSingle();
 
   if (error) {
-    console.warn("[auth] profile role admin read failed", {
-      userId,
-      error: error.message,
-    });
     return null;
   }
 
@@ -57,18 +53,6 @@ export async function getProfileRoleForUserId(
     if (role) {
       return role;
     }
-  }
-
-  if (error) {
-    console.warn("[auth] profile role session read failed, using admin fallback", {
-      userId,
-      error: error.message,
-    });
-  } else if (!data) {
-    console.warn(
-      "[auth] profile role session read returned no row (check profiles RLS policies), using admin fallback",
-      { userId },
-    );
   }
 
   return readProfileRoleWithAdmin(userId);

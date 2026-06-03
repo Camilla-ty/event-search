@@ -10,5 +10,10 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, anonKey, {
+    auth: {
+      // OAuth PKCE is completed in /auth/callback (server route).
+      detectSessionInUrl: false,
+    },
+  });
 }

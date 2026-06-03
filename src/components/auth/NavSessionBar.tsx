@@ -28,8 +28,10 @@ export function NavSessionBar({ initial, className }: NavSessionBarProps) {
     const supabase = createClient();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      router.refresh();
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        router.refresh();
+      }
     });
 
     return () => {
@@ -55,7 +57,9 @@ export function NavSessionBar({ initial, className }: NavSessionBarProps) {
     }
   }
 
-  const loginHref = `/login?redirect=${encodeURIComponent(safeRedirectTarget(pathname))}`;
+  const redirectTarget = safeRedirectTarget(pathname);
+  const loginHref = `/login?redirect=${encodeURIComponent(redirectTarget)}`;
+  const signupHref = `/signup?redirect=${encodeURIComponent(redirectTarget)}`;
 
   return (
     <div
@@ -99,12 +103,20 @@ export function NavSessionBar({ initial, className }: NavSessionBarProps) {
           </Button>
         </>
       ) : (
-        <Link
-          href={loginHref}
-          className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-        >
-          Log in
-        </Link>
+        <>
+          <Link
+            href={signupHref}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 px-3 text-sm font-medium text-white transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2"
+          >
+            Sign Up
+          </Link>
+          <Link
+            href={loginHref}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            Log in
+          </Link>
+        </>
       )}
     </div>
   );

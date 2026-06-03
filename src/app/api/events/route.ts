@@ -40,22 +40,12 @@ function coerceYear(raw: unknown): number | null {
 }
 
 export async function POST(request: Request) {
-  const requestId = crypto.randomUUID();
-  console.info("[api/events] request received", { requestId });
-
-  // Authentication boundary: every write goes through `getUser()` first. The
-  // service-role client is intentionally only used by helpers (e.g. `createEventEdition`)
-  // AFTER we've confirmed the caller is authenticated.
   const supabase = await createClient();
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
   if (authError || !user) {
-    console.warn("[api/events] unauthorized", {
-      requestId,
-      reason: authError?.message ?? "no_user",
-    });
     return NextResponse.json(
       { ok: false, error: "Unauthorized." },
       { status: 401 },
@@ -106,7 +96,6 @@ export async function POST(request: Request) {
   }
 
   if (errors.length > 0 || year === null) {
-    console.error("[api/events] validation failed", { requestId, errors });
     return NextResponse.json(
       { ok: false, error: errors.join("; ") || "Invalid payload." },
       { status: 400 },
@@ -133,24 +122,10 @@ export async function POST(request: Request) {
       city_id: cityId,
     });
 
-    console.info("[api/events] createEventEdition success", {
-      requestId,
-      id: edition.id,
-      slug: edition.slug,
-    });
-
-    // Phase 2 hook: schedule OG image / banner enrichment via `after()` here.
-    // e.g.
-    // import { after } from "next/server";
-    // after(() => enrichEventBanner(edition.id, edition.website_url));
-
     return NextResponse.json({ ok: true, edition }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("[api/events] createEventEdition failed", {
-      requestId,
-      message,
-    });
+    console.error("[api/events] createEventEdition failed", { message });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

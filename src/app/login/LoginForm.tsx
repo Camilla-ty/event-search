@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { EmailOtpAuthModal } from "@/src/components/auth/EmailOtpAuthModal";
+import { AuthFormError } from "@/src/components/auth/AuthFormError";
+import { OAuthProviderErrorHelp } from "@/src/components/auth/OAuthProviderErrorHelp";
+import { GoogleAuthButton } from "@/src/components/auth/GoogleAuthButton";
 import { Button } from "@/src/components/common";
 import { fetchAuthUserExists } from "@/src/lib/auth/fetchAuthUserExists";
 import { safeRedirectTarget } from "@/src/lib/auth/safeRedirect";
@@ -20,14 +23,22 @@ export default function LoginForm() {
     searchParams.get("redirect"),
     DEFAULT_REDIRECT,
   );
+  const oauthErrorParam = searchParams.get("error");
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    typeof oauthErrorParam === "string" && oauthErrorParam.trim() !== ""
+      ? oauthErrorParam.trim()
+      : null,
+  );
   const [accountNotFound, setAccountNotFound] = useState(false);
-  const [signUpModalOpen, setSignUpModalOpen] = useState(false);
+
+  const signupHref = `/signup?redirect=${encodeURIComponent(redirectTo)}${
+    email.trim() ? `&email=${encodeURIComponent(email.trim())}` : ""
+  }`;
 
   async function handleSendOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,53 +134,57 @@ export default function LoginForm() {
     }
   }
 
-  function handleSignUpSuccess() {
-    router.replace(redirectTo);
-    router.refresh();
-  }
-
   return (
-    <>
-      <LoginCard>
-        <header className="space-y-1">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            Log in with email
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            For existing members only. Enter your email to receive a one-time code.
-          </p>
-        </header>
+    <LoginCard>
+      <header className="space-y-1">
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+          Log in with email
+        </h1>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          For existing members only. Use Google or a one-time email code.
+        </p>
+      </header>
 
-        {accountNotFound ? (
-          <div className="mt-6 space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              No account found for{" "}
-              <span className="font-medium">{email.trim()}</span>.
-            </p>
-            <Button
-              type="button"
-              className="w-full"
-              onClick={() => {
-                setSignUpModalOpen(true);
-                setAccountNotFound(false);
-              }}
-            >
-              Sign up instead
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={() => {
-                setAccountNotFound(false);
-                setError(null);
-              }}
-            >
-              Try a different email
-            </Button>
+      {accountNotFound ? (
+        <div className="mt-6 space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            No account found for{" "}
+            <span className="font-medium">{email.trim()}</span>.
+          </p>
+          <Link
+            href={signupHref}
+            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+          >
+            Sign up instead
+          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              setAccountNotFound(false);
+              setError(null);
+            }}
+          >
+            Try a different email
+          </Button>
+        </div>
+      ) : step === "email" ? (
+        <div className="mt-6 space-y-4">
+          <GoogleAuthButton redirectTo={redirectTo} flow="login" />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                Or email code
+              </span>
+            </div>
           </div>
-        ) : step === "email" ? (
-          <form onSubmit={handleSendOtp} className="mt-6 space-y-4" noValidate>
+
+          <form onSubmit={handleSendOtp} className="space-y-4" noValidate>
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Email
@@ -194,65 +209,69 @@ export default function LoginForm() {
               {isSubmitting ? "Sending code…" : "Get OTP Code"}
             </Button>
           </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4" noValidate>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Enter the code sent to <span className="font-medium">{email.trim()}</span>.
-            </p>
+        </div>
+      ) : (
+        <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4" noValidate>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Enter the code sent to <span className="font-medium">{email.trim()}</span>.
+          </p>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Verification code
-              </span>
-              <input
-                id="login-otp"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={otp}
-                onChange={(event) => setOtp(event.target.value)}
-                required
-                disabled={isSubmitting}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                placeholder="123456"
-              />
-            </label>
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Verification code
+            </span>
+            <input
+              id="login-otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={otp}
+              onChange={(event) => setOtp(event.target.value)}
+              required
+              disabled={isSubmitting}
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              placeholder="123456"
+            />
+          </label>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={isSubmitting}
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setStep("email");
-                  setOtp("");
-                  setError(null);
-                }}
-              >
-                Back
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
-                {isSubmitting ? "Verifying…" : "Verify OTP"}
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {error ? (
-          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100">
-            {error}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setStep("email");
+                setOtp("");
+                setError(null);
+              }}
+            >
+              Back
+            </Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:flex-1">
+              {isSubmitting ? "Verifying…" : "Verify OTP"}
+            </Button>
           </div>
-        ) : null}
-      </LoginCard>
+        </form>
+      )}
 
-      <EmailOtpAuthModal
-        open={signUpModalOpen}
-        onClose={() => setSignUpModalOpen(false)}
-        onSuccess={handleSignUpSuccess}
-        initialEmail={email}
-      />
-    </>
+      {error ? (
+        <div className="mt-4">
+          <AuthFormError message={error} />
+          <OAuthProviderErrorHelp message={error} />
+        </div>
+      ) : null}
+
+      <p className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
+        New to HandShakes?{" "}
+        <Link
+          href={signupHref}
+          className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
+        >
+          Create an account
+        </Link>
+      </p>
+    </LoginCard>
   );
 }
 

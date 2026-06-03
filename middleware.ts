@@ -5,6 +5,12 @@ import { updateSession } from "@/src/lib/supabase/middleware";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Do not refresh session on OAuth callback — getUser() can mutate cookies and
+  // drop the PKCE code-verifier before exchangeCodeForSession runs.
+  if (pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
   const { response, user } = await updateSession(request);
 
   if (pathname.startsWith("/admin")) {

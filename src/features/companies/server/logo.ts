@@ -66,11 +66,7 @@ async function fetchWithTimeout(
       cache: "no-store",
       signal: controller.signal,
     });
-  } catch (error) {
-    console.warn("[logo] fetch failed", {
-      url,
-      reason: error instanceof Error ? error.message : "unknown",
-    });
+  } catch {
     return null;
   } finally {
     clearTimeout(timer);
@@ -84,38 +80,28 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
   }
   const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
   if (!isAllowedImageContentType(contentType)) {
-    console.warn("[logo] unsupported content-type", { url, contentType });
     return null;
   }
   const contentLengthHeader = response.headers.get("content-length");
   if (contentLengthHeader) {
     const length = Number(contentLengthHeader);
     if (Number.isFinite(length) && length > MAX_LOGO_SIZE_BYTES) {
-      console.warn("[logo] content-length too large", { url, length });
       return null;
     }
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) {
-    console.warn("[logo] downloaded bytes invalid", {
-      url,
-      byteLength: bytes.byteLength,
-    });
     return null;
   }
   return { bytes, contentType };
 }
 
 async function tryProviderLogo(domain: string): Promise<FetchedImage | null> {
-  const providerUrl = getLogoProviderUrl(domain);
-  console.info("[logo] try provider", { providerUrl });
-  return downloadImage(providerUrl);
+  return downloadImage(getLogoProviderUrl(domain));
 }
 
 async function tryFaviconLogo(domain: string): Promise<FetchedImage | null> {
-  const faviconUrl = `https://${domain}/favicon.ico`;
-  console.info("[logo] try favicon", { faviconUrl });
-  return downloadImage(faviconUrl);
+  return downloadImage(`https://${domain}/favicon.ico`);
 }
 
 function extractOgImageUrl(html: string, baseDomain: string): string | null {
@@ -145,9 +131,7 @@ function extractOgImageUrl(html: string, baseDomain: string): string | null {
 }
 
 async function tryOgImageLogo(domain: string): Promise<FetchedImage | null> {
-  const homepageUrl = `https://${domain}/`;
-  console.info("[logo] try og:image (homepage fetch)", { homepageUrl });
-  const response = await fetchWithTimeout(homepageUrl, {
+  const response = await fetchWithTimeout(`https://${domain}/`, {
     timeoutMs: HTML_FETCH_TIMEOUT_MS,
     headers: {
       accept: "text/html,application/xhtml+xml",
@@ -160,10 +144,8 @@ async function tryOgImageLogo(domain: string): Promise<FetchedImage | null> {
   const html = await response.text();
   const imageUrl = extractOgImageUrl(html, domain);
   if (!imageUrl) {
-    console.info("[logo] og:image not found in homepage", { domain });
     return null;
   }
-  console.info("[logo] og:image candidate", { domain, imageUrl });
   return downloadImage(imageUrl);
 }
 
@@ -182,22 +164,12 @@ async function uploadLogoToBucket(
     });
 
   if (uploadError) {
-    console.warn("[logo] upload failed", {
-      domain,
-      message: uploadError.message,
-    });
     return null;
   }
 
   const {
     data: { publicUrl },
   } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
-  console.info("[logo] uploaded", {
-    domain,
-    path,
-    bytes: image.bytes.byteLength,
-    contentType: image.contentType,
-  });
   return publicUrl || null;
 }
 
@@ -214,9 +186,6 @@ export async function resolveExistingLogoUrlByDomain(domain: string) {
     .limit(1);
 
   if (error) {
-    console.warn("[logo] resolveExistingLogoUrlByDomain error", {
-      message: error.message,
-    });
     return null;
   }
 
@@ -232,12 +201,10 @@ export async function resolveExistingLogoUrlByDomain(domain: string) {
  */
 export async function fetchAndUploadLogoByDomain(domain: string): Promise<string | null> {
   const normalizedDomain = normalizeDomain(domain);
-  console.info("[logo] fetchAndUpload entry", { domain, normalizedDomain });
   if (!normalizedDomain) return null;
 
   const existingLogoUrl = await resolveExistingLogoUrlByDomain(normalizedDomain);
   if (existingLogoUrl) {
-    console.info("[logo] reusing existing logo", { normalizedDomain });
     return existingLogoUrl;
   }
 
@@ -251,12 +218,7 @@ export async function fetchAndUploadLogoByDomain(domain: string): Promise<string
     let image: FetchedImage | null = null;
     try {
       image = await strategy(normalizedDomain);
-    } catch (error) {
-      console.warn("[logo] strategy threw", {
-        normalizedDomain,
-        strategy: strategy.name,
-        reason: error instanceof Error ? error.message : "unknown",
-      });
+    } catch {
       image = null;
     }
     if (!image) continue;
@@ -264,14 +226,10 @@ export async function fetchAndUploadLogoByDomain(domain: string): Promise<string
     try {
       const publicUrl = await uploadLogoToBucket(normalizedDomain, image);
       if (publicUrl) return publicUrl;
-    } catch (error) {
-      console.warn("[logo] upload threw", {
-        normalizedDomain,
-        reason: error instanceof Error ? error.message : "unknown",
-      });
+    } catch {
+      // try next strategy
     }
   }
 
-  console.info("[logo] no logo resolved", { normalizedDomain });
   return null;
 }

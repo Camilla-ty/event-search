@@ -27,13 +27,6 @@ export const COMPANY_PUBLIC_SELECT = `
   )
 `;
 
-function shouldDebugSponsorDetail(): boolean {
-  return (
-    process.env.DEBUG_SPONSOR_DETAIL === "true" ||
-    process.env.DEBUG_SPONSOR_DETAIL === "1"
-  );
-}
-
 async function getCompanyByIdAdmin(id: string) {
   try {
     const supabase = createAdminClient();
@@ -50,10 +43,6 @@ async function getCompanyByIdAdmin(id: string) {
 }
 
 export async function getCompanyById(id: string) {
-  const debug = shouldDebugSponsorDetail();
-  if (debug) {
-    console.info("[getCompanyById] start", { id });
-  }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("companies")
@@ -63,15 +52,10 @@ export async function getCompanyById(id: string) {
 
   if (error) throw new Error(error.message);
   if (data) {
-    if (debug) console.info("[getCompanyById] ok", { id });
     return data;
   }
 
-  const admin = await getCompanyByIdAdmin(id);
-  if (debug) {
-    console.info("[getCompanyById] admin_fallback", { id, found: Boolean(admin) });
-  }
-  return admin;
+  return getCompanyByIdAdmin(id);
 }
 
 async function getCompanyBySlugAdmin(slug: string) {
@@ -93,11 +77,6 @@ export async function getCompanyBySlug(slug: string) {
   const key = slug.trim();
   if (!key) return null;
 
-  const debug = shouldDebugSponsorDetail();
-  if (debug) {
-    console.info("[getCompanyBySlug] start", { slug: key });
-  }
-
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("companies")
@@ -107,19 +86,10 @@ export async function getCompanyBySlug(slug: string) {
 
   if (error) throw new Error(error.message);
   if (data) {
-    if (debug) console.info("[getCompanyBySlug] ok", { slug: key, id: data.id });
     return data;
   }
 
-  const admin = await getCompanyBySlugAdmin(key);
-  if (debug) {
-    console.info("[getCompanyBySlug] admin_fallback", {
-      slug: key,
-      found: Boolean(admin),
-      id: admin?.id ?? null,
-    });
-  }
-  return admin;
+  return getCompanyBySlugAdmin(key);
 }
 
 export type CompanyPublicRow = NonNullable<Awaited<ReturnType<typeof getCompanyById>>>;
@@ -212,49 +182,9 @@ export async function getCompaniesByEventEdition(eventEditionId: string) {
   if (error) throw new Error(error.message);
   const list = links ?? [];
 
-  const shouldDebug =
-    process.env.DEBUG_EVENT_SPONSORS === "true" ||
-    process.env.DEBUG_EVENT_SPONSORS === "1";
-
-  if (shouldDebug) {
-    const companyIdsFromLinks = [
-      ...new Set(
-        list
-          .map((row: { company_id?: unknown }) => companyIdKey(row.company_id))
-          .filter((k) => k !== ""),
-      ),
-    ];
-    console.info("[getCompaniesByEventEdition]", {
-      editionId: editionKey,
-      linkRowCount: list.length,
-      linkIds: list.map((row: { id?: unknown }) => String(row?.id ?? "")),
-      companyIdsFromLinks,
-    });
-  }
-
   if (list.length === 0) {
     return [];
   }
 
-  const merged = await mergeCompaniesOntoEventSponsorLinks(list);
-
-  if (shouldDebug) {
-    const hydratedKeys = [
-      ...new Set(
-        merged
-          .map((row) => (row.companies?.id !== undefined ? companyIdKey(row.companies.id) : ""))
-          .filter((k) => k !== ""),
-      ),
-    ];
-    const unhydrated = merged.filter(
-      (row) => companyIdKey(row.company_id) !== "" && row.companies === null,
-    ).length;
-    console.info("[mergeCompaniesOntoEventSponsorLinks:after]", {
-      mergedCount: merged.length,
-      hydratedDistinctCompanyIds: hydratedKeys,
-      sponsorsWithCompanyIdMissingCompanyRow: unhydrated,
-    });
-  }
-
-  return merged;
+  return mergeCompaniesOntoEventSponsorLinks(list);
 }

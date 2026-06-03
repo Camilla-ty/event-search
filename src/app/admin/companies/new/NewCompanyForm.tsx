@@ -32,8 +32,6 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
         website,
         city_id: cityId.trim() === "" ? null : cityId,
       };
-      console.log("[NewCompanyForm] submit values", payload);
-
       const response = await fetch("/api/companies", {
         method: "POST",
         headers: {
@@ -43,11 +41,6 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
       });
 
       const data = (await response.json()) as ApiResponse;
-      console.log("[NewCompanyForm] submit response", {
-        status: response.status,
-        ok: data.ok,
-        error: data.error ?? null,
-      });
 
       if (response.ok && data.ok) {
         setResult({ ok: true, message: "Company created successfully." });
@@ -63,7 +56,6 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
         submitError instanceof Error && submitError.message.trim() !== ""
           ? submitError.message.trim()
           : "Failed to create company";
-      console.log("[NewCompanyForm] submit failed", { message });
       setResult({ ok: false, message });
     } finally {
       setIsSubmitting(false);
