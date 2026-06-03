@@ -3,21 +3,38 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import {
+  ExplorerResultsToolbar,
+  MobileFilterDrawer,
+  PageHeader,
+} from "@/src/components/common/explorer";
+import {
+  explorerFilterStickyClass,
+  explorerPageGridClass,
+} from "@/src/lib/layout/explorerLayout";
+
 import { FilterPanel } from "./FilterPanel";
-import { ResultsToolbar } from "./ResultsToolbar";
+import { SponsorEventContextBanner } from "./SponsorEventContextBanner";
 import { SponsorList } from "./SponsorList";
-import type { FilterState, SponsorRecord } from "./types";
+import type { FilterState, SponsorEventContext, SponsorRecord } from "./types";
 
 type SortValue = "tier" | "name";
+
+const SPONSOR_SORT_OPTIONS = [
+  { value: "tier" as const, label: "Tier rank" },
+  { value: "name" as const, label: "Name" },
+];
 
 type SponsorSearchPageProps = {
   sponsors: SponsorRecord[];
   initialFilters?: FilterState;
+  eventContext?: SponsorEventContext | null;
 };
 
 const defaultFilters: FilterState = {
   query: "",
   industry: "all",
+  eventSlug: null,
 };
 
 function normalizeText(value: string | null | undefined) {
@@ -27,6 +44,7 @@ function normalizeText(value: string | null | undefined) {
 export function SponsorSearchPage({
   sponsors,
   initialFilters,
+  eventContext = null,
 }: SponsorSearchPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -78,6 +96,13 @@ export function SponsorSearchPage({
       next.delete("industry");
     }
 
+    const eventSlug = filters.eventSlug?.trim() ?? "";
+    if (eventSlug !== "") {
+      next.set("event", eventSlug);
+    } else {
+      next.delete("event");
+    }
+
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
@@ -91,30 +116,51 @@ export function SponsorSearchPage({
     setPage(1);
   }
 
+  function clearEventScope() {
+    setFilters((current) => ({ ...current, eventSlug: null }));
+    setPage(1);
+  }
+
+  const activeEventSlug = filters.eventSlug?.trim() ?? "";
+  const activeEventContext =
+    activeEventSlug !== ""
+      ? {
+          slug: activeEventSlug,
+          name: eventContext?.name ?? null,
+        }
+      : null;
+
   return (
     <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Sponsor Search</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Find and connect with sponsors that fit your event.
-        </p>
-      </header>
+      <PageHeader
+        title="Sponsor Search"
+        description="Find and connect with sponsors that fit your event."
+      />
 
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="hidden lg:block">
+      <div className={explorerPageGridClass}>
+        <div className="hidden md:block">
           <FilterPanel
             filters={filters}
             industries={industries}
+            eventName={activeEventContext?.name ?? null}
             onChange={setFilters}
             onReset={handleReset}
-            className="sticky top-6"
+            className={explorerFilterStickyClass}
           />
         </div>
 
         <div className="space-y-4">
-          <ResultsToolbar
+          {activeEventContext ? (
+            <SponsorEventContextBanner
+              eventName={activeEventContext.name}
+              onClear={clearEventScope}
+            />
+          ) : null}
+          <ExplorerResultsToolbar
             total={filteredAndSorted.length}
+            entityLabel="sponsors"
             sort={sort}
+            sortOptions={SPONSOR_SORT_OPTIONS}
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
           />
@@ -128,26 +174,18 @@ export function SponsorSearchPage({
         </div>
       </div>
 
-      {mobileFiltersOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setMobileFiltersOpen(false)}>
-          <div
-            className="absolute inset-y-0 left-0 w-[88%] max-w-sm overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Filters</h2>
-              <button
-                type="button"
-                className="text-sm text-slate-500 dark:text-slate-300"
-                onClick={() => setMobileFiltersOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-            <FilterPanel filters={filters} industries={industries} onChange={setFilters} onReset={handleReset} />
-          </div>
-        </div>
-      ) : null}
+      <MobileFilterDrawer
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+      >
+        <FilterPanel
+          filters={filters}
+          industries={industries}
+          eventName={activeEventContext?.name ?? null}
+          onChange={setFilters}
+          onReset={handleReset}
+        />
+      </MobileFilterDrawer>
     </section>
   );
 }

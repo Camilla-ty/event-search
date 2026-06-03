@@ -1,3 +1,4 @@
+import { feedbackWarningClass } from "@/src/lib/design/classes";
 import { isSupabaseGoogleExchangeError } from "@/src/lib/auth/oauthRedirectState";
 
 export function OAuthProviderErrorHelp({ message }: { message: string }) {
@@ -9,19 +10,22 @@ export function OAuthProviderErrorHelp({ message }: { message: string }) {
   const projectHost = supabaseUrl ? new URL(supabaseUrl).hostname : "YOUR_PROJECT.supabase.co";
 
   return (
-    <div className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-      <p className="font-medium">Google sign-in failed at Supabase (before your app received a session).</p>
-      <p>This is not a double-exchange in the app. Supabase could not trade Google&apos;s authorization code for tokens.</p>
+    <div className={`mt-3 space-y-2 ${feedbackWarningClass}`}>
+      <p className="font-medium">
+        Google sign-in failed at Supabase (before your app received a session).
+      </p>
+      <p>
+        This is not a double-exchange in the app. Supabase could not trade Google&apos;s
+        authorization code for tokens.
+      </p>
       <ul className="list-disc space-y-1 pl-5">
         <li>
           Google Cloud → OAuth client → Authorized redirect URI must be exactly:{" "}
-          <code className="text-xs">
-            https://{projectHost}/auth/v1/callback
-          </code>
+          <code className="text-xs">https://{projectHost}/auth/v1/callback</code>
         </li>
         <li>
-          Supabase Dashboard → Auth → Providers → Google: Client ID and Client Secret must match that Google
-          OAuth client (re-paste if the secret was rotated).
+          Supabase Dashboard → Auth → Providers → Google: Client ID and Client Secret must
+          match that Google OAuth client (re-paste if the secret was rotated).
         </li>
         <li>
           Supabase Dashboard → Auth → URL Configuration: Site URL{" "}

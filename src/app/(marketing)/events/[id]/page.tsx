@@ -1,13 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
-import {
-  filterDisplayableSponsors,
-} from "@/src/features/events/components/detail/eventSponsorUtils";
+import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
 import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
+import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { createPageMetadata } from "@/src/lib/metadata/site";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,29 @@ function formatDateRange(start?: string | null, end?: string | null) {
   if (!start) return end ?? "Date TBC";
   if (!end || end === start) return start;
   return `${start} - ${end}`;
+}
+
+export async function generateMetadata({
+  params,
+}: EventDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const edition = await getEventDetailData(id);
+  if (!edition) {
+    return createPageMetadata({ title: "Event not found", path: `/events/${id}` });
+  }
+  const name = edition.name?.trim() || "Event";
+  const city = edition.cities?.name;
+  const country = edition.cities?.countries?.name;
+  const location = [city, country].filter(Boolean).join(", ");
+  const description = location
+    ? `${name} — ${location}. View sponsors and event intelligence on Event Pixels.`
+    : `${name}. View sponsors and event intelligence on Event Pixels.`;
+  const slug = typeof edition.slug === "string" ? edition.slug : id;
+  return createPageMetadata({
+    title: name,
+    description,
+    path: `/events/${slug}`,
+  });
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
@@ -47,51 +71,41 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <Link
-          href="/events"
-          className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
-        >
+        <Link href="/events" className={`text-sm ${brandLinkClass}`}>
           ← Back to Events Explorer
         </Link>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-200 dark:border-slate-800 dark:bg-slate-800">
-          <div className="aspect-[16/9] w-full bg-gradient-to-br from-violet-700 to-indigo-500" />
+      <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_1fr] lg:grid-cols-[minmax(0,380px)_1fr]">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted">
+          <div className="aspect-[16/9] w-full bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
         </div>
 
-        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="space-y-2">
             <Badge variant="neutral">{edition.event_series?.name ?? "Event"}</Badge>
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-              {edition.name}
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
+            <p className="text-sm text-slate-600">
               {edition.cities?.name ?? "Unknown city"}
               {edition.cities?.countries?.name ? `, ${edition.cities.countries.name}` : ""}
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500">
               {formatDateRange(edition.start_date, edition.end_date)}
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Sponsors</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {sponsorCount}
-                {!isAuthenticated ? "+" : ""}
-              </p>
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-xs text-slate-500">Sponsors</p>
+              <p className="text-lg font-semibold text-slate-900">{sponsorCount}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Year</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {edition.year ?? "TBC"}
-              </p>
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-xs text-slate-500">Year</p>
+              <p className="text-lg font-semibold text-slate-900">{edition.year ?? "TBC"}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Category</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <div className="rounded-lg border border-slate-200 p-3">
+              <p className="text-xs text-slate-500">Category</p>
+              <p className="text-lg font-semibold text-slate-900">
                 {edition.event_series?.name ?? "General"}
               </p>
             </div>
@@ -99,9 +113,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Description</h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">Description</h2>
+        <p className="mt-2 text-sm text-slate-600">
           {edition.event_series?.description ??
             "Detailed event description will be expanded as the content model evolves."}
         </p>
@@ -111,21 +125,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         <EventSponsorsSection
           sponsors={sponsors}
           isAuthenticated={isAuthenticated}
+          eventSlug={eventSlug}
         />
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Actions</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Actions</h2>
           <div className="mt-3 space-y-2">
             <Link
               href={`/sponsors?event=${eventSlug}`}
-              className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500"
+              className={`${primaryCtaClass} h-10 w-full`}
             >
               View Sponsors
             </Link>
-            <Link
-              href="/events"
-              className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
+            <Link href="/events" className={`${secondaryCtaClass} h-10 w-full`}>
               Back to Explorer
             </Link>
           </div>

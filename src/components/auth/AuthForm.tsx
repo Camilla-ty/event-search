@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/src/components/common";
+import { brandLinkClass, formInputClass } from "@/src/lib/design/classes";
 import {
   AUTH_GO_TO_LOGIN,
   AUTH_REDIRECTING_AFTER_AUTH,
@@ -113,10 +114,10 @@ export function AuthForm({
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+          <div className="w-full border-t border-slate-200" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+          <span className="bg-white px-2 text-slate-500">
             Or continue with email
           </span>
         </div>
@@ -125,9 +126,7 @@ export function AuthForm({
       {step === "collect" ? (
         <form onSubmit={handleSendOtp} className="space-y-4" noValidate>
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Email
-            </span>
+            <span className="text-sm font-medium text-slate-700">Email</span>
             <input
               id={`${idPrefix}-email`}
               type="email"
@@ -136,8 +135,9 @@ export function AuthForm({
               onChange={(event) => setEmail(event.target.value)}
               required
               disabled={formBusy}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={formInputClass}
               placeholder="you@example.com"
+              aria-label="Email address"
             />
           </label>
 
@@ -147,15 +147,13 @@ export function AuthForm({
         </form>
       ) : (
         <form onSubmit={handleVerifySubmit} className="space-y-4" noValidate>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+          <p className="text-sm text-slate-600">
             Enter the code sent to{" "}
             <span className="font-medium">{email.trim()}</span>.
           </p>
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Verification code
-            </span>
+            <span className="text-sm font-medium text-slate-700">Verification code</span>
             <input
               id={`${idPrefix}-otp`}
               type="text"
@@ -165,8 +163,9 @@ export function AuthForm({
               onChange={(event) => setOtp(event.target.value)}
               required
               disabled={formBusy}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={`${formInputClass} tracking-widest`}
               placeholder="123456"
+              aria-label="Verification code"
             />
           </label>
 
@@ -194,12 +193,9 @@ export function AuthForm({
       {error ? <AuthFormError message={error} /> : null}
 
       {showLoginLink ? (
-        <p className="text-center text-sm text-slate-600 dark:text-slate-300">
+        <p className="text-center text-sm text-slate-600">
           Already have an account?{" "}
-          <Link
-            href={loginHref}
-            className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
-          >
+          <Link href={loginHref} className={brandLinkClass}>
             {AUTH_GO_TO_LOGIN}
           </Link>
         </p>

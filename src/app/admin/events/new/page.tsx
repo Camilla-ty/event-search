@@ -17,8 +17,8 @@ export default async function NewEventEditionAdminPage() {
   if (seriesResult.status === "fulfilled") series = seriesResult.value;
 
   return (
-    <main className="mx-auto w-full max-w-xl p-6">
+    <div className="mx-auto w-full max-w-xl">
       <NewEventEditionForm cities={cities} series={series} />
-    </main>
+    </div>
   );
 }

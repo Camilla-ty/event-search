@@ -12,8 +12,8 @@ export default async function NewCompanyAdminPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-6">
+    <div className="mx-auto w-full max-w-xl">
       <NewCompanyForm cities={cities} />
-    </main>
+    </div>
   );
 }

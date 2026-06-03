@@ -11,6 +11,8 @@ import { AuthOAuthErrorBanner } from "@/src/components/auth/AuthOAuthErrorBanner
 import { GoogleAuthButton } from "@/src/components/auth/GoogleAuthButton";
 import { useEmailOtpAuth } from "@/src/components/auth/useEmailOtpAuth";
 import { Button } from "@/src/components/common";
+import { BRAND_NAME } from "@/src/lib/design/brand";
+import { brandLinkClass, formInputClass, primaryCtaClass } from "@/src/lib/design/classes";
 import {
   AUTH_CREATE_ACCOUNT,
   AUTH_GO_TO_SIGNUP,
@@ -87,10 +89,8 @@ export default function LoginForm() {
   return (
     <LoginCard>
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          Log in with email
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <h1 className="text-xl font-semibold text-slate-900">Log in with email</h1>
+        <p className="text-sm text-slate-600">
           For existing members only. Use Google or a one-time email code.
         </p>
       </header>
@@ -105,13 +105,8 @@ export default function LoginForm() {
 
       {intentBlock ? (
         <div className="mt-6 space-y-4">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {intentBlock.message}
-          </p>
-          <Link
-            href={signupLinkHref}
-            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
-          >
+          <p className="text-sm font-medium text-slate-700">{intentBlock.message}</p>
+          <Link href={signupLinkHref} className={`${primaryCtaClass} h-10 w-full`}>
             {AUTH_GO_TO_SIGNUP}
           </Link>
           <Button
@@ -133,20 +128,16 @@ export default function LoginForm() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+              <div className="w-full border-t border-slate-200" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                Or email code
-              </span>
+              <span className="bg-white px-2 text-slate-500">Or email code</span>
             </div>
           </div>
 
           <form onSubmit={handleSendOtp} className="space-y-4" noValidate>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Email
-              </span>
+              <span className="text-sm font-medium text-slate-700">Email</span>
               <input
                 id="login-email"
                 type="email"
@@ -158,8 +149,9 @@ export default function LoginForm() {
                 }}
                 required
                 disabled={formBusy}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className={formInputClass}
                 placeholder="you@example.com"
+                aria-label="Email address"
               />
             </label>
 
@@ -170,14 +162,12 @@ export default function LoginForm() {
         </div>
       ) : (
         <form onSubmit={handleVerifySubmit} className="mt-6 space-y-4" noValidate>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+          <p className="text-sm text-slate-600">
             Enter the code sent to <span className="font-medium">{email.trim()}</span>.
           </p>
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Verification code
-            </span>
+            <span className="text-sm font-medium text-slate-700">Verification code</span>
             <input
               id="login-otp"
               type="text"
@@ -187,8 +177,9 @@ export default function LoginForm() {
               onChange={(event) => setOtp(event.target.value)}
               required
               disabled={formBusy}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm tracking-widest outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={`${formInputClass} tracking-widest`}
               placeholder="123456"
+              aria-label="Verification code"
             />
           </label>
 
@@ -219,12 +210,9 @@ export default function LoginForm() {
         </div>
       ) : null}
 
-      <p className="mt-4 text-center text-sm text-slate-600 dark:text-slate-300">
-        New to HandShakes?{" "}
-        <Link
-          href={signupHref}
-          className="font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400"
-        >
+      <p className="mt-4 text-center text-sm text-slate-600">
+        New to {BRAND_NAME}?{" "}
+        <Link href={signupHref} className={brandLinkClass}>
           {AUTH_CREATE_ACCOUNT}
         </Link>
       </p>
@@ -234,7 +222,7 @@ export default function LoginForm() {
 
 function LoginCard({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       {children}
     </div>
   );

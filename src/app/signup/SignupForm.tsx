@@ -19,10 +19,8 @@ export default function SignupForm() {
   return (
     <SignupCard>
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-          Create your account
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
+        <h1 className="text-xl font-semibold text-slate-900">Create your account</h1>
+        <p className="text-sm text-slate-600">
           Sign up with Google or a one-time email code. One account per email.
         </p>
       </header>
@@ -43,7 +41,7 @@ export default function SignupForm() {
 
 function SignupCard({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       {children}
     </div>
   );

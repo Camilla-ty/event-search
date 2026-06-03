@@ -13,7 +13,7 @@ export type MarketingNavSession = {
   email: string | null;
 };
 
-const loggedOut: MarketingNavSession = {
+export const LOGGED_OUT_NAV_SESSION: MarketingNavSession = {
   isAuthenticated: false,
   isAdmin: false,
   role: null,
@@ -32,7 +32,7 @@ export async function getMarketingNavSession(): Promise<MarketingNavSession> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return loggedOut;
+    return LOGGED_OUT_NAV_SESSION;
   }
 
   const { data: profile } = await supabase

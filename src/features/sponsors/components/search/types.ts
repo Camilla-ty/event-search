@@ -17,4 +17,10 @@ export type SponsorRecord = {
 export type FilterState = {
   query: string;
   industry: string;
+  eventSlug: string | null;
+};
+
+export type SponsorEventContext = {
+  slug: string;
+  name: string | null;
 };

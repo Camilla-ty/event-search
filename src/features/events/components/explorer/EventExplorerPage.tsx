@@ -3,13 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import {
+  ExplorerResultsToolbar,
+  MobileFilterDrawer,
+  PageHeader,
+} from "@/src/components/common/explorer";
+import {
+  explorerFilterStickyClass,
+  explorerPageGridClass,
+} from "@/src/lib/layout/explorerLayout";
+
 import { EventGrid } from "./EventGrid";
 import { FilterPanel } from "./FilterPanel";
-import { ResultsToolbar } from "./ResultsToolbar";
 import type { EventFilters, EventRecord } from "./types";
 
 type SortValue = "date" | "name";
-type ViewValue = "grid";
+
+const EVENT_SORT_OPTIONS = [
+  { value: "date" as const, label: "Event Date" },
+  { value: "name" as const, label: "Event Name" },
+];
 
 const defaultFilters: EventFilters = {
   query: "",
@@ -45,7 +58,6 @@ export function EventExplorerPage({
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<EventFilters>(initialFilters ?? defaultFilters);
   const [sort, setSort] = useState<SortValue>("date");
-  const [view] = useState<ViewValue>("grid");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -144,15 +156,13 @@ export function EventExplorerPage({
 
   return (
     <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Events Explorer</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Discover events, analyze sponsor activity, and find new opportunities.
-        </p>
-      </header>
+      <PageHeader
+        title="Events Explorer"
+        description="Discover events, analyze sponsor activity, and find new opportunities."
+      />
 
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="hidden lg:block">
+      <div className={explorerPageGridClass}>
+        <div className="hidden md:block">
           <FilterPanel
             filters={filters}
             industries={industries}
@@ -160,15 +170,16 @@ export function EventExplorerPage({
             types={types}
             onChange={setFilters}
             onReset={handleReset}
-            className="sticky top-6"
+            className={explorerFilterStickyClass}
           />
         </div>
 
         <div className="space-y-4">
-          <ResultsToolbar
+          <ExplorerResultsToolbar
             total={filteredAndSorted.length}
+            entityLabel="events"
             sort={sort}
-            view={view}
+            sortOptions={EVENT_SORT_OPTIONS}
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
           />
@@ -182,33 +193,19 @@ export function EventExplorerPage({
         </div>
       </div>
 
-      {mobileFiltersOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setMobileFiltersOpen(false)}>
-          <div
-            className="absolute inset-y-0 left-0 w-[88%] max-w-sm overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Filters</h2>
-              <button
-                type="button"
-                className="text-sm text-slate-500 dark:text-slate-300"
-                onClick={() => setMobileFiltersOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-            <FilterPanel
-              filters={filters}
-              industries={industries}
-              regions={regions}
-              types={types}
-              onChange={setFilters}
-              onReset={handleReset}
-            />
-          </div>
-        </div>
-      ) : null}
+      <MobileFilterDrawer
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+      >
+        <FilterPanel
+          filters={filters}
+          industries={industries}
+          regions={regions}
+          types={types}
+          onChange={setFilters}
+          onReset={handleReset}
+        />
+      </MobileFilterDrawer>
     </section>
   );
 }

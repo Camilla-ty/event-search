@@ -3,7 +3,9 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { Button } from "@/src/components/common";
+import { InlineErrorBanner } from "@/src/components/common/states";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
+import { formInputClass } from "@/src/lib/design/classes";
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
 
 type ApiResponse = {
@@ -100,17 +102,17 @@ export default function NewEventEditionForm({
   }
 
   return (
-    <div className="relative rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+    <div className="relative rounded-xl border border-slate-200 bg-white p-6">
+      <h1 className="text-xl font-semibold text-slate-900">
         New Event Edition
       </h1>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+      <p className="mt-1 text-sm text-slate-600">
         Manually create an event edition record.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700">
             Series
           </span>
           <select
@@ -118,7 +120,7 @@ export default function NewEventEditionForm({
             onChange={(event) => setSeriesId(event.target.value)}
             required
             disabled={isSubmitting || series.length === 0}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
           >
             <option value="">
               {series.length === 0 ? "No series available" : "Select a series"}
@@ -130,14 +132,14 @@ export default function NewEventEditionForm({
             ))}
           </select>
           {series.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500">
               No event series found. Create series records first.
             </p>
           ) : null}
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700">
             Year
           </span>
           <input
@@ -149,13 +151,13 @@ export default function NewEventEditionForm({
             min={1900}
             max={2999}
             step={1}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
             placeholder={String(CURRENT_YEAR)}
           />
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700">
             Name
           </span>
           <input
@@ -164,12 +166,12 @@ export default function NewEventEditionForm({
             onChange={(event) => setName(event.target.value)}
             required
             disabled={isSubmitting}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
             placeholder="Token2049 Singapore"
           />
         </label>
 
-        <div className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
+        <div className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-600">
           Slug preview:{" "}
           <span className="font-mono">
             {previewSlug || "(enter name and year)"}
@@ -178,7 +180,7 @@ export default function NewEventEditionForm({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <span className="text-sm font-medium text-slate-700">
               Start date
             </span>
             <input
@@ -187,11 +189,11 @@ export default function NewEventEditionForm({
               onChange={(event) => setStartDate(event.target.value)}
               required
               disabled={isSubmitting}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={formInputClass}
             />
           </label>
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <span className="text-sm font-medium text-slate-700">
               End date
             </span>
             <input
@@ -200,13 +202,13 @@ export default function NewEventEditionForm({
               onChange={(event) => setEndDate(event.target.value)}
               required
               disabled={isSubmitting}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={formInputClass}
             />
           </label>
         </div>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700">
             Website URL
           </span>
           <input
@@ -215,13 +217,13 @@ export default function NewEventEditionForm({
             onChange={(event) => setWebsiteUrl(event.target.value)}
             required
             disabled={isSubmitting}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
             placeholder="https://www.asia.token2049.com/"
           />
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700">
             City
           </span>
           <select
@@ -229,7 +231,7 @@ export default function NewEventEditionForm({
             onChange={(event) => setCityId(event.target.value)}
             required
             disabled={isSubmitting || cities.length === 0}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
           >
             <option value="">
               {cities.length === 0 ? "No cities available" : "Select a city"}
@@ -241,7 +243,7 @@ export default function NewEventEditionForm({
             ))}
           </select>
           {cities.length === 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500">
               No cities found. Add city records first.
             </p>
           ) : null}
@@ -253,16 +255,11 @@ export default function NewEventEditionForm({
       </form>
 
       {result ? (
-        <div
-          className={[
-            "mt-4 rounded-lg border px-4 py-3 text-sm font-medium",
-            result.ok
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
-              : "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100",
-          ].join(" ")}
-        >
-          {result.message}
-        </div>
+        <InlineErrorBanner
+          className="mt-4"
+          message={result.message}
+          variant={result.ok ? "success" : "error"}
+        />
       ) : null}
     </div>
   );

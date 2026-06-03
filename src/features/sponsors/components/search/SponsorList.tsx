@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/src/components/common";
+import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common/states";
 
 import { SponsorCard } from "./SponsorCard";
 import type { SponsorRecord } from "./types";
@@ -15,19 +16,6 @@ type SponsorListProps = {
   onPageChange: (page: number) => void;
 };
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div
-          key={index}
-          className="h-28 animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800"
-        />
-      ))}
-    </div>
-  );
-}
-
 export function SponsorList({
   sponsors,
   loading,
@@ -36,22 +24,17 @@ export function SponsorList({
   onPageChange,
 }: SponsorListProps) {
   if (loading) {
-    return <LoadingSkeleton />;
+    return <PageLoadingSkeleton variant="list" />;
   }
 
   if (sponsors.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">No sponsors found</h3>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Try broadening your filters or search query.
-        </p>
-        <div className="mt-4">
-          <Button variant="secondary" onClick={onReset}>
-            Reset Filters
-          </Button>
-        </div>
-      </div>
+      <NoResultsState
+        title="No sponsors found"
+        description="Try broadening your filters or search query."
+        onReset={onReset}
+        resetLabel="Reset filters"
+      />
     );
   }
 
@@ -68,8 +51,8 @@ export function SponsorList({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-slate-600 dark:text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+        <p className="text-slate-600">
           Showing {start + 1} to {Math.min(start + PAGE_SIZE, sponsors.length)} of{" "}
           {sponsors.length.toLocaleString()} results
         </p>
@@ -82,7 +65,7 @@ export function SponsorList({
           >
             Previous
           </Button>
-          <span className="text-slate-700 dark:text-slate-200">
+          <span className="text-slate-700">
             {normalizedPage} / {totalPages}
           </span>
           <Button

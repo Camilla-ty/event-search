@@ -9,16 +9,20 @@ export type SearchBarProps = {
   placeholder?: string;
   defaultValue?: string;
   onSearch?: (value: string) => void;
+  ariaLabel?: string;
   inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
   className?: string;
+  submitVariant?: "primary" | "secondary";
 };
 
 export function SearchBar({
   placeholder = "Search...",
   defaultValue = "",
   onSearch,
+  ariaLabel = "Search",
   inputProps,
   className,
+  submitVariant = "primary",
 }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue);
 
@@ -31,7 +35,7 @@ export function SearchBar({
     <form
       onSubmit={handleSubmit}
       className={[
-        "flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-950",
+        "flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm",
         className,
       ]
         .filter(Boolean)
@@ -43,14 +47,15 @@ export function SearchBar({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         className={[
-          "h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-300 dark:text-slate-100 dark:focus:border-slate-700",
+          "h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15",
           inputProps?.className,
         ]
           .filter(Boolean)
           .join(" ")}
       />
-      <Button type="submit" size="md">
+      <Button type="submit" size="md" variant={submitVariant}>
         Search
       </Button>
     </form>

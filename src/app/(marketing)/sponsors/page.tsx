@@ -1,9 +1,16 @@
-import type { CompanyPublicRow } from "@/src/lib/queries/companies";
-import { getSponsorSearchData } from "@/src/features/sponsors/server/getSponsorSearchData";
 import { SponsorSearchPage } from "@/src/features/sponsors/components/search/SponsorSearchPage";
 import type { SponsorRecord } from "@/src/features/sponsors/components/search/types";
+import { getSponsorSearchData } from "@/src/features/sponsors/server/getSponsorSearchData";
+import { createPageMetadata } from "@/src/lib/metadata/site";
+import type { CompanyPublicRow } from "@/src/lib/queries/companies";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = createPageMetadata({
+  title: "Sponsors Search",
+  description: "Find and analyze sponsors and companies across events.",
+  path: "/sponsors",
+});
 
 type SponsorsPageProps = {
   searchParams: Promise<{
@@ -44,13 +51,24 @@ export default async function SponsorsPage({ searchParams }: SponsorsPageProps) 
     companies: sponsor.companies ? sponsorCompanyFromRow(sponsor.companies) : null,
   }));
 
+  const eventSlugFromUrl = event?.trim() ?? "";
+
   return (
     <SponsorSearchPage
       sponsors={sponsors}
       initialFilters={{
         query: data.filters.query ?? "",
         industry: data.filters.industry ?? "all",
+        eventSlug: eventSlugFromUrl !== "" ? eventSlugFromUrl : null,
       }}
+      eventContext={
+        eventSlugFromUrl !== ""
+          ? {
+              slug: eventSlugFromUrl,
+              name: data.selectedEvent?.name ?? null,
+            }
+          : null
+      }
     />
   );
 }

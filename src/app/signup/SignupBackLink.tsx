@@ -29,7 +29,7 @@ export function SignupBackLink() {
     <button
       type="button"
       onClick={handleBack}
-      className="mb-6 text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+      className="mb-6 text-sm font-medium text-slate-600 transition hover:text-slate-900"
     >
       ← Back
     </button>

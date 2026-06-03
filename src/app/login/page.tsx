@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { createClient } from "@/src/lib/supabase/server";
+import { createPageMetadata } from "@/src/lib/metadata/site";
 import { resolvePostAuthRedirect } from "@/src/lib/auth/resolvePostAuthRedirect";
 
 import { LoginBackLink } from "./LoginBackLink";
@@ -9,9 +10,10 @@ import LoginForm from "./LoginForm";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Log in with email code - HandShakes",
-};
+export const metadata = createPageMetadata({
+  title: "Log in",
+  path: "/login",
+});
 
 type LoginPageProps = {
   searchParams: Promise<{ redirect?: string; error?: string }>;
@@ -31,11 +33,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-6">
+    <>
       <LoginBackLink />
-      <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />}>
+      <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-slate-100" aria-hidden />}>
         <LoginForm />
       </Suspense>
-    </main>
+    </>
   );
 }

@@ -1,8 +1,15 @@
-import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
+import { createPageMetadata } from "@/src/lib/metadata/site";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = createPageMetadata({
+  title: "Events Explorer",
+  description: "Discover and analyze events, sponsors, and opportunities across the industry.",
+  path: "/events",
+});
 
 type EventsPageProps = {
   searchParams: Promise<{

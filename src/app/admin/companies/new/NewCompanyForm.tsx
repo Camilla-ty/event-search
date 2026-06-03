@@ -3,7 +3,9 @@
 import { FormEvent, useState } from "react";
 
 import { Button } from "@/src/components/common";
+import { InlineErrorBanner } from "@/src/components/common/states";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
+import { formInputClass } from "@/src/lib/design/classes";
 
 type ApiResponse = {
   ok: boolean;
@@ -63,21 +65,12 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
   }
 
   return (
-    <div className="relative rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-        New Company
-      </h1>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-        Manually create a company record.
-      </p>
-      <form
-        onSubmit={handleSubmit}
-        className="mt-6 space-y-4"
-      >
+    <div className="relative rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h1 className="text-xl font-semibold text-slate-900">New Company</h1>
+      <p className="mt-1 text-sm text-slate-600">Manually create a company record.</p>
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Company name
-          </span>
+          <span className="text-sm font-medium text-slate-700">Company name</span>
           <input
             id="new-company-name"
             type="text"
@@ -85,15 +78,13 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
             onChange={(event) => setName(event.target.value)}
             required
             disabled={isSubmitting}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
             placeholder="Acme Inc."
           />
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Website
-          </span>
+          <span className="text-sm font-medium text-slate-700">Website</span>
           <input
             id="new-company-website"
             type="text"
@@ -101,21 +92,19 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
             onChange={(event) => setWebsite(event.target.value)}
             required
             disabled={isSubmitting}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
             placeholder="https://acme.com"
           />
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            City
-          </span>
+          <span className="text-sm font-medium text-slate-700">City</span>
           <select
             id="new-company-city-id"
             value={cityId}
             onChange={(event) => setCityId(event.target.value)}
             disabled={isSubmitting}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className={formInputClass}
           >
             <option value="">No city / Unknown</option>
             {cities.map((city) => (
@@ -124,7 +113,7 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
               </option>
             ))}
           </select>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500">
             City is optional. Leave as &quot;No city / Unknown&quot; if not applicable.
           </p>
         </label>
@@ -135,16 +124,11 @@ export default function NewCompanyForm({ cities }: NewCompanyFormProps) {
       </form>
 
       {result ? (
-        <div
-          className={[
-            "mt-4 rounded-lg border px-4 py-3 text-sm font-medium",
-            result.ok
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100"
-              : "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100",
-          ].join(" ")}
-        >
-          {result.message}
-        </div>
+        <InlineErrorBanner
+          className="mt-4"
+          message={result.message}
+          variant={result.ok ? "success" : "error"}
+        />
       ) : null}
     </div>
   );
