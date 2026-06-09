@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { normalizeDomain } from "@/src/lib/domain/normalizeDomain";
 
 import type {
   ColumnMapping,
@@ -528,15 +529,25 @@ type BulkRowDecisionRow = {
   has_blocking_validation: boolean;
   normalized_company_name: string | null;
   raw_company_name: string | null;
+  normalized_website: string | null;
+  raw_website: string | null;
   normalized_domain: string | null;
   duplicate_role: string | null;
 };
 
+function resolveServerRowDomain(row: BulkRowDecisionRow): string {
+  const fromNormalized = (row.normalized_domain ?? "").trim();
+  if (fromNormalized !== "") return fromNormalized;
+  const website = (row.normalized_website ?? row.raw_website ?? "").trim();
+  if (website === "") return "";
+  return normalizeDomain(website).trim();
+}
+
 function isServerEligibleForBulkCreateNew(row: BulkRowDecisionRow): boolean {
   if (row.status === "resolved" || row.status === "excluded") return false;
-  if (row.has_blocking_validation) return false;
+  if (row.has_blocking_validation === true) return false;
   const name = (row.normalized_company_name ?? row.raw_company_name ?? "").trim();
-  const domain = (row.normalized_domain ?? "").trim();
+  const domain = resolveServerRowDomain(row);
   return name !== "" && domain !== "";
 }
 
@@ -570,7 +581,7 @@ export async function bulkApplyRowDecisions(
   const { data: rows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, status, has_blocking_validation, normalized_company_name, raw_company_name, normalized_domain, duplicate_role",
+      "id, status, has_blocking_validation, normalized_company_name, raw_company_name, normalized_website, raw_website, normalized_domain, duplicate_role",
     )
     .eq("batch_id", batchId)
     .in("id", uniqueIds);

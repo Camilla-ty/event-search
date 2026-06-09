@@ -16,9 +16,11 @@ import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import {
+  getBulkCreateNewButtonState,
   isEligibleForBulkCreateNew,
   isEligibleForBulkExclude,
   isSelectableReviewRow,
+  resolveRowDomain,
 } from "../../reviewQueueEligibility";
 import { BulkReviewConfirmModal } from "../BulkReviewConfirmModal";
 import { RowDecisionDrawer } from "../RowDecisionDrawer";
@@ -90,29 +92,38 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     };
   }, [batch.id, reload]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
   const visibleSelectableIds = useMemo(
     () => rows.filter(isSelectableReviewRow).map((r) => r.id),
     [rows],
   );
 
-  const selectedRows = useMemo(
-    () => rows.filter((r) => selectedIds.has(r.id)),
-    [rows, selectedIds],
+  const rowById = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
+
+  const createNewSelectedIds = useMemo(
+    () =>
+      Array.from(selectedIds).filter((id) => {
+        const row = rowById.get(id);
+        return row ? isEligibleForBulkCreateNew(row) : false;
+      }),
+    [selectedIds, rowById],
   );
 
-  const createNewSelectedCount = useMemo(
-    () => selectedRows.filter(isEligibleForBulkCreateNew).length,
-    [selectedRows],
+  const excludeSelectedIds = useMemo(
+    () =>
+      Array.from(selectedIds).filter((id) => {
+        const row = rowById.get(id);
+        return row ? isEligibleForBulkExclude(row) : false;
+      }),
+    [selectedIds, rowById],
   );
 
-  const excludeSelectedCount = useMemo(
-    () => selectedRows.filter(isEligibleForBulkExclude).length,
-    [selectedRows],
-  );
+  const createNewSelectedCount = createNewSelectedIds.length;
+  const excludeSelectedCount = excludeSelectedIds.length;
+
+  const bulkCreateNewState = getBulkCreateNewButtonState(selectedIds, rows, {
+    loading,
+    actionLoading,
+  });
 
   const allVisibleSelected =
     visibleSelectableIds.length > 0 &&
@@ -167,8 +178,11 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
       setError(listed.error);
       return;
     }
-    const ids = listed.rows.filter(isSelectableReviewRow).map((r) => r.id);
-    selectIds(ids);
+    setRows(listed.rows);
+    setSummary(listed.summary);
+    setSelectedIds(
+      new Set(listed.rows.filter(isSelectableReviewRow).map((r) => r.id)),
+    );
   }
 
   function clearSelection() {
@@ -200,10 +214,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   }
 
   async function applyBulkAction(action: PendingBulkAction) {
-    const targetIds =
-      action === "create_new"
-        ? selectedRows.filter(isEligibleForBulkCreateNew).map((r) => r.id)
-        : selectedRows.filter(isEligibleForBulkExclude).map((r) => r.id);
+    const targetIds = action === "create_new" ? createNewSelectedIds : excludeSelectedIds;
 
     if (targetIds.length === 0) return;
 
@@ -299,7 +310,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         ) : null}
         <span className="text-slate-500">
           {selectedIds.size > 0
-            ? `${selectedIds.size} selected · ${createNewSelectedCount} eligible for create-new`
+            ? `${bulkCreateNewState.selectedCount} selected · ${bulkCreateNewState.eligibleCount} eligible for create-new`
             : "Select rows for bulk actions"}
         </span>
       </div>
@@ -353,7 +364,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                       </td>
                       <td className="px-4 py-2">{row.excel_row_number}</td>
                       <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
-                      <td className="px-4 py-2">{row.normalized_domain ?? "—"}</td>
+                      <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
                       <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
                       <td className="px-4 py-2">
                         <span>{row.status}</span>
@@ -389,13 +400,14 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         </Button>
         <Button
           variant="secondary"
-          disabled={createNewSelectedCount === 0 || actionLoading || loading}
+          disabled={!bulkCreateNewState.enabled}
+          title={bulkCreateNewState.disabledReason ?? undefined}
           onClick={() => {
             setBulkError(null);
             setPendingBulk("create_new");
           }}
         >
-          Create new companies ({createNewSelectedCount})
+          Create new companies for selected ({bulkCreateNewState.eligibleCount})
         </Button>
         <Button
           variant="secondary"
@@ -419,6 +431,10 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
           Import to draft →
         </Button>
       </div>
+
+      {bulkCreateNewState.disabledReason ? (
+        <p className="text-sm text-amber-800">{bulkCreateNewState.disabledReason}</p>
+      ) : null}
 
       {summary.auto_ready > 0 ? (
         <p className="text-sm text-amber-800">
