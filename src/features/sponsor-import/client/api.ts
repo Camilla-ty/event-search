@@ -83,6 +83,21 @@ export async function bulkAcceptDomains(batchId: string) {
   return parseJson<ApiOk<{ accepted_count: number }>>(res);
 }
 
+export async function bulkApplyRowDecisions(
+  batchId: string,
+  body: { decision_type: "create_new" | "exclude"; row_ids: string[] },
+) {
+  const res = await fetch(
+    `/api/admin/sponsor-imports/batches/${batchId}/rows/bulk-decisions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return parseJson<ApiOk<{ applied_count: number; skipped_count: number }>>(res);
+}
+
 export async function fetchRows(
   batchId: string,
   params?: { status?: string; page?: number; pageSize?: number },

@@ -26,7 +26,7 @@ import {
   parseWithColumnMapping,
   readSpreadsheetHeaders,
 } from "./parseSpreadsheet";
-import { SPONSOR_IMPORT_BUCKET } from "../types";
+import { SPONSOR_IMPORT_BUCKET, SPONSOR_IMPORT_MAX_ROWS } from "../types";
 import { uploadSourceFile } from "./storage";
 import { assignDuplicateClusters, validateRow } from "./validateRows";
 
@@ -520,6 +520,127 @@ export async function bulkAcceptDomainMatches(batchId: string, actorId: string) 
   });
 
   return { accepted_count: accepted };
+}
+
+type BulkRowDecisionRow = {
+  id: string;
+  status: string;
+  has_blocking_validation: boolean;
+  normalized_company_name: string | null;
+  raw_company_name: string | null;
+  normalized_domain: string | null;
+  duplicate_role: string | null;
+};
+
+function isServerEligibleForBulkCreateNew(row: BulkRowDecisionRow): boolean {
+  if (row.status === "resolved" || row.status === "excluded") return false;
+  if (row.has_blocking_validation) return false;
+  const name = (row.normalized_company_name ?? row.raw_company_name ?? "").trim();
+  const domain = (row.normalized_domain ?? "").trim();
+  return name !== "" && domain !== "";
+}
+
+function isServerEligibleForBulkExclude(row: BulkRowDecisionRow): boolean {
+  return row.status !== "resolved" && row.status !== "excluded";
+}
+
+export async function bulkApplyRowDecisions(
+  batchId: string,
+  actorId: string,
+  input: {
+    decision_type: "create_new" | "exclude";
+    row_ids: string[];
+  },
+) {
+  const batch = await getBatchRow(batchId);
+  assertBatchStatus(batch, ["review"]);
+
+  const uniqueIds = Array.from(new Set(input.row_ids.map((id) => id.trim()).filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    throw new SponsorImportHttpError(400, "row_ids must not be empty.");
+  }
+  if (uniqueIds.length > SPONSOR_IMPORT_MAX_ROWS) {
+    throw new SponsorImportHttpError(
+      400,
+      `Maximum ${SPONSOR_IMPORT_MAX_ROWS} rows per bulk action.`,
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { data: rows, error } = await supabase
+    .from("sponsor_import_rows")
+    .select(
+      "id, status, has_blocking_validation, normalized_company_name, raw_company_name, normalized_domain, duplicate_role",
+    )
+    .eq("batch_id", batchId)
+    .in("id", uniqueIds);
+
+  if (error) throw new Error(error.message);
+
+  const now = new Date().toISOString();
+  let applied_count = 0;
+  let skipped_count = 0;
+
+  for (const row of (rows ?? []) as BulkRowDecisionRow[]) {
+    const rowId = String(row.id);
+
+    if (input.decision_type === "create_new") {
+      if (!isServerEligibleForBulkCreateNew(row)) {
+        skipped_count += 1;
+        continue;
+      }
+
+      const patch: Record<string, unknown> = {
+        status: "resolved",
+        decision_type: "create_new",
+        decision_source: "bulk_action",
+        resolved_company_id: null,
+        decision_by: actorId,
+        decision_at: now,
+        updated_at: now,
+      };
+      if (row.duplicate_role === "duplicate") {
+        patch.duplicate_resolution = "kept";
+      }
+
+      const { error: updateError } = await supabase
+        .from("sponsor_import_rows")
+        .update(patch)
+        .eq("id", rowId);
+      if (updateError) throw new Error(updateError.message);
+      applied_count += 1;
+      continue;
+    }
+
+    if (!isServerEligibleForBulkExclude(row)) {
+      skipped_count += 1;
+      continue;
+    }
+
+    const patch: Record<string, unknown> = {
+      status: "excluded",
+      decision_type: "exclude",
+      decision_source: "bulk_action",
+      resolved_company_id: null,
+      decision_by: actorId,
+      decision_at: now,
+      updated_at: now,
+    };
+    if (row.duplicate_role === "duplicate") {
+      patch.duplicate_resolution = "excluded";
+    }
+
+    const { error: updateError } = await supabase
+      .from("sponsor_import_rows")
+      .update(patch)
+      .eq("id", rowId);
+    if (updateError) throw new Error(updateError.message);
+    applied_count += 1;
+  }
+
+  skipped_count += uniqueIds.length - (rows ?? []).length;
+
+  return { applied_count, skipped_count };
 }
 
 export async function listBatchRows(
