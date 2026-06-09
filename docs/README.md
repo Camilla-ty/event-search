@@ -16,9 +16,16 @@
 
 **Locked Phase 1 rules:** company website required; company/edition slug editable with warnings; **multiple editions per series + year allowed** (unique slug only; series+year+city warnings in admin).
 
+### Phase 1.1 (complete — location usability)
+
+| Document | Description |
+|----------|-------------|
+| [Phase 1.1 — Location Scope](./phase-1.1-location-scope.md) | Location formatter + inline Add City — **implemented** |
+
 ### Roadmap phases
 
 1. **Events admin** — ✅ Complete — series, editions, companies, nav, import handoff stubs  
+1.1. **Location usability** — Formatter + inline Add City (proposed before Phase 2)  
 2. **Sponsor import migration** — 4 tables + constraints + RLS  
 3. **Sponsor import API** — Batch lifecycle (service role)  
 4. **Sponsor import UI** — Full Excel import flow  

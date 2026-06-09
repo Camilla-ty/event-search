@@ -5,6 +5,7 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ export default async function AdminEventEditionsListPage({ searchParams }: PageP
                   </td>
                   <td className="px-4 py-3 text-slate-600">{edition.year}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {edition.cities?.name ?? "—"}
+                    {formatLocationFromCityEmbed(edition.cities) || "—"}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{edition.live_sponsor_count}</td>
                   <td className="px-4 py-3">

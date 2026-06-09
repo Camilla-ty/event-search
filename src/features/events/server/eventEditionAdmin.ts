@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
 import { EVENT_EDITION_LIST_SELECT } from "@/src/lib/queries/events";
 
 export type EventEditionAdminRow = {
@@ -150,21 +151,8 @@ export type EditionSiblingSummary = {
   name: string;
   slug: string;
   city_id: string | null;
-  cities?: { id: string; name: string } | null;
+  cities?: Record<string, unknown> | null;
 };
-
-function parseEmbeddedCity(
-  raw: unknown,
-): { id: string; name: string } | null {
-  if (raw === null || raw === undefined) return null;
-  const candidate = Array.isArray(raw) ? raw[0] : raw;
-  if (!candidate || typeof candidate !== "object") return null;
-  const record = candidate as Record<string, unknown>;
-  const id = typeof record.id === "string" ? record.id : null;
-  const name = typeof record.name === "string" ? record.name : null;
-  if (!id || !name) return null;
-  return { id, name };
-}
 
 /** Other editions for the same series and year (multi-city / multi-occurrence allowed). */
 export async function findSiblingEditions(params: {
@@ -175,7 +163,7 @@ export async function findSiblingEditions(params: {
   const supabase = createAdminClient();
   let query = supabase
     .from("event_editions")
-    .select("id, series_id, year, name, slug, city_id, cities ( id, name )")
+    .select(`id, series_id, year, name, slug, city_id, cities ( ${CITY_ADMIN_SELECT} )`)
     .eq("series_id", params.seriesId)
     .eq("year", params.year)
     .order("name", { ascending: true });
@@ -194,6 +182,9 @@ export async function findSiblingEditions(params: {
     name: typeof row.name === "string" ? row.name : "",
     slug: typeof row.slug === "string" ? row.slug : "",
     city_id: typeof row.city_id === "string" ? row.city_id : null,
-    cities: parseEmbeddedCity(row.cities),
+    cities:
+      row.cities && typeof row.cities === "object"
+        ? (row.cities as Record<string, unknown>)
+        : null,
   }));
 }

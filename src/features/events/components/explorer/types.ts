@@ -9,6 +9,9 @@ export type EventRecord = {
   } | null;
   cities?: {
     name?: string | null;
+    states?: {
+      name?: string | null;
+    } | null;
     countries?: {
       name?: string | null;
     } | null;

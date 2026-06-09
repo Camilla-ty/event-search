@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/src/components/common";
 import { secondaryCtaClass } from "@/src/lib/design/classes";
 
+import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
+
 import type { EventRecord } from "./types";
 
 function formatDateRange(start?: string | null, end?: string | null) {
@@ -15,9 +17,11 @@ function formatDateRange(start?: string | null, end?: string | null) {
 }
 
 export function EventCard({ event }: { event: EventRecord }) {
-  const location = [event.cities?.name, event.cities?.countries?.name]
-    .filter(Boolean)
-    .join(", ");
+  const location = formatLocationLabel({
+    city: event.cities?.name,
+    state: event.cities?.states?.name,
+    country: event.cities?.countries?.name,
+  });
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

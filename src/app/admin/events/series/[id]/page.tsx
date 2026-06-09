@@ -7,6 +7,7 @@ import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
 import { getEventSeriesAdminById } from "@/src/features/events/server/eventSeriesAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +84,9 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
                   <tr key={edition.id} className="border-b border-slate-100">
                     <td className="px-4 py-3">{edition.name}</td>
                     <td className="px-4 py-3">{edition.year}</td>
-                    <td className="px-4 py-3">{edition.cities?.name ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {formatLocationFromCityEmbed(edition.cities) || "—"}
+                    </td>
                     <td className="px-4 py-3">{edition.live_sponsor_count}</td>
                     <td className="px-4 py-3">
                       <Link

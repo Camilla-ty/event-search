@@ -8,15 +8,12 @@ import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
+import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
 import { formInputClass } from "@/src/lib/design/classes";
 import { EditionSiblingWarnings } from "@/src/features/events/components/admin/EditionSiblingWarnings";
 import type { EditionSiblingSummary } from "@/src/features/events/server/eventEditionAdmin";
-import {
-  buildEditionSlug,
-  cityLabelToSlugHint,
-  slugify,
-} from "@/src/lib/slugify";
+import { buildEditionSlug, slugify } from "@/src/lib/slugify";
 
 type EditionFormValues = {
   series_id: string;
@@ -81,7 +78,7 @@ export function EventEditionForm({
 
   const yearNumber = Number(values.year);
   const selectedCity = cities.find((city) => city.id === values.city_id);
-  const citySlugHint = selectedCity ? cityLabelToSlugHint(selectedCity.label) : null;
+  const citySlugHint = selectedCity?.city ?? null;
 
   const autoSlug = useMemo(() => {
     if (!values.name.trim() || !Number.isInteger(yearNumber)) return "";
@@ -346,22 +343,12 @@ export function EventEditionForm({
             </label>
           </div>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">City</span>
-            <select
-              value={values.city_id}
-              onChange={(e) => updateField("city_id", e.target.value)}
-              disabled={isSubmitting}
-              className={formInputClass}
-            >
-              <option value="">No city</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AdminCitySelect
+            value={values.city_id}
+            onChange={(cityId) => updateField("city_id", cityId)}
+            initialCities={cities}
+            disabled={isSubmitting}
+          />
 
           <div className="flex flex-col gap-2 pt-2 sm:flex-row">
             {mode === "create" ? (

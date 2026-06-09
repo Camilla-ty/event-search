@@ -1,14 +1,13 @@
 import { createClient } from "@/src/lib/supabase/server";
 
+import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
+
 const EVENT_EDITION_BY_CITY_SELECT = `
   *,
   event_series (*),
   cities (
     *,
-    countries (
-      *,
-      regions (*)
-    )
+    ${CITY_PUBLIC_EMBED}
   )
 `;
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/src/components/common";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 function formatDateRange(start?: string | null, end?: string | null) {
   if (!start && !end) return "Date TBC";
@@ -17,9 +18,7 @@ function pluralize(count: number, singular: string, plural: string): string {
 
 export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
   const { company, eventSeriesGroups } = data;
-  const locationLabel = [company.cities?.name, company.cities?.countries?.name]
-    .filter(Boolean)
-    .join(", ");
+  const locationLabel = formatLocationFromCityEmbed(company.cities);
   const website = company.website?.trim() ?? "";
   const logoUrl = company.logo_url?.trim() ?? "";
 

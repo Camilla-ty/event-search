@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { EditionSiblingSummary } from "@/src/features/events/server/eventEditionAdmin";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 type EditionSiblingWarningsProps = {
   siblings: EditionSiblingSummary[];
@@ -10,8 +11,8 @@ type EditionSiblingWarningsProps = {
 };
 
 function formatSiblingLabel(sibling: EditionSiblingSummary): string {
-  const cityName = sibling.cities?.name;
-  if (cityName) return `${sibling.name} (${cityName})`;
+  const location = formatLocationFromCityEmbed(sibling.cities);
+  if (location) return `${sibling.name} (${location})`;
   return sibling.name;
 }
 

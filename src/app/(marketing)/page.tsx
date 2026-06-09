@@ -13,6 +13,7 @@ import { getSponsorSearchData } from "@/src/features/sponsors/server/getSponsorS
 import type { SponsorRecord } from "@/src/features/sponsors/components/search/types";
 import { BRAND_NAME } from "@/src/lib/design/brand";
 import { brandLinkClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 import {
   buildEventDetailPath,
@@ -51,7 +52,14 @@ function toPreviewSponsor(
           slug: extended.slug ?? null,
           name: extended.name ?? null,
           industry: extended.industry ?? null,
-          location: extended.location ?? null,
+          location:
+            (company && typeof company === "object"
+              ? formatLocationFromCityEmbed(
+                  (company as { cities?: unknown }).cities,
+                )
+              : "") ||
+            extended.location ||
+            null,
         }
       : null,
   };

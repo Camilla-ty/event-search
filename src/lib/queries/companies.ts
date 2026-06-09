@@ -1,5 +1,6 @@
 import { createClient } from "@/src/lib/supabase/server";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
 function companyIdKey(raw: unknown): string {
@@ -23,7 +24,7 @@ export const COMPANY_PUBLIC_SELECT = `
   *,
   cities (
     *,
-    countries (*)
+    ${CITY_PUBLIC_EMBED}
   )
 `;
 

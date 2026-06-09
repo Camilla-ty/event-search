@@ -46,6 +46,10 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
     cities: edition.cities
       ? {
           name: edition.cities.name ?? null,
+          states:
+            edition.cities.states && typeof edition.cities.states === "object"
+              ? { name: edition.cities.states.name ?? null }
+              : null,
           countries: edition.cities.countries
             ? {
                 name: edition.cities.countries.name ?? null,

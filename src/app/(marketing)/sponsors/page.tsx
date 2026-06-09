@@ -2,6 +2,7 @@ import { SponsorSearchPage } from "@/src/features/sponsors/components/search/Spo
 import type { SponsorRecord } from "@/src/features/sponsors/components/search/types";
 import { getSponsorSearchData } from "@/src/features/sponsors/server/getSponsorSearchData";
 import { createPageMetadata } from "@/src/lib/metadata/site";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import type { CompanyPublicRow } from "@/src/lib/queries/companies";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,10 @@ function sponsorCompanyFromRow(row: CompanyPublicRow): SponsorRecord["companies"
     name: row.name ?? null,
     logo_url: row.logo_url ?? null,
     industry: extended.industry ?? null,
-    location: extended.location ?? null,
+    location:
+      formatLocationFromCityEmbed(row.cities) ||
+      extended.location ||
+      null,
     countries_active_count: extended.countries_active_count ?? null,
   };
 }

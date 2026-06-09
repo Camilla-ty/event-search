@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
+import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import { formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
 
@@ -162,22 +163,13 @@ export function CompanyAdminForm({
           <p className="text-xs text-slate-500">Public path: /sponsors/{effectiveSlug || "…"}</p>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">City</span>
-          <select
-            value={values.city_id}
-            onChange={(e) => updateField("city_id", e.target.value)}
-            disabled={isSubmitting}
-            className={formInputClass}
-          >
-            <option value="">No city / Unknown</option>
-            {cities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AdminCitySelect
+          value={values.city_id}
+          onChange={(cityId) => updateField("city_id", cityId)}
+          initialCities={cities}
+          disabled={isSubmitting}
+          emptyLabel="No city / Unknown"
+        />
 
         {mode === "edit" ? (
           <>

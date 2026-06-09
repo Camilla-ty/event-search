@@ -8,6 +8,7 @@ import { filterDisplayableSponsors } from "@/src/features/events/components/deta
 import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
 import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 import { createClient } from "@/src/lib/supabase/server";
 
@@ -33,9 +34,7 @@ export async function generateMetadata({
     return createPageMetadata({ title: "Event not found", path: `/events/${id}` });
   }
   const name = edition.name?.trim() || "Event";
-  const city = edition.cities?.name;
-  const country = edition.cities?.countries?.name;
-  const location = [city, country].filter(Boolean).join(", ");
+  const location = formatLocationFromCityEmbed(edition.cities);
   const description = location
     ? `${name} — ${location}. View sponsors and event intelligence on EventPixels.`
     : `${name}. View sponsors and event intelligence on EventPixels.`;
@@ -86,8 +85,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <Badge variant="neutral">{edition.event_series?.name ?? "Event"}</Badge>
             <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
             <p className="text-sm text-slate-600">
-              {edition.cities?.name ?? "Unknown city"}
-              {edition.cities?.countries?.name ? `, ${edition.cities.countries.name}` : ""}
+              {formatLocationFromCityEmbed(edition.cities) || "Location not set"}
             </p>
             <p className="text-sm text-slate-500">
               {formatDateRange(edition.start_date, edition.end_date)}

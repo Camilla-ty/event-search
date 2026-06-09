@@ -1,4 +1,5 @@
 import { createClient } from "@/src/lib/supabase/server";
+import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 
 /** Shared embed for `event_editions` list cards (kept in sync with list queries). */
 export const EVENT_EDITION_LIST_SELECT = `
@@ -6,10 +7,7 @@ export const EVENT_EDITION_LIST_SELECT = `
   event_series (*),
   cities (
     *,
-    countries (
-      *,
-      regions (*)
-    )
+    ${CITY_PUBLIC_EMBED}
   )
 `;
 

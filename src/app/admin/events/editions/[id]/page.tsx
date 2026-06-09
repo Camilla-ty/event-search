@@ -17,6 +17,7 @@ import {
 } from "@/src/features/events/server/eventEditionAdmin";
 import { getSeriesOptions } from "@/src/features/events/server/getSeriesOptions";
 import { primaryCtaClass } from "@/src/lib/design/classes";
+import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,8 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
   const { id } = await params;
   const edition = await getEventEditionAdminById(id);
   if (!edition) notFound();
+
+  const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
 
   const [cities, series, liveSponsorCount, sponsors] = await Promise.all([
     getCityOptions(),
@@ -93,7 +96,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
       />
 
       <div className="mb-4 flex flex-wrap gap-3 text-sm text-slate-600">
-        {edition.cities?.name ? <span>City: {edition.cities.name}</span> : null}
+        {editionLocationLabel ? <span>Location: {editionLocationLabel}</span> : null}
         <span>
           Slug:{" "}
           <Link href={`/events/${edition.slug}`} className="font-mono text-brand-primary hover:underline">
