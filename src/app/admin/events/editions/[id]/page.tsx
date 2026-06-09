@@ -8,7 +8,10 @@ import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { getCompaniesByEventEdition } from "@/src/lib/queries/companies";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
-import { EditionImportsStub } from "@/src/features/events/components/admin/EditionImportsStub";
+import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
+import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
+import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
+import { getEditionImportsData } from "@/src/features/sponsor-import/server/importUiData";
 import { EditionLiveSponsorsTable } from "@/src/features/events/components/admin/EditionLiveSponsorsTable";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
 import {
@@ -51,12 +54,26 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
 
   const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
 
-  const [cities, series, liveSponsorCount, sponsors] = await Promise.all([
+  const [cities, series, liveSponsorCount, sponsors, importsData] = await Promise.all([
     getCityOptions(),
     getSeriesOptions(),
     countLiveSponsorsForEdition(id),
     getCompaniesByEventEdition(id),
+    getEditionImportsData(
+      id,
+      edition.name,
+      edition.event_series?.name ?? "—",
+      0,
+    ),
   ]);
+
+  importsData.liveSponsorCount = liveSponsorCount;
+
+  const activeBatch = importsData.activeBatch;
+  const activeBatchId =
+    activeBatch && typeof activeBatch.id === "string" ? activeBatch.id : null;
+  const activeBatchStatus =
+    activeBatch && typeof activeBatch.status === "string" ? activeBatch.status : null;
 
   const sponsorRows = sponsors.map((row) => ({
     id: String(row.id),
@@ -86,12 +103,24 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
         title={`${edition.name} (${edition.year})`}
         description={edition.event_series?.name ?? "Event edition"}
         actions={
-          <Link
-            href={`/admin/sponsor-imports/new?editionId=${edition.id}`}
-            className={`${primaryCtaClass} h-10`}
-          >
-            Import sponsors
-          </Link>
+          activeBatchId && activeBatchStatus ? (
+            <Link
+              href={flowHref(
+                activeBatchId,
+                defaultStepForBatchStatus(activeBatchStatus as SponsorImportBatchStatus),
+              )}
+              className={`${primaryCtaClass} h-10`}
+            >
+              Resume import
+            </Link>
+          ) : (
+            <Link
+              href={`/admin/sponsor-imports/new?editionId=${edition.id}`}
+              className={`${primaryCtaClass} h-10`}
+            >
+              Import sponsors
+            </Link>
+          )
         }
       />
 
@@ -133,13 +162,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
             />
           }
           sponsorsPanel={<EditionLiveSponsorsTable sponsors={sponsorRows} />}
-          importsPanel={
-            <EditionImportsStub
-              editionName={edition.name}
-              seriesName={edition.event_series?.name ?? "—"}
-              liveSponsorCount={liveSponsorCount}
-            />
-          }
+          importsPanel={<EditionImportsPanel data={importsData} />}
         />
       </Suspense>
     </section>

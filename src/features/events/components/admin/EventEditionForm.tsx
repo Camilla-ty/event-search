@@ -133,9 +133,7 @@ export function EventEditionForm({
   }
 
   function buildPayload() {
-    return {
-      series_id: values.series_id,
-      year: yearNumber,
+    const payload = {
       name: values.name,
       slug: effectiveSlug,
       website_url: values.website_url.trim() || null,
@@ -143,6 +141,10 @@ export function EventEditionForm({
       end_date: values.end_date.trim() || null,
       city_id: values.city_id.trim() || null,
     };
+    if (mode === "create") {
+      return { ...payload, series_id: values.series_id, year: yearNumber };
+    }
+    return payload;
   }
 
   async function submitEdition(redirect: "import" | "detail" | "stay") {

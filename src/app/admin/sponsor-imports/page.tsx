@@ -2,11 +2,27 @@ import Link from "next/link";
 
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
-import { Button } from "@/src/components/common";
+import { ImportHistoryTable } from "@/src/features/sponsor-import/components/ImportHistoryTable";
+import { getImportHistoryData } from "@/src/features/sponsor-import/server/importUiData";
+import { primaryCtaClass } from "@/src/lib/design/classes";
 
 export const dynamic = "force-dynamic";
 
-export default function SponsorImportsStubPage() {
+export default async function SponsorImportsPage() {
+  const { batches } = await getImportHistoryData(100);
+
+  const tableRows = batches.map((b) => ({
+    id: String(b.id),
+    status: String(b.status),
+    source_filename: String(b.source_filename),
+    source_row_count: Number(b.source_row_count),
+    created_at: String(b.created_at),
+    edition_name: String(b.edition_name),
+    edition_year: Number(b.edition_year),
+    series_name: b.series_name != null ? String(b.series_name) : null,
+    event_edition_id: String(b.event_edition_id),
+  }));
+
   return (
     <section>
       <AdminBreadcrumbs
@@ -14,53 +30,15 @@ export default function SponsorImportsStubPage() {
       />
       <AdminPageHeader
         title="Sponsor imports"
-        description="Upload Excel sponsor lists for an event edition. Full import workflow ships in Phase 4."
+        description="Upload Excel sponsor lists for an event edition. One active import per edition."
+        actions={
+          <Link href="/admin/sponsor-imports/new" className={`${primaryCtaClass} h-10`}>
+            New import
+          </Link>
+        }
       />
 
-      <div className="rounded-xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-950">
-        <p className="font-semibold">Coming in Phase 4</p>
-        <p className="mt-2">
-          Database migration and import API are not live yet. You can create event editions
-          now and use <strong>Create &amp; import sponsors</strong> to save the edition —
-          import will activate once Phase 4 is deployed.
-        </p>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button type="button" disabled title="Available after Phase 4">
-          New import
-        </Button>
-      </div>
-
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white px-5 py-6">
-        <h2 className="font-semibold text-slate-900">What you can do now</h2>
-        <ul className="mt-3 space-y-2 text-sm">
-          <li>
-            <Link href="/admin/events/editions/new" className="text-brand-primary hover:underline">
-              Create event edition
-            </Link>
-          </li>
-          <li>
-            <Link href="/admin/events/editions" className="text-brand-primary hover:underline">
-              View event editions
-            </Link>
-          </li>
-          <li>
-            <Link href="/admin/companies" className="text-brand-primary hover:underline">
-              Manage companies
-            </Link>
-          </li>
-        </ul>
-      </div>
-
-      <p className="mt-8 text-center text-sm text-slate-500">
-        No sponsor imports yet. Start by creating an event edition, then return here after
-        Phase 4 to upload your first Excel file.
-      </p>
-
-      <p className="mt-4 text-xs text-slate-500">
-        Expected flow: Excel file → validation → review → draft → publish.
-      </p>
+      <ImportHistoryTable batches={tableRows} />
     </section>
   );
 }

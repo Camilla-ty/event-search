@@ -3,12 +3,25 @@ import Link from "next/link";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/common";
+import { DashboardImportsWidget } from "@/src/features/sponsor-import/components/DashboardImportsWidget";
+import { getDashboardImportsInProgress } from "@/src/features/sponsor-import/server/importUiData";
 import { BRAND_NAME } from "@/src/lib/design/brand";
 import { primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminHomePage() {
+export default async function AdminHomePage() {
+  const inProgress = await getDashboardImportsInProgress();
+  const widgetRows = inProgress.map((b) => ({
+    id: String(b.id),
+    status: String(b.status),
+    source_filename: String(b.source_filename),
+    source_row_count: Number(b.source_row_count),
+    edition_name: String(b.edition_name),
+    edition_year: Number(b.edition_year),
+    series_name: b.series_name != null ? String(b.series_name) : null,
+    event_edition_id: String(b.event_edition_id),
+  }));
   return (
     <section className="space-y-6">
       <AdminBreadcrumbs items={[{ label: "Admin" }, { label: "Dashboard" }]} />
@@ -17,16 +30,7 @@ export default function AdminHomePage() {
         description={`Manage ${BRAND_NAME} events, companies, and sponsor data.`}
       />
 
-      <div className="rounded-xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-950">
-        <p className="font-medium">Sponsor import — Phase 4</p>
-        <p className="mt-1">
-          Excel sponsor import is not available yet. Create event editions now; import will
-          activate in a later release.
-        </p>
-        <Link href="/admin/sponsor-imports" className="mt-2 inline-block text-brand-primary underline">
-          Sponsor imports hub
-        </Link>
-      </div>
+      <DashboardImportsWidget batches={widgetRows} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>

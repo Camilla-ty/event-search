@@ -1,7 +1,15 @@
 import * as XLSX from "xlsx";
 
+import {
+  buildSpreadsheetColumnOptions,
+  columnIndexToLetter,
+  columnMappingValue,
+} from "../columnMappingUi";
 import type { ColumnMapping, ParsedSpreadsheetRow } from "../types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../types";
+
+export { buildSpreadsheetColumnOptions, columnIndexToLetter, columnMappingValue };
+export type { SpreadsheetColumnOption } from "../columnMappingUi";
 
 export type SourceFileFormat = "xlsx" | "xls" | "csv";
 
@@ -117,23 +125,27 @@ export function parseWithColumnMapping(
 
 /** Guess column mapping from header labels (fallback when client omits mapping). */
 export function guessColumnMapping(headerRow: string[]): ColumnMapping | null {
-  const find = (patterns: RegExp[]): string | null => {
+  const findIndex = (patterns: RegExp[]): number | null => {
     for (let i = 0; i < headerRow.length; i++) {
       const label = (headerRow[i] ?? "").trim();
       if (!label) continue;
       if (patterns.some((p) => p.test(label))) {
-        return label;
+        return i;
       }
     }
     return null;
   };
 
-  const company_name =
-    find([/company/i, /sponsor/i, /name/i, /organization/i]) ?? "A";
-  const website = find([/website/i, /url/i, /domain/i, /web/i]) ?? "B";
-  const tier_rank = find([/tier/i, /rank/i, /level/i, /sponsor.*level/i]) ?? "C";
+  const companyIdx =
+    findIndex([/company/i, /sponsor/i, /name/i, /organization/i]) ?? 0;
+  const websiteIdx = findIndex([/website/i, /url/i, /domain/i, /web/i]) ?? 1;
+  const tierIdx = findIndex([/tier/i, /rank/i, /level/i, /sponsor.*level/i]) ?? 2;
 
-  return { company_name, website, tier_rank };
+  return {
+    company_name: columnMappingValue(headerRow, companyIdx),
+    website: columnMappingValue(headerRow, websiteIdx),
+    tier_rank: columnMappingValue(headerRow, tierIdx),
+  };
 }
 
 export function readSpreadsheetHeaders(buffer: ArrayBuffer): string[] {

@@ -113,11 +113,29 @@ export async function listBatchesAdmin(filters: {
   return { batches: data ?? [], total: count ?? 0 };
 }
 
+export async function getBatchSpreadsheetHeaders(batchId: string): Promise<string[]> {
+  const batch = await getBatchRow(batchId);
+  const supabase = createAdminClient();
+  const { data: fileData, error: downloadError } = await supabase.storage
+    .from(SPONSOR_IMPORT_BUCKET)
+    .download(batch.source_file_storage_path as string);
+
+  if (downloadError || !fileData) {
+    return [];
+  }
+
+  const buffer = await fileData.arrayBuffer();
+  return readSpreadsheetHeaders(buffer);
+}
+
 export async function getBatchAdmin(batchId: string) {
   const batch = await getBatchRow(batchId);
-  const rows = await loadImportRows(batchId);
+  const [rows, headers] = await Promise.all([
+    loadImportRows(batchId),
+    getBatchSpreadsheetHeaders(batchId),
+  ]);
   const summary = summarizeRows(rows);
-  return { batch, summary };
+  return { batch, summary, headers };
 }
 
 export async function getActiveBatchForEdition(editionId: string) {
