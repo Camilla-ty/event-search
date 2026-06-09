@@ -1,5 +1,5 @@
-/** Event Pixels — locked product identity (always this casing). */
-export const BRAND_NAME = "Event Pixels";
+/** EventPixels — locked product identity (always this casing). */
+export const BRAND_NAME = "EventPixels";
 
 /** Full logo (mark + wordmark) — served from /public/brand */
 export const BRAND_LOGO_WORDMARK_SRC = "/brand/logo-wordmark.svg";

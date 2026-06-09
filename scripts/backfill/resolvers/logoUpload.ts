@@ -174,7 +174,7 @@ async function tryOgImageLogo(domain: string): Promise<FetchedImage | null> {
     timeoutMs: HTML_FETCH_TIMEOUT_MS,
     headers: {
       accept: "text/html,application/xhtml+xml",
-      "user-agent": "HandshakesLogoBackfillBot/1.0 (+metadata image fetch)",
+      "user-agent": "EventPixelsLogoBackfillBot/1.0 (+metadata image fetch)",
     },
   });
 

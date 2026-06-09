@@ -14,8 +14,21 @@ export const primaryNavItems: NavItem[] = [
 /** @deprecated Use primaryNavItems — kept for imports during migration. */
 export const publicNavItems = primaryNavItems;
 
-export const adminNavItems: NavItem[] = [
-  { href: "/admin", label: "Admin Home" },
-  { href: "/admin/companies/new", label: "Create Company" },
-  { href: "/admin/events/new", label: "Create Event" },
+/** Admin workspace primary sidebar. */
+export const adminPrimaryNavItems: NavItem[] = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/events", label: "Events" },
+  { href: "/admin/sponsor-imports", label: "Sponsor imports" },
+  { href: "/admin/companies", label: "Companies" },
 ];
+
+/** Events section secondary nav (shown under Events routes). */
+export const adminEventsSubNavItems: NavItem[] = [
+  { href: "/admin/events", label: "Overview" },
+  { href: "/admin/events/editions", label: "Editions" },
+  { href: "/admin/events/series", label: "Series" },
+  { href: "/admin/events/editions/new", label: "Create edition" },
+];
+
+/** @deprecated Use adminPrimaryNavItems */
+export const adminNavItems: NavItem[] = adminPrimaryNavItems;

@@ -5,7 +5,7 @@ import { createPageMetadata } from "@/src/lib/metadata/site";
 export const metadata = createPageMetadata({
   title: "Exhibitors",
   description:
-    "Search and analyze exhibitor participation across events with Event Pixels.",
+    "Search and analyze exhibitor participation across events with EventPixels.",
   path: "/exhibitors",
 });
 

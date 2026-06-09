@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export const metadata = createPageMetadata({
   title: "Home",
   description:
-    "Discover events, sponsors, and companies with Event Pixels event industry intelligence.",
+    `Discover events, sponsors, and companies with ${BRAND_NAME} event industry intelligence.`,
   path: "/",
 });
 

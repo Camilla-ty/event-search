@@ -3,41 +3,19 @@ import { NextResponse } from "next/server";
 import { createEventEdition } from "@/src/features/events/server/createEventEdition";
 import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { createClient } from "@/src/lib/supabase/server";
+import { buildEditionSlug } from "@/src/lib/slugify";
+import { validateEditionCreateBody } from "@/src/lib/validation/eventEdition";
 
 type CreateEventEditionBody = {
   series_id?: string;
   year?: number | string;
   name?: string;
-  start_date?: string;
-  end_date?: string;
-  website_url?: string;
-  city_id?: string;
+  slug?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  website_url?: string | null;
+  city_id?: string | null;
 };
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-function slugify(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function buildEditionSlug(name: string, year: number): string {
-  return slugify(`${name} ${year}`);
-}
-
-function coerceYear(raw: unknown): number | null {
-  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
-  if (typeof raw === "string" && raw.trim() !== "") {
-    const n = Number(raw);
-    if (Number.isInteger(n)) return n;
-  }
-  return null;
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -70,58 +48,33 @@ export async function POST(request: Request) {
     );
   }
 
-  const seriesId = body.series_id?.trim() ?? "";
-  const cityId = body.city_id?.trim() ?? "";
   const name = body.name?.trim() ?? "";
-  const websiteUrl = body.website_url?.trim() ?? "";
-  const startDate = body.start_date?.trim() ?? "";
-  const endDate = body.end_date?.trim() ?? "";
-  const year = coerceYear(body.year);
+  const year = body.year;
+  const derivedSlug =
+    body.slug && body.slug.trim() !== ""
+      ? body.slug.trim()
+      : buildEditionSlug(name, Number(year));
 
-  const errors: string[] = [];
-  if (!UUID_REGEX.test(seriesId)) errors.push("series_id must be a valid UUID");
-  if (!UUID_REGEX.test(cityId)) errors.push("city_id must be a valid UUID");
-  if (year === null) errors.push("year must be an integer");
-  if (!name) errors.push("name is required");
-  if (!websiteUrl) errors.push("website_url is required");
-  if (!ISO_DATE_REGEX.test(startDate))
-    errors.push("start_date must be YYYY-MM-DD");
-  if (!ISO_DATE_REGEX.test(endDate)) errors.push("end_date must be YYYY-MM-DD");
-  if (
-    ISO_DATE_REGEX.test(startDate) &&
-    ISO_DATE_REGEX.test(endDate) &&
-    startDate > endDate
-  ) {
-    errors.push("start_date must be on or before end_date");
-  }
+  const validated = validateEditionCreateBody({
+    series_id: body.series_id,
+    year: body.year,
+    name,
+    slug: derivedSlug,
+    start_date: body.start_date,
+    end_date: body.end_date,
+    website_url: body.website_url,
+    city_id: body.city_id,
+  });
 
-  if (errors.length > 0 || year === null) {
+  if (!validated.ok) {
     return NextResponse.json(
-      { ok: false, error: errors.join("; ") || "Invalid payload." },
-      { status: 400 },
-    );
-  }
-
-  const slug = buildEditionSlug(name, year);
-  if (!slug) {
-    return NextResponse.json(
-      { ok: false, error: "Could not derive slug from name and year." },
+      { ok: false, error: validated.errors.join("; ") || "Invalid payload." },
       { status: 400 },
     );
   }
 
   try {
-    const edition = await createEventEdition({
-      series_id: seriesId,
-      year,
-      name,
-      slug,
-      start_date: startDate,
-      end_date: endDate,
-      website_url: websiteUrl,
-      city_id: cityId,
-    });
-
+    const edition = await createEventEdition(validated.data);
     return NextResponse.json({ ok: true, edition }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

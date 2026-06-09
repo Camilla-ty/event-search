@@ -1,4 +1,4 @@
-/** Shared Tailwind class strings for the Event Pixels design system. */
+/** Shared Tailwind class strings for the EventPixels design system. */
 
 export const brandLinkClass =
   "font-medium text-brand-primary transition hover:text-brand-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2";

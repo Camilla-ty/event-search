@@ -37,8 +37,8 @@ export async function generateMetadata({
   const country = edition.cities?.countries?.name;
   const location = [city, country].filter(Boolean).join(", ");
   const description = location
-    ? `${name} — ${location}. View sponsors and event intelligence on Event Pixels.`
-    : `${name}. View sponsors and event intelligence on Event Pixels.`;
+    ? `${name} — ${location}. View sponsors and event intelligence on EventPixels.`
+    : `${name}. View sponsors and event intelligence on EventPixels.`;
   const slug = typeof edition.slug === "string" ? edition.slug : id;
   return createPageMetadata({
     title: name,

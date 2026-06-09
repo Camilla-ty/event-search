@@ -157,7 +157,7 @@ async function fetchHomepageMetadata(
     headers: {
       accept: "text/html,application/xhtml+xml",
       "user-agent":
-        "HandshakesMetadataBot/1.0 (+server-side metadata fetch; not a content scraper)",
+        "EventPixelsMetadataBot/1.0 (+server-side metadata fetch; not a content scraper)",
     },
   });
   if (!response || !response.ok) return empty;

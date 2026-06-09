@@ -5,6 +5,8 @@ import type { LayoutMode } from "@/src/lib/layout/layoutMode";
 import { isSidebarLayoutMode } from "@/src/lib/layout/layoutMode";
 import type { MarketingNavSession } from "@/src/lib/auth/marketingSession";
 
+import { AdminShell } from "@/src/features/admin/components/AdminShell";
+
 import { BrowseMobileHeader } from "./BrowseMobileHeader";
 import { GlobalSearchBar } from "./GlobalSearchBar";
 import { MobilePrimaryNav } from "./MobilePrimaryNav";
@@ -43,12 +45,9 @@ export function LayoutShell({
     return (
       <div className={tokens.shell}>
         <SkipLink />
-        <NavigationShell mode={mode} session={session} adminEmail={adminEmail} />
-        <div className={tokens.contentColumn}>
-          <main id="main-content" className={tokens.main}>
-            <div className={tokens.page}>{children}</div>
-          </main>
-        </div>
+        <AdminShell session={session} adminEmail={adminEmail}>
+          {children}
+        </AdminShell>
       </div>
     );
   }

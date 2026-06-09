@@ -22,8 +22,8 @@ export async function generateMetadata({
   const name = data.company.name?.trim() || "Sponsor";
   const industry = data.company.industry?.trim();
   const description = industry
-    ? `${name} — ${industry}. Company and sponsor intelligence on Event Pixels.`
-    : `${name}. Company and sponsor intelligence on Event Pixels.`;
+    ? `${name} — ${industry}. Company and sponsor intelligence on EventPixels.`
+    : `${name}. Company and sponsor intelligence on EventPixels.`;
   const profileSlug = data.company.slug?.trim() || slug;
   return createPageMetadata({
     title: name,
