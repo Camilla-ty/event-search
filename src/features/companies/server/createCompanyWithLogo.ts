@@ -1,6 +1,9 @@
+import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { fetchAndUploadLogoByDomain } from "./logo";
+
+export { normalizeDomainFromWebsite };
 
 export type CreateCompanyInput = {
   name: string;
@@ -18,25 +21,6 @@ export type CompanyRow = {
   short_description?: string | null;
   description?: string | null;
 };
-
-export function normalizeDomainFromWebsite(website: string): string {
-  const value = website.trim().toLowerCase();
-  if (!value) return "";
-
-  try {
-    const withProtocol =
-      value.startsWith("http://") || value.startsWith("https://")
-        ? value
-        : `https://${value}`;
-    const parsed = new URL(withProtocol);
-    return parsed.hostname.replace(/^www\./, "");
-  } catch {
-    return value
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .replace(/\/.*$/, "");
-  }
-}
 
 function buildShortDescription(name: string) {
   return `${name} partner profile`;
