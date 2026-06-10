@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Badge, Button } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
+import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { SponsorRecord } from "./types";
@@ -29,12 +30,7 @@ export function SponsorCard({ sponsor }: { sponsor: SponsorRecord }) {
   return (
     <article className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center">
       <CompanyLogo
-        company={{
-          name: sponsor.companies?.name,
-          logo_url: sponsor.companies?.logo_url,
-          domain: sponsor.companies?.domain,
-          logo_status: sponsor.companies?.logo_status,
-        }}
+        company={companyLogoFieldsFromRow(sponsor.companies)}
         className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
         monogramClassName="text-lg font-semibold text-slate-400"
         logoDevSize={112}

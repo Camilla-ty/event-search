@@ -8,6 +8,7 @@ export type CompanyLogoFields = {
   name?: string | null;
   logo_url?: string | null;
   domain?: string | null;
+  logo_source?: string | null;
   logo_status?: string | null;
 };
 

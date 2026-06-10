@@ -5,6 +5,7 @@ export type EventSponsorCompany = {
   website?: string | null;
   logo_url?: string | null;
   domain?: string | null;
+  logo_source?: string | null;
   logo_status?: string | null;
   short_description?: string | null;
   description?: string | null;

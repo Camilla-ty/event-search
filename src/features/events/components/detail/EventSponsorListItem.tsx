@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
+import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { EventSponsorRow } from "./types";
@@ -36,12 +37,7 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
       >
         <div className="flex gap-3">
           <CompanyLogo
-            company={{
-              name: company?.name,
-              logo_url: company?.logo_url,
-              domain: company?.domain,
-              logo_status: company?.logo_status,
-            }}
+            company={companyLogoFieldsFromRow(company)}
             className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
             monogramClassName="text-lg font-semibold text-slate-400"
             logoDevSize={112}

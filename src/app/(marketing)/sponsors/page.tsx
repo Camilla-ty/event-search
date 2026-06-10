@@ -34,6 +34,7 @@ function sponsorCompanyFromRow(row: CompanyPublicRow): SponsorRecord["companies"
     name: row.name ?? null,
     logo_url: row.logo_url ?? null,
     domain: row.domain ?? null,
+    logo_source: row.logo_source ?? null,
     logo_status: row.logo_status ?? null,
     industry: extended.industry ?? null,
     location:

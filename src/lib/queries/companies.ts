@@ -19,14 +19,51 @@ function normalizeEditionIdForQuery(raw: string): string {
   return isUuidString(trimmed) ? trimmed.toLowerCase() : trimmed;
 }
 
+/** Explicit public company columns (includes logo metadata for Logo.dev resolver). */
+export const COMPANY_PUBLIC_COLUMNS = `
+  id,
+  name,
+  slug,
+  domain,
+  website,
+  logo_url,
+  logo_source,
+  logo_status,
+  logo_fetched_at,
+  logo_fetch_error,
+  short_description,
+  description,
+  city_id,
+  created_at
+`;
+
 /** Public company profile fields + city/country for detail pages. */
 export const COMPANY_PUBLIC_SELECT = `
-  *,
+  ${COMPANY_PUBLIC_COLUMNS},
   cities (
     *,
     ${CITY_PUBLIC_EMBED}
   )
 `;
+
+export type CompanyPublicRow = {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string | null;
+  website: string | null;
+  logo_url: string | null;
+  logo_source: string | null;
+  logo_status: string | null;
+  logo_fetched_at: string | null;
+  logo_fetch_error: string | null;
+  short_description: string | null;
+  description: string | null;
+  city_id: string | null;
+  created_at: string | null;
+  cities?: unknown;
+  industry?: string | null;
+};
 
 async function getCompanyByIdAdmin(id: string) {
   try {
@@ -37,13 +74,13 @@ async function getCompanyByIdAdmin(id: string) {
       .eq("id", id)
       .maybeSingle();
     if (error) return null;
-    return data;
+    return data as CompanyPublicRow;
   } catch {
     return null;
   }
 }
 
-export async function getCompanyById(id: string) {
+export async function getCompanyById(id: string): Promise<CompanyPublicRow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("companies")
@@ -53,13 +90,13 @@ export async function getCompanyById(id: string) {
 
   if (error) throw new Error(error.message);
   if (data) {
-    return data;
+    return data as CompanyPublicRow;
   }
 
   return getCompanyByIdAdmin(id);
 }
 
-async function getCompanyBySlugAdmin(slug: string) {
+async function getCompanyBySlugAdmin(slug: string): Promise<CompanyPublicRow | null> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -68,13 +105,13 @@ async function getCompanyBySlugAdmin(slug: string) {
       .eq("slug", slug)
       .maybeSingle();
     if (error) return null;
-    return data;
+    return data as CompanyPublicRow;
   } catch {
     return null;
   }
 }
 
-export async function getCompanyBySlug(slug: string) {
+export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow | null> {
   const key = slug.trim();
   if (!key) return null;
 
@@ -87,13 +124,11 @@ export async function getCompanyBySlug(slug: string) {
 
   if (error) throw new Error(error.message);
   if (data) {
-    return data;
+    return data as CompanyPublicRow;
   }
 
   return getCompanyBySlugAdmin(key);
 }
-
-export type CompanyPublicRow = NonNullable<Awaited<ReturnType<typeof getCompanyById>>>;
 
 export async function getCompaniesByIds(ids: readonly string[]) {
   const unique = [...new Set(ids.filter((id) => id.trim() !== ""))];
@@ -108,7 +143,7 @@ export async function getCompaniesByIds(ids: readonly string[]) {
     .in("id", unique);
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as CompanyPublicRow[];
 }
 
 async function getCompaniesByIdsAdmin(ids: readonly string[]) {
@@ -124,7 +159,7 @@ async function getCompaniesByIdsAdmin(ids: readonly string[]) {
     if (error) {
       return [];
     }
-    return data ?? [];
+    return (data ?? []) as CompanyPublicRow[];
   } catch {
     return [];
   }
