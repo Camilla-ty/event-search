@@ -9,6 +9,10 @@ import { getEventSeriesAdminById } from "@/src/features/events/server/eventSerie
 import { primaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
+import {
+  getKeywordsForSeriesId,
+  listKeywordsAdmin,
+} from "@/src/features/events/server/seriesKeywordsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +25,11 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
   const series = await getEventSeriesAdminById(id);
   if (!series) notFound();
 
-  const editions = await listEventEditionsAdmin({ seriesId: id });
+  const [editions, allKeywords, seriesKeywords] = await Promise.all([
+    listEventEditionsAdmin({ seriesId: id }),
+    listKeywordsAdmin(),
+    getKeywordsForSeriesId(id),
+  ]);
 
   return (
     <section>
@@ -50,6 +58,8 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
       <EventSeriesForm
         mode="edit"
         seriesId={series.id}
+        allKeywords={allKeywords}
+        initialKeywordIds={seriesKeywords.map((keyword) => keyword.id)}
         initial={{
           name: series.name,
           slug: series.slug,

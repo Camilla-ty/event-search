@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
+import type { KeywordRow } from "@/src/features/events/types/keywords";
 import { formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
+
+import { SeriesKeywordMultiSelect } from "./SeriesKeywordMultiSelect";
 
 type SeriesFormValues = {
   name: string;
@@ -20,13 +23,22 @@ type EventSeriesFormProps = {
   mode: "create" | "edit";
   seriesId?: string;
   initial: SeriesFormValues;
+  allKeywords: KeywordRow[];
+  initialKeywordIds: string[];
 };
 
 type ApiResponse = { ok: boolean; error?: string; series?: { id: string } };
 
-export function EventSeriesForm({ mode, seriesId, initial }: EventSeriesFormProps) {
+export function EventSeriesForm({
+  mode,
+  seriesId,
+  initial,
+  allKeywords,
+  initialKeywordIds,
+}: EventSeriesFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<SeriesFormValues>(initial);
+  const [keywordIds, setKeywordIds] = useState<string[]>(initialKeywordIds);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -47,6 +59,7 @@ export function EventSeriesForm({ mode, seriesId, initial }: EventSeriesFormProp
       description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
       logo_url: values.logo_url.trim() || null,
+      keyword_ids: keywordIds,
     };
 
     const url =
@@ -179,6 +192,16 @@ export function EventSeriesForm({ mode, seriesId, initial }: EventSeriesFormProp
             className={formInputClass}
           />
         </label>
+
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-slate-700">Keywords</span>
+          <SeriesKeywordMultiSelect
+            keywords={allKeywords}
+            selectedIds={keywordIds}
+            onChange={setKeywordIds}
+            disabled={isSubmitting}
+          />
+        </div>
 
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : mode === "create" ? "Create series" : "Save changes"}

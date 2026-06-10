@@ -7,6 +7,7 @@ import {
   createEventSeries,
   listEventSeriesAdmin,
 } from "@/src/features/events/server/eventSeriesAdmin";
+import { setSeriesKeywords } from "@/src/features/events/server/seriesKeywordsAdmin";
 
 export async function GET(request: Request) {
   const auth = await requireAdminApi();
@@ -30,6 +31,7 @@ type CreateSeriesBody = {
   description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
+  keyword_ids?: string[];
 };
 
 export async function POST(request: Request) {
@@ -67,6 +69,9 @@ export async function POST(request: Request) {
       website_url: website,
       logo_url: logo,
     });
+    if (Array.isArray(body.keyword_ids)) {
+      await setSeriesKeywords(series.id, body.keyword_ids);
+    }
     return NextResponse.json({ ok: true, series }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

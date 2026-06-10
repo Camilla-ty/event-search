@@ -2,10 +2,12 @@ import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrum
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
+import { listKeywordsAdmin } from "@/src/features/events/server/seriesKeywordsAdmin";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminCreateEventSeriesPage() {
+export default async function AdminCreateEventSeriesPage() {
+  const allKeywords = await listKeywordsAdmin();
   return (
     <section>
       <AdminBreadcrumbs
@@ -23,6 +25,8 @@ export default function AdminCreateEventSeriesPage() {
       <EventsSubNav />
       <EventSeriesForm
         mode="create"
+        allKeywords={allKeywords}
+        initialKeywordIds={[]}
         initial={{
           name: "",
           slug: "",

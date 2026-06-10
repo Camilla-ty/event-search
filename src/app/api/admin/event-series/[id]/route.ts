@@ -7,6 +7,10 @@ import {
   getEventSeriesAdminById,
   updateEventSeries,
 } from "@/src/features/events/server/eventSeriesAdmin";
+import {
+  getKeywordsForSeriesId,
+  setSeriesKeywords,
+} from "@/src/features/events/server/seriesKeywordsAdmin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,7 +25,8 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!series) {
       return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
     }
-    return NextResponse.json({ ok: true, series });
+    const keywords = await getKeywordsForSeriesId(id);
+    return NextResponse.json({ ok: true, series, keywords });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
@@ -34,6 +39,7 @@ type PatchSeriesBody = {
   description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
+  keyword_ids?: string[];
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -80,7 +86,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const series = await updateEventSeries(id, patch);
-    return NextResponse.json({ ok: true, series });
+    if (Array.isArray(body.keyword_ids)) {
+      await setSeriesKeywords(id, body.keyword_ids);
+    }
+    const keywords = await getKeywordsForSeriesId(id);
+    return NextResponse.json({ ok: true, series, keywords });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

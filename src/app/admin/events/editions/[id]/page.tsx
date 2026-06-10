@@ -12,8 +12,10 @@ import { EditionImportsPanel } from "@/src/features/sponsor-import/components/Ed
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
 import { getEditionImportsData } from "@/src/features/sponsor-import/server/importUiData";
+import { EditionInheritedKeywords } from "@/src/features/events/components/admin/EditionInheritedKeywords";
 import { EditionLiveSponsorsTable } from "@/src/features/events/components/admin/EditionLiveSponsorsTable";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
+import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
 import {
   countLiveSponsorsForEdition,
   getEventEditionAdminById,
@@ -54,18 +56,20 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
 
   const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
 
-  const [cities, series, liveSponsorCount, sponsors, importsData] = await Promise.all([
-    getCityOptions(),
-    getSeriesOptions(),
-    countLiveSponsorsForEdition(id),
-    getCompaniesByEventEdition(id),
-    getEditionImportsData(
-      id,
-      edition.name,
-      edition.event_series?.name ?? "—",
-      0,
-    ),
-  ]);
+  const [cities, series, liveSponsorCount, sponsors, importsData, inheritedKeywords] =
+    await Promise.all([
+      getCityOptions(),
+      getSeriesOptions(),
+      countLiveSponsorsForEdition(id),
+      getCompaniesByEventEdition(id),
+      getEditionImportsData(
+        id,
+        edition.name,
+        edition.event_series?.name ?? "—",
+        0,
+      ),
+      getInheritedKeywordsForEditionId(id),
+    ]);
 
   importsData.liveSponsorCount = liveSponsorCount;
 
@@ -143,24 +147,30 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
           editionId={edition.id}
           profileWarnings={editionProfileWarnings(edition)}
           profilePanel={
-            <EventEditionForm
-              mode="edit"
-              editionId={edition.id}
-              series={series}
-              cities={cities}
-              readOnlySeriesName={edition.event_series?.name}
-              readOnlyYear={edition.year}
-              initial={{
-                series_id: edition.series_id ?? "",
-                year: String(edition.year),
-                name: edition.name,
-                slug: edition.slug,
-                website_url: edition.website_url ?? "",
-                start_date: edition.start_date ?? "",
-                end_date: edition.end_date ?? "",
-                city_id: edition.city_id ?? "",
-              }}
-            />
+            <div className="space-y-6">
+              <EditionInheritedKeywords
+                seriesName={edition.event_series?.name ?? null}
+                keywords={inheritedKeywords}
+              />
+              <EventEditionForm
+                mode="edit"
+                editionId={edition.id}
+                series={series}
+                cities={cities}
+                readOnlySeriesName={edition.event_series?.name}
+                readOnlyYear={edition.year}
+                initial={{
+                  series_id: edition.series_id ?? "",
+                  year: String(edition.year),
+                  name: edition.name,
+                  slug: edition.slug,
+                  website_url: edition.website_url ?? "",
+                  start_date: edition.start_date ?? "",
+                  end_date: edition.end_date ?? "",
+                  city_id: edition.city_id ?? "",
+                }}
+              />
+            </div>
           }
           sponsorsPanel={<EditionLiveSponsorsTable sponsors={sponsorRows} />}
           importsPanel={<EditionImportsPanel data={importsData} />}
