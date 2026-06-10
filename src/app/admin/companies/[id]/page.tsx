@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { CompanyAdminForm } from "@/src/features/companies/components/admin/CompanyAdminForm";
+import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { getCompanyAdminById } from "@/src/features/companies/server/companyAdmin";
+import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +17,10 @@ type PageProps = {
 
 export default async function AdminCompanyDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [company, cities] = await Promise.all([
+  const [company, cities, sponsorships] = await Promise.all([
     getCompanyAdminById(id),
     getCityOptions(),
+    listSponsorshipsForCompanyAdmin(id),
   ]);
 
   if (!company) notFound();
@@ -63,6 +66,17 @@ export default async function AdminCompanyDetailPage({ params }: PageProps) {
           description: company.description ?? "",
         }}
       />
+
+      <div className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
+          Sponsorships ({sponsorships.length})
+        </h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Read-only. Tier and roster changes are made on each edition&apos;s sponsors
+          tab.
+        </p>
+        <CompanySponsorshipsTable sponsorships={sponsorships} />
+      </div>
     </section>
   );
 }

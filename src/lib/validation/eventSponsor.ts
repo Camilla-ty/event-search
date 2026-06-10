@@ -2,10 +2,57 @@ const TIER_RANK_MIN = 1;
 const TIER_RANK_MAX = 1000;
 const TIER_LABEL_MAX_LENGTH = 80;
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type EventSponsorUpdatePatch = {
   tier_rank?: number;
   tier_label?: string | null;
 };
+
+export type EventSponsorCreatePayload = {
+  company_id: string;
+  tier_rank: number;
+  tier_label: string | null;
+};
+
+function parseTierRank(
+  raw: unknown,
+): { ok: true; rank: number } | { ok: false; error: string } {
+  const rank =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && raw.trim() !== ""
+        ? Number(raw)
+        : null;
+  if (rank === null || !Number.isInteger(rank)) {
+    return { ok: false, error: "tier_rank must be an integer" };
+  }
+  if (rank < TIER_RANK_MIN || rank > TIER_RANK_MAX) {
+    return {
+      ok: false,
+      error: `tier_rank must be between ${TIER_RANK_MIN} and ${TIER_RANK_MAX}`,
+    };
+  }
+  return { ok: true, rank };
+}
+
+function parseTierLabel(
+  raw: unknown,
+): { ok: true; label: string | null } | { ok: false; error: string } {
+  if (raw === null || raw === undefined) return { ok: true, label: null };
+  if (typeof raw !== "string") {
+    return { ok: false, error: "tier_label must be a string or null" };
+  }
+  const label = raw.trim();
+  if (label.length > TIER_LABEL_MAX_LENGTH) {
+    return {
+      ok: false,
+      error: `tier_label must be at most ${TIER_LABEL_MAX_LENGTH} characters`,
+    };
+  }
+  return { ok: true, label: label === "" ? null : label };
+}
 
 /**
  * Validates a PATCH body for an `event_sponsors` link.
@@ -23,40 +70,20 @@ export function validateEventSponsorUpdateBody(
   const patch: EventSponsorUpdatePatch = {};
 
   if ("tier_rank" in body) {
-    const raw = body.tier_rank;
-    const rank =
-      typeof raw === "number"
-        ? raw
-        : typeof raw === "string" && raw.trim() !== ""
-          ? Number(raw)
-          : null;
-
-    if (rank === null || !Number.isInteger(rank)) {
-      errors.push("tier_rank must be an integer");
-    } else if (rank < TIER_RANK_MIN || rank > TIER_RANK_MAX) {
-      errors.push(
-        `tier_rank must be between ${TIER_RANK_MIN} and ${TIER_RANK_MAX}`,
-      );
+    const rank = parseTierRank(body.tier_rank);
+    if (rank.ok) {
+      patch.tier_rank = rank.rank;
     } else {
-      patch.tier_rank = rank;
+      errors.push(rank.error);
     }
   }
 
   if ("tier_label" in body) {
-    const raw = body.tier_label;
-    if (raw === null) {
-      patch.tier_label = null;
-    } else if (typeof raw === "string") {
-      const label = raw.trim();
-      if (label.length > TIER_LABEL_MAX_LENGTH) {
-        errors.push(
-          `tier_label must be at most ${TIER_LABEL_MAX_LENGTH} characters`,
-        );
-      } else {
-        patch.tier_label = label === "" ? null : label;
-      }
+    const label = parseTierLabel(body.tier_label);
+    if (label.ok) {
+      patch.tier_label = label.label;
     } else {
-      errors.push("tier_label must be a string or null");
+      errors.push(label.error);
     }
   }
 
@@ -69,4 +96,50 @@ export function validateEventSponsorUpdateBody(
   }
 
   return { ok: true, patch };
+}
+
+/**
+ * Validates a POST body that attaches a company to an edition.
+ *
+ * `company_id` and `tier_rank` are required; `tier_label` is optional
+ * (null/blank stores null).
+ */
+export function validateEventSponsorCreateBody(
+  body: Record<string, unknown>,
+):
+  | { ok: true; data: EventSponsorCreatePayload }
+  | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+
+  const companyIdRaw = body.company_id;
+  const companyId =
+    typeof companyIdRaw === "string" && UUID_REGEX.test(companyIdRaw.trim())
+      ? companyIdRaw.trim()
+      : null;
+  if (companyId === null) {
+    errors.push("company_id must be a valid UUID");
+  }
+
+  const rank = parseTierRank(body.tier_rank);
+  if (!rank.ok) {
+    errors.push(rank.error);
+  }
+
+  const label = parseTierLabel(body.tier_label);
+  if (!label.ok) {
+    errors.push(label.error);
+  }
+
+  if (errors.length > 0 || companyId === null || !rank.ok || !label.ok) {
+    return { ok: false, errors };
+  }
+
+  return {
+    ok: true,
+    data: {
+      company_id: companyId,
+      tier_rank: rank.rank,
+      tier_label: label.label,
+    },
+  };
 }

@@ -203,7 +203,13 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
             </div>
           }
           sponsorsPanel={
-            <EditionSponsorsPanel sponsors={sponsorRows} activeImport={activeImport} />
+            <EditionSponsorsPanel
+              editionId={edition.id}
+              editionName={edition.name}
+              editionYear={edition.year}
+              sponsors={sponsorRows}
+              activeImport={activeImport}
+            />
           }
           importsPanel={<EditionImportsPanel data={importsData} />}
         />

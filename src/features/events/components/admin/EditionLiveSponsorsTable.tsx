@@ -15,11 +15,13 @@ export type LiveSponsorRow = {
 type EditionLiveSponsorsTableProps = {
   sponsors: LiveSponsorRow[];
   onEdit?: (row: LiveSponsorRow) => void;
+  onRemove?: (row: LiveSponsorRow) => void;
 };
 
 export function EditionLiveSponsorsTable({
   sponsors,
   onEdit,
+  onRemove,
 }: EditionLiveSponsorsTableProps) {
   if (sponsors.length === 0) {
     return (
@@ -76,7 +78,16 @@ export function EditionLiveSponsorsTable({
                         View
                       </Link>
                     ) : null}
-                    {!onEdit && !companyId ? "—" : null}
+                    {onRemove ? (
+                      <button
+                        type="button"
+                        className="text-red-600 hover:underline"
+                        onClick={() => onRemove(row)}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                    {!onEdit && !onRemove && !companyId ? "—" : null}
                   </span>
                 </td>
               </tr>

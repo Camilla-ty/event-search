@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
 import {
   defaultStepForBatchStatus,
@@ -15,6 +16,7 @@ import {
   EditionLiveSponsorsTable,
   type LiveSponsorRow,
 } from "./EditionLiveSponsorsTable";
+import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
 
 export type ActiveImportInfo = {
@@ -22,20 +24,40 @@ export type ActiveImportInfo = {
   status: SponsorImportBatchStatus;
 };
 
+type PanelAction =
+  | { type: "edit"; row: LiveSponsorRow }
+  | { type: "create" }
+  | { type: "remove"; row: LiveSponsorRow }
+  | null;
+
 type EditionSponsorsPanelProps = {
+  editionId: string;
+  editionName: string;
+  editionYear: number;
   sponsors: LiveSponsorRow[];
   activeImport: ActiveImportInfo | null;
 };
 
 export function EditionSponsorsPanel({
+  editionId,
+  editionName,
+  editionYear,
   sponsors,
   activeImport,
 }: EditionSponsorsPanelProps) {
   const router = useRouter();
-  const [editingRow, setEditingRow] = useState<LiveSponsorRow | null>(null);
+  const [action, setAction] = useState<PanelAction>(null);
 
-  function handleSaved() {
-    setEditingRow(null);
+  const attachedCompanyIds = new Set<string>();
+  for (const sponsor of sponsors) {
+    const companyId = sponsor.companies?.id;
+    if (typeof companyId === "string" && companyId !== "") {
+      attachedCompanyIds.add(companyId);
+    }
+  }
+
+  function handleDone() {
+    setAction(null);
     router.refresh();
   }
 
@@ -45,7 +67,7 @@ export function EditionSponsorsPanel({
         <WarningBanner
           title="Import in progress"
           messages={[
-            "An import batch is in progress for this edition. Tier changes made here may be overwritten when that batch is published.",
+            "An import batch is in progress for this edition. Tier changes and removals made here may be overwritten or re-added when that batch is published.",
           ]}
           action={
             <Link
@@ -61,13 +83,47 @@ export function EditionSponsorsPanel({
         />
       ) : null}
 
-      <EditionLiveSponsorsTable sponsors={sponsors} onEdit={setEditingRow} />
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-600">
+          {sponsors.length} live sponsor{sponsors.length === 1 ? "" : "s"}
+        </p>
+        <Button onClick={() => setAction({ type: "create" })}>Add sponsor</Button>
+      </div>
 
-      <SponsorLinkDrawer
-        row={editingRow}
-        onClose={() => setEditingRow(null)}
-        onSaved={handleSaved}
+      <EditionLiveSponsorsTable
+        sponsors={sponsors}
+        onEdit={(row) => setAction({ type: "edit", row })}
+        onRemove={(row) => setAction({ type: "remove", row })}
       />
+
+      {action?.type === "edit" ? (
+        <SponsorLinkDrawer
+          mode="edit"
+          row={action.row}
+          onClose={() => setAction(null)}
+          onSaved={handleDone}
+        />
+      ) : null}
+
+      {action?.type === "create" ? (
+        <SponsorLinkDrawer
+          mode="create"
+          editionId={editionId}
+          attachedCompanyIds={attachedCompanyIds}
+          onClose={() => setAction(null)}
+          onSaved={handleDone}
+        />
+      ) : null}
+
+      {action?.type === "remove" ? (
+        <RemoveSponsorModal
+          row={action.row}
+          editionName={editionName}
+          editionYear={editionYear}
+          onClose={() => setAction(null)}
+          onRemoved={handleDone}
+        />
+      ) : null}
     </div>
   );
 }

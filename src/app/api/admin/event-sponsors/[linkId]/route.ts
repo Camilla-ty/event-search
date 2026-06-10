@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  deleteEventSponsorLinkAdmin,
   getEventSponsorLinkAdminById,
   updateEventSponsorLinkAdmin,
 } from "@/src/features/events/server/eventSponsorAdmin";
@@ -40,6 +41,27 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const link = await updateEventSponsorLinkAdmin(linkId, validated.patch);
+    return NextResponse.json({ ok: true, link });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireAdminApi();
+  if (!auth.ok) return auth.response;
+
+  const { linkId } = await context.params;
+
+  try {
+    const link = await deleteEventSponsorLinkAdmin(linkId);
+    if (!link) {
+      return NextResponse.json(
+        { ok: false, error: "Sponsor link not found." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ ok: true, link });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
