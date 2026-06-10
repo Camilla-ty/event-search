@@ -104,6 +104,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
     id: String(row.id),
     tier_rank: typeof row.tier_rank === "number" ? row.tier_rank : null,
     tier_label: typeof row.tier_label === "string" ? row.tier_label : null,
+    display_order: typeof row.display_order === "number" ? row.display_order : null,
     companies:
       row.companies && typeof row.companies === "object"
         ? {

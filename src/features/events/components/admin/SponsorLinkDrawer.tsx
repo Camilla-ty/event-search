@@ -110,6 +110,7 @@ type TierFieldsProps = {
   tierLabel: string;
   tierRank: string;
   rankRequired: boolean;
+  rankExtraHint?: string;
   onLabelChange: (value: string) => void;
   onRankChange: (value: string) => void;
 };
@@ -118,6 +119,7 @@ function TierFields({
   tierLabel,
   tierRank,
   rankRequired,
+  rankExtraHint,
   onLabelChange,
   onRankChange,
 }: TierFieldsProps) {
@@ -163,7 +165,7 @@ function TierFields({
         <p className="mt-1 text-xs text-slate-500">
           Integer between {TIER_RANK_MIN} and {TIER_RANK_MAX}. Lower ranks appear
           first on the public page, and only rank 1 sponsors are visible to
-          logged-out visitors.
+          logged-out visitors.{rankExtraHint ? ` ${rankExtraHint}` : ""}
         </p>
       </div>
     </>
@@ -267,6 +269,7 @@ function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
         tierLabel={tierLabel}
         tierRank={tierRank}
         rankRequired={false}
+        rankExtraHint="Changing the rank moves the sponsor to the end of the new tier."
         onLabelChange={setTierLabel}
         onRankChange={setTierRank}
       />

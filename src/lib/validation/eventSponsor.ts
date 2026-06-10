@@ -98,6 +98,19 @@ export function validateEventSponsorUpdateBody(
   return { ok: true, patch };
 }
 
+export type SponsorMoveDirection = "up" | "down";
+
+/** Validates a POST body for moving a sponsor within its tier. */
+export function validateEventSponsorMoveBody(
+  body: Record<string, unknown>,
+): { ok: true; direction: SponsorMoveDirection } | { ok: false; errors: string[] } {
+  const raw = body.direction;
+  if (raw === "up" || raw === "down") {
+    return { ok: true, direction: raw };
+  }
+  return { ok: false, errors: ['direction must be "up" or "down"'] };
+}
+
 /**
  * Validates a POST body that attaches a company to an edition.
  *

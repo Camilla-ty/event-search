@@ -203,7 +203,8 @@ export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id
 }
 
 /**
- * Sponsor links for an edition, ordered by `event_sponsors.tier_rank`.
+ * Sponsor links for an edition in canonical order:
+ * `tier_rank ASC NULLS LAST, display_order ASC NULLS LAST, id ASC`.
  * Company fields always come from `companies` (batch by `company_id`), not from embeds.
  */
 export async function getCompaniesByEventEdition(eventEditionId: string) {
@@ -211,9 +212,11 @@ export async function getCompaniesByEventEdition(eventEditionId: string) {
   const editionKey = normalizeEditionIdForQuery(eventEditionId);
   const { data: links, error } = await supabase
     .from("event_sponsors")
-    .select("id, company_id, tier_rank, tier_label, event_editions_id")
+    .select("id, company_id, tier_rank, tier_label, display_order, event_editions_id")
     .eq("event_editions_id", editionKey)
-    .order("tier_rank", { ascending: true });
+    .order("tier_rank", { ascending: true, nullsFirst: false })
+    .order("display_order", { ascending: true, nullsFirst: false })
+    .order("id", { ascending: true });
 
   if (error) throw new Error(error.message);
   const list = links ?? [];

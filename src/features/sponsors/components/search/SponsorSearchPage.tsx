@@ -78,6 +78,9 @@ export function SponsorSearchPage({
       const ar = a.tier_rank ?? Number.POSITIVE_INFINITY;
       const br = b.tier_rank ?? Number.POSITIVE_INFINITY;
       if (ar !== br) return ar - br;
+      const ao = a.display_order ?? Number.POSITIVE_INFINITY;
+      const bo = b.display_order ?? Number.POSITIVE_INFINITY;
+      if (ao !== bo) return ao - bo;
       return (a.companies?.name ?? "").localeCompare(b.companies?.name ?? "");
     });
   }, [filters.industry, filters.query, sort, sponsors]);
