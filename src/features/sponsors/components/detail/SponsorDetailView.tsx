@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/src/components/common";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 function formatDateRange(start?: string | null, end?: string | null) {
@@ -19,7 +20,10 @@ function pluralize(count: number, singular: string, plural: string): string {
 export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
   const { company, eventSeriesGroups } = data;
   const locationLabel = formatLocationFromCityEmbed(company.cities);
-  const website = company.website?.trim() ?? "";
+  const websiteDisplay = formatPublicCompanyWebsite({
+    website: company.website,
+    domain: company.domain,
+  });
   const logoUrl = company.logo_url?.trim() ?? "";
 
   return (
@@ -67,29 +71,21 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
                 <dd>{locationLabel}</dd>
               </div>
             ) : null}
-            {website ? (
+            {websiteDisplay ? (
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Website
                 </dt>
                 <dd>
                   <a
-                    href={website.startsWith("http") ? website : `https://${website}`}
+                    href={websiteDisplay.href}
                     target="_blank"
                     rel="noreferrer"
                     className={brandLinkClass}
                   >
-                    {website.replace(/^https?:\/\//, "")}
+                    {websiteDisplay.label}
                   </a>
                 </dd>
-              </div>
-            ) : null}
-            {company.domain ? (
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Domain
-                </dt>
-                <dd className="font-mono text-xs">{company.domain}</dd>
               </div>
             ) : null}
           </dl>
