@@ -12,7 +12,10 @@ import { EditionImportsPanel } from "@/src/features/sponsor-import/components/Ed
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
 import { getEditionImportsData } from "@/src/features/sponsor-import/server/importUiData";
-import { EditionLiveSponsorsTable } from "@/src/features/events/components/admin/EditionLiveSponsorsTable";
+import {
+  EditionSponsorsPanel,
+  type ActiveImportInfo,
+} from "@/src/features/events/components/admin/EditionSponsorsPanel";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
@@ -29,6 +32,18 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+const ACTIVE_BATCH_STATUSES: readonly SponsorImportBatchStatus[] = [
+  "uploaded",
+  "review",
+  "draft",
+];
+
+function parseActiveBatchStatus(raw: string | null): SponsorImportBatchStatus | null {
+  if (raw === null) return null;
+  const match = ACTIVE_BATCH_STATUSES.find((status) => status === raw);
+  return match ?? null;
+}
 
 function editionProfileWarnings(edition: {
   website_url: string | null;
@@ -79,6 +94,12 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
   const activeBatchStatus =
     activeBatch && typeof activeBatch.status === "string" ? activeBatch.status : null;
 
+  const parsedActiveStatus = parseActiveBatchStatus(activeBatchStatus);
+  const activeImport: ActiveImportInfo | null =
+    activeBatchId && parsedActiveStatus
+      ? { batchId: activeBatchId, status: parsedActiveStatus }
+      : null;
+
   const sponsorRows = sponsors.map((row) => ({
     id: String(row.id),
     tier_rank: typeof row.tier_rank === "number" ? row.tier_rank : null,
@@ -119,11 +140,11 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
           )
         }
         actions={
-          activeBatchId && activeBatchStatus ? (
+          activeImport ? (
             <Link
               href={flowHref(
-                activeBatchId,
-                defaultStepForBatchStatus(activeBatchStatus as SponsorImportBatchStatus),
+                activeImport.batchId,
+                defaultStepForBatchStatus(activeImport.status),
               )}
               className={`${primaryCtaClass} h-10`}
             >
@@ -181,7 +202,9 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
               />
             </div>
           }
-          sponsorsPanel={<EditionLiveSponsorsTable sponsors={sponsorRows} />}
+          sponsorsPanel={
+            <EditionSponsorsPanel sponsors={sponsorRows} activeImport={activeImport} />
+          }
           importsPanel={<EditionImportsPanel data={importsData} />}
         />
       </Suspense>

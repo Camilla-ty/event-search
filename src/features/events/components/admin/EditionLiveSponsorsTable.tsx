@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type LiveSponsorRow = {
+export type LiveSponsorRow = {
   id: string;
   tier_rank: number | null;
   tier_label: string | null;
@@ -14,9 +14,13 @@ type LiveSponsorRow = {
 
 type EditionLiveSponsorsTableProps = {
   sponsors: LiveSponsorRow[];
+  onEdit?: (row: LiveSponsorRow) => void;
 };
 
-export function EditionLiveSponsorsTable({ sponsors }: EditionLiveSponsorsTableProps) {
+export function EditionLiveSponsorsTable({
+  sponsors,
+  onEdit,
+}: EditionLiveSponsorsTableProps) {
   if (sponsors.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
@@ -54,16 +58,26 @@ export function EditionLiveSponsorsTable({ sponsors }: EditionLiveSponsorsTableP
                 <td className="px-4 py-3 text-slate-600">{label ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{row.tier_rank ?? "—"}</td>
                 <td className="px-4 py-3">
-                  {companyId ? (
-                    <Link
-                      href={`/admin/companies/${companyId}`}
-                      className="text-brand-primary hover:underline"
-                    >
-                      View
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
+                  <span className="flex items-center gap-3">
+                    {onEdit ? (
+                      <button
+                        type="button"
+                        className="text-brand-primary hover:underline"
+                        onClick={() => onEdit(row)}
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    {companyId ? (
+                      <Link
+                        href={`/admin/companies/${companyId}`}
+                        className="text-brand-primary hover:underline"
+                      >
+                        View
+                      </Link>
+                    ) : null}
+                    {!onEdit && !companyId ? "—" : null}
+                  </span>
                 </td>
               </tr>
             );
