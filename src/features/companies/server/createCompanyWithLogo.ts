@@ -2,7 +2,8 @@ import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
-import { probeLogoDevByDomain } from "./logoProbe";
+import { companyLogoMetadataPatch } from "./companyLogoMetadata";
+import { ingestCompanyLogoByDomain } from "./companyLogoIngest";
 
 export { normalizeDomainFromWebsite };
 
@@ -34,10 +35,7 @@ function buildDescription(name: string, website: string) {
 }
 
 /**
- * Insert a company row. **Never** downloads or rehosts logos — purely deterministic DB write.
- *
- * Logo enrichment is a separate, non-blocking step (`enrichCompanyLogo`) so a slow
- * provider or network timeout cannot affect company creation.
+ * Insert a company row. Logo fetch/upload is a separate non-blocking step (`enrichCompanyLogo`).
  */
 export async function createCompany(input: CreateCompanyInput): Promise<CompanyRow> {
   const supabase = createAdminClient();
@@ -84,7 +82,7 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
 }
 
 /**
- * Best-effort Logo.dev metadata probe. **Never throws.**
+ * Best-effort logo fetch + Storage upload + DB update. **Never throws.**
  *
  * Intended to be invoked via Next.js `after()` so it runs after the API response is sent.
  */
@@ -115,17 +113,10 @@ export async function enrichCompanyLogo(
       return;
     }
 
-    const probe = await probeLogoDevByDomain(normalizedDomain);
+    const ingestResult = await ingestCompanyLogoByDomain(normalizedDomain);
+    const patch = companyLogoMetadataPatch(ingestResult);
 
-    await supabase
-      .from("companies")
-      .update({
-        logo_source: "logo_dev",
-        logo_status: probe.status,
-        logo_fetched_at: new Date().toISOString(),
-        logo_fetch_error: probe.error,
-      })
-      .eq("id", companyId);
+    await supabase.from("companies").update(patch).eq("id", companyId);
   } catch {
     // Best-effort enrichment; failures must not affect the API response.
   }

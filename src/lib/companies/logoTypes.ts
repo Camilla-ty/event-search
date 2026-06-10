@@ -1,4 +1,4 @@
-export const LOGO_SOURCES = ["manual", "logo_dev", "none"] as const;
+export const LOGO_SOURCES = ["manual", "storage", "logo_dev", "none"] as const;
 export type LogoSource = (typeof LOGO_SOURCES)[number];
 
 export const LOGO_STATUSES = ["ok", "pending", "missing", "error", "skipped"] as const;

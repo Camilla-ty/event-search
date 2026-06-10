@@ -195,10 +195,9 @@ export async function resolveExistingLogoUrlByDomain(domain: string) {
 }
 
 /**
- * Legacy: fetch a logo from a website domain and upload it to Supabase Storage.
- * Used only by `scripts/backfill-companies-logos.ts` — not the live company create flow.
+ * @deprecated Use `ingestCompanyLogoByDomain` from `companyLogoIngest.ts`.
  *
- * Fallback chain: legacy provider → /favicon.ico → og:image. Any failure returns null.
+ * Legacy fetch + upload (Clearbit-era provider chain). Not used by live ingest.
  */
 export async function fetchAndUploadLogoByDomain(domain: string): Promise<string | null> {
   const normalizedDomain = normalizeDomain(domain);

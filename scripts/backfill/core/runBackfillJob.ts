@@ -12,8 +12,9 @@ export type BackfillSkip = {
 };
 
 export type BackfillResolvedValue = {
-  column: string;
-  value: string;
+  column?: string;
+  value?: string;
+  patch?: Record<string, unknown>;
   preview?: string;
 };
 
@@ -178,15 +179,33 @@ export async function runBackfillJob<Row extends BackfillRow>(
       continue;
     }
 
+    const previewText =
+      resolved.preview ??
+      resolved.value ??
+      (resolved.patch ? JSON.stringify(resolved.patch) : "");
+
     if (env.dryRun) {
       updated += 1;
-      console.log(
-        `[dry-run] (${progress}) ${label} -> ${resolved.preview ?? resolved.value}`,
-      );
+      console.log(`[dry-run] (${progress}) ${label} -> ${previewText}`);
     } else {
+      const updatePayload =
+        resolved.patch !== undefined
+          ? resolved.patch
+          : resolved.column !== undefined && resolved.value !== undefined
+            ? { [resolved.column]: resolved.value }
+            : null;
+
+      if (updatePayload === null) {
+        failed += 1;
+        console.error(
+          `[fail] (${progress}) ${label} - resolver returned no update payload`,
+        );
+        continue;
+      }
+
       const { error: updateError } = await supabase
         .from(config.tableName)
-        .update({ [resolved.column]: resolved.value })
+        .update(updatePayload)
         .eq("id", row.id);
 
       if (updateError) {
@@ -199,9 +218,7 @@ export async function runBackfillJob<Row extends BackfillRow>(
       }
 
       updated += 1;
-      console.log(
-        `[ok]   (${progress}) ${label} -> ${resolved.preview ?? resolved.value}`,
-      );
+      console.log(`[ok]   (${progress}) ${label} -> ${previewText}`);
     }
 
     if (env.delayMs > 0) {

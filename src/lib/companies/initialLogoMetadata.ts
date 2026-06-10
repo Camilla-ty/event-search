@@ -14,7 +14,7 @@ export function initialLogoMetadata(params: {
   }
 
   if (params.domain?.trim()) {
-    return { logo_source: "logo_dev", logo_status: "pending" };
+    return { logo_source: "storage", logo_status: "pending" };
   }
 
   return { logo_source: "none", logo_status: "skipped" };
