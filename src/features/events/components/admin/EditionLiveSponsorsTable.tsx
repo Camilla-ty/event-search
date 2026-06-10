@@ -3,6 +3,7 @@ import Link from "next/link";
 type LiveSponsorRow = {
   id: string;
   tier_rank: number | null;
+  tier_label: string | null;
   companies: {
     id: string;
     name: string | null;
@@ -31,7 +32,8 @@ export function EditionLiveSponsorsTable({ sponsors }: EditionLiveSponsorsTableP
           <tr>
             <th className="px-4 py-3 font-medium">Company</th>
             <th className="px-4 py-3 font-medium">Domain</th>
-            <th className="px-4 py-3 font-medium">Tier</th>
+            <th className="px-4 py-3 font-medium">Tier label</th>
+            <th className="px-4 py-3 font-medium">Rank</th>
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
@@ -39,12 +41,17 @@ export function EditionLiveSponsorsTable({ sponsors }: EditionLiveSponsorsTableP
           {sponsors.map((row) => {
             const company = row.companies;
             const companyId = company?.id;
+            const label =
+              typeof row.tier_label === "string" && row.tier_label.trim() !== ""
+                ? row.tier_label.trim()
+                : null;
             return (
               <tr key={row.id} className="border-b border-slate-100 last:border-0">
                 <td className="px-4 py-3 font-medium text-slate-900">
                   {company?.name ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{company?.domain ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{label ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{row.tier_rank ?? "—"}</td>
                 <td className="px-4 py-3">
                   {companyId ? (

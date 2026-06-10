@@ -78,6 +78,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
   const sponsorRows = sponsors.map((row) => ({
     id: String(row.id),
     tier_rank: typeof row.tier_rank === "number" ? row.tier_rank : null,
+    tier_label: typeof row.tier_label === "string" ? row.tier_label : null,
     companies:
       row.companies && typeof row.companies === "object"
         ? {

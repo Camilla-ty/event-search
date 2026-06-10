@@ -17,5 +17,6 @@ export type EventSponsorRow = {
   id: string | number;
   company_id?: string | null;
   tier_rank?: number | null;
+  tier_label?: string | null;
   companies?: EventSponsorCompany | null;
 };

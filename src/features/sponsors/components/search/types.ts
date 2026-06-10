@@ -11,6 +11,7 @@ export type SponsorCompany = {
 export type SponsorRecord = {
   id: string;
   tier_rank?: number | null;
+  tier_label?: string | null;
   companies?: SponsorCompany | null;
 };
 

@@ -4,8 +4,15 @@ import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { EventSponsorRow } from "./types";
 
+function publicTierLabel(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed !== "" ? trimmed : null;
+}
+
 export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) {
   const company = sponsor.companies;
+  const tierLabel = publicTierLabel(sponsor.tier_label);
   const heading = company?.name?.trim() || "Unknown sponsor";
   const shortRaw = company?.short_description?.trim();
   const profileHref = company
@@ -36,10 +43,8 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-slate-900">{heading}</p>
-              {sponsor.tier_rank != null ? (
-                <span className="shrink-0 text-xs font-medium text-slate-500">
-                  Tier {sponsor.tier_rank}
-                </span>
+              {tierLabel ? (
+                <span className="shrink-0 text-xs font-medium text-slate-500">{tierLabel}</span>
               ) : null}
             </div>
             {shortRaw ? (

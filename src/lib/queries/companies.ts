@@ -176,7 +176,7 @@ export async function getCompaniesByEventEdition(eventEditionId: string) {
   const editionKey = normalizeEditionIdForQuery(eventEditionId);
   const { data: links, error } = await supabase
     .from("event_sponsors")
-    .select("id, company_id, tier_rank, event_editions_id")
+    .select("id, company_id, tier_rank, tier_label, event_editions_id")
     .eq("event_editions_id", editionKey)
     .order("tier_rank", { ascending: true });
 

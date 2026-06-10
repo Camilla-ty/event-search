@@ -46,6 +46,7 @@ function toPreviewSponsor(
   return {
     id: String(sponsor.id),
     tier_rank: sponsor.tier_rank ?? null,
+    tier_label: typeof sponsor.tier_label === "string" ? sponsor.tier_label : null,
     companies: extended
       ? {
           id: extended.id ?? null,
