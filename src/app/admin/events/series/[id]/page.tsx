@@ -5,6 +5,7 @@ import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrum
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
+import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getEventSeriesAdminById } from "@/src/features/events/server/eventSeriesAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
@@ -54,6 +55,12 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
         }
       />
       <EventsSubNav />
+
+      {seriesKeywords.length > 0 ? (
+        <div className="mb-6">
+          <SeriesKeywordsChips keywords={seriesKeywords} />
+        </div>
+      ) : null}
 
       <EventSeriesForm
         mode="edit"

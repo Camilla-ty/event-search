@@ -33,6 +33,7 @@ type EventEditionFormProps = {
   series: SeriesOption[];
   cities: CityOption[];
   readOnlySeriesName?: string;
+  readOnlySeriesId?: string;
   readOnlyYear?: number;
 };
 
@@ -65,6 +66,7 @@ export function EventEditionForm({
   series,
   cities,
   readOnlySeriesName,
+  readOnlySeriesId,
   readOnlyYear,
 }: EventEditionFormProps) {
   const router = useRouter();
@@ -224,7 +226,18 @@ export function EventEditionForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm font-medium text-slate-700">Series</p>
-                <p className="mt-1 text-sm text-slate-900">{readOnlySeriesName ?? "—"}</p>
+                <p className="mt-1 text-sm text-slate-900">
+                  {readOnlySeriesId && readOnlySeriesName ? (
+                    <Link
+                      href={`/admin/events/series/${readOnlySeriesId}`}
+                      className="text-brand-primary hover:underline"
+                    >
+                      {readOnlySeriesName}
+                    </Link>
+                  ) : (
+                    (readOnlySeriesName ?? "—")
+                  )}
+                </p>
                 <p className="mt-1 text-xs text-slate-500">Series cannot be changed.</p>
               </div>
               <div>

@@ -12,9 +12,9 @@ import { EditionImportsPanel } from "@/src/features/sponsor-import/components/Ed
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
 import { getEditionImportsData } from "@/src/features/sponsor-import/server/importUiData";
-import { EditionInheritedKeywords } from "@/src/features/events/components/admin/EditionInheritedKeywords";
 import { EditionLiveSponsorsTable } from "@/src/features/events/components/admin/EditionLiveSponsorsTable";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
+import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
 import {
   countLiveSponsorsForEdition,
@@ -106,7 +106,18 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
       />
       <AdminPageHeader
         title={`${edition.name} (${edition.year})`}
-        description={edition.event_series?.name ?? "Event edition"}
+        description={
+          edition.event_series?.id && edition.event_series.name ? (
+            <Link
+              href={`/admin/events/series/${edition.event_series.id}`}
+              className="text-brand-primary hover:underline"
+            >
+              {edition.event_series.name}
+            </Link>
+          ) : (
+            (edition.event_series?.name ?? "Event edition")
+          )
+        }
         actions={
           activeBatchId && activeBatchStatus ? (
             <Link
@@ -148,16 +159,14 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
           profileWarnings={editionProfileWarnings(edition)}
           profilePanel={
             <div className="space-y-6">
-              <EditionInheritedKeywords
-                seriesName={edition.event_series?.name ?? null}
-                keywords={inheritedKeywords}
-              />
+              <SeriesKeywordsChips keywords={inheritedKeywords} />
               <EventEditionForm
                 mode="edit"
                 editionId={edition.id}
                 series={series}
                 cities={cities}
                 readOnlySeriesName={edition.event_series?.name}
+                readOnlySeriesId={edition.event_series?.id ?? edition.series_id ?? undefined}
                 readOnlyYear={edition.year}
                 initial={{
                   series_id: edition.series_id ?? "",
