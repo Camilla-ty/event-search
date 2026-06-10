@@ -4,8 +4,8 @@ export const BRAND_NAME = "EventPixels";
 /** Full logo (mark + wordmark) — served from /public/brand */
 export const BRAND_LOGO_WORDMARK_SRC = "/brand/logo-wordmark.svg";
 
-/** Icon-only mark (favicon) — Next.js file convention at src/app/icon.svg */
-export const BRAND_LOGO_MARK_SRC = "/icon";
+/** Icon-only mark — served from /public/brand (also used as src/app/icon.svg for favicon) */
+export const BRAND_LOGO_MARK_SRC = "/brand/logo-mark.svg";
 
 export const brandColors = {
   primary: "#1434CB",
