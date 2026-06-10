@@ -6,6 +6,8 @@ export type SponsorCompany = {
   location?: string | null;
   countries_active_count?: number | null;
   logo_url?: string | null;
+  domain?: string | null;
+  logo_status?: string | null;
 };
 
 export type SponsorRecord = {

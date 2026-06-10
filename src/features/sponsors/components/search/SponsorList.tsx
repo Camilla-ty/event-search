@@ -2,6 +2,7 @@
 
 import { Button } from "@/src/components/common";
 import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common/states";
+import { LogoDevAttribution } from "@/src/components/companies/LogoDevAttribution";
 
 import { SponsorCard } from "./SponsorCard";
 import type { SponsorRecord } from "./types";
@@ -50,6 +51,8 @@ export function SponsorList({
           <SponsorCard key={sponsor.id} sponsor={sponsor} />
         ))}
       </div>
+
+      <LogoDevAttribution className="px-1" />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
         <p className="text-slate-600">

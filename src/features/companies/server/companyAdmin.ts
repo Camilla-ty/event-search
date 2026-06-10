@@ -1,5 +1,6 @@
-import { createAdminClient } from "@/src/lib/supabase/admin";
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
+import { logoMetadataPatchForLogoUrlChange } from "@/src/lib/companies/logoMetadataPatch";
+import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export type CompanyAdminRow = {
   id: string;
@@ -8,6 +9,10 @@ export type CompanyAdminRow = {
   domain: string | null;
   website: string | null;
   logo_url: string | null;
+  logo_source: string | null;
+  logo_status: string | null;
+  logo_fetched_at: string | null;
+  logo_fetch_error: string | null;
   short_description: string | null;
   description: string | null;
   city_id: string | null;
@@ -33,7 +38,7 @@ export async function listCompaniesAdmin(search?: string): Promise<CompanyListIt
   let query = supabase
     .from("companies")
     .select(
-      "id, name, slug, domain, website, logo_url, short_description, description, city_id, created_at",
+      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
     )
     .order("name", { ascending: true });
 
@@ -75,7 +80,7 @@ export async function getCompanyAdminById(id: string): Promise<CompanyAdminRow |
   const { data, error } = await supabase
     .from("companies")
     .select(
-      "id, name, slug, domain, website, logo_url, short_description, description, city_id, created_at",
+      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -90,6 +95,12 @@ export async function updateCompanyAdmin(
 ): Promise<CompanyAdminRow> {
   const supabase = createAdminClient();
   const patch: Record<string, unknown> = {};
+  let existingDomain: string | null = null;
+
+  if (input.logo_url !== undefined && !(input.logo_url?.trim() || null)) {
+    const existing = await getCompanyAdminById(id);
+    existingDomain = existing?.domain ?? null;
+  }
 
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.slug !== undefined) patch.slug = input.slug.trim();
@@ -102,7 +113,19 @@ export async function updateCompanyAdmin(
     }
     patch.domain = domain;
   }
-  if (input.logo_url !== undefined) patch.logo_url = input.logo_url?.trim() || null;
+  if (input.logo_url !== undefined) {
+    const logoUrl = input.logo_url?.trim() || null;
+    patch.logo_url = logoUrl;
+    const domainForLogo =
+      (typeof patch.domain === "string" ? patch.domain : null) ?? existingDomain;
+    Object.assign(
+      patch,
+      logoMetadataPatchForLogoUrlChange({
+        logo_url: logoUrl,
+        domain: domainForLogo,
+      }),
+    );
+  }
   if (input.short_description !== undefined) {
     patch.short_description = input.short_description?.trim() || null;
   }
@@ -116,7 +139,7 @@ export async function updateCompanyAdmin(
     .update(patch)
     .eq("id", id)
     .select(
-      "id, name, slug, domain, website, logo_url, short_description, description, city_id, created_at",
+      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
     )
     .single();
 

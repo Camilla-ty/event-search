@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 
 import {
   getCompanyAdminById,
   updateCompanyAdmin,
 } from "@/src/features/companies/server/companyAdmin";
+import { enrichCompanyLogo } from "@/src/features/companies/server/createCompanyWithLogo";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
@@ -94,6 +95,13 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const company = await updateCompanyAdmin(id, patch);
+
+    if (typeof patch.website === "string") {
+      after(async () => {
+        await enrichCompanyLogo(id, patch.website as string);
+      });
+    }
+
     return NextResponse.json({ ok: true, company });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

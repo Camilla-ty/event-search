@@ -30,7 +30,8 @@ function normalizeDomain(domain: string): string {
     .replace(/\/.*$/, "");
 }
 
-function getLogoProviderUrl(domain: string): string {
+/** @deprecated Legacy storage backfill only — Clearbit shut down Dec 2025. Prefer Logo.dev metadata flow. */
+function getLegacyLogoProviderUrl(domain: string): string {
   const providerBase =
     process.env.LOGO_PROVIDER_BASE_URL ?? "https://logo.clearbit.com";
   return `${providerBase.replace(/\/+$/, "")}/${domain}`;
@@ -97,7 +98,7 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
 }
 
 async function tryProviderLogo(domain: string): Promise<FetchedImage | null> {
-  return downloadImage(getLogoProviderUrl(domain));
+  return downloadImage(getLegacyLogoProviderUrl(domain));
 }
 
 async function tryFaviconLogo(domain: string): Promise<FetchedImage | null> {
@@ -194,10 +195,10 @@ export async function resolveExistingLogoUrlByDomain(domain: string) {
 }
 
 /**
- * Try to fetch a logo from a website domain and upload it to Supabase Storage.
+ * Legacy: fetch a logo from a website domain and upload it to Supabase Storage.
+ * Used only by `scripts/backfill-companies-logos.ts` — not the live company create flow.
  *
- * Fallback chain: provider → /favicon.ico → og:image. Any failure returns null;
- * callers must treat null as "no logo" and never block company creation on it.
+ * Fallback chain: legacy provider → /favicon.ico → og:image. Any failure returns null.
  */
 export async function fetchAndUploadLogoByDomain(domain: string): Promise<string | null> {
   const normalizedDomain = normalizeDomain(domain);

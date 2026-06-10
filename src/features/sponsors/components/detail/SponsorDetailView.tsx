@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
+import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
+import { LogoDevAttribution } from "@/src/components/companies/LogoDevAttribution";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
@@ -24,7 +26,6 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
     website: company.website,
     domain: company.domain,
   });
-  const logoUrl = company.logo_url?.trim() ?? "";
 
   return (
     <section className="space-y-8">
@@ -35,19 +36,16 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
       </div>
 
       <header className="grid gap-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[auto_1fr] md:items-start">
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={company.name ? `${company.name} logo` : "Company logo"}
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            <span className="text-2xl font-semibold text-slate-400">
-              {(company.name ?? "?").slice(0, 1).toUpperCase()}
-            </span>
-          )}
-        </div>
+        <CompanyLogo
+          company={{
+            name: company.name,
+            logo_url: company.logo_url,
+            domain: company.domain,
+            logo_status: company.logo_status,
+          }}
+          className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+          logoDevSize={192}
+        />
 
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -89,6 +87,7 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
               </div>
             ) : null}
           </dl>
+          <LogoDevAttribution />
         </div>
       </header>
 

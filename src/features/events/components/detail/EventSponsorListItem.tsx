@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { EventSponsorRow } from "./types";
@@ -18,7 +19,6 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
   const profileHref = company
     ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
     : null;
-  const logoRaw = company?.logo_url?.trim();
 
   if (!profileHref) {
     return (
@@ -35,11 +35,17 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
         className="block rounded-lg border border-slate-200 p-3 transition hover:border-brand-primary/40 hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
       >
         <div className="flex gap-3">
-          {logoRaw ? (
-            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-slate-200 bg-white">
-              <img src={logoRaw} alt="" className="h-full w-full object-contain" />
-            </div>
-          ) : null}
+          <CompanyLogo
+            company={{
+              name: company?.name,
+              logo_url: company?.logo_url,
+              domain: company?.domain,
+              logo_status: company?.logo_status,
+            }}
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
+            monogramClassName="text-lg font-semibold text-slate-400"
+            logoDevSize={112}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-slate-900">{heading}</p>

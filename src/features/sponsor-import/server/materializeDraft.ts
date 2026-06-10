@@ -1,7 +1,10 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { slugify } from "@/src/lib/slugify";
 
-import { createCompany } from "@/src/features/companies/server/createCompanyWithLogo";
+import {
+  createCompany,
+  enrichCompanyLogo,
+} from "@/src/features/companies/server/createCompanyWithLogo";
 
 import type { ImportToDraftResult } from "../types";
 import { SponsorImportHttpError } from "./errors";
@@ -63,6 +66,7 @@ async function resolveCompanyIdForRow(
     const slug = await uniqueSlug(row.proposed_slug ?? name);
     const company = await createCompany({ name, website, slug, city_id: null });
     createdByRowId.set(row.id, company.id);
+    void enrichCompanyLogo(company.id, website);
     return company.id;
   }
 

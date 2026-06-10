@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Badge, Button } from "@/src/components/common";
+import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { SponsorRecord } from "./types";
@@ -26,8 +27,20 @@ export function SponsorCard({ sponsor }: { sponsor: SponsorRecord }) {
     : null;
 
   return (
-    <article className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
-      <div className="space-y-2">
+    <article className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center">
+      <CompanyLogo
+        company={{
+          name: sponsor.companies?.name,
+          logo_url: sponsor.companies?.logo_url,
+          domain: sponsor.companies?.domain,
+          logo_status: sponsor.companies?.logo_status,
+        }}
+        className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+        monogramClassName="text-lg font-semibold text-slate-400"
+        logoDevSize={112}
+      />
+
+      <div className="space-y-2 min-w-0">
         <h3 className="text-base font-semibold text-slate-900">{companyName}</h3>
         <p className="text-sm text-slate-600">{industry}</p>
         <p className="text-xs text-slate-500">{location}</p>
