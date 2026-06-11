@@ -41,6 +41,7 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
     event_series: edition.event_series
       ? {
           name: edition.event_series.name ?? null,
+          logo_url: edition.event_series.logo_url ?? null,
         }
       : null,
     cities: edition.cities

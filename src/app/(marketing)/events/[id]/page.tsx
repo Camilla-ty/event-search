@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
+import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
 import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
@@ -66,6 +67,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const isAuthenticated = user !== null;
   const sponsorCount = sponsors.length;
   const eventSlug = typeof edition.slug === "string" ? edition.slug : "";
+  const seriesLogoUrl =
+    typeof edition.event_series?.logo_url === "string" &&
+    edition.event_series.logo_url.trim() !== ""
+      ? edition.event_series.logo_url.trim()
+      : null;
 
   return (
     <section className="space-y-6">
@@ -77,7 +83,25 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_1fr] lg:grid-cols-[minmax(0,380px)_1fr]">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted">
-          <div className="aspect-[16/9] w-full bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
+          {seriesLogoUrl ? (
+            <div className="aspect-[16/9] w-full p-8">
+              <SeriesLogo
+                series={{
+                  name:
+                    typeof edition.event_series?.name === "string"
+                      ? edition.event_series.name
+                      : null,
+                  logo_url: seriesLogoUrl,
+                }}
+                fallbackName={typeof edition.name === "string" ? edition.name : null}
+                className="flex h-full w-full items-center justify-center"
+                imageClassName="max-h-full max-w-full object-contain"
+                monogramClassName="text-5xl font-semibold text-slate-400"
+              />
+            </div>
+          ) : (
+            <div className="aspect-[16/9] w-full bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
+          )}
         </div>
 
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

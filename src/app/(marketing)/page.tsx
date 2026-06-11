@@ -9,6 +9,7 @@ import {
 } from "@/src/components/common";
 import { getHomeOverview } from "@/src/features/home/server/getHomeOverview";
 import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
+import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { getSponsorSearchData } from "@/src/features/sponsors/server/getSponsorSearchData";
 import type { SponsorRecord } from "@/src/features/sponsors/components/search/types";
 import { BRAND_NAME } from "@/src/lib/design/brand";
@@ -173,9 +174,19 @@ export default async function HomePage() {
             });
             const card = (
               <Card className="h-full transition hover:border-brand-primary/30">
-                <CardHeader>
-                  <CardTitle>{event.name ?? "Untitled Event"}</CardTitle>
-                  <CardDescription>{event.start_date ?? "Date TBC"}</CardDescription>
+                <CardHeader className="flex items-center gap-3 space-y-0">
+                  <SeriesLogo
+                    series={event.event_series ?? null}
+                    fallbackName={event.name ?? null}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+                    monogramClassName="text-sm font-semibold text-slate-400"
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <CardTitle className="line-clamp-1">
+                      {event.name ?? "Untitled Event"}
+                    </CardTitle>
+                    <CardDescription>{event.start_date ?? "Date TBC"}</CardDescription>
+                  </div>
                 </CardHeader>
               </Card>
             );

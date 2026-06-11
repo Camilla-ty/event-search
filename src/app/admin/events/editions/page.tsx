@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
+import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
@@ -96,7 +97,14 @@ export default async function AdminEventEditionsListPage({ searchParams }: PageP
                 <tr key={edition.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-slate-900">{edition.name}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {edition.event_series?.name ?? "—"}
+                    <div className="flex items-center gap-2">
+                      <SeriesLogo
+                        series={edition.event_series}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50"
+                        monogramClassName="text-xs font-semibold text-slate-400"
+                      />
+                      <span>{edition.event_series?.name ?? "—"}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{edition.year}</td>
                   <td className="px-4 py-3 text-slate-600">

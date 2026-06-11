@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
+import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { secondaryCtaClass } from "@/src/lib/design/classes";
 
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
@@ -25,16 +26,24 @@ export function EventCard({ event }: { event: EventRecord }) {
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="space-y-2">
-        <h3 className="line-clamp-1 text-base font-semibold text-slate-900">
-          {event.name ?? "Untitled Event"}
-        </h3>
-        <p className="text-xs text-slate-500">
-          {formatDateRange(event.start_date, event.end_date)}
-        </p>
-        <p className="line-clamp-1 text-sm text-slate-600">
-          {location || "Location not set"}
-        </p>
+      <div className="flex items-start gap-3">
+        <SeriesLogo
+          series={event.event_series}
+          fallbackName={event.name}
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+          monogramClassName="text-base font-semibold text-slate-400"
+        />
+        <div className="min-w-0 space-y-2">
+          <h3 className="line-clamp-1 text-base font-semibold text-slate-900">
+            {event.name ?? "Untitled Event"}
+          </h3>
+          <p className="text-xs text-slate-500">
+            {formatDateRange(event.start_date, event.end_date)}
+          </p>
+          <p className="line-clamp-1 text-sm text-slate-600">
+            {location || "Location not set"}
+          </p>
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">

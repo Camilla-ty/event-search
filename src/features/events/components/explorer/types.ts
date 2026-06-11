@@ -6,6 +6,7 @@ export type EventRecord = {
   end_date?: string | null;
   event_series?: {
     name?: string | null;
+    logo_url?: string | null;
   } | null;
   cities?: {
     name?: string | null;

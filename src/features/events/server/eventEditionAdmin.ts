@@ -13,7 +13,12 @@ export type EventEditionAdminRow = {
   website_url: string | null;
   city_id: string | null;
   created_at: string | null;
-  event_series?: { id: string; name: string; slug: string } | null;
+  event_series?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url?: string | null;
+  } | null;
   cities?: { id: string; name: string } | null;
 };
 
