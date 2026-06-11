@@ -43,6 +43,7 @@ export type ColumnMapping = {
   company_name: string;
   website: string;
   tier_rank: string;
+  tier_label: string;
   notes?: string;
 };
 
@@ -58,6 +59,7 @@ export type ParsedSpreadsheetRow = {
   rawCompanyName: string | null;
   rawWebsite: string | null;
   rawTierRank: number | null;
+  rawTierLabel: string | null;
   rawNotes: string | null;
 };
 

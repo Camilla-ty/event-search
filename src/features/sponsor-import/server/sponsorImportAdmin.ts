@@ -35,7 +35,7 @@ const BATCH_SELECT =
   "id, event_edition_id, status, processing_phase, source_filename, source_file_storage_path, source_file_format, source_sheet_name, source_row_count, source_file_checksum, column_mapping, created_by, published_by, discarded_by, review_acknowledged_by, published_at, discarded_at, review_acknowledged_at, discard_reason, created_at, updated_at";
 
 const ROW_SELECT =
-  "id, batch_id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, normalized_company_name, normalized_website, normalized_domain, proposed_slug, mapped_tier_rank, status, validation_issues, has_blocking_validation, match_method, match_confidence, proposed_company_id, conflict_type, decision_type, decision_source, resolved_company_id, decision_by, decision_at, decision_notes, duplicate_cluster_key, duplicate_role, duplicate_of_row_id, duplicate_resolution, already_on_live_sponsor_id, already_on_live_tier_rank, intended_link_action, draft_link_id, import_error, created_at, updated_at";
+  "id, batch_id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, raw_tier_label, normalized_company_name, normalized_website, normalized_domain, proposed_slug, mapped_tier_rank, mapped_tier_label, status, validation_issues, has_blocking_validation, match_method, match_confidence, proposed_company_id, conflict_type, decision_type, decision_source, resolved_company_id, decision_by, decision_at, decision_notes, duplicate_cluster_key, duplicate_role, duplicate_of_row_id, duplicate_resolution, already_on_live_sponsor_id, already_on_live_tier_rank, intended_link_action, draft_link_id, import_error, created_at, updated_at";
 
 function parseColumnMapping(raw: unknown): ColumnMapping {
   if (!raw || typeof raw !== "object") {
@@ -45,14 +45,15 @@ function parseColumnMapping(raw: unknown): ColumnMapping {
   const company_name = typeof o.company_name === "string" ? o.company_name.trim() : "";
   const website = typeof o.website === "string" ? o.website.trim() : "";
   const tier_rank = typeof o.tier_rank === "string" ? o.tier_rank.trim() : "";
-  if (!company_name || !website || !tier_rank) {
+  const tier_label = typeof o.tier_label === "string" ? o.tier_label.trim() : "";
+  if (!company_name || !website || !tier_rank || !tier_label) {
     throw new SponsorImportHttpError(
       400,
-      "column_mapping requires company_name, website, and tier_rank.",
+      "column_mapping requires company_name, website, tier_rank, and tier_label.",
     );
   }
   const notes = typeof o.notes === "string" ? o.notes.trim() : undefined;
-  return { company_name, website, tier_rank, ...(notes ? { notes } : {}) };
+  return { company_name, website, tier_rank, tier_label, ...(notes ? { notes } : {}) };
 }
 
 async function getBatchRow(batchId: string): Promise<BatchRow & Record<string, unknown>> {
@@ -217,6 +218,7 @@ export async function createBatchFromUpload(input: {
     raw_company_name: r.rawCompanyName,
     raw_website: r.rawWebsite,
     raw_tier_rank: r.rawTierRank,
+    raw_tier_label: r.rawTierLabel,
     status: "needs_review",
     validation_issues: [],
     has_blocking_validation: false,
@@ -270,6 +272,7 @@ export async function saveColumnMapping(
         raw_company_name: r.rawCompanyName,
         raw_website: r.rawWebsite,
         raw_tier_rank: r.rawTierRank,
+        raw_tier_label: r.rawTierLabel,
         status: "needs_review",
         validation_issues: [],
         has_blocking_validation: false,
@@ -319,7 +322,7 @@ export async function runBatchValidation(batchId: string, actorId: string) {
   const { data: rawRows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, status",
+      "id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, raw_tier_label, status",
     )
     .eq("batch_id", batchId)
     .order("excel_row_number", { ascending: true });
@@ -334,6 +337,7 @@ export async function runBatchValidation(batchId: string, actorId: string) {
         raw_company_name: r.raw_company_name as string | null,
         raw_website: r.raw_website as string | null,
         raw_tier_rank: r.raw_tier_rank as number | null,
+        raw_tier_label: r.raw_tier_label as string | null,
         status: String(r.status),
       });
       return { ...v, id: String(r.id), excel_row_number: Number(r.excel_row_number), status: String(r.status) };
@@ -358,6 +362,7 @@ export async function runBatchValidation(batchId: string, actorId: string) {
         normalized_domain: row.normalized_domain,
         proposed_slug: row.proposed_slug,
         mapped_tier_rank: row.mapped_tier_rank,
+        mapped_tier_label: row.mapped_tier_label,
         validation_issues: row.validation_issues,
         has_blocking_validation: row.has_blocking_validation,
         duplicate_cluster_key: row.duplicate_cluster_key,
@@ -800,7 +805,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
   const { data: resolvedRows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank",
+      "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label",
     )
     .eq("batch_id", batchId)
     .eq("status", "resolved");
@@ -821,6 +826,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
         normalized_website: r.normalized_website as string | null,
         proposed_slug: r.proposed_slug as string | null,
         mapped_tier_rank: r.mapped_tier_rank as number | null,
+        mapped_tier_label: r.mapped_tier_label as string | null,
       })),
     );
 
@@ -858,7 +864,7 @@ export async function listDraftLinks(batchId: string) {
   const { data: links, error } = await supabase
     .from("sponsor_import_draft_links")
     .select(
-      "id, batch_id, event_edition_id, company_id, tier_rank, source_import_row_id, excluded_from_publish, created_at, updated_at, companies(id, name, slug, domain)",
+      "id, batch_id, event_edition_id, company_id, tier_rank, tier_label, source_import_row_id, excluded_from_publish, created_at, updated_at, companies(id, name, slug, domain)",
     )
     .eq("batch_id", batchId)
     .order("tier_rank", { ascending: true });
@@ -1060,7 +1066,7 @@ export async function buildOutcomeReportCsv(batchId: string): Promise<string> {
   const { data: rows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "excel_row_number, raw_company_name, normalized_domain, mapped_tier_rank, status, decision_type, resolved_company_id, import_error, draft_link_id",
+      "excel_row_number, raw_company_name, normalized_domain, mapped_tier_rank, mapped_tier_label, status, decision_type, resolved_company_id, import_error, draft_link_id",
     )
     .eq("batch_id", batchId)
     .order("excel_row_number", { ascending: true });
@@ -1072,6 +1078,7 @@ export async function buildOutcomeReportCsv(batchId: string): Promise<string> {
     "company_name",
     "domain",
     "tier_rank",
+    "tier_label",
     "status",
     "decision_type",
     "resolved_company_id",
@@ -1085,6 +1092,7 @@ export async function buildOutcomeReportCsv(batchId: string): Promise<string> {
       JSON.stringify(r.raw_company_name ?? ""),
       JSON.stringify(r.normalized_domain ?? ""),
       r.mapped_tier_rank ?? "",
+      JSON.stringify(r.mapped_tier_label ?? ""),
       r.status,
       r.decision_type ?? "",
       r.resolved_company_id ?? "",

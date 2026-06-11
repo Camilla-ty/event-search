@@ -3,13 +3,14 @@ import type { RowSummary, SponsorImportBatch } from "../client/types";
 
 function parseColumnMapping(raw: unknown): ColumnMapping {
   if (!raw || typeof raw !== "object") {
-    return { company_name: "A", website: "B", tier_rank: "C" };
+    return { company_name: "A", website: "B", tier_rank: "C", tier_label: "D" };
   }
   const o = raw as Record<string, unknown>;
   return {
     company_name: typeof o.company_name === "string" ? o.company_name : "A",
     website: typeof o.website === "string" ? o.website : "B",
     tier_rank: typeof o.tier_rank === "string" ? o.tier_rank : "C",
+    tier_label: typeof o.tier_label === "string" ? o.tier_label : "D",
     notes: typeof o.notes === "string" ? o.notes : undefined,
   };
 }

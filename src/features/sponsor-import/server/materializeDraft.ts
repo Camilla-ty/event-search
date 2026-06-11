@@ -19,6 +19,7 @@ type ResolvedRow = {
   normalized_website: string | null;
   proposed_slug: string | null;
   mapped_tier_rank: number | null;
+  mapped_tier_label: string | null;
 };
 
 async function uniqueSlug(base: string): Promise<string> {
@@ -94,7 +95,7 @@ export async function materializeDraftLinks(
 
   const byCompany = new Map<
     string,
-    { tier: number; sourceRowId: string; rowIds: string[] }
+    { tier: number; tierLabel: string | null; sourceRowId: string; rowIds: string[] }
   >();
 
   for (const row of rows) {
@@ -106,11 +107,17 @@ export async function materializeDraftLinks(
 
     const existing = byCompany.get(companyId);
     if (!existing) {
-      byCompany.set(companyId, { tier, sourceRowId: row.id, rowIds: [row.id] });
+      byCompany.set(companyId, {
+        tier,
+        tierLabel: row.mapped_tier_label,
+        sourceRowId: row.id,
+        rowIds: [row.id],
+      });
     } else {
       existing.rowIds.push(row.id);
       if (tier > existing.tier) {
         existing.tier = tier;
+        existing.tierLabel = row.mapped_tier_label;
         existing.sourceRowId = row.id;
       }
     }
@@ -136,6 +143,7 @@ export async function materializeDraftLinks(
         .from("sponsor_import_draft_links")
         .update({
           tier_rank: group.tier,
+          tier_label: group.tierLabel,
           source_import_row_id: group.sourceRowId,
           updated_at: new Date().toISOString(),
         })
@@ -153,6 +161,7 @@ export async function materializeDraftLinks(
           event_edition_id: eventEditionId,
           company_id: companyId,
           tier_rank: group.tier,
+          tier_label: group.tierLabel,
           source_import_row_id: group.sourceRowId,
           excluded_from_publish: false,
         })

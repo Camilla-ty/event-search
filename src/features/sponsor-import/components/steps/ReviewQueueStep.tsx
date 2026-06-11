@@ -335,6 +335,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                 <th className="px-4 py-2">Company</th>
                 <th className="px-4 py-2">Domain</th>
                 <th className="px-4 py-2">Tier</th>
+                <th className="px-4 py-2">Label</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2" />
               </tr>
@@ -342,7 +343,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                     No rows in this filter.
                   </td>
                 </tr>
@@ -366,6 +367,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                       <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
                       <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
                       <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
+                      <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>
                       <td className="px-4 py-2">
                         <span>{row.status}</span>
                         {selectable && !canCreateNew ? (

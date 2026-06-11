@@ -109,6 +109,7 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
                   <th className="px-4 py-2">Company</th>
                   <th className="px-4 py-2">Domain</th>
                   <th className="px-4 py-2">Tier</th>
+                  <th className="px-4 py-2">Label</th>
                   <th className="px-4 py-2">Issues</th>
                 </tr>
               </thead>
@@ -119,6 +120,7 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
                     <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
                     <td className="px-4 py-2">{row.normalized_domain ?? "—"}</td>
                     <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
+                    <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>
                     <td className="px-4 py-2 text-xs text-slate-600">
                       {row.has_blocking_validation
                         ? row.validation_issues

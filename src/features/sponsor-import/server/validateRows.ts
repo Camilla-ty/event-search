@@ -3,12 +3,15 @@ import { slugify } from "@/src/lib/slugify";
 
 import type { ValidationIssue } from "../types";
 
+const TIER_LABEL_MAX_LENGTH = 80;
+
 export type RowValidationInput = {
   id: string;
   excel_row_number: number;
   raw_company_name: string | null;
   raw_website: string | null;
   raw_tier_rank: number | null;
+  raw_tier_label: string | null;
   status: string;
 };
 
@@ -18,6 +21,7 @@ export type RowValidationOutput = {
   normalized_domain: string | null;
   proposed_slug: string | null;
   mapped_tier_rank: number | null;
+  mapped_tier_label: string | null;
   validation_issues: ValidationIssue[];
   has_blocking_validation: boolean;
   duplicate_cluster_key: string | null;
@@ -33,6 +37,7 @@ function buildIssues(input: RowValidationInput): {
   normalized_domain: string | null;
   proposed_slug: string | null;
   mapped_tier_rank: number | null;
+  mapped_tier_label: string | null;
 } {
   const issues: ValidationIssue[] = [];
   const name = input.raw_company_name?.trim() ?? "";
@@ -81,6 +86,18 @@ function buildIssues(input: RowValidationInput): {
     mapped_tier_rank = input.raw_tier_rank;
   }
 
+  let mapped_tier_label: string | null = null;
+  const labelRaw = input.raw_tier_label?.trim() ?? "";
+  if (labelRaw.length > TIER_LABEL_MAX_LENGTH) {
+    issues.push({
+      type: "invalid_tier_label",
+      severity: "blocking",
+      message: `Sponsor label must be at most ${TIER_LABEL_MAX_LENGTH} characters.`,
+    });
+  } else if (labelRaw !== "") {
+    mapped_tier_label = labelRaw;
+  }
+
   return {
     issues,
     normalized_company_name,
@@ -88,6 +105,7 @@ function buildIssues(input: RowValidationInput): {
     normalized_domain,
     proposed_slug,
     mapped_tier_rank,
+    mapped_tier_label,
   };
 }
 

@@ -115,6 +115,7 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
                 <th className="px-4 py-2">Company</th>
                 <th className="px-4 py-2">Domain</th>
                 <th className="px-4 py-2">Tier</th>
+                <th className="px-4 py-2">Label</th>
                 <th className="px-4 py-2">Publish</th>
               </tr>
             </thead>
@@ -141,6 +142,7 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
                       }}
                     />
                   </td>
+                  <td className="px-4 py-2">{link.tier_label ?? "—"}</td>
                   <td className="px-4 py-2">
                     <label className="flex items-center gap-2">
                       <input

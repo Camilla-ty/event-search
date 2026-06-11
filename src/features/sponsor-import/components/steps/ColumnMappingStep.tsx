@@ -48,6 +48,7 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
     company_name: normalizeMappingValue(initial.company_name ?? "", columnOptions),
     website: normalizeMappingValue(initial.website ?? "", columnOptions),
     tier_rank: normalizeMappingValue(initial.tier_rank ?? "", columnOptions),
+    tier_label: normalizeMappingValue(initial.tier_label ?? "", columnOptions),
     notes: initial.notes,
   }));
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
 
   function renderSelect(
     label: string,
-    field: keyof Pick<ColumnMapping, "company_name" | "website" | "tier_rank">,
+    field: keyof Pick<ColumnMapping, "company_name" | "website" | "tier_rank" | "tier_label">,
   ) {
     return (
       <label className="text-sm font-medium text-slate-700">
@@ -94,7 +95,7 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Column mapping</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Map spreadsheet columns to company name, website, and tier rank.
+          Map spreadsheet columns to sponsor tier, sponsor label, company name, and website.
         </p>
       </div>
 
@@ -115,9 +116,10 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
       )}
 
       <div className="grid max-w-lg gap-4">
+        {renderSelect("Sponsor tier column", "tier_rank")}
+        {renderSelect("Sponsor label column", "tier_label")}
         {renderSelect("Company name column", "company_name")}
         {renderSelect("Website column", "website")}
-        {renderSelect("Tier rank column", "tier_rank")}
       </div>
 
       {error ? <InlineErrorBanner message={error} /> : null}

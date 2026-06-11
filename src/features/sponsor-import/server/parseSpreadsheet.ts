@@ -90,9 +90,10 @@ export function parseWithColumnMapping(
   const nameIdx = resolveColumnIndex(headerRow, mapping.company_name);
   const webIdx = resolveColumnIndex(headerRow, mapping.website);
   const tierIdx = resolveColumnIndex(headerRow, mapping.tier_rank);
+  const labelIdx = resolveColumnIndex(headerRow, mapping.tier_label);
   const notesIdx = mapping.notes ? resolveColumnIndex(headerRow, mapping.notes) : null;
 
-  if (nameIdx === null || webIdx === null || tierIdx === null) {
+  if (nameIdx === null || webIdx === null || tierIdx === null || labelIdx === null) {
     throw new Error("Column mapping references missing columns in the spreadsheet header.");
   }
 
@@ -108,7 +109,8 @@ export function parseWithColumnMapping(
     const hasAny =
       cellToString(row[nameIdx]) !== null ||
       cellToString(row[webIdx]) !== null ||
-      cellToTier(row[tierIdx]) !== null;
+      cellToTier(row[tierIdx]) !== null ||
+      cellToString(row[labelIdx]) !== null;
     if (!hasAny) continue;
 
     rows.push({
@@ -116,6 +118,7 @@ export function parseWithColumnMapping(
       rawCompanyName: cellToString(row[nameIdx]),
       rawWebsite: cellToString(row[webIdx]),
       rawTierRank: cellToTier(row[tierIdx]),
+      rawTierLabel: cellToString(row[labelIdx]),
       rawNotes: notesIdx !== null ? cellToString(row[notesIdx]) : null,
     });
   }
@@ -123,28 +126,67 @@ export function parseWithColumnMapping(
   return { rows, sheetName };
 }
 
+function findColumnIndex(
+  headerRow: string[],
+  patterns: RegExp[],
+  used: Set<number>,
+): number | null {
+  for (let i = 0; i < headerRow.length; i++) {
+    if (used.has(i)) continue;
+    const label = (headerRow[i] ?? "").trim();
+    if (!label) continue;
+    if (patterns.some((p) => p.test(label))) {
+      return i;
+    }
+  }
+  return null;
+}
+
 /** Guess column mapping from header labels (fallback when client omits mapping). */
 export function guessColumnMapping(headerRow: string[]): ColumnMapping | null {
-  const findIndex = (patterns: RegExp[]): number | null => {
-    for (let i = 0; i < headerRow.length; i++) {
-      const label = (headerRow[i] ?? "").trim();
-      if (!label) continue;
-      if (patterns.some((p) => p.test(label))) {
-        return i;
-      }
-    }
-    return null;
-  };
+  const used = new Set<number>();
 
-  const companyIdx =
-    findIndex([/company/i, /sponsor/i, /name/i, /organization/i]) ?? 0;
-  const websiteIdx = findIndex([/website/i, /url/i, /domain/i, /web/i]) ?? 1;
-  const tierIdx = findIndex([/tier/i, /rank/i, /level/i, /sponsor.*level/i]) ?? 2;
+  const tierRankIdx = findColumnIndex(
+    headerRow,
+    [/sponsor\s*tier/i, /^tier\s*rank$/i, /^rank$/i, /^tier$/i],
+    used,
+  );
+  if (tierRankIdx !== null) used.add(tierRankIdx);
+
+  const tierLabelIdx = findColumnIndex(
+    headerRow,
+    [/sponsor\s*label/i, /tier\s*label/i, /^label$/i],
+    used,
+  );
+  if (tierLabelIdx !== null) used.add(tierLabelIdx);
+
+  const companyIdx = findColumnIndex(
+    headerRow,
+    [/^name$/i, /company\s*name/i, /organization/i, /company/i],
+    used,
+  );
+  if (companyIdx !== null) used.add(companyIdx);
+
+  const websiteIdx = findColumnIndex(
+    headerRow,
+    [/website/i, /url/i, /domain/i, /web/i],
+    used,
+  );
+
+  if (
+    tierRankIdx === null ||
+    tierLabelIdx === null ||
+    companyIdx === null ||
+    websiteIdx === null
+  ) {
+    return null;
+  }
 
   return {
     company_name: columnMappingValue(headerRow, companyIdx),
     website: columnMappingValue(headerRow, websiteIdx),
-    tier_rank: columnMappingValue(headerRow, tierIdx),
+    tier_rank: columnMappingValue(headerRow, tierRankIdx),
+    tier_label: columnMappingValue(headerRow, tierLabelIdx),
   };
 }
 

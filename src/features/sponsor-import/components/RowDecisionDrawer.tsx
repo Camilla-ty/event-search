@@ -110,7 +110,10 @@ export function RowDecisionDrawer({
           <div>
             <p className="font-medium text-slate-900">{row.raw_company_name ?? "—"}</p>
             <p className="text-slate-600">{row.normalized_domain ?? row.raw_website ?? "—"}</p>
-            <p className="text-slate-600">Tier: {row.mapped_tier_rank ?? "—"}</p>
+            <p className="text-slate-600">
+              Tier: {row.mapped_tier_rank ?? "—"}
+              {row.mapped_tier_label ? ` · ${row.mapped_tier_label}` : ""}
+            </p>
           </div>
 
           {row.match_method ? (

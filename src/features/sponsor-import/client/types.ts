@@ -40,10 +40,12 @@ export type SponsorImportRow = {
   raw_company_name: string | null;
   raw_website: string | null;
   raw_tier_rank: number | null;
+  raw_tier_label: string | null;
   normalized_company_name: string | null;
   normalized_website: string | null;
   normalized_domain: string | null;
   mapped_tier_rank: number | null;
+  mapped_tier_label: string | null;
   status: SponsorImportRowStatus;
   validation_issues: ValidationIssue[];
   has_blocking_validation: boolean;
@@ -66,6 +68,7 @@ export type DraftLinkRow = {
   id: string;
   company_id: string;
   tier_rank: number;
+  tier_label: string | null;
   excluded_from_publish: boolean;
   companies?: {
     id: string;
