@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import type {
@@ -24,6 +25,7 @@ type CreateCityResponse = {
 };
 
 export function AddCityModal({ open, onClose, onCreated }: AddCityModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [countries, setCountries] = useState<CountryOption[]>([]);
   const [states, setStates] = useState<StateOption[]>([]);
   const [countryId, setCountryId] = useState("");
@@ -33,6 +35,10 @@ export function AddCityModal({ open, onClose, onCreated }: AddCityModalProps) {
   const [isLoadingStates, setIsLoadingStates] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -99,12 +105,11 @@ export function AddCityModal({ open, onClose, onCreated }: AddCityModalProps) {
     };
   }, [open, countryId]);
 
-  if (!open) return null;
-
   const statesRequired = states.length > 0;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    event.stopPropagation();
     setError(null);
     setIsSubmitting(true);
 
@@ -141,7 +146,9 @@ export function AddCityModal({ open, onClose, onCreated }: AddCityModalProps) {
     }
   }
 
-  return (
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       role="dialog"
@@ -239,6 +246,7 @@ export function AddCityModal({ open, onClose, onCreated }: AddCityModalProps) {
           </Button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

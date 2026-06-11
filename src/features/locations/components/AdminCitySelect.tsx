@@ -11,6 +11,7 @@ type AdminCitySelectProps = {
   value: string;
   onChange: (cityId: string) => void;
   initialCities: CityOption[];
+  onCityCreated?: (city: CityOption) => void;
   disabled?: boolean;
   emptyLabel?: string;
 };
@@ -24,6 +25,7 @@ export function AdminCitySelect({
   value,
   onChange,
   initialCities,
+  onCityCreated,
   disabled = false,
   emptyLabel = "No city",
 }: AdminCitySelectProps) {
@@ -37,6 +39,7 @@ export function AdminCitySelect({
       if (prev.some((row) => row.id === city.id)) return prev;
       return sortCityOptions([...prev, city]);
     });
+    onCityCreated?.(city);
     onChange(city.id);
   }
 

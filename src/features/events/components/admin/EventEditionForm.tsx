@@ -77,9 +77,21 @@ export function EventEditionForm({
   const [slugModalOpen, setSlugModalOpen] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState<"import" | "detail" | null>(null);
   const [siblings, setSiblings] = useState<EditionSiblingSummary[]>([]);
+  const [inlineCities, setInlineCities] = useState<CityOption[]>([]);
 
   const yearNumber = Number(values.year);
-  const selectedCity = cities.find((city) => city.id === values.city_id);
+  const cityLookup = useMemo(() => {
+    const byId = new Map<string, CityOption>();
+    for (const city of cities) {
+      byId.set(city.id, city);
+    }
+    for (const city of inlineCities) {
+      byId.set(city.id, city);
+    }
+    return byId;
+  }, [cities, inlineCities]);
+  const selectedCity =
+    values.city_id !== "" ? (cityLookup.get(values.city_id) ?? null) : null;
   const citySlugHint = selectedCity?.city ?? null;
 
   const autoSlug = useMemo(() => {
@@ -362,6 +374,12 @@ export function EventEditionForm({
             value={values.city_id}
             onChange={(cityId) => updateField("city_id", cityId)}
             initialCities={cities}
+            onCityCreated={(city) => {
+              setInlineCities((prev) => {
+                if (prev.some((row) => row.id === city.id)) return prev;
+                return [...prev, city];
+              });
+            }}
             disabled={isSubmitting}
           />
 
