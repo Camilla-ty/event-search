@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
+import { enrichEventSeriesLogo } from "@/src/features/events/server/enrichEventSeriesLogo";
 import {
   getEventSeriesAdminById,
   updateEventSeries,
@@ -90,6 +91,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       await setSeriesKeywords(id, body.keyword_ids);
     }
     const keywords = await getKeywordsForSeriesId(id);
+    const websiteForEnrich = series.website_url?.trim() ?? "";
+    if (websiteForEnrich !== "" && !(series.logo_url?.trim() ?? "")) {
+      after(async () => {
+        await enrichEventSeriesLogo(id, websiteForEnrich);
+      });
+    }
     return NextResponse.json({ ok: true, series, keywords });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

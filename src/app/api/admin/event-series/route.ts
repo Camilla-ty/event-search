@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
+import { enrichEventSeriesLogo } from "@/src/features/events/server/enrichEventSeriesLogo";
 import {
   createEventSeries,
   listEventSeriesAdmin,
@@ -71,6 +72,11 @@ export async function POST(request: Request) {
     });
     if (Array.isArray(body.keyword_ids)) {
       await setSeriesKeywords(series.id, body.keyword_ids);
+    }
+    if (website && !logo) {
+      after(async () => {
+        await enrichEventSeriesLogo(series.id, website);
+      });
     }
     return NextResponse.json({ ok: true, series }, { status: 201 });
   } catch (error) {

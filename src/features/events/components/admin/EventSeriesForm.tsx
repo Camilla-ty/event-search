@@ -53,14 +53,18 @@ export function EventSeriesForm({
   }
 
   async function submitPayload() {
-    const payload = {
+    const base = {
       name: values.name,
       slug: effectiveSlug,
       description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
-      logo_url: values.logo_url.trim() || null,
       keyword_ids: keywordIds,
     };
+
+    const payload =
+      mode === "edit"
+        ? { ...base, logo_url: values.logo_url.trim() || null }
+        : base;
 
     const url =
       mode === "create"
@@ -180,18 +184,29 @@ export function EventSeriesForm({
             className={formInputClass}
             placeholder="https://example.com"
           />
+          {mode === "create" ? (
+            <p className="text-xs text-slate-500">
+              Logo is fetched automatically from this website after save.
+            </p>
+          ) : null}
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Logo URL</span>
-          <input
-            type="text"
-            value={values.logo_url}
-            onChange={(e) => updateField("logo_url", e.target.value)}
-            disabled={isSubmitting}
-            className={formInputClass}
-          />
-        </label>
+        {mode === "edit" ? (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Logo URL</span>
+            <input
+              type="text"
+              value={values.logo_url}
+              onChange={(e) => updateField("logo_url", e.target.value)}
+              disabled={isSubmitting}
+              className={formInputClass}
+            />
+            <p className="text-xs text-slate-500">
+              Review the auto-fetched logo. Paste a different URL to override, or clear this field
+              and save to fetch again from the website URL.
+            </p>
+          </label>
+        ) : null}
 
         <div className="space-y-2">
           <span className="text-sm font-medium text-slate-700">Keywords</span>

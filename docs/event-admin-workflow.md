@@ -59,6 +59,8 @@ flowchart LR
 
 **Slug auto-generation:** `slugify(name)`; append `year` only if the slug does not already end with that year (admins may include the year in the edition name). Selected city is not added to the auto-slug.
 
+**Series logo auto-fetch:** On create, only website URL is shown; logo is fetched async after save. On edit, Logo URL is shown for review — paste to override, or clear and save to re-fetch from website. Ingest uses the same resolver pipeline as companies, uploads to Storage under `event-series/`, and writes the public URL to `logo_url`.
+
 ### Sponsor import prerequisites
 
 | Requirement | Rule |
