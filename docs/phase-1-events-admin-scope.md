@@ -176,7 +176,7 @@ Same fields as create. All editable.
 | Event series | `event_editions.series_id` | **Yes** | **No** | Searchable select |
 | Year | `event_editions.year` | **Yes** | **No** | Integer input |
 | Edition name | `event_editions.name` | **Yes** | Yes | |
-| Slug | `event_editions.slug` | **Yes** | Yes (warnings) | Auto from name + city hint; year appended only if not already in slug; **globally unique (hard)** |
+| Slug | `event_editions.slug` | **Yes** | Yes (warnings) | Auto from name + year (year appended only if not already in slug); **globally unique (hard)** |
 | Website URL | `event_editions.website_url` | No* | Yes | *Highly recommended |
 | Start date | `event_editions.start_date` | No | Yes | Date input |
 | End date | `event_editions.end_date` | No | Yes | Date input |

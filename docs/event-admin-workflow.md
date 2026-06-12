@@ -57,7 +57,7 @@ flowchart LR
 | **Admin (soft)** | Stronger warn when `series_id + year + city_id` all match and city is set |
 | **Missing city** | No tuple uniqueness; rely on distinct `name` + `slug` + sibling warnings |
 
-**Slug auto-generation:** `slugify(name + optional city hint)`; append `year` only if the slug does not already end with that year (admins may include the year in the edition name).
+**Slug auto-generation:** `slugify(name)`; append `year` only if the slug does not already end with that year (admins may include the year in the edition name). Selected city is not added to the auto-slug.
 
 ### Sponsor import prerequisites
 

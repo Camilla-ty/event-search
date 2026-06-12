@@ -92,12 +92,11 @@ export function EventEditionForm({
   }, [cities, inlineCities]);
   const selectedCity =
     values.city_id !== "" ? (cityLookup.get(values.city_id) ?? null) : null;
-  const citySlugHint = selectedCity?.city ?? null;
 
   const autoSlug = useMemo(() => {
     if (!values.name.trim() || !Number.isInteger(yearNumber)) return "";
-    return buildEditionSlug(values.name, yearNumber, citySlugHint);
-  }, [values.name, yearNumber, citySlugHint]);
+    return buildEditionSlug(values.name, yearNumber);
+  }, [values.name, yearNumber]);
 
   useEffect(() => {
     const seriesId = values.series_id.trim();
