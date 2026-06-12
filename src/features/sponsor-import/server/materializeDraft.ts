@@ -60,14 +60,17 @@ async function resolveCompanyIdForRow(
 
   if (row.decision_type === "create_new") {
     const name = row.normalized_company_name?.trim();
-    const website = row.normalized_website?.trim();
-    if (!name || !website) {
-      throw new SponsorImportHttpError(422, `Row ${row.excel_row_number} missing name or website.`);
+    if (!name) {
+      throw new SponsorImportHttpError(422, `Row ${row.excel_row_number} missing company name.`);
     }
+    const websiteRaw = row.normalized_website?.trim() ?? "";
+    const website = websiteRaw !== "" ? websiteRaw : null;
     const slug = await uniqueSlug(row.proposed_slug ?? name);
     const company = await createCompany({ name, website, slug, city_id: null });
     createdByRowId.set(row.id, company.id);
-    void enrichCompanyLogo(company.id, website);
+    if (website) {
+      void enrichCompanyLogo(company.id, website);
+    }
     return company.id;
   }
 

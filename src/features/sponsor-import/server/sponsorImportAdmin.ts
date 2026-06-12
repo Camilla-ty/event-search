@@ -552,8 +552,7 @@ function isServerEligibleForBulkCreateNew(row: BulkRowDecisionRow): boolean {
   if (row.status === "resolved" || row.status === "excluded") return false;
   if (row.has_blocking_validation === true) return false;
   const name = (row.normalized_company_name ?? row.raw_company_name ?? "").trim();
-  const domain = resolveServerRowDomain(row);
-  return name !== "" && domain !== "";
+  return name !== "";
 }
 
 function isServerEligibleForBulkExclude(row: BulkRowDecisionRow): boolean {

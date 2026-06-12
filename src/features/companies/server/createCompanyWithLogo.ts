@@ -10,7 +10,7 @@ export { normalizeDomainFromWebsite };
 
 export type CreateCompanyInput = {
   name: string;
-  website: string;
+  website: string | null;
   city_id: string | null;
   slug: string;
 };
@@ -19,7 +19,7 @@ export type CompanyRow = {
   id: string;
   name: string;
   slug: string;
-  domain: string;
+  domain: string | null;
   logo_url: string | null;
   logo_source: string | null;
   logo_status: string | null;
@@ -31,8 +31,11 @@ function buildShortDescription(name: string) {
   return `${name} partner profile`;
 }
 
-function buildDescription(name: string, website: string) {
-  return `Auto-generated profile for ${name} (${website}).`;
+function buildDescription(name: string, website: string | null) {
+  if (website) {
+    return `Auto-generated profile for ${name} (${website}).`;
+  }
+  return `Auto-generated profile for ${name}.`;
 }
 
 /**
@@ -40,25 +43,29 @@ function buildDescription(name: string, website: string) {
  */
 export async function createCompany(input: CreateCompanyInput): Promise<CompanyRow> {
   const supabase = createAdminClient();
-  const normalizedDomain = normalizeDomainFromWebsite(input.website);
+  const trimmedName = input.name.trim();
+  const trimmedWebsite = input.website?.trim() ?? "";
+  const trimmedSlug = input.slug.trim();
+  const hasWebsite = trimmedWebsite !== "";
 
-  if (!normalizedDomain) {
-    throw new Error("Invalid company website");
+  let normalizedDomain: string | null = null;
+  if (hasWebsite) {
+    normalizedDomain = normalizeDomainFromWebsite(trimmedWebsite);
+    if (!normalizedDomain) {
+      throw new Error("Invalid company website");
+    }
   }
 
-  const trimmedName = input.name.trim();
-  const trimmedWebsite = input.website.trim();
-  const trimmedSlug = input.slug.trim();
-  const isSocialWebsite = isSocialPlatformWebsite(trimmedWebsite);
+  const isSocialWebsite = hasWebsite && isSocialPlatformWebsite(trimmedWebsite);
   const logoMeta = initialLogoMetadata({
     logo_url: null,
-    domain: isSocialWebsite ? null : normalizedDomain,
+    domain: hasWebsite && !isSocialWebsite ? normalizedDomain : null,
   });
 
   const insertPayload: Record<string, unknown> = {
     name: trimmedName,
     domain: normalizedDomain,
-    website: trimmedWebsite,
+    website: hasWebsite ? trimmedWebsite : null,
     city_id: input.city_id ?? null,
     slug: trimmedSlug,
     logo_url: null,
@@ -67,7 +74,7 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
     logo_fetched_at: null,
     logo_fetch_error: null,
     short_description: buildShortDescription(trimmedName),
-    description: buildDescription(trimmedName, trimmedWebsite),
+    description: buildDescription(trimmedName, hasWebsite ? trimmedWebsite : null),
   };
 
   const { data: inserted, error: insertError } = await supabase
@@ -96,11 +103,12 @@ export async function enrichCompanyLogo(
   website: string,
 ): Promise<void> {
   try {
-    if (isSocialPlatformWebsite(website)) {
+    const trimmedWebsite = website.trim();
+    if (!trimmedWebsite || isSocialPlatformWebsite(trimmedWebsite)) {
       return;
     }
 
-    const normalizedDomain = normalizeDomainFromWebsite(website);
+    const normalizedDomain = normalizeDomainFromWebsite(trimmedWebsite);
     if (!normalizedDomain) {
       return;
     }

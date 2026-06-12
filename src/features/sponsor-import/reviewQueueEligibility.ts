@@ -33,7 +33,6 @@ export function getBulkCreateNewBlockReason(row: SponsorImportRow): BulkCreateNe
   if (row.status === "excluded") return "excluded";
   if (hasBlockingValidation(row)) return "blocking_validation";
   if (resolveRowCompanyName(row) === "") return "missing_company_name";
-  if (resolveRowDomain(row) === "") return "missing_domain";
   return null;
 }
 

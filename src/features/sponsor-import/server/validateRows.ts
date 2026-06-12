@@ -58,8 +58,8 @@ function buildIssues(input: RowValidationInput): {
   if (!websiteRaw) {
     issues.push({
       type: "missing_website",
-      severity: "blocking",
-      message: "Website is required.",
+      severity: "warning",
+      message: "No website — company will be created by name only.",
     });
   } else if (!normalized_domain) {
     issues.push({
