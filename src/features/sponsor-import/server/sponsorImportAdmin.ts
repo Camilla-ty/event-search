@@ -4,6 +4,7 @@ import { normalizeDomain } from "@/src/lib/domain/normalizeDomain";
 import type {
   ColumnMapping,
   DraftDiffSummary,
+  ImportToDraftResult,
   PublishResult,
   RowSummary,
   SponsorImportBatchStatus,
@@ -788,18 +789,113 @@ export async function patchRowDecision(
   return updated;
 }
 
+function parseImportToDraftResultPayload(payload: unknown): ImportToDraftResult | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  if (
+    typeof p.companies_created !== "number" ||
+    typeof p.draft_links_created !== "number" ||
+    typeof p.draft_links_updated !== "number" ||
+    typeof p.rows_materialized !== "number"
+  ) {
+    return null;
+  }
+  return {
+    companies_created: p.companies_created,
+    draft_links_created: p.draft_links_created,
+    draft_links_updated: p.draft_links_updated,
+    rows_materialized: p.rows_materialized,
+  };
+}
+
+async function loadImportToDraftResultFromLog(
+  batchId: string,
+): Promise<ImportToDraftResult | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("sponsor_import_admin_action_logs")
+    .select("payload")
+    .eq("batch_id", batchId)
+    .eq("action_type", "import_to_draft")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return parseImportToDraftResultPayload(data?.payload);
+}
+
+async function summarizeImportToDraftFromDb(batchId: string): Promise<ImportToDraftResult> {
+  const supabase = createAdminClient();
+  const { count: linkCount, error: linkError } = await supabase
+    .from("sponsor_import_draft_links")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId);
+  if (linkError) throw new Error(linkError.message);
+
+  const { count: rowsMaterialized, error: rowError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .not("draft_link_id", "is", null);
+  if (rowError) throw new Error(rowError.message);
+
+  return {
+    companies_created: 0,
+    draft_links_created: linkCount ?? 0,
+    draft_links_updated: 0,
+    rows_materialized: rowsMaterialized ?? 0,
+  };
+}
+
+async function resolveIdempotentImportToDraftResult(
+  batchId: string,
+): Promise<ImportToDraftResult> {
+  return (await loadImportToDraftResultFromLog(batchId)) ?? summarizeImportToDraftFromDb(batchId);
+}
+
 export async function importBatchToDraft(batchId: string, actorId: string) {
-  const batch = await getBatchRow(batchId);
+  let batch = await getBatchRow(batchId);
+
+  if (batch.status === "draft") {
+    return resolveIdempotentImportToDraftResult(batchId);
+  }
+
   assertBatchStatus(batch, ["review"]);
 
   const rows = await loadImportRows(batchId);
   assertImportToDraftGuards(rows);
 
   const supabase = createAdminClient();
-  await supabase
+  const now = new Date().toISOString();
+  const { data: claimed, error: claimError } = await supabase
     .from("sponsor_import_batches")
-    .update({ processing_phase: "importing_to_draft", updated_at: new Date().toISOString() })
-    .eq("id", batchId);
+    .update({ processing_phase: "importing_to_draft", updated_at: now })
+    .eq("id", batchId)
+    .eq("status", "review")
+    .is("processing_phase", null)
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) throw new Error(claimError.message);
+
+  if (!claimed) {
+    batch = await getBatchRow(batchId);
+    if (batch.status === "draft") {
+      return resolveIdempotentImportToDraftResult(batchId);
+    }
+    if (batch.processing_phase === "importing_to_draft") {
+      throw new SponsorImportHttpError(
+        409,
+        "Import to draft is already in progress. Wait for it to finish before retrying.",
+      );
+    }
+    throw new SponsorImportHttpError(
+      409,
+      "Import to draft could not start. Refresh the page and try again.",
+      { status: batch.status, processing_phase: batch.processing_phase },
+    );
+  }
 
   const { data: resolvedRows, error } = await supabase
     .from("sponsor_import_rows")

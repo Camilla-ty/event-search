@@ -7,7 +7,7 @@ import {
 } from "@/src/features/companies/server/createCompanyWithLogo";
 
 import type { ImportToDraftResult } from "../types";
-import { SponsorImportHttpError } from "./errors";
+import { isUniqueViolation, SponsorImportHttpError } from "./errors";
 
 type ResolvedRow = {
   id: string;
@@ -170,9 +170,40 @@ export async function materializeDraftLinks(
         })
         .select("id")
         .single();
-      if (insertError) throw new Error(insertError.message);
-      linkId = String(inserted.id);
-      draftLinksCreated += 1;
+
+      if (insertError) {
+        const insertMessage = insertError.message;
+        if (isUniqueViolation(insertMessage)) {
+          const { data: racedLink, error: racedFindError } = await supabase
+            .from("sponsor_import_draft_links")
+            .select("id")
+            .eq("batch_id", batchId)
+            .eq("company_id", companyId)
+            .maybeSingle();
+          if (racedFindError) throw new Error(racedFindError.message);
+          if (!racedLink) throw new Error(insertMessage);
+
+          const { data: updated, error: updateError } = await supabase
+            .from("sponsor_import_draft_links")
+            .update({
+              tier_rank: group.tier,
+              tier_label: group.tierLabel,
+              source_import_row_id: group.sourceRowId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", racedLink.id)
+            .select("id")
+            .single();
+          if (updateError) throw new Error(updateError.message);
+          linkId = String(updated.id);
+          draftLinksUpdated += 1;
+        } else {
+          throw new Error(insertMessage);
+        }
+      } else {
+        linkId = String(inserted.id);
+        draftLinksCreated += 1;
+      }
     }
 
     for (const rowId of group.rowIds) {

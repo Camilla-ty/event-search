@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { SponsorImportHttpError } from "./errors";
-import { isUniqueViolation } from "./errors";
+import { isUniqueViolation, SponsorImportHttpError, uniqueViolationUserMessage } from "./errors";
 
 export function sponsorImportErrorResponse(error: unknown): NextResponse {
   if (error instanceof SponsorImportHttpError) {
@@ -16,7 +15,7 @@ export function sponsorImportErrorResponse(error: unknown): NextResponse {
     return NextResponse.json(
       {
         ok: false,
-        error: "Constraint violation — an active import may already exist for this edition.",
+        error: uniqueViolationUserMessage(message),
         details: { message },
       },
       { status: 409 },

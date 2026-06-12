@@ -28,6 +28,12 @@ export function FileUploadBox({ file, onFileChange, disabled = false }: FileUplo
     onFileChange(next);
   }
 
+  function clearFile(e: React.MouseEvent) {
+    e.stopPropagation();
+    pickFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     pickFile(e.target.files?.[0] ?? null);
   }
@@ -68,7 +74,7 @@ export function FileUploadBox({ file, onFileChange, disabled = false }: FileUplo
         }}
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-label="Upload spreadsheet file"
+        aria-label={file ? "Replace spreadsheet file" : "Upload spreadsheet file"}
       >
         <input
           ref={inputRef}
@@ -82,10 +88,27 @@ export function FileUploadBox({ file, onFileChange, disabled = false }: FileUplo
         {file ? (
           <div className="space-y-2">
             <p className="text-sm font-semibold text-emerald-900">File selected</p>
-            <p className="text-sm text-slate-900">{file.name}</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm text-slate-900">{file.name}</p>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={clearFile}
+                className={[
+                  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition",
+                  disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer hover:bg-emerald-100 hover:text-slate-800",
+                ].join(" ")}
+                aria-label={`Remove ${file.name}`}
+              >
+                ×
+              </button>
+            </div>
             <p className="text-xs text-slate-600">
               {file.type || "Unknown type"} · {formatFileSize(file.size)}
             </p>
+            <p className="text-xs text-slate-500">Click or drop to replace</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -98,7 +121,7 @@ export function FileUploadBox({ file, onFileChange, disabled = false }: FileUplo
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {!file ? (
         <Button
           type="button"
           variant="secondary"
@@ -108,23 +131,9 @@ export function FileUploadBox({ file, onFileChange, disabled = false }: FileUplo
             inputRef.current?.click();
           }}
         >
-          {file ? "Choose different file" : "Choose file"}
+          Choose file
         </Button>
-        {file ? (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={disabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              pickFile(null);
-              if (inputRef.current) inputRef.current.value = "";
-            }}
-          >
-            Remove file
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

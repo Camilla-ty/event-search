@@ -58,6 +58,9 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const skipFilterReload = useRef(true);
+  const bulkAcceptInFlight = useRef(false);
+  const importToDraftInFlight = useRef(false);
+  const bulkActionInFlight = useRef(false);
 
   useImportProgressLabel(Boolean(progressMessage), progressMessage);
 
@@ -242,57 +245,75 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   }
 
   async function handleBulkAccept() {
+    if (bulkAcceptInFlight.current) return;
+    bulkAcceptInFlight.current = true;
     setActionLoading(true);
     setProgressMessage(IMPORT_PROGRESS.bulkAccept);
     setError(null);
-    const result = await bulkAcceptDomains(batch.id);
-    setActionLoading(false);
-    setProgressMessage(null);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await bulkAcceptDomains(batch.id);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      await reload();
+    } finally {
+      bulkAcceptInFlight.current = false;
+      setActionLoading(false);
+      setProgressMessage(null);
     }
-    await reload();
   }
 
   async function handleImportToDraft() {
+    if (importToDraftInFlight.current) return;
+    importToDraftInFlight.current = true;
     setActionLoading(true);
     setProgressMessage(IMPORT_PROGRESS.importingToDraft);
     setError(null);
+
     const result = await importToDraft(batch.id);
-    setActionLoading(false);
-    setProgressMessage(null);
     if (!result.ok) {
+      importToDraftInFlight.current = false;
+      setActionLoading(false);
+      setProgressMessage(null);
       setError(result.error);
       return;
     }
+
     router.push(flowHref(batch.id, "draft"));
   }
 
   async function applyBulkAction(action: PendingBulkAction) {
+    if (bulkActionInFlight.current) return;
+
     const targetIds = action === "create_new" ? createNewSelectedIds : excludeSelectedIds;
 
     if (targetIds.length === 0) return;
 
+    bulkActionInFlight.current = true;
     setActionLoading(true);
     setProgressMessage(IMPORT_PROGRESS.applyingDecisions);
     setBulkError(null);
-    const result = await bulkApplyRowDecisions(batch.id, {
-      decision_type: action,
-      row_ids: targetIds,
-    });
-    setActionLoading(false);
-    setProgressMessage(null);
+    try {
+      const result = await bulkApplyRowDecisions(batch.id, {
+        decision_type: action,
+        row_ids: targetIds,
+      });
 
-    if (!result.ok) {
-      setBulkError(result.error);
-      return;
+      if (!result.ok) {
+        setBulkError(result.error);
+        return;
+      }
+
+      setPendingBulk(null);
+      setBulkError(null);
+      clearSelection();
+      await reload();
+    } finally {
+      bulkActionInFlight.current = false;
+      setActionLoading(false);
+      setProgressMessage(null);
     }
-
-    setPendingBulk(null);
-    setBulkError(null);
-    clearSelection();
-    await reload();
   }
 
   const pendingBulkCount =
@@ -476,20 +497,21 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         </Button>
         {canBulkAccept ? (
           <Button onClick={() => void handleBulkAccept()} disabled={actionLoading || loading}>
-            {actionLoading && progressMessage === IMPORT_PROGRESS.bulkAccept
-              ? "Accepting auto-ready matches…"
-              : `Bulk accept domain matches (${summary.auto_ready})`}
+            Bulk accept domain matches ({summary.auto_ready})
           </Button>
         ) : null}
         <Button
           onClick={() => void handleImportToDraft()}
           disabled={!canImportToDraft || actionLoading || loading}
+          aria-busy={actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft}
         >
-          {actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft
-            ? "Creating draft links…"
-            : "Import to draft →"}
+          Import to draft →
         </Button>
       </div>
+
+      {actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft ? (
+        <ImportProgressMessage message={IMPORT_PROGRESS.importingToDraft} />
+      ) : null}
 
       {bulkCreateNewState.disabledReason ? (
         <p className="text-sm text-amber-800">{bulkCreateNewState.disabledReason}</p>
