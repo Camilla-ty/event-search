@@ -142,27 +142,40 @@ function findColumnIndex(
   return null;
 }
 
+/** Match tier rank / sponsor tier headers (spaces, underscores, hyphens). */
+const TIER_RANK_HEADER_PATTERNS = [
+  /^tier_rank$/i,
+  /^tier[\s_-]+rank$/i,
+  /^sponsor[\s_-]+tier$/i,
+  /^sponsor[\s_-]*tier$/i,
+  /^tier[\s_-]*rank$/i,
+  /^rank$/i,
+  /^tier$/i,
+] as const;
+
+/** Match tier label / sponsor label headers (spaces, underscores, hyphens). */
+const TIER_LABEL_HEADER_PATTERNS = [
+  /^tier_label$/i,
+  /^tier[\s_-]+label$/i,
+  /^sponsor[\s_-]+label$/i,
+  /^sponsor[\s_-]*label$/i,
+  /^tier[\s_-]*label$/i,
+  /^label$/i,
+] as const;
+
 /** Guess column mapping from header labels (fallback when client omits mapping). */
 export function guessColumnMapping(headerRow: string[]): ColumnMapping | null {
   const used = new Set<number>();
 
-  const tierRankIdx = findColumnIndex(
-    headerRow,
-    [/sponsor\s*tier/i, /^tier\s*rank$/i, /^rank$/i, /^tier$/i],
-    used,
-  );
+  const tierRankIdx = findColumnIndex(headerRow, [...TIER_RANK_HEADER_PATTERNS], used);
   if (tierRankIdx !== null) used.add(tierRankIdx);
 
-  const tierLabelIdx = findColumnIndex(
-    headerRow,
-    [/sponsor\s*label/i, /tier\s*label/i, /^label$/i],
-    used,
-  );
+  const tierLabelIdx = findColumnIndex(headerRow, [...TIER_LABEL_HEADER_PATTERNS], used);
   if (tierLabelIdx !== null) used.add(tierLabelIdx);
 
   const companyIdx = findColumnIndex(
     headerRow,
-    [/^name$/i, /company\s*name/i, /organization/i, /company/i],
+    [/^name$/i, /company[\s_-]*name/i, /company\s*name/i, /organization/i, /^company$/i],
     used,
   );
   if (companyIdx !== null) used.add(companyIdx);
