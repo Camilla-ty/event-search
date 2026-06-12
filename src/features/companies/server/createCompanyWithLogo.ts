@@ -1,5 +1,6 @@
 import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
+import { isSocialPlatformWebsite } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";
@@ -48,7 +49,11 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
   const trimmedName = input.name.trim();
   const trimmedWebsite = input.website.trim();
   const trimmedSlug = input.slug.trim();
-  const logoMeta = initialLogoMetadata({ logo_url: null, domain: normalizedDomain });
+  const isSocialWebsite = isSocialPlatformWebsite(trimmedWebsite);
+  const logoMeta = initialLogoMetadata({
+    logo_url: null,
+    domain: isSocialWebsite ? null : normalizedDomain,
+  });
 
   const insertPayload: Record<string, unknown> = {
     name: trimmedName,
@@ -91,6 +96,10 @@ export async function enrichCompanyLogo(
   website: string,
 ): Promise<void> {
   try {
+    if (isSocialPlatformWebsite(website)) {
+      return;
+    }
+
     const normalizedDomain = normalizeDomainFromWebsite(website);
     if (!normalizedDomain) {
       return;

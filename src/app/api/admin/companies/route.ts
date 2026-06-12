@@ -9,9 +9,16 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search") ?? undefined;
+  const filterRaw = searchParams.get("filter");
+  const filter =
+    filterRaw === "social_website" ||
+    filterRaw === "missing_logo" ||
+    filterRaw === "needs_logo_review"
+      ? filterRaw
+      : undefined;
 
   try {
-    const companies = await listCompaniesAdmin(search);
+    const companies = await listCompaniesAdmin({ search, filter });
     return NextResponse.json({ ok: true, companies });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

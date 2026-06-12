@@ -1,5 +1,10 @@
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
 import { logoMetadataPatchForLogoUrlChange } from "@/src/lib/companies/logoMetadataPatch";
+import {
+  companyMissingLogo,
+  companyNeedsLogoReview,
+  isSocialWebsiteCompany,
+} from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export type CompanyAdminRow = {
@@ -33,7 +38,40 @@ export type UpdateCompanyAdminInput = {
   city_id?: string | null;
 };
 
-export async function listCompaniesAdmin(search?: string): Promise<CompanyListItem[]> {
+export type CompanyListFilter =
+  | "all"
+  | "social_website"
+  | "missing_logo"
+  | "needs_logo_review";
+
+export type ListCompaniesAdminOptions = {
+  search?: string;
+  filter?: CompanyListFilter;
+};
+
+function applyCompanyListFilter(
+  companies: CompanyAdminRow[],
+  filter: CompanyListFilter,
+): CompanyAdminRow[] {
+  if (filter === "all") return companies;
+
+  return companies.filter((company) => {
+    switch (filter) {
+      case "social_website":
+        return isSocialWebsiteCompany(company);
+      case "missing_logo":
+        return companyMissingLogo(company);
+      case "needs_logo_review":
+        return companyNeedsLogoReview(company);
+      default:
+        return true;
+    }
+  });
+}
+
+export async function listCompaniesAdmin(
+  options?: ListCompaniesAdminOptions,
+): Promise<CompanyListItem[]> {
   const supabase = createAdminClient();
   let query = supabase
     .from("companies")
@@ -42,17 +80,18 @@ export async function listCompaniesAdmin(search?: string): Promise<CompanyListIt
     )
     .order("name", { ascending: true });
 
-  const term = search?.trim() ?? "";
+  const term = options?.search?.trim() ?? "";
   if (term !== "") {
     query = query.or(
-      `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%`,
+      `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%,website.ilike.%${term}%`,
     );
   }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const companies = (data ?? []) as CompanyAdminRow[];
+  const filter = options?.filter ?? "all";
+  const companies = applyCompanyListFilter((data ?? []) as CompanyAdminRow[], filter);
   if (companies.length === 0) return [];
 
   const { data: links, error: linkError } = await supabase

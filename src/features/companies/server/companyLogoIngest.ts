@@ -191,15 +191,15 @@ function storagePath(
   return `${storageNamespace}/${domain}/logo.${extensionFor(contentType)}`;
 }
 
-async function resolveExistingLogoUrlByDomain(domain: string): Promise<string | null> {
-  const normalizedDomain = normalizeDomain(domain);
-  if (!normalizedDomain) return null;
+async function resolveExistingLogoUrlByDomain(identityKey: string): Promise<string | null> {
+  const key = identityKey.trim().toLowerCase();
+  if (!key) return null;
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("companies")
     .select("logo_url")
-    .eq("domain", normalizedDomain)
+    .eq("domain", key)
     .not("logo_url", "is", null)
     .limit(1);
 
@@ -252,8 +252,8 @@ export async function ingestCompanyLogoByDomain(
   options?: CompanyLogoIngestOptions,
 ): Promise<CompanyLogoIngestResult> {
   const storageNamespace = options?.storageNamespace?.trim() || DEFAULT_STORAGE_NAMESPACE;
-  const normalizedDomain = normalizeDomain(domain);
-  if (!normalizedDomain) {
+  const identityKey = domain.trim().toLowerCase();
+  if (!identityKey) {
     return {
       status: "skipped",
       logoUrl: null,
@@ -263,7 +263,18 @@ export async function ingestCompanyLogoByDomain(
     };
   }
 
-  const existingLogoUrl = await resolveExistingLogoUrlByDomain(normalizedDomain);
+  const fetchHost = normalizeDomain(domain);
+  if (!fetchHost) {
+    return {
+      status: "skipped",
+      logoUrl: null,
+      strategy: null,
+      error: null,
+      preview: null,
+    };
+  }
+
+  const existingLogoUrl = await resolveExistingLogoUrlByDomain(identityKey);
   if (existingLogoUrl) {
     return {
       status: "ok",
@@ -284,7 +295,7 @@ export async function ingestCompanyLogoByDomain(
   for (const strategy of strategies) {
     let image: FetchedImage | null = null;
     try {
-      image = await strategy.run(normalizedDomain);
+      image = await strategy.run(fetchHost);
     } catch {
       image = null;
       lastError = "strategy_threw";
@@ -294,7 +305,7 @@ export async function ingestCompanyLogoByDomain(
 
     if (options?.dryRun) {
       const ext = extensionFor(image.contentType);
-      const previewPath = `${storageNamespace}/${normalizedDomain}/logo.${ext}`;
+      const previewPath = `${storageNamespace}/${identityKey}/logo.${ext}`;
       return {
         status: "ok",
         logoUrl: null,
@@ -304,7 +315,7 @@ export async function ingestCompanyLogoByDomain(
       };
     }
 
-    const publicUrl = await uploadCompanyLogo(normalizedDomain, image, storageNamespace);
+    const publicUrl = await uploadCompanyLogo(identityKey, image, storageNamespace);
     if (!publicUrl) {
       lastError = "upload_failed";
       continue;
