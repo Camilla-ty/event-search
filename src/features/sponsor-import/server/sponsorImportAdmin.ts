@@ -900,7 +900,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
   const { data: resolvedRows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label",
+      "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label, draft_link_id",
     )
     .eq("batch_id", batchId)
     .eq("status", "resolved");
@@ -922,6 +922,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
         proposed_slug: r.proposed_slug as string | null,
         mapped_tier_rank: r.mapped_tier_rank as number | null,
         mapped_tier_label: r.mapped_tier_label as string | null,
+        draft_link_id: r.draft_link_id as string | null,
       })),
     );
 

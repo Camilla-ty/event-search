@@ -35,5 +35,16 @@ export function uniqueViolationUserMessage(message: string): string {
     return "A company with this slug already exists.";
   }
 
+  if (
+    message.includes("companies_name") ||
+    (message.includes("companies") && message.includes("(name)"))
+  ) {
+    return "A company with this name already exists — often caused by duplicate names in the spreadsheet or companies left from a prior failed import. Link to the existing company instead of creating a new one.";
+  }
+
+  if (message.includes("companies") && message.includes("domain")) {
+    return "A company with this website domain already exists.";
+  }
+
   return "A uniqueness constraint was violated. If an action is still running, wait for it to finish before retrying.";
 }
