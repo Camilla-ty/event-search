@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
+import { importFilterChipClass } from "@/src/lib/design/classes";
 
 import {
   bulkAcceptDomains,
@@ -15,6 +16,7 @@ import {
 import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
+import { IMPORT_PROGRESS } from "../../importProgress";
 import {
   getBulkCreateNewButtonState,
   isEligibleForBulkCreateNew,
@@ -23,6 +25,8 @@ import {
   resolveRowDomain,
 } from "../../reviewQueueEligibility";
 import { BulkReviewConfirmModal } from "../BulkReviewConfirmModal";
+import { useImportProgressLabel } from "../ImportFlowProgress";
+import { ImportProgressMessage } from "../ImportProgressMessage";
 import { RowDecisionDrawer } from "../RowDecisionDrawer";
 
 type ReviewQueueStepProps = {
@@ -44,6 +48,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [progressMessage, setProgressMessage] = useState<string | null>(IMPORT_PROGRESS.matching);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RowSummary>(initialSummary);
   const [rows, setRows] = useState<SponsorImportRow[]>([]);
@@ -52,45 +57,90 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const skipFilterReload = useRef(true);
+
+  useImportProgressLabel(Boolean(progressMessage), progressMessage);
+
+  const loadRowsForFilter = useCallback(
+    async (activeFilter: FilterKey) => {
+      const listed = await fetchRows(batch.id, {
+        status: filterStatusParam(activeFilter),
+        page: 1,
+        pageSize: SPONSOR_IMPORT_MAX_ROWS,
+      });
+      if (!listed.ok) {
+        setError(listed.error);
+        return false;
+      }
+      setSummary(listed.summary);
+      setRows(listed.rows);
+      setSelectedIds((prev) => {
+        const visible = new Set(listed.rows.map((r) => r.id));
+        return new Set(Array.from(prev).filter((id) => visible.has(id)));
+      });
+      return true;
+    },
+    [batch.id],
+  );
 
   const reload = useCallback(async () => {
-    const listed = await fetchRows(batch.id, {
-      status: filterStatusParam(filter),
-      page: 1,
-      pageSize: SPONSOR_IMPORT_MAX_ROWS,
-    });
-    if (!listed.ok) {
-      setError(listed.error);
-      return;
-    }
-    setSummary(listed.summary);
-    setRows(listed.rows);
-    setSelectedIds((prev) => {
-      const visible = new Set(listed.rows.map((r) => r.id));
-      return new Set(Array.from(prev).filter((id) => visible.has(id)));
-    });
-  }, [batch.id, filter]);
+    await loadRowsForFilter(filter);
+  }, [filter, loadRowsForFilter]);
 
   useEffect(() => {
     let cancelled = false;
+
     async function init() {
       setLoading(true);
+      setProgressMessage(IMPORT_PROGRESS.matching);
       setError(null);
+      skipFilterReload.current = true;
+
       const matched = await runMatching(batch.id);
       if (cancelled) return;
       if (!matched.ok) {
         setError(matched.error);
         setLoading(false);
+        setProgressMessage(null);
         return;
       }
-      await reload();
-      if (!cancelled) setLoading(false);
+
+      await loadRowsForFilter(filter);
+      if (cancelled) return;
+
+      setLoading(false);
+      setProgressMessage(null);
+      skipFilterReload.current = false;
     }
+
     void init();
     return () => {
       cancelled = true;
+      setProgressMessage(null);
     };
-  }, [batch.id, reload]);
+  }, [batch.id, loadRowsForFilter]);
+
+  useEffect(() => {
+    if (skipFilterReload.current) return;
+
+    let cancelled = false;
+
+    async function loadFilteredRows() {
+      setLoading(true);
+      setProgressMessage(IMPORT_PROGRESS.loadingRows);
+      setError(null);
+      await loadRowsForFilter(filter);
+      if (!cancelled) {
+        setLoading(false);
+        setProgressMessage(null);
+      }
+    }
+
+    void loadFilteredRows();
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, loadRowsForFilter]);
 
   const visibleSelectableIds = useMemo(
     () => rows.filter(isSelectableReviewRow).map((r) => r.id),
@@ -167,6 +217,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
 
   async function selectAllMatchingFilter() {
     setActionLoading(true);
+    setProgressMessage(IMPORT_PROGRESS.loadingRows);
     setError(null);
     const listed = await fetchRows(batch.id, {
       status: filterStatusParam(filter),
@@ -174,6 +225,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
       pageSize: SPONSOR_IMPORT_MAX_ROWS,
     });
     setActionLoading(false);
+    setProgressMessage(null);
     if (!listed.ok) {
       setError(listed.error);
       return;
@@ -191,9 +243,11 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
 
   async function handleBulkAccept() {
     setActionLoading(true);
+    setProgressMessage(IMPORT_PROGRESS.bulkAccept);
     setError(null);
     const result = await bulkAcceptDomains(batch.id);
     setActionLoading(false);
+    setProgressMessage(null);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -203,9 +257,11 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
 
   async function handleImportToDraft() {
     setActionLoading(true);
+    setProgressMessage(IMPORT_PROGRESS.importingToDraft);
     setError(null);
     const result = await importToDraft(batch.id);
     setActionLoading(false);
+    setProgressMessage(null);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -219,12 +275,14 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     if (targetIds.length === 0) return;
 
     setActionLoading(true);
+    setProgressMessage(IMPORT_PROGRESS.applyingDecisions);
     setBulkError(null);
     const result = await bulkApplyRowDecisions(batch.id, {
       decision_type: action,
       row_ids: targetIds,
     });
     setActionLoading(false);
+    setProgressMessage(null);
 
     if (!result.ok) {
       setBulkError(result.error);
@@ -272,12 +330,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
               setFilter(key);
               clearSelection();
             }}
-            className={[
-              "rounded-md px-3 py-1.5 text-sm",
-              filter === key
-                ? "bg-brand-primary-muted font-medium text-brand-primary"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-            ].join(" ")}
+            className={importFilterChipClass(filter === key)}
           >
             {key === "needs_review" ? "Needs review" : key === "auto_ready" ? "Auto-ready" : "All"}
           </button>
@@ -316,7 +369,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading rows…</p>
+        <ImportProgressMessage message={progressMessage ?? IMPORT_PROGRESS.loadingRows} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="min-w-full text-left text-sm">
@@ -423,14 +476,18 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         </Button>
         {canBulkAccept ? (
           <Button onClick={() => void handleBulkAccept()} disabled={actionLoading || loading}>
-            {actionLoading ? "Accepting…" : `Bulk accept domain matches (${summary.auto_ready})`}
+            {actionLoading && progressMessage === IMPORT_PROGRESS.bulkAccept
+              ? "Accepting auto-ready matches…"
+              : `Bulk accept domain matches (${summary.auto_ready})`}
           </Button>
         ) : null}
         <Button
           onClick={() => void handleImportToDraft()}
           disabled={!canImportToDraft || actionLoading || loading}
         >
-          Import to draft →
+          {actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft
+            ? "Creating draft links…"
+            : "Import to draft →"}
         </Button>
       </div>
 

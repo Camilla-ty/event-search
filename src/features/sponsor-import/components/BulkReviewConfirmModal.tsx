@@ -52,7 +52,7 @@ export function BulkReviewConfirmModal({
             Cancel
           </Button>
           <Button onClick={onConfirm} disabled={loading}>
-            {loading ? "Applying…" : "Confirm"}
+            {loading ? "Applying review decisions…" : "Confirm"}
           </Button>
         </div>
       </div>

@@ -99,7 +99,7 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
         <button
           type="button"
           onClick={downloadTemplate}
-          className="mt-3 text-brand-primary hover:underline"
+          className="mt-3 cursor-pointer text-brand-primary hover:underline"
         >
           Download CSV template
         </button>
@@ -145,7 +145,7 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={loading || Boolean(activeBatchId) || !file}>
-          {loading ? "Uploading…" : "Upload & continue"}
+          {loading ? "Uploading file…" : "Upload & continue"}
         </Button>
         <Link href="/admin/sponsor-imports" className={`${secondaryCtaClass} h-10`}>
           Cancel

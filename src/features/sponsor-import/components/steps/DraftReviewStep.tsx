@@ -9,6 +9,9 @@ import { formInputClass } from "@/src/lib/design/classes";
 import { acknowledgeReview, fetchDraftLinks, patchDraftLink } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
 import type { DraftDiffSummary, DraftLinkRow, SponsorImportBatch } from "../../client/types";
+import { IMPORT_PROGRESS } from "../../importProgress";
+import { useImportProgressLabel } from "../ImportFlowProgress";
+import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type DraftReviewStepProps = {
   batch: SponsorImportBatch;
@@ -27,6 +30,8 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
     excluded: 0,
   });
   const [acknowledged, setAcknowledged] = useState(false);
+
+  useImportProgressLabel(loading, IMPORT_PROGRESS.loadingDraft);
 
   async function reload() {
     const result = await fetchDraftLinks(batch.id);
@@ -106,7 +111,7 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading draft links…</p>
+        <ImportProgressMessage message={IMPORT_PROGRESS.loadingDraft} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="min-w-full text-left text-sm">

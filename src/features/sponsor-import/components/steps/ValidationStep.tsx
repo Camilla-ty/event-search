@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 
-import { fetchRows, runMatching, runValidation } from "../../client/api";
+import { fetchRows, runValidation } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
+import { IMPORT_PROGRESS } from "../../importProgress";
+import { useImportProgressLabel } from "../ImportFlowProgress";
+import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type ValidationStepProps = {
   batch: SponsorImportBatch;
@@ -17,10 +20,11 @@ type ValidationStepProps = {
 export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [continuing, setContinuing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RowSummary>(initialSummary);
   const [rows, setRows] = useState<SponsorImportRow[]>([]);
+
+  useImportProgressLabel(loading, IMPORT_PROGRESS.validating);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,20 +57,6 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
 
   const canContinue = summary.blocking_validation_count === 0;
 
-  async function handleContinue() {
-    setContinuing(true);
-    setError(null);
-
-    const matched = await runMatching(batch.id);
-    if (!matched.ok) {
-      setError(matched.error);
-      setContinuing(false);
-      return;
-    }
-
-    router.push(flowHref(batch.id, "review"));
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -77,7 +67,7 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Validating rows…</p>
+        <ImportProgressMessage message={IMPORT_PROGRESS.validating} />
       ) : (
         <>
           <div className="flex flex-wrap gap-3 text-sm">
@@ -140,8 +130,11 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
         >
           Back
         </Button>
-        <Button onClick={() => void handleContinue()} disabled={loading || continuing || !canContinue}>
-          {continuing ? "Preparing review…" : "Continue to review →"}
+        <Button
+          onClick={() => router.push(flowHref(batch.id, "review"))}
+          disabled={loading || !canContinue}
+        >
+          Continue to review →
         </Button>
       </div>
       {!canContinue && !loading ? (

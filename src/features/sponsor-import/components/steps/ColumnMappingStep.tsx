@@ -14,6 +14,9 @@ import { saveColumnMapping } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
 import type { SponsorImportBatch } from "../../client/types";
 import type { ColumnMapping } from "../../types";
+import { IMPORT_PROGRESS } from "../../importProgress";
+import { useImportProgressLabel } from "../ImportFlowProgress";
+import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type ColumnMappingStepProps = {
   batch: SponsorImportBatch;
@@ -53,6 +56,8 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
   }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useImportProgressLabel(loading, IMPORT_PROGRESS.applyingMapping);
 
   const hasDetectedHeaders = spreadsheetHeaders.some((h) => h.trim() !== "");
 
@@ -125,11 +130,11 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
       {error ? <InlineErrorBanner message={error} /> : null}
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={() => router.push(flowHref(batch.id, "upload"))}>
-          Back
+        <Button variant="secondary" onClick={() => router.push("/admin/sponsor-imports")}>
+          Save & exit
         </Button>
-        <Button onClick={handleConfirm} disabled={loading}>
-          {loading ? "Saving…" : "Confirm mapping →"}
+        <Button onClick={() => void handleConfirm()} disabled={loading}>
+          {loading ? "Applying column mapping…" : "Confirm mapping →"}
         </Button>
       </div>
     </div>

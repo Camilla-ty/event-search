@@ -7,6 +7,7 @@ import type { ImportStep } from "../client/types";
 import type { RowSummary, SponsorImportBatch } from "../client/types";
 import { DiscardImportModal } from "./DiscardImportModal";
 import { ImportContextBar } from "./ImportContextBar";
+import { ImportFlowProgressProvider, useImportFlowProgress } from "./ImportFlowProgress";
 import { ImportStepper } from "./ImportStepper";
 import { ColumnMappingStep } from "./steps/ColumnMappingStep";
 import { DraftReviewStep } from "./steps/DraftReviewStep";
@@ -31,7 +32,15 @@ type SponsorImportFlowProps = {
   spreadsheetHeaders: string[];
 };
 
-export function SponsorImportFlow({
+export function SponsorImportFlow(props: SponsorImportFlowProps) {
+  return (
+    <ImportFlowProgressProvider>
+      <SponsorImportFlowBody {...props} />
+    </ImportFlowProgressProvider>
+  );
+}
+
+function SponsorImportFlowBody({
   batch,
   summary,
   edition,
@@ -39,6 +48,7 @@ export function SponsorImportFlow({
   spreadsheetHeaders,
 }: SponsorImportFlowProps) {
   const router = useRouter();
+  const { progressLabel } = useImportFlowProgress();
   const [discardOpen, setDiscardOpen] = useState(false);
 
   return (
@@ -51,6 +61,7 @@ export function SponsorImportFlow({
         filename={batch.source_filename}
         status={batch.status}
         rowCount={batch.source_row_count}
+        progressLabel={progressLabel}
         onDiscard={() => setDiscardOpen(true)}
       />
 

@@ -39,3 +39,12 @@ export const feedbackErrorClass =
 
 export const feedbackWarningClass =
   "rounded-lg border border-brand-warning/40 bg-brand-warning/15 px-4 py-3 text-sm text-amber-950";
+
+export function importFilterChipClass(active: boolean): string {
+  return [
+    "cursor-pointer rounded-md px-3 py-1.5 text-sm transition",
+    active
+      ? "bg-brand-primary-muted font-medium text-brand-primary"
+      : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+  ].join(" ");
+}

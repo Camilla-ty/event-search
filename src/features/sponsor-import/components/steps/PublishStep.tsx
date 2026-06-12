@@ -9,6 +9,9 @@ import { primaryCtaClass } from "@/src/lib/design/classes";
 
 import { fetchDraftLinks, publishBatch } from "../../client/api";
 import type { DraftDiffSummary, PublishResult, SponsorImportBatch } from "../../client/types";
+import { IMPORT_PROGRESS } from "../../importProgress";
+import { useImportProgressLabel } from "../ImportFlowProgress";
+import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type PublishStepProps = {
   batch: SponsorImportBatch;
@@ -22,6 +25,13 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
   const [error, setError] = useState<string | null>(null);
   const [diff, setDiff] = useState<DraftDiffSummary | null>(null);
   const [result, setResult] = useState<PublishResult | null>(null);
+
+  const progressLabel = publishing
+    ? IMPORT_PROGRESS.publishing
+    : loading
+      ? IMPORT_PROGRESS.loadingPublishSummary
+      : null;
+  useImportProgressLabel(Boolean(progressLabel), progressLabel);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +111,7 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
       </ul>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading publish summary…</p>
+        <ImportProgressMessage message={IMPORT_PROGRESS.loadingPublishSummary} />
       ) : diff ? (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm">
           <p className="font-medium text-slate-900">Ready to publish</p>
@@ -123,7 +133,7 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
           Back
         </Button>
         <Button onClick={() => void handlePublish()} disabled={publishing || loading}>
-          {publishing ? "Publishing…" : "Publish to edition"}
+          {publishing ? "Publishing to edition…" : "Publish to edition"}
         </Button>
       </div>
     </div>
