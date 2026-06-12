@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 
-import { fetchRows, runMatching, runValidation, saveColumnMapping } from "../../client/api";
+import { fetchRows, runMatching, runValidation } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 
@@ -56,15 +56,6 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
   async function handleContinue() {
     setContinuing(true);
     setError(null);
-
-    if (batch.status === "uploaded") {
-      const mapped = await saveColumnMapping(batch.id, batch.column_mapping, true);
-      if (!mapped.ok) {
-        setError(mapped.error);
-        setContinuing(false);
-        return;
-      }
-    }
 
     const matched = await runMatching(batch.id);
     if (!matched.ok) {
