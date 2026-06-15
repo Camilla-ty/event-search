@@ -3,7 +3,8 @@ import type { SponsorImportProcessingPhase } from "./types";
 export const IMPORT_PROGRESS = {
   parsing: "Parsing spreadsheet…",
   applyingMapping: "Applying column mapping…",
-  validating: "Validating rows…",
+  validating:
+    "Checking the uploaded file for duplicate companies, missing required fields, invalid websites, and tier data…",
   matching: "Matching companies…",
   importingToDraft: "Creating draft links…",
   publishing: "Publishing to edition…",

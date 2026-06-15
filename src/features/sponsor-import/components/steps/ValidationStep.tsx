@@ -62,7 +62,8 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Validation</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Checking required fields, tiers, and duplicate rows in the file.
+          Checking the uploaded file for duplicate companies, missing required fields, invalid
+          websites, and tier data.
         </p>
       </div>
 

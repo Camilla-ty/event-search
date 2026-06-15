@@ -44,6 +44,29 @@ function filterStatusParam(filter: FilterKey): string | undefined {
   return undefined;
 }
 
+function importStatusMessage(summary: RowSummary, canImportToDraft: boolean): string {
+  if (canImportToDraft) {
+    return "All rows resolved. Ready to create the draft edition.";
+  }
+  if (summary.auto_ready > 0) {
+    const noun = summary.auto_ready === 1 ? "match" : "matches";
+    return `Accept ${summary.auto_ready} auto-ready domain ${noun} in Step 1 before importing.`;
+  }
+  if (summary.needs_review > 0) {
+    const noun = summary.needs_review === 1 ? "row" : "rows";
+    return `${summary.needs_review} ${noun} still need review before import.`;
+  }
+  if (summary.pending_duplicate_count > 0) {
+    const noun = summary.pending_duplicate_count === 1 ? "duplicate" : "duplicates";
+    return `${summary.pending_duplicate_count} pending ${noun} must be resolved before import.`;
+  }
+  if (summary.blocking_validation_count > 0) {
+    const noun = summary.blocking_validation_count === 1 ? "row" : "rows";
+    return `${summary.blocking_validation_count} ${noun} with blocking validation issues.`;
+  }
+  return "Resolve remaining rows before importing to draft.";
+}
+
 export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -57,6 +80,8 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [acceptedDomainMatchCount, setAcceptedDomainMatchCount] = useState<number | null>(null);
+  const [step1DetailsOpen, setStep1DetailsOpen] = useState(false);
   const skipFilterReload = useRef(true);
   const bulkAcceptInFlight = useRef(false);
   const importToDraftInFlight = useRef(false);
@@ -183,6 +208,8 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     visibleSelectableIds.every((id) => selectedIds.has(id));
 
   const canBulkAccept = summary.auto_ready > 0;
+  const showStep1 = canBulkAccept || acceptedDomainMatchCount !== null;
+  const step1Collapsed = !canBulkAccept && acceptedDomainMatchCount !== null;
   const canImportToDraft =
     summary.auto_ready === 0 &&
     summary.needs_review === 0 &&
@@ -251,10 +278,15 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     setProgressMessage(IMPORT_PROGRESS.bulkAccept);
     setError(null);
     try {
+      const acceptedCount = summary.auto_ready;
       const result = await bulkAcceptDomains(batch.id);
       if (!result.ok) {
         setError(result.error);
         return;
+      }
+      if (acceptedCount > 0) {
+        setAcceptedDomainMatchCount(acceptedCount);
+        setStep1DetailsOpen(false);
       }
       await reload();
     } finally {
@@ -319,209 +351,304 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const pendingBulkCount =
     pendingBulk === "create_new" ? createNewSelectedCount : excludeSelectedCount;
 
+  const importStatus = importStatusMessage(summary, canImportToDraft);
+  const importingToDraft =
+    actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">Review queue</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Resolve company matches and duplicates before importing to draft.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2 text-sm">
-        <span className="rounded-md bg-slate-100 px-3 py-1">Total: {summary.total}</span>
-        <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-950">
-          Needs review: {summary.needs_review}
-        </span>
-        <span className="rounded-md bg-sky-50 px-3 py-1 text-sky-950">
-          Auto-ready: {summary.auto_ready}
-        </span>
-        <span className="rounded-md bg-emerald-50 px-3 py-1 text-emerald-950">
-          Resolved: {summary.resolved}
-        </span>
-        <span className="rounded-md bg-slate-100 px-3 py-1">Excluded: {summary.excluded}</span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {(["needs_review", "auto_ready", "all"] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              setFilter(key);
-              clearSelection();
-            }}
-            className={importFilterChipClass(filter === key)}
-          >
-            {key === "needs_review" ? "Needs review" : key === "auto_ready" ? "Auto-ready" : "All"}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={loading || actionLoading || visibleSelectableIds.length === 0}
-          onClick={toggleSelectAllVisible}
-        >
-          {allVisibleSelected ? "Deselect visible" : "Select all visible"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={loading || actionLoading}
-          onClick={() => void selectAllMatchingFilter()}
-        >
-          Select all matching filter
-        </Button>
-        {selectedIds.size > 0 ? (
-          <Button type="button" variant="secondary" size="sm" onClick={clearSelection}>
-            Clear selection ({selectedIds.size})
-          </Button>
-        ) : null}
-        <span className="text-slate-500">
-          {selectedIds.size > 0
-            ? `${bulkCreateNewState.selectedCount} selected · ${bulkCreateNewState.eligibleCount} eligible for create-new`
-            : "Select rows for bulk actions"}
-        </span>
-      </div>
-
-      {loading ? (
-        <ImportProgressMessage message={progressMessage ?? IMPORT_PROGRESS.loadingRows} />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-2">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    disabled={visibleSelectableIds.length === 0}
-                    onChange={toggleSelectAllVisible}
-                    aria-label="Select all visible rows"
-                  />
-                </th>
-                <th className="px-4 py-2">Row</th>
-                <th className="px-4 py-2">Company</th>
-                <th className="px-4 py-2">Domain</th>
-                <th className="px-4 py-2">Tier</th>
-                <th className="px-4 py-2">Label</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
-                    No rows in this filter.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row) => {
-                  const selectable = isSelectableReviewRow(row);
-                  const canCreateNew = isEligibleForBulkCreateNew(row);
-                  return (
-                    <tr key={row.id} className="border-b border-slate-100">
-                      <td className="px-4 py-2">
-                        {selectable ? (
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(row.id)}
-                            onChange={() => toggleRow(row.id)}
-                            aria-label={`Select row ${row.excel_row_number}`}
-                          />
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-2">{row.excel_row_number}</td>
-                      <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
-                      <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
-                      <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
-                      <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>
-                      <td className="px-4 py-2">
-                        <span>{row.status}</span>
-                        {selectable && !canCreateNew ? (
-                          <span className="ml-2 text-xs text-slate-500">(exclude only)</span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-2">
-                        {row.status === "needs_review" || row.duplicate_role === "duplicate" ? (
-                          <Button size="sm" variant="secondary" onClick={() => setSelectedRow(row)}>
-                            Decide
-                          </Button>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+    <div className="pb-28">
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Review queue</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Resolve company matches and duplicates before importing to draft.
+          </p>
         </div>
-      )}
 
-      {error ? <InlineErrorBanner message={error} /> : null}
+        <div className="flex flex-wrap gap-2 text-sm">
+          <span className="rounded-md bg-slate-100 px-3 py-1">Total: {summary.total}</span>
+          <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-950">
+            Needs review: {summary.needs_review}
+          </span>
+          <span className="rounded-md bg-sky-50 px-3 py-1 text-sky-950">
+            Auto-ready: {summary.auto_ready}
+          </span>
+          <span className="rounded-md bg-emerald-50 px-3 py-1 text-emerald-950">
+            Resolved: {summary.resolved}
+          </span>
+          <span className="rounded-md bg-slate-100 px-3 py-1">Excluded: {summary.excluded}</span>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          onClick={() => router.push(flowHref(batch.id, "validation"))}
-          disabled={actionLoading}
-        >
-          Back
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!bulkCreateNewState.enabled}
-          title={bulkCreateNewState.disabledReason ?? undefined}
-          onClick={() => {
-            setBulkError(null);
-            setPendingBulk("create_new");
-          }}
-        >
-          Create new companies for selected ({bulkCreateNewState.eligibleCount})
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={excludeSelectedCount === 0 || actionLoading || loading}
-          onClick={() => {
-            setBulkError(null);
-            setPendingBulk("exclude");
-          }}
-        >
-          Exclude selected ({excludeSelectedCount})
-        </Button>
-        {canBulkAccept ? (
-          <Button onClick={() => void handleBulkAccept()} disabled={actionLoading || loading}>
-            Bulk accept domain matches ({summary.auto_ready})
-          </Button>
+        {showStep1 ? (
+          step1Collapsed ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm font-medium text-slate-900">
+                  Step 1 · Accept domain matches
+                </span>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-900">
+                  Completed
+                </span>
+                <span className="text-sm text-slate-600">
+                  {acceptedDomainMatchCount === 1
+                    ? "1 domain match accepted"
+                    : `${acceptedDomainMatchCount} domain matches accepted`}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={() => setStep1DetailsOpen((open) => !open)}
+                >
+                  {step1DetailsOpen ? "Hide details" : "Show details"}
+                </Button>
+              </div>
+              {step1DetailsOpen ? (
+                <p className="mt-3 text-sm text-slate-600">
+                  Auto-ready domain matches were accepted and linked to existing companies.
+                  Continue with Step 2 for any remaining rows.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Step 1 · Accept domain matches
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm text-slate-600">
+                    Accept rows where the spreadsheet domain clearly matches an existing company.
+                    Do this first so Step 2 only shows rows that still need a decision.
+                  </p>
+                </div>
+                <span className="rounded-md bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-950">
+                  {summary.auto_ready} rows
+                </span>
+              </div>
+              <div className="mt-4">
+                <Button
+                  onClick={() => void handleBulkAccept()}
+                  disabled={actionLoading || loading}
+                >
+                  Bulk accept domain matches ({summary.auto_ready})
+                </Button>
+              </div>
+            </section>
+          )
         ) : null}
-        <Button
-          onClick={() => void handleImportToDraft()}
-          disabled={!canImportToDraft || actionLoading || loading}
-          aria-busy={actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft}
-        >
-          Import to draft →
-        </Button>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              Step 2 · Resolve remaining companies
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Work through unmatched or ambiguous rows. Select rows, then create new companies or
+              exclude them from the import.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {(["needs_review", "auto_ready", "all"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setFilter(key);
+                  clearSelection();
+                }}
+                className={importFilterChipClass(filter === key)}
+              >
+                {key === "needs_review"
+                  ? "Needs review"
+                  : key === "auto_ready"
+                    ? "Auto-ready"
+                    : "All"}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={loading || actionLoading || visibleSelectableIds.length === 0}
+              onClick={toggleSelectAllVisible}
+            >
+              {allVisibleSelected ? "Deselect visible" : "Select all visible"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={loading || actionLoading}
+              onClick={() => void selectAllMatchingFilter()}
+            >
+              Select all matching filter
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={!bulkCreateNewState.enabled}
+              title={bulkCreateNewState.disabledReason ?? undefined}
+              onClick={() => {
+                setBulkError(null);
+                setPendingBulk("create_new");
+              }}
+            >
+              Create new ({bulkCreateNewState.eligibleCount})
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={excludeSelectedCount === 0 || actionLoading || loading}
+              onClick={() => {
+                setBulkError(null);
+                setPendingBulk("exclude");
+              }}
+            >
+              Exclude ({excludeSelectedCount})
+            </Button>
+            {selectedIds.size > 0 ? (
+              <Button type="button" variant="secondary" size="sm" onClick={clearSelection}>
+                Clear selection ({selectedIds.size})
+              </Button>
+            ) : null}
+            <span className="text-slate-500 sm:ml-auto">
+              {selectedIds.size > 0
+                ? `${bulkCreateNewState.selectedCount} selected · ${bulkCreateNewState.eligibleCount} eligible for create-new`
+                : "Select rows for bulk actions"}
+            </span>
+          </div>
+
+          {bulkCreateNewState.disabledReason ? (
+            <p className="mt-3 text-sm text-amber-800">{bulkCreateNewState.disabledReason}</p>
+          ) : null}
+
+          <div className="mt-4">
+            {loading ? (
+              <ImportProgressMessage message={progressMessage ?? IMPORT_PROGRESS.loadingRows} />
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2">
+                        <input
+                          type="checkbox"
+                          checked={allVisibleSelected}
+                          disabled={visibleSelectableIds.length === 0}
+                          onChange={toggleSelectAllVisible}
+                          aria-label="Select all visible rows"
+                        />
+                      </th>
+                      <th className="px-4 py-2">Row</th>
+                      <th className="px-4 py-2">Company</th>
+                      <th className="px-4 py-2">Domain</th>
+                      <th className="px-4 py-2">Tier</th>
+                      <th className="px-4 py-2">Label</th>
+                      <th className="px-4 py-2">Status</th>
+                      <th className="px-4 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                          No rows in this filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      rows.map((row) => {
+                        const selectable = isSelectableReviewRow(row);
+                        const canCreateNew = isEligibleForBulkCreateNew(row);
+                        return (
+                          <tr key={row.id} className="border-b border-slate-100">
+                            <td className="px-4 py-2">
+                              {selectable ? (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(row.id)}
+                                  onChange={() => toggleRow(row.id)}
+                                  aria-label={`Select row ${row.excel_row_number}`}
+                                />
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-2">{row.excel_row_number}</td>
+                            <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
+                            <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
+                            <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
+                            <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>
+                            <td className="px-4 py-2">
+                              <span>{row.status}</span>
+                              {selectable && !canCreateNew ? (
+                                <span className="ml-2 text-xs text-slate-500">(exclude only)</span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-2">
+                              {row.status === "needs_review" ||
+                              row.duplicate_role === "duplicate" ? (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => setSelectedRow(row)}
+                                >
+                                  Decide
+                                </Button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {error ? <InlineErrorBanner message={error} /> : null}
       </div>
 
-      {actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft ? (
-        <ImportProgressMessage message={IMPORT_PROGRESS.importingToDraft} />
-      ) : null}
-
-      {bulkCreateNewState.disabledReason ? (
-        <p className="text-sm text-amber-800">{bulkCreateNewState.disabledReason}</p>
-      ) : null}
-
-      {summary.auto_ready > 0 ? (
-        <p className="text-sm text-amber-800">
-          Bulk accept all auto-ready domain matches before importing to draft.
-        </p>
-      ) : null}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">Step 3 · Import to draft</p>
+            <p
+              className={
+                canImportToDraft ? "text-sm text-emerald-800" : "text-sm text-slate-600"
+              }
+            >
+              {importStatus}
+            </p>
+            {importingToDraft ? (
+              <div className="mt-2">
+                <ImportProgressMessage message={IMPORT_PROGRESS.importingToDraft} />
+              </div>
+            ) : null}
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => router.push(flowHref(batch.id, "validation"))}
+            disabled={actionLoading}
+          >
+            Back
+          </Button>
+          <Button
+            onClick={() => void handleImportToDraft()}
+            disabled={!canImportToDraft || actionLoading || loading}
+            aria-busy={importingToDraft}
+          >
+            Import to draft →
+          </Button>
+        </div>
+      </div>
 
       <RowDecisionDrawer
         batchId={batch.id}
