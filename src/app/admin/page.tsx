@@ -39,14 +39,14 @@ export default async function AdminHomePage() {
             <CardDescription>Start common admin workflows.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <Link href="/admin/events/editions/new" className={`${primaryCtaClass} h-10 text-center`}>
+            <Link href="/admin/events/series/new" className={`${primaryCtaClass} h-10 text-center`}>
+              Create event series
+            </Link>
+            <Link href="/admin/events/editions/new" className={`${secondaryCtaClass} h-10 text-center`}>
               Create event edition
             </Link>
             <Link href="/admin/companies/new" className={`${secondaryCtaClass} h-10 text-center`}>
               Create company
-            </Link>
-            <Link href="/admin/events/series/new" className={`${secondaryCtaClass} h-10 text-center`}>
-              Create event series
             </Link>
           </CardContent>
         </Card>
@@ -61,16 +61,16 @@ export default async function AdminHomePage() {
               Events overview →
             </Link>
             <Link
-              href="/admin/events/editions"
-              className="text-sm text-brand-primary hover:underline"
-            >
-              All editions →
-            </Link>
-            <Link
               href="/admin/events/series"
               className="text-sm text-brand-primary hover:underline"
             >
               All series →
+            </Link>
+            <Link
+              href="/admin/events/editions"
+              className="text-sm text-brand-primary hover:underline"
+            >
+              All editions →
             </Link>
           </CardContent>
         </Card>

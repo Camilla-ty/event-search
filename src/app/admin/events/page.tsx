@@ -28,20 +28,6 @@ export default function AdminEventsOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Event editions</CardTitle>
-            <CardDescription>Year-specific events linked to sponsor imports.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/admin/events/editions"
-              className="text-sm text-brand-primary hover:underline"
-            >
-              View all editions →
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
             <CardTitle>Event series</CardTitle>
             <CardDescription>Recurring event brands.</CardDescription>
           </CardHeader>
@@ -51,6 +37,20 @@ export default function AdminEventsOverviewPage() {
               className="text-sm text-brand-primary hover:underline"
             >
               View all series →
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Event editions</CardTitle>
+            <CardDescription>Year-specific events linked to sponsor imports.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/admin/events/editions"
+              className="text-sm text-brand-primary hover:underline"
+            >
+              View all editions →
             </Link>
           </CardContent>
         </Card>
