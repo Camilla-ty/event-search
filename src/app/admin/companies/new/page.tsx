@@ -19,7 +19,7 @@ export default async function NewCompanyAdminPage() {
       />
       <AdminPageHeader
         title="Create company"
-        description="Manually add a company to the global directory. Website is required."
+        description="Manually add a company to the global directory. Website is required. Logo URL is optional."
       />
       <CompanyAdminForm
         mode="create"

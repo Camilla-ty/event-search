@@ -1,4 +1,6 @@
 import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
+import { logoMetadataPatchForManualLogoStorage } from "@/src/lib/companies/logoMetadataPatch";
+import { shouldAutoEnrichCompanyLogo } from "@/src/lib/companies/shouldAutoEnrichCompanyLogo";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
 import { isSocialPlatformWebsite } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
@@ -93,6 +95,29 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
   return inserted as CompanyRow;
 }
 
+export async function applyManualCompanyLogoStorage(
+  companyId: string,
+  storageUrl: string,
+): Promise<CompanyRow> {
+  const supabase = createAdminClient();
+  const patch = logoMetadataPatchForManualLogoStorage(storageUrl);
+
+  const { data, error } = await supabase
+    .from("companies")
+    .update(patch)
+    .eq("id", companyId)
+    .select(
+      "id, name, slug, domain, logo_url, logo_source, logo_status, short_description, description",
+    )
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as CompanyRow;
+}
+
 /**
  * Best-effort logo fetch + Storage upload + DB update. **Never throws.**
  *
@@ -121,12 +146,12 @@ export async function enrichCompanyLogo(
       .eq("id", companyId)
       .maybeSingle();
 
-    const existingLogoUrl =
-      typeof existing?.logo_url === "string" ? existing.logo_url.trim() : "";
-    const existingSource =
-      typeof existing?.logo_source === "string" ? existing.logo_source.trim() : "";
-
-    if (existingLogoUrl || existingSource === "manual") {
+    if (
+      !shouldAutoEnrichCompanyLogo({
+        logo_url: typeof existing?.logo_url === "string" ? existing.logo_url : null,
+        logo_source: typeof existing?.logo_source === "string" ? existing.logo_source : null,
+      })
+    ) {
       return;
     }
 

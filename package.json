@@ -9,6 +9,7 @@
     "lint": "eslint",
     "backfill:event-series-logos": "tsx --env-file=.env.local scripts/backfill-event-series-logos.ts",
     "backfill:companies-logos": "tsx --env-file=.env.local scripts/backfill-companies-logos.ts",
+    "compare:logos": "tsx --env-file=.env.local scripts/compare-logo-providers.ts",
     "backfill:event-series-descriptions": "tsx --env-file=.env.local scripts/backfill-event-series-descriptions.ts"
   },
   "dependencies": {

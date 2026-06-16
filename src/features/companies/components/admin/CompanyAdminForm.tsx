@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
+import {
+  CompanyBrandfetchLogoUpgrade,
+  type CompanyLogoMetadata,
+} from "@/src/features/companies/components/admin/CompanyBrandfetchLogoUpgrade";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import { formInputClass } from "@/src/lib/design/classes";
@@ -26,9 +30,28 @@ type CompanyAdminFormProps = {
   initial: CompanyFormValues;
   cities: CityOption[];
   readOnlyDomain?: string | null;
+  initialNotice?: string | null;
+  initialLogoMetadata?: CompanyLogoMetadata;
 };
 
-type ApiResponse = { ok: boolean; error?: string; company?: { id: string } };
+type FormResult = {
+  ok: boolean;
+  message: string;
+  variant: "error" | "success" | "warning";
+};
+
+type ApiResponse = {
+  ok: boolean;
+  error?: string;
+  company?: {
+    id: string;
+    logo_url?: string | null;
+    logo_source?: string | null;
+    logo_status?: string | null;
+    logo_fetched_at?: string | null;
+  };
+  warnings?: string[];
+};
 
 export function CompanyAdminForm({
   mode,
@@ -36,17 +59,77 @@ export function CompanyAdminForm({
   initial,
   cities,
   readOnlyDomain,
+  initialNotice,
+  initialLogoMetadata,
 }: CompanyAdminFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<CompanyFormValues>(initial);
+  const [logoMetadata, setLogoMetadata] = useState<CompanyLogoMetadata>(
+    () =>
+      initialLogoMetadata ?? {
+        logo_url: initial.logo_url,
+        logo_source: null,
+        logo_status: null,
+        logo_fetched_at: null,
+      },
+  );
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<FormResult | null>(() => {
+    const notice = initialNotice?.trim();
+    if (!notice) return null;
+    return { ok: true, message: notice, variant: "warning" };
+  });
   const [slugModalOpen, setSlugModalOpen] = useState(false);
 
   const autoSlug = useMemo(() => slugify(values.name), [values.name]);
   const effectiveSlug = slugTouched ? values.slug : autoSlug;
   const slugChanged = mode === "edit" && effectiveSlug !== initial.slug;
+
+  function applySubmitResponse(data: ApiResponse) {
+    if (data.ok && data.company && mode === "create") {
+      const warning = data.warnings?.[0];
+      const query = warning ? `?logoWarning=${encodeURIComponent(warning)}` : "";
+      router.push(`/admin/companies/${data.company.id}${query}`);
+      router.refresh();
+      return;
+    }
+
+    if (data.ok && mode === "edit") {
+      if (data.company?.logo_url !== undefined) {
+        setValues((prev) => ({
+          ...prev,
+          logo_url: data.company?.logo_url ?? "",
+        }));
+      }
+      if (
+        data.company?.logo_source !== undefined ||
+        data.company?.logo_status !== undefined ||
+        data.company?.logo_fetched_at !== undefined
+      ) {
+        setLogoMetadata({
+          logo_url: data.company?.logo_url ?? values.logo_url,
+          logo_source: data.company?.logo_source ?? null,
+          logo_status: data.company?.logo_status ?? null,
+          logo_fetched_at: data.company?.logo_fetched_at ?? null,
+        });
+      }
+      const warning = data.warnings?.[0];
+      setResult({
+        ok: true,
+        message: warning ?? "Company updated successfully.",
+        variant: warning ? "warning" : "success",
+      });
+      router.refresh();
+      return;
+    }
+
+    setResult({
+      ok: false,
+      message: data.error ?? "Request failed.",
+      variant: "error",
+    });
+  }
 
   function updateField<K extends keyof CompanyFormValues>(key: K, value: CompanyFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -62,6 +145,7 @@ export function CompanyAdminForm({
           website: values.website,
           city_id: values.city_id.trim() || null,
           slug: effectiveSlug,
+          logo_url: values.logo_url.trim() || null,
         }),
       });
       return (await response.json()) as ApiResponse;
@@ -93,24 +177,16 @@ export function CompanyAdminForm({
     setResult(null);
     setIsSubmitting(true);
     try {
-      const data = await submitPayload();
-      if (data.ok && data.company) {
-        router.push(`/admin/companies/${data.company.id}`);
-        router.refresh();
-        return;
-      }
-      if (data.ok && mode === "edit") {
-        setResult({ ok: true, message: "Company updated successfully." });
-        router.refresh();
-        return;
-      }
-      setResult({ ok: false, message: data.error ?? "Request failed." });
+      applySubmitResponse(await submitPayload());
     } catch {
-      setResult({ ok: false, message: "Request failed." });
+      setResult({ ok: false, message: "Request failed.", variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const logoUrlHelper =
+    "Optional. Paste an external logo URL from a sponsor page; a stored copy is saved when import succeeds.";
 
   return (
     <>
@@ -171,18 +247,34 @@ export function CompanyAdminForm({
           emptyLabel="No city / Unknown"
         />
 
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-slate-700">Logo URL</span>
+          <input
+            type="text"
+            value={values.logo_url}
+            onChange={(e) => updateField("logo_url", e.target.value)}
+            disabled={isSubmitting}
+            className={formInputClass}
+            placeholder="https://…"
+          />
+          <p className="text-xs text-slate-500">{logoUrlHelper}</p>
+        </label>
+
+        {mode === "edit" && companyId ? (
+          <CompanyBrandfetchLogoUpgrade
+            companyId={companyId}
+            domain={readOnlyDomain ?? null}
+            metadata={logoMetadata}
+            disabled={isSubmitting}
+            onMetadataChange={(next) => {
+              setLogoMetadata(next);
+              setValues((prev) => ({ ...prev, logo_url: next.logo_url }));
+            }}
+          />
+        ) : null}
+
         {mode === "edit" ? (
           <>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Logo URL</span>
-              <input
-                type="text"
-                value={values.logo_url}
-                onChange={(e) => updateField("logo_url", e.target.value)}
-                disabled={isSubmitting}
-                className={formInputClass}
-              />
-            </label>
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-700">Short description</span>
               <input
@@ -219,7 +311,7 @@ export function CompanyAdminForm({
         <InlineErrorBanner
           className="mt-4"
           message={result.message}
-          variant={result.ok ? "success" : "error"}
+          variant={result.variant}
         />
       ) : null}
 
@@ -232,21 +324,12 @@ export function CompanyAdminForm({
         onCancel={() => setSlugModalOpen(false)}
         onConfirm={async () => {
           setSlugModalOpen(false);
+          setResult(null);
           setIsSubmitting(true);
           try {
-            const data = await submitPayload();
-            if (data.ok) {
-              if (mode === "create" && data.company) {
-                router.push(`/admin/companies/${data.company.id}`);
-              } else {
-                setResult({ ok: true, message: "Company updated successfully." });
-                router.refresh();
-              }
-            } else {
-              setResult({ ok: false, message: data.error ?? "Request failed." });
-            }
+            applySubmitResponse(await submitPayload());
           } catch {
-            setResult({ ok: false, message: "Request failed." });
+            setResult({ ok: false, message: "Request failed.", variant: "error" });
           } finally {
             setIsSubmitting(false);
           }

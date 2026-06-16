@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Logo.dev vs Brandfetch — EventPixels comparison</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      line-height: 1.4;
+    }
+    body { margin: 0; padding: 24px; background: #f8fafc; color: #0f172a; }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .intro { max-width: 960px; margin-bottom: 20px; color: #475569; }
+    .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filters button {
+      border: 1px solid #cbd5e1; background: #fff; border-radius: 999px;
+      padding: 6px 12px; cursor: pointer;
+    }
+    .filters button.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+    th, td { border-bottom: 1px solid #e2e8f0; vertical-align: top; padding: 14px; }
+    th { text-align: left; background: #f1f5f9; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; }
+    tr:last-child td { border-bottom: 0; }
+    .domain-name { font-weight: 600; }
+    .domain-host, .category, .meta { font-size: 0.85rem; color: #64748b; }
+    .provider-name { font-weight: 600; margin-bottom: 8px; }
+    .thumb {
+      width: 128px; height: 128px; border: 1px dashed #cbd5e1; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; background: #fff; overflow: hidden;
+    }
+    .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .missing { color: #94a3b8; font-size: 0.85rem; }
+    .notes label { display: block; font-size: 0.75rem; color: #64748b; margin-top: 8px; }
+    .notes select { width: 100%; margin-top: 4px; }
+    .footer { margin-top: 16px; font-size: 0.85rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Logo.dev vs Brandfetch</h1>
+  <p class="intro">
+    Local comparison for EventPixels migration review. Generated 2026-06-16T05:53:27.891Z.
+    Open this page via a local web server (for example <code>npx serve tmp/logo-comparison -p 3456</code>)
+    so Brandfetch embed images can load. Logo.dev images are saved locally when server fetch succeeds.
+  </p>
+  <div class="stats">
+    <div class="stat"><strong>40</strong> domains</div>
+    <div class="stat">Logo.dev OK: <strong>40</strong></div>
+    <div class="stat">Brandfetch OK: <strong>40</strong></div>
+    <div class="stat">Both OK: <strong>40</strong></div>
+    <div class="stat">Neither OK: <strong>0</strong></div>
+  </div>
+  <div class="filters">
+    <button type="button" class="active" data-filter="all">All</button>
+    <button type="button" data-filter="large">Large</button>
+    <button type="button" data-filter="crypto">Crypto</button>
+    <button type="button" data-filter="startup">Startup</button>
+    <button type="button" data-filter="long-tail">Long-tail</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Domain</th>
+        <th>Logo.dev</th>
+        <th>Brandfetch</th>
+        <th>Your review</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+    <tr data-category="large" data-domain="apple.com">
+      <td class="domain">
+        <div class="domain-name">apple.com</div>
+        <div class="domain-host">apple.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="apple-com/logo-dev.webp" alt="Logo.dev logo for apple-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.4 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/apple.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for apple-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="microsoft.com">
+      <td class="domain">
+        <div class="domain-name">microsoft.com</div>
+        <div class="domain-host">microsoft.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="microsoft-com/logo-dev.webp" alt="Logo.dev logo for microsoft-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 1.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/microsoft.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for microsoft-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="google.com">
+      <td class="domain">
+        <div class="domain-name">google.com</div>
+        <div class="domain-host">google.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="google-com/logo-dev.webp" alt="Logo.dev logo for google-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 6.8 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/google.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for google-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="salesforce.com">
+      <td class="domain">
+        <div class="domain-name">salesforce.com</div>
+        <div class="domain-host">salesforce.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="salesforce-com/logo-dev.webp" alt="Logo.dev logo for salesforce-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 4.7 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/salesforce.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for salesforce-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="stripe.com">
+      <td class="domain">
+        <div class="domain-name">stripe.com</div>
+        <div class="domain-host">stripe.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="stripe-com/logo-dev.webp" alt="Logo.dev logo for stripe-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/stripe.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for stripe-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="amazon.com">
+      <td class="domain">
+        <div class="domain-name">amazon.com</div>
+        <div class="domain-host">amazon.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="amazon-com/logo-dev.webp" alt="Logo.dev logo for amazon-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/amazon.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for amazon-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="ibm.com">
+      <td class="domain">
+        <div class="domain-name">ibm.com</div>
+        <div class="domain-host">ibm.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="ibm-com/logo-dev.webp" alt="Logo.dev logo for ibm-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.0 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/ibm.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for ibm-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="oracle.com">
+      <td class="domain">
+        <div class="domain-name">oracle.com</div>
+        <div class="domain-host">oracle.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="oracle-com/logo-dev.webp" alt="Logo.dev logo for oracle-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.8 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/oracle.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for oracle-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="adobe.com">
+      <td class="domain">
+        <div class="domain-name">adobe.com</div>
+        <div class="domain-host">adobe.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="adobe-com/logo-dev.webp" alt="Logo.dev logo for adobe-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.4 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/adobe.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for adobe-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="large" data-domain="nvidia.com">
+      <td class="domain">
+        <div class="domain-name">nvidia.com</div>
+        <div class="domain-host">nvidia.com</div>
+        <div class="category">large</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="nvidia-com/logo-dev.webp" alt="Logo.dev logo for nvidia-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 5.3 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/nvidia.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for nvidia-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="coinbase.com">
+      <td class="domain">
+        <div class="domain-name">coinbase.com</div>
+        <div class="domain-host">coinbase.com</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="coinbase-com/logo-dev.webp" alt="Logo.dev logo for coinbase-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/coinbase.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for coinbase-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="binance.com">
+      <td class="domain">
+        <div class="domain-name">binance.com</div>
+        <div class="domain-host">binance.com</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="binance-com/logo-dev.webp" alt="Logo.dev logo for binance-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 9.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/binance.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for binance-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="ethereum.org">
+      <td class="domain">
+        <div class="domain-name">ethereum.org</div>
+        <div class="domain-host">ethereum.org</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="ethereum-org/logo-dev.webp" alt="Logo.dev logo for ethereum-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 9.9 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/ethereum.org/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for ethereum-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="polygon.technology">
+      <td class="domain">
+        <div class="domain-name">polygon.technology</div>
+        <div class="domain-host">polygon.technology</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="polygon-technology/logo-dev.webp" alt="Logo.dev logo for polygon-technology" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 6.5 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/polygon.technology/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for polygon-technology" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="chainalysis.com">
+      <td class="domain">
+        <div class="domain-name">chainalysis.com</div>
+        <div class="domain-host">chainalysis.com</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="chainalysis-com/logo-dev.webp" alt="Logo.dev logo for chainalysis-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 15.4 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/chainalysis.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for chainalysis-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="consensys.io">
+      <td class="domain">
+        <div class="domain-name">consensys.io</div>
+        <div class="domain-host">consensys.io</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="consensys-io/logo-dev.webp" alt="Logo.dev logo for consensys-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 4.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/consensys.io/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for consensys-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="uniswap.org">
+      <td class="domain">
+        <div class="domain-name">uniswap.org</div>
+        <div class="domain-host">uniswap.org</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="uniswap-org/logo-dev.webp" alt="Logo.dev logo for uniswap-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 14.3 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/uniswap.org/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for uniswap-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="aave.com">
+      <td class="domain">
+        <div class="domain-name">aave.com</div>
+        <div class="domain-host">aave.com</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="aave-com/logo-dev.webp" alt="Logo.dev logo for aave-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.7 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/aave.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for aave-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="ledger.com">
+      <td class="domain">
+        <div class="domain-name">ledger.com</div>
+        <div class="domain-host">ledger.com</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="ledger-com/logo-dev.webp" alt="Logo.dev logo for ledger-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 954 B · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/ledger.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for ledger-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="crypto" data-domain="opensea.io">
+      <td class="domain">
+        <div class="domain-name">opensea.io</div>
+        <div class="domain-host">opensea.io</div>
+        <div class="category">crypto</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="opensea-io/logo-dev.webp" alt="Logo.dev logo for opensea-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 9.9 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/opensea.io/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for opensea-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="openai.com">
+      <td class="domain">
+        <div class="domain-name">openai.com</div>
+        <div class="domain-host">openai.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="openai-com/logo-dev.webp" alt="Logo.dev logo for openai-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 4.1 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/openai.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for openai-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="notion.so">
+      <td class="domain">
+        <div class="domain-name">notion.so</div>
+        <div class="domain-host">notion.so</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="notion-so/logo-dev.webp" alt="Logo.dev logo for notion-so" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/notion.so/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for notion-so" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="linear.app">
+      <td class="domain">
+        <div class="domain-name">linear.app</div>
+        <div class="domain-host">linear.app</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="linear-app/logo-dev.webp" alt="Logo.dev logo for linear-app" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 5.3 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/linear.app/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for linear-app" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="vercel.com">
+      <td class="domain">
+        <div class="domain-name">vercel.com</div>
+        <div class="domain-host">vercel.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="vercel-com/logo-dev.webp" alt="Logo.dev logo for vercel-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 852 B · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/vercel.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for vercel-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="figma.com">
+      <td class="domain">
+        <div class="domain-name">figma.com</div>
+        <div class="domain-host">figma.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="figma-com/logo-dev.webp" alt="Logo.dev logo for figma-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.7 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/figma.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for figma-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="airtable.com">
+      <td class="domain">
+        <div class="domain-name">airtable.com</div>
+        <div class="domain-host">airtable.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="airtable-com/logo-dev.webp" alt="Logo.dev logo for airtable-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 6.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/airtable.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for airtable-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="hubspot.com">
+      <td class="domain">
+        <div class="domain-name">hubspot.com</div>
+        <div class="domain-host">hubspot.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="hubspot-com/logo-dev.webp" alt="Logo.dev logo for hubspot-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 5.5 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/hubspot.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for hubspot-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="intercom.com">
+      <td class="domain">
+        <div class="domain-name">intercom.com</div>
+        <div class="domain-host">intercom.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="intercom-com/logo-dev.webp" alt="Logo.dev logo for intercom-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.1 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/intercom.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for intercom-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="ramp.com">
+      <td class="domain">
+        <div class="domain-name">ramp.com</div>
+        <div class="domain-host">ramp.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="ramp-com/logo-dev.webp" alt="Logo.dev logo for ramp-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.7 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/ramp.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for ramp-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="startup" data-domain="brex.com">
+      <td class="domain">
+        <div class="domain-name">brex.com</div>
+        <div class="domain-host">brex.com</div>
+        <div class="category">startup</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="brex-com/logo-dev.webp" alt="Logo.dev logo for brex-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 1.7 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/brex.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for brex-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="linktr.ee">
+      <td class="domain">
+        <div class="domain-name">Linktree (aggregator)</div>
+        <div class="domain-host">linktr.ee</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="linktr-ee/logo-dev.webp" alt="Logo.dev logo for linktr-ee" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 4.6 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/linktr.ee/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for linktr-ee" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="substack.com">
+      <td class="domain">
+        <div class="domain-name">substack.com</div>
+        <div class="domain-host">substack.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="substack-com/logo-dev.webp" alt="Logo.dev logo for substack-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 2.3 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/substack.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for substack-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="ghost.org">
+      <td class="domain">
+        <div class="domain-name">ghost.org</div>
+        <div class="domain-host">ghost.org</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="ghost-org/logo-dev.webp" alt="Logo.dev logo for ghost-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 17.0 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/ghost.org/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for ghost-org" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="cal.com">
+      <td class="domain">
+        <div class="domain-name">cal.com</div>
+        <div class="domain-host">cal.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="cal-com/logo-dev.webp" alt="Logo.dev logo for cal-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 11.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/cal.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for cal-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="plausible.io">
+      <td class="domain">
+        <div class="domain-name">plausible.io</div>
+        <div class="domain-host">plausible.io</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="plausible-io/logo-dev.webp" alt="Logo.dev logo for plausible-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 10.0 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/plausible.io/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for plausible-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="posthog.com">
+      <td class="domain">
+        <div class="domain-name">posthog.com</div>
+        <div class="domain-host">posthog.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="posthog-com/logo-dev.webp" alt="Logo.dev logo for posthog-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 6.1 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/posthog.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for posthog-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="supabase.com">
+      <td class="domain">
+        <div class="domain-name">supabase.com</div>
+        <div class="domain-host">supabase.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="supabase-com/logo-dev.webp" alt="Logo.dev logo for supabase-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 3.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/supabase.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for supabase-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="render.com">
+      <td class="domain">
+        <div class="domain-name">render.com</div>
+        <div class="domain-host">render.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="render-com/logo-dev.webp" alt="Logo.dev logo for render-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 1.2 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/render.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for render-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="fly.io">
+      <td class="domain">
+        <div class="domain-name">fly.io</div>
+        <div class="domain-host">fly.io</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="fly-io/logo-dev.webp" alt="Logo.dev logo for fly-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 12.1 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/fly.io/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for fly-io" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+
+    <tr data-category="long-tail" data-domain="deno.com">
+      <td class="domain">
+        <div class="domain-name">deno.com</div>
+        <div class="domain-host">deno.com</div>
+        <div class="category">long-tail</div>
+      </td>
+      
+    <td class="provider">
+      <div class="provider-name">Logo.dev</div>
+      <div class="thumb"><img src="deno-com/logo-dev.webp" alt="Logo.dev logo for deno-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/webp · 5.0 KB · Saved via server fetch (same path as auto-ingest).</div>
+    </td>
+      
+    <td class="provider">
+      <div class="provider-name">Brandfetch</div>
+      <div class="thumb"><img src="https://cdn.brandfetch.io/domain/deno.com/icon.png?c=1id-3ffPrKLPy7bG0GR&amp;w=128&amp;h=128" alt="Brandfetch logo for deno-com" loading="lazy" referrerpolicy="origin" /></div>
+      <div class="meta">image/png (embed) · Brandfetch Logo API is embed-only. Images load in the browser when you open this report via a local web server (not file://).</div>
+    </td>
+      <td class="notes">
+        <label>Better</label>
+        <select class="score-better">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="tie">Tie</option>
+          <option value="neither">Neither</option>
+        </select>
+        <label>Store in EventPixels</label>
+        <select class="score-store">
+          <option value="">—</option>
+          <option value="logo-dev">Logo.dev</option>
+          <option value="brandfetch">Brandfetch</option>
+          <option value="manual">Manual only</option>
+          <option value="monogram">Monogram</option>
+        </select>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+  <p class="footer">Open this file from the generated folder so relative image paths resolve.</p>
+  <script>
+    const buttons = document.querySelectorAll(".filters button");
+    const rows = document.querySelectorAll("tbody tr");
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        button.classList.add("active");
+        const filter = button.dataset.filter;
+        rows.forEach((row) => {
+          const show = filter === "all" || row.dataset.category === filter;
+          row.style.display = show ? "" : "none";
+        });
+      });
+    });
+  </script>
+</body>
+</html>

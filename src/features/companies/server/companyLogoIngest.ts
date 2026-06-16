@@ -342,3 +342,39 @@ export async function ingestCompanyLogoByDomain(
     preview: null,
   };
 }
+
+export type ManualCompanyLogoIngestResult =
+  | { ok: true; storageUrl: string }
+  | { ok: false; error: string };
+
+/**
+ * Download an admin-provided logo URL and upload it to Supabase Storage.
+ * Does not write to the database.
+ */
+export async function ingestManualCompanyLogoFromUrl(
+  externalUrl: string,
+  storageIdentityKey: string,
+  options?: Pick<CompanyLogoIngestOptions, "storageNamespace">,
+): Promise<ManualCompanyLogoIngestResult> {
+  const trimmedUrl = externalUrl.trim();
+  const identityKey = storageIdentityKey.trim().toLowerCase();
+  if (!trimmedUrl) {
+    return { ok: false, error: "empty_url" };
+  }
+  if (!identityKey) {
+    return { ok: false, error: "missing_storage_key" };
+  }
+
+  const image = await downloadImage(trimmedUrl);
+  if (!image) {
+    return { ok: false, error: "download_failed" };
+  }
+
+  const storageNamespace = options?.storageNamespace?.trim() || DEFAULT_STORAGE_NAMESPACE;
+  const publicUrl = await uploadCompanyLogo(identityKey, image, storageNamespace);
+  if (!publicUrl) {
+    return { ok: false, error: "upload_failed" };
+  }
+
+  return { ok: true, storageUrl: publicUrl };
+}

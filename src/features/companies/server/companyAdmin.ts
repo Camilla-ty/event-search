@@ -1,5 +1,11 @@
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
-import { logoMetadataPatchForLogoUrlChange } from "@/src/lib/companies/logoMetadataPatch";
+import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
+import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
+import {
+  logoMetadataPatchForLogoClear,
+  logoMetadataPatchForManualLogoStorage,
+} from "@/src/lib/companies/logoMetadataPatch";
+import { MANUAL_LOGO_IMPORT_FAILED_EDIT_WARNING } from "@/src/lib/companies/manualLogoIngestMessages";
 import {
   companyMissingLogo,
   companyNeedsLogoReview,
@@ -37,6 +43,57 @@ export type UpdateCompanyAdminInput = {
   description?: string | null;
   city_id?: string | null;
 };
+
+export type UpdateCompanyAdminResult = {
+  company: CompanyAdminRow;
+  warnings: string[];
+};
+
+async function resolveManualLogoPatch(params: {
+  existing: CompanyAdminRow;
+  incomingLogoUrl: string | null;
+  domainForLogo: string | null;
+}): Promise<{ patch: Record<string, unknown>; warnings: string[] }> {
+  const warnings: string[] = [];
+  const existingLogo = params.existing.logo_url?.trim() || null;
+
+  if (params.incomingLogoUrl === null) {
+    return {
+      patch: logoMetadataPatchForLogoClear({ domain: params.domainForLogo }),
+      warnings,
+    };
+  }
+
+  if (
+    params.incomingLogoUrl === existingLogo &&
+    isCompanyLogoStorageUrl(existingLogo)
+  ) {
+    return { patch: {}, warnings };
+  }
+
+  if (isCompanyLogoStorageUrl(params.incomingLogoUrl)) {
+    return {
+      patch: logoMetadataPatchForManualLogoStorage(params.incomingLogoUrl),
+      warnings,
+    };
+  }
+
+  const storageKey = params.domainForLogo?.trim() || params.existing.id;
+  const ingest = await ingestManualCompanyLogoFromUrl(
+    params.incomingLogoUrl,
+    storageKey,
+  );
+
+  if (ingest.ok) {
+    return {
+      patch: logoMetadataPatchForManualLogoStorage(ingest.storageUrl),
+      warnings,
+    };
+  }
+
+  warnings.push(MANUAL_LOGO_IMPORT_FAILED_EDIT_WARNING);
+  return { patch: {}, warnings };
+}
 
 export type CompanyListFilter =
   | "all"
@@ -131,14 +188,17 @@ export async function getCompanyAdminById(id: string): Promise<CompanyAdminRow |
 export async function updateCompanyAdmin(
   id: string,
   input: UpdateCompanyAdminInput,
-): Promise<CompanyAdminRow> {
+): Promise<UpdateCompanyAdminResult> {
   const supabase = createAdminClient();
   const patch: Record<string, unknown> = {};
-  let existingDomain: string | null = null;
+  const warnings: string[] = [];
+  let existingRow: CompanyAdminRow | null = null;
 
-  if (input.logo_url !== undefined && !(input.logo_url?.trim() || null)) {
-    const existing = await getCompanyAdminById(id);
-    existingDomain = existing?.domain ?? null;
+  if (input.logo_url !== undefined) {
+    existingRow = await getCompanyAdminById(id);
+    if (!existingRow) {
+      throw new Error("Company not found.");
+    }
   }
 
   if (input.name !== undefined) patch.name = input.name.trim();
@@ -152,18 +212,18 @@ export async function updateCompanyAdmin(
     }
     patch.domain = domain;
   }
-  if (input.logo_url !== undefined) {
-    const logoUrl = input.logo_url?.trim() || null;
-    patch.logo_url = logoUrl;
+  if (input.logo_url !== undefined && existingRow) {
+    const incomingLogoUrl = input.logo_url?.trim() || null;
     const domainForLogo =
-      (typeof patch.domain === "string" ? patch.domain : null) ?? existingDomain;
-    Object.assign(
-      patch,
-      logoMetadataPatchForLogoUrlChange({
-        logo_url: logoUrl,
-        domain: domainForLogo,
-      }),
-    );
+      (typeof patch.domain === "string" ? patch.domain : null) ?? existingRow.domain;
+
+    const logoPatch = await resolveManualLogoPatch({
+      existing: existingRow,
+      incomingLogoUrl,
+      domainForLogo,
+    });
+    warnings.push(...logoPatch.warnings);
+    Object.assign(patch, logoPatch.patch);
   }
   if (input.short_description !== undefined) {
     patch.short_description = input.short_description?.trim() || null;
@@ -183,5 +243,5 @@ export async function updateCompanyAdmin(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as CompanyAdminRow;
+  return { company: data as CompanyAdminRow, warnings };
 }

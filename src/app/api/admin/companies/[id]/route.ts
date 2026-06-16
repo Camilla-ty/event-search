@@ -94,7 +94,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const company = await updateCompanyAdmin(id, patch);
+    const { company, warnings } = await updateCompanyAdmin(id, patch);
 
     if (typeof patch.website === "string") {
       after(async () => {
@@ -102,7 +102,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       });
     }
 
-    return NextResponse.json({ ok: true, company });
+    return NextResponse.json({
+      ok: true,
+      company,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

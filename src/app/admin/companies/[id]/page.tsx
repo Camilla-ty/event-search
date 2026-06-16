@@ -13,10 +13,12 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ logoWarning?: string }>;
 };
 
-export default async function AdminCompanyDetailPage({ params }: PageProps) {
+export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { logoWarning } = await searchParams;
   const [company, cities, sponsorships] = await Promise.all([
     getCompanyAdminById(id),
     getCityOptions(),
@@ -56,6 +58,7 @@ export default async function AdminCompanyDetailPage({ params }: PageProps) {
         companyId={company.id}
         cities={cities}
         readOnlyDomain={company.domain}
+        initialNotice={logoWarning ?? null}
         initial={{
           name: company.name,
           website: company.website ?? "",
@@ -64,6 +67,12 @@ export default async function AdminCompanyDetailPage({ params }: PageProps) {
           logo_url: company.logo_url ?? "",
           short_description: company.short_description ?? "",
           description: company.description ?? "",
+        }}
+        initialLogoMetadata={{
+          logo_url: company.logo_url ?? "",
+          logo_source: company.logo_source,
+          logo_status: company.logo_status,
+          logo_fetched_at: company.logo_fetched_at,
         }}
       />
 

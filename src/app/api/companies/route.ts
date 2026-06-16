@@ -1,17 +1,24 @@
 import { NextResponse, after } from "next/server";
 
+import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
 import {
+  applyManualCompanyLogoStorage,
   createCompany,
   enrichCompanyLogo,
+  normalizeDomainFromWebsite,
 } from "@/src/features/companies/server/createCompanyWithLogo";
 import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
+import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
+import { MANUAL_LOGO_IMPORT_FAILED_WARNING } from "@/src/lib/companies/manualLogoIngestMessages";
 import { createClient } from "@/src/lib/supabase/server";
+import { isValidHttpUrl } from "@/src/lib/validation/url";
 
 type CreateCompanyBody = {
   name?: string;
   website?: string;
   city_id?: string | null;
   slug?: string;
+  logo_url?: string | null;
 };
 
 function slugify(value: string): string {
@@ -61,6 +68,7 @@ export async function POST(request: Request) {
       : null;
   const rawSlug = body.slug?.trim() ?? "";
   const slug = slugify(rawSlug !== "" ? rawSlug : name ?? "");
+  const manualLogoUrl = body.logo_url?.trim() || null;
 
   if (!name || !website || !slug) {
     return NextResponse.json(
@@ -69,19 +77,58 @@ export async function POST(request: Request) {
     );
   }
 
+  if (manualLogoUrl && !isValidHttpUrl(manualLogoUrl)) {
+    return NextResponse.json(
+      { ok: false, error: "logo_url must be a valid URL." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const company = await createCompany({
+    let company = await createCompany({
       name,
       website,
       city_id: cityId,
       slug,
     });
 
-    after(async () => {
-      await enrichCompanyLogo(company.id, website);
-    });
+    const warnings: string[] = [];
+    let skipAutoEnrich = false;
 
-    return NextResponse.json({ ok: true, company }, { status: 201 });
+    if (manualLogoUrl) {
+      const domain = normalizeDomainFromWebsite(website);
+      if (domain) {
+        if (isCompanyLogoStorageUrl(manualLogoUrl)) {
+          company = await applyManualCompanyLogoStorage(company.id, manualLogoUrl);
+          skipAutoEnrich = true;
+        } else {
+          const ingest = await ingestManualCompanyLogoFromUrl(manualLogoUrl, domain);
+          if (ingest.ok) {
+            company = await applyManualCompanyLogoStorage(company.id, ingest.storageUrl);
+            skipAutoEnrich = true;
+          } else {
+            warnings.push(MANUAL_LOGO_IMPORT_FAILED_WARNING);
+          }
+        }
+      } else {
+        warnings.push(MANUAL_LOGO_IMPORT_FAILED_WARNING);
+      }
+    }
+
+    if (!skipAutoEnrich) {
+      after(async () => {
+        await enrichCompanyLogo(company.id, website);
+      });
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        company,
+        ...(warnings.length > 0 ? { warnings } : {}),
+      },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[api/companies] createCompany failed", { message });
