@@ -445,8 +445,9 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
               Step 2 · Resolve remaining companies
             </h3>
             <p className="mt-1 text-sm text-slate-600">
-              Work through unmatched or ambiguous rows. Select rows, then create new companies or
-              exclude them from the import.
+              Work through unmatched or ambiguous rows. Select all matching rows, then create new
+              companies. Use <span className="font-medium">Decide</span> on individual rows for
+              duplicates, conflicts, or rows you want to skip.
             </p>
           </div>
 
@@ -473,16 +474,6 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
           <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
             <Button
               type="button"
-              variant="secondary"
-              size="sm"
-              disabled={loading || actionLoading || visibleSelectableIds.length === 0}
-              onClick={toggleSelectAllVisible}
-            >
-              {allVisibleSelected ? "Deselect visible" : "Select all visible"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
               size="sm"
               disabled={loading || actionLoading}
               onClick={() => void selectAllMatchingFilter()}
@@ -491,7 +482,6 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
             </Button>
             <Button
               type="button"
-              variant="secondary"
               size="sm"
               disabled={!bulkCreateNewState.enabled}
               title={bulkCreateNewState.disabledReason ?? undefined}
@@ -501,18 +491,6 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
               }}
             >
               Create new ({bulkCreateNewState.eligibleCount})
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={excludeSelectedCount === 0 || actionLoading || loading}
-              onClick={() => {
-                setBulkError(null);
-                setPendingBulk("exclude");
-              }}
-            >
-              Exclude ({excludeSelectedCount})
             </Button>
             {selectedIds.size > 0 ? (
               <Button type="button" variant="secondary" size="sm" onClick={clearSelection}>
