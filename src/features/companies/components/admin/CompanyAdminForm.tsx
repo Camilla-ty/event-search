@@ -145,7 +145,6 @@ export function CompanyAdminForm({
           website: values.website,
           city_id: values.city_id.trim() || null,
           slug: effectiveSlug,
-          logo_url: values.logo_url.trim() || null,
         }),
       });
       return (await response.json()) as ApiResponse;
@@ -186,7 +185,7 @@ export function CompanyAdminForm({
   }
 
   const logoUrlHelper =
-    "Optional. Paste an external logo URL from a sponsor page; a stored copy is saved when import succeeds.";
+    "Manual override. Paste an external logo URL from a sponsor page; a stored copy is saved when import succeeds.";
 
   return (
     <>
@@ -247,18 +246,20 @@ export function CompanyAdminForm({
           emptyLabel="No city / Unknown"
         />
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Logo URL</span>
-          <input
-            type="text"
-            value={values.logo_url}
-            onChange={(e) => updateField("logo_url", e.target.value)}
-            disabled={isSubmitting}
-            className={formInputClass}
-            placeholder="https://…"
-          />
-          <p className="text-xs text-slate-500">{logoUrlHelper}</p>
-        </label>
+        {mode === "edit" ? (
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Logo URL</span>
+            <input
+              type="text"
+              value={values.logo_url}
+              onChange={(e) => updateField("logo_url", e.target.value)}
+              disabled={isSubmitting}
+              className={formInputClass}
+              placeholder="https://…"
+            />
+            <p className="text-xs text-slate-500">{logoUrlHelper}</p>
+          </label>
+        ) : null}
 
         {mode === "edit" && companyId ? (
           <CompanyBrandfetchLogoUpgrade

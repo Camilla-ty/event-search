@@ -19,7 +19,7 @@ export default async function NewCompanyAdminPage() {
       />
       <AdminPageHeader
         title="Create company"
-        description="Manually add a company to the global directory. Website is required. Logo URL is optional."
+        description="Manually add a company to the global directory. Website is required. Logo is filled automatically after create. You can upgrade with Brandfetch or override manually on the edit page."
       />
       <CompanyAdminForm
         mode="create"
