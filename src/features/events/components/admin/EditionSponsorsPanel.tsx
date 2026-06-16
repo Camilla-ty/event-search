@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
+import { BrandfetchUpgradeBatchToolbar } from "@/src/features/companies/components/admin/BrandfetchUpgradeBatchToolbar";
+import type { BrandfetchUpgradeBatchItem } from "@/src/lib/companies/brandfetchUpgradeBatchClient";
 import {
   defaultStepForBatchStatus,
   flowHref,
@@ -50,6 +52,35 @@ export function EditionSponsorsPanel({
   const [action, setAction] = useState<PanelAction>(null);
   const [movePending, setMovePending] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(() => new Set());
+
+  const batchItems = useMemo((): BrandfetchUpgradeBatchItem[] => {
+    const seen = new Set<string>();
+    const items: BrandfetchUpgradeBatchItem[] = [];
+
+    for (const sponsor of sponsors) {
+      const company = sponsor.companies;
+      if (!company || company.id === "" || seen.has(company.id)) {
+        continue;
+      }
+      seen.add(company.id);
+      items.push({
+        companyId: company.id,
+        name: company.name?.trim() || "—",
+        domain: company.domain,
+        logo_url: company.logo_url,
+        logo_source: company.logo_source,
+        logo_status: company.logo_status,
+      });
+    }
+
+    return items;
+  }, [sponsors]);
+
+  const allCompanyIds = useMemo(
+    () => batchItems.map((item) => item.companyId),
+    [batchItems],
+  );
 
   const attachedCompanyIds = new Set<string>();
   for (const sponsor of sponsors) {
@@ -118,8 +149,31 @@ export function EditionSponsorsPanel({
 
       {moveError ? <InlineErrorBanner message={moveError} /> : null}
 
+      <BrandfetchUpgradeBatchToolbar
+        items={batchItems}
+        selectedCompanyIds={selectedCompanyIds}
+        disabled={movePending}
+      />
+
       <EditionLiveSponsorsTable
         sponsors={sponsors}
+        selectable
+        selectedCompanyIds={selectedCompanyIds}
+        allCompanyIds={allCompanyIds}
+        onToggleCompany={(companyId, checked) => {
+          setSelectedCompanyIds((previous) => {
+            const next = new Set(previous);
+            if (checked) {
+              next.add(companyId);
+            } else {
+              next.delete(companyId);
+            }
+            return next;
+          });
+        }}
+        onToggleAllCompanies={(checked) => {
+          setSelectedCompanyIds(checked ? new Set(allCompanyIds) : new Set());
+        }}
         onEdit={(row) => setAction({ type: "edit", row })}
         onRemove={(row) => setAction({ type: "remove", row })}
         onMove={(row, direction) => void handleMove(row, direction)}

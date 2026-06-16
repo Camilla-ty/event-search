@@ -112,6 +112,16 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
             name: typeof row.companies.name === "string" ? row.companies.name : null,
             slug: typeof row.companies.slug === "string" ? row.companies.slug : null,
             domain: typeof row.companies.domain === "string" ? row.companies.domain : null,
+            logo_url:
+              typeof row.companies.logo_url === "string" ? row.companies.logo_url : null,
+            logo_source:
+              typeof row.companies.logo_source === "string"
+                ? row.companies.logo_source
+                : null,
+            logo_status:
+              typeof row.companies.logo_status === "string"
+                ? row.companies.logo_status
+                : null,
           }
         : null,
   }));
