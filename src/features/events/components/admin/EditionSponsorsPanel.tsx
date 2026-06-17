@@ -4,21 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { Button, InlineErrorBanner } from "@/src/components/common";
+import { InlineErrorBanner } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
-import { BrandfetchUpgradeBatchToolbar } from "@/src/features/companies/components/admin/BrandfetchUpgradeBatchToolbar";
-import type { BrandfetchUpgradeBatchItem } from "@/src/lib/companies/brandfetchUpgradeBatchClient";
 import {
   defaultStepForBatchStatus,
   flowHref,
 } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
 
+import { EditionLiveSponsorsQARoster } from "./EditionLiveSponsorsQARoster";
+import { EditionSponsorsQAHeader } from "./EditionSponsorsQAHeader";
 import {
-  EditionLiveSponsorsTable,
-  type LiveSponsorRow,
-  type SponsorMoveDirection,
-} from "./EditionLiveSponsorsTable";
+  countDistinctTiers,
+  filterSponsorsBySearch,
+} from "./liveSponsorQaUtils";
+import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
 
@@ -37,6 +37,8 @@ type EditionSponsorsPanelProps = {
   editionId: string;
   editionName: string;
   editionYear: number;
+  editionSlug: string;
+  eventWebsiteUrl: string | null;
   sponsors: LiveSponsorRow[];
   activeImport: ActiveImportInfo | null;
 };
@@ -45,6 +47,8 @@ export function EditionSponsorsPanel({
   editionId,
   editionName,
   editionYear,
+  editionSlug,
+  eventWebsiteUrl,
   sponsors,
   activeImport,
 }: EditionSponsorsPanelProps) {
@@ -52,35 +56,14 @@ export function EditionSponsorsPanel({
   const [action, setAction] = useState<PanelAction>(null);
   const [movePending, setMovePending] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
-  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(() => new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const batchItems = useMemo((): BrandfetchUpgradeBatchItem[] => {
-    const seen = new Set<string>();
-    const items: BrandfetchUpgradeBatchItem[] = [];
-
-    for (const sponsor of sponsors) {
-      const company = sponsor.companies;
-      if (!company || company.id === "" || seen.has(company.id)) {
-        continue;
-      }
-      seen.add(company.id);
-      items.push({
-        companyId: company.id,
-        name: company.name?.trim() || "—",
-        domain: company.domain,
-        logo_url: company.logo_url,
-        logo_source: company.logo_source,
-        logo_status: company.logo_status,
-      });
-    }
-
-    return items;
-  }, [sponsors]);
-
-  const allCompanyIds = useMemo(
-    () => batchItems.map((item) => item.companyId),
-    [batchItems],
+  const tierCount = useMemo(() => countDistinctTiers(sponsors), [sponsors]);
+  const filteredSponsors = useMemo(
+    () => filterSponsorsBySearch(sponsors, searchQuery),
+    [sponsors, searchQuery],
   );
+  const emptySearch = searchQuery.trim() !== "" && filteredSponsors.length === 0;
 
   const attachedCompanyIds = new Set<string>();
   for (const sponsor of sponsors) {
@@ -140,40 +123,21 @@ export function EditionSponsorsPanel({
         />
       ) : null}
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
-          {sponsors.length} live sponsor{sponsors.length === 1 ? "" : "s"}
-        </p>
-        <Button onClick={() => setAction({ type: "create" })}>Add sponsor</Button>
-      </div>
+      <EditionSponsorsQAHeader
+        sponsorCount={sponsors.length}
+        tierCount={tierCount}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        editionSlug={editionSlug}
+        eventWebsiteUrl={eventWebsiteUrl}
+        onAddSponsor={() => setAction({ type: "create" })}
+      />
 
       {moveError ? <InlineErrorBanner message={moveError} /> : null}
 
-      <BrandfetchUpgradeBatchToolbar
-        items={batchItems}
-        selectedCompanyIds={selectedCompanyIds}
-        disabled={movePending}
-      />
-
-      <EditionLiveSponsorsTable
-        sponsors={sponsors}
-        selectable
-        selectedCompanyIds={selectedCompanyIds}
-        allCompanyIds={allCompanyIds}
-        onToggleCompany={(companyId, checked) => {
-          setSelectedCompanyIds((previous) => {
-            const next = new Set(previous);
-            if (checked) {
-              next.add(companyId);
-            } else {
-              next.delete(companyId);
-            }
-            return next;
-          });
-        }}
-        onToggleAllCompanies={(checked) => {
-          setSelectedCompanyIds(checked ? new Set(allCompanyIds) : new Set());
-        }}
+      <EditionLiveSponsorsQARoster
+        sponsors={filteredSponsors}
+        emptySearch={emptySearch}
         onEdit={(row) => setAction({ type: "edit", row })}
         onRemove={(row) => setAction({ type: "remove", row })}
         onMove={(row, direction) => void handleMove(row, direction)}

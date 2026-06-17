@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/src/components/common";
 import { feedbackErrorClass } from "@/src/lib/design/classes";
 
-import type { LiveSponsorRow } from "./EditionLiveSponsorsTable";
+import type { LiveSponsorRow } from "./liveSponsorTypes";
 
 type RemoveSponsorModalProps = {
   row: LiveSponsorRow;

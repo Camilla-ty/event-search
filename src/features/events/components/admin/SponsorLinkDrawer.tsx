@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { formInputClass } from "@/src/lib/design/classes";
 
-import type { LiveSponsorRow } from "./EditionLiveSponsorsTable";
+import type { LiveSponsorRow } from "./liveSponsorTypes";
 
 const TIER_RANK_MIN = 1;
 const TIER_RANK_MAX = 1000;

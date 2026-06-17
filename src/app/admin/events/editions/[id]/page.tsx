@@ -218,6 +218,8 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
               editionId={edition.id}
               editionName={edition.name}
               editionYear={edition.year}
+              editionSlug={edition.slug}
+              eventWebsiteUrl={edition.website_url}
               sponsors={sponsorRows}
               activeImport={activeImport}
             />
