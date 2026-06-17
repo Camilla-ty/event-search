@@ -33,7 +33,6 @@ export function SponsorCard({ sponsor }: { sponsor: SponsorRecord }) {
         company={companyLogoFieldsFromRow(sponsor.companies)}
         className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
         monogramClassName="text-lg font-semibold text-slate-400"
-        logoDevSize={112}
       />
 
       <div className="space-y-2 min-w-0">

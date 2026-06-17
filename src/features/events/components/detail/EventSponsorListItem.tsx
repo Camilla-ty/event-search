@@ -40,7 +40,6 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
             company={companyLogoFieldsFromRow(company)}
             className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
             monogramClassName="text-lg font-semibold text-slate-400"
-            logoDevSize={112}
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">

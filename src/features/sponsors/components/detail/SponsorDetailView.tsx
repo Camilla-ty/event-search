@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
-import { LogoDevAttribution } from "@/src/components/companies/LogoDevAttribution";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
@@ -40,7 +39,6 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
         <CompanyLogo
           company={companyLogoFieldsFromRow(company)}
           className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
-          logoDevSize={192}
         />
 
         <div className="min-w-0 space-y-3">
@@ -83,7 +81,6 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
               </div>
             ) : null}
           </dl>
-          <LogoDevAttribution />
         </div>
       </header>
 

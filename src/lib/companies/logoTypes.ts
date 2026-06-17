@@ -14,5 +14,5 @@ export type CompanyLogoFields = {
 };
 
 export type ResolvedCompanyLogo =
-  | { kind: "image"; src: string; usesLogoDev: boolean }
+  | { kind: "image"; src: string }
   | { kind: "monogram"; letter: string };

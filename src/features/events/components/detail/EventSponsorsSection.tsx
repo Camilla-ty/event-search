@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { LogoDevAttribution } from "@/src/components/companies/LogoDevAttribution";
 import { buildSignupEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 
@@ -46,8 +45,6 @@ export function EventSponsorsSection({
           ))}
         </ul>
       )}
-
-      {sponsors.length > 0 ? <LogoDevAttribution className="mt-3" /> : null}
 
       {!isAuthenticated ? (
         <div className="mt-6 border-t border-slate-200 pt-5">

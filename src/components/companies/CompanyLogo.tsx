@@ -14,7 +14,6 @@ type CompanyLogoProps = {
   imageClassName?: string;
   monogramClassName?: string;
   alt?: string;
-  logoDevSize?: number;
 };
 
 export function CompanyLogo({
@@ -23,12 +22,8 @@ export function CompanyLogo({
   imageClassName = "h-full w-full object-contain",
   monogramClassName = "text-2xl font-semibold text-slate-400",
   alt,
-  logoDevSize,
 }: CompanyLogoProps) {
-  const resolved = useMemo(
-    () => resolveCompanyLogo(company, { logoDevSize }),
-    [company, logoDevSize],
-  );
+  const resolved = useMemo(() => resolveCompanyLogo(company), [company]);
   const [imageFailed, setImageFailed] = useState(false);
 
   const showMonogram = resolved.kind === "monogram" || imageFailed;
