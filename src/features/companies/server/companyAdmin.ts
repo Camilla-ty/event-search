@@ -1,10 +1,8 @@
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
 import {
-  companyAliasMatchesSearch,
   normalizeCompanyAliases,
   parseCompanyAliasesFromRow,
-  resolveCompanySearchMatch,
 } from "@/src/lib/companies/companyAliases";
 import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
 import {
@@ -18,6 +16,8 @@ import {
   isSocialWebsiteCompany,
 } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+
+import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
 
 const COMPANY_ADMIN_SELECT =
   "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases";
@@ -138,11 +138,11 @@ export type ListCompaniesAdminOptions = {
   filter?: CompanyListFilter;
 };
 
-function applyCompanyListFilter(
-  companies: CompanyAdminRow[],
+function applyCompanyListFilter<T extends CompanyAdminRow>(
+  companies: readonly T[],
   filter: CompanyListFilter,
-): CompanyAdminRow[] {
-  if (filter === "all") return companies;
+): T[] {
+  if (filter === "all") return [...companies];
 
   return companies.filter((company) => {
     switch (filter) {
@@ -156,44 +156,6 @@ function applyCompanyListFilter(
         return true;
     }
   });
-}
-
-async function searchCompaniesByPrimaryFields(term: string): Promise<CompanyAdminRow[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_ADMIN_SELECT)
-    .or(
-      `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%,website.ilike.%${term}%`,
-    )
-    .order("name", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>));
-}
-
-async function searchCompaniesByAliasOnly(
-  term: string,
-  excludeIds: ReadonlySet<string>,
-): Promise<CompanyAdminRow[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_ADMIN_SELECT)
-    .order("name", { ascending: true });
-
-  if (error) throw new Error(error.message);
-
-  const matches: CompanyAdminRow[] = [];
-  for (const row of data ?? []) {
-    const company = mapCompanyAdminRow(row as Record<string, unknown>);
-    if (excludeIds.has(company.id)) continue;
-    if (company.aliases.length === 0) continue;
-    if (!companyAliasMatchesSearch(company, term)) continue;
-    matches.push(company);
-  }
-
-  return matches;
 }
 
 async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
@@ -217,18 +179,21 @@ async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
 function toCompanyListItems(
   companies: CompanyAdminRow[],
   countByCompany: Map<string, number>,
-  searchTerm?: string,
 ): CompanyListItem[] {
-  const term = searchTerm?.trim() ?? "";
-  return companies.map((company) => {
-    const matched_alias =
-      term !== "" ? resolveCompanySearchMatch(company, term).matched_alias : null;
-    return {
-      ...company,
-      sponsor_link_count: countByCompany.get(company.id) ?? 0,
-      ...(term !== "" ? { matched_alias } : {}),
-    };
-  });
+  return companies.map((company) => ({
+    ...company,
+    sponsor_link_count: countByCompany.get(company.id) ?? 0,
+  }));
+}
+
+function searchHitsToCompanyListItems(
+  hits: readonly AdminCompanySearchHit[],
+  countByCompany: Map<string, number>,
+): CompanyListItem[] {
+  return hits.map((hit) => ({
+    ...hit,
+    sponsor_link_count: countByCompany.get(hit.id) ?? 0,
+  }));
 }
 
 export async function listCompaniesAdmin(
@@ -239,14 +204,9 @@ export async function listCompaniesAdmin(
   const countByCompany = await loadSponsorLinkCounts();
 
   if (term !== "") {
-    const primaryMatches = await searchCompaniesByPrimaryFields(term);
-    const filteredPrimary = applyCompanyListFilter(primaryMatches, filter);
-    const primaryIds = new Set(filteredPrimary.map((company) => company.id));
-    const aliasMatches = applyCompanyListFilter(
-      await searchCompaniesByAliasOnly(term, primaryIds),
-      filter,
-    );
-    return toCompanyListItems([...filteredPrimary, ...aliasMatches], countByCompany, term);
+    const hits = await searchCompaniesAdmin({ query: term });
+    const filtered = applyCompanyListFilter(hits, filter);
+    return searchHitsToCompanyListItems(filtered, countByCompany);
   }
 
   const supabase = createAdminClient();
