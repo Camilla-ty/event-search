@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { InlineErrorBanner } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
@@ -22,11 +22,17 @@ import {
 import {
   applyTierDisplayOrder,
   computeMoveOrderedLinkIdsForSponsors,
+  getDirtyTierOrders,
+  isRosterOrderDirty,
 } from "./liveSponsorReorderClient";
 import { applyLiveSponsorCompanyLogoUpdate } from "./liveSponsorLogoUpdate";
 import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
+import { LiveSponsorOrderSaveBar } from "./LiveSponsorOrderSaveBar";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
+
+const UNSAVED_ORDER_CONFIRM_MESSAGE =
+  "You have unsaved order changes. Continue and discard them?";
 
 export type ActiveImportInfo = {
   batchId: string;
@@ -61,29 +67,71 @@ export function EditionSponsorsPanel({
 }: EditionSponsorsPanelProps) {
   const router = useRouter();
   const [action, setAction] = useState<PanelAction>(null);
-  const [movePending, setMovePending] = useState(false);
-  const [moveError, setMoveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [rosterSponsors, setRosterSponsors] = useState<LiveSponsorRow[]>(sponsors);
+  const [savedRoster, setSavedRoster] = useState<LiveSponsorRow[]>(sponsors);
+  const [draftRoster, setDraftRoster] = useState<LiveSponsorRow[]>(sponsors);
+
+  const savedRosterRef = useRef(savedRoster);
+  const draftRosterRef = useRef(draftRoster);
+  savedRosterRef.current = savedRoster;
+  draftRosterRef.current = draftRoster;
 
   useEffect(() => {
-    setRosterSponsors(sponsors);
+    if (isRosterOrderDirty(savedRosterRef.current, draftRosterRef.current)) {
+      setSavedRoster(sponsors);
+      return;
+    }
+    setSavedRoster(sponsors);
+    setDraftRoster(sponsors);
   }, [sponsors]);
 
-  const tierCount = useMemo(() => countDistinctTiers(rosterSponsors), [rosterSponsors]);
+  const isOrderDirty = useMemo(
+    () => isRosterOrderDirty(savedRoster, draftRoster),
+    [savedRoster, draftRoster],
+  );
+
+  useEffect(() => {
+    if (!isOrderDirty) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isOrderDirty]);
+
+  const tierCount = useMemo(() => countDistinctTiers(draftRoster), [draftRoster]);
   const filteredSponsors = useMemo(
-    () => filterSponsorsBySearch(rosterSponsors, searchQuery),
-    [rosterSponsors, searchQuery],
+    () => filterSponsorsBySearch(draftRoster, searchQuery),
+    [draftRoster, searchQuery],
   );
   const emptySearch = searchQuery.trim() !== "" && filteredSponsors.length === 0;
-  const reorderDisabled = searchQuery.trim() !== "" || movePending;
+  const reorderDisabled = searchQuery.trim() !== "" || isSaving;
 
   const attachedCompanyIds = new Set<string>();
-  for (const sponsor of rosterSponsors) {
+  for (const sponsor of draftRoster) {
     const companyId = sponsor.companies?.id;
     if (typeof companyId === "string" && companyId !== "") {
       attachedCompanyIds.add(companyId);
     }
+  }
+
+  function discardUnsavedOrderChanges() {
+    setDraftRoster(savedRoster);
+    setSaveError(null);
+  }
+
+  function confirmDiscardUnsavedOrder(): boolean {
+    if (!isOrderDirty) {
+      return true;
+    }
+    return window.confirm(UNSAVED_ORDER_CONFIRM_MESSAGE);
   }
 
   function handleDone() {
@@ -91,37 +139,59 @@ export function EditionSponsorsPanel({
     router.refresh();
   }
 
-  async function handleReorderTier(tierRank: number | null, orderedLinkIds: readonly string[]) {
-    const snapshot = rosterSponsors;
-    setRosterSponsors(applyTierDisplayOrder(snapshot, tierRank, orderedLinkIds));
-    setMovePending(true);
-    setMoveError(null);
+  function handleLocalReorderTier(tierRank: number | null, orderedLinkIds: readonly string[]) {
+    setDraftRoster((current) => applyTierDisplayOrder(current, tierRank, orderedLinkIds));
+    setSaveError(null);
+  }
+
+  async function handleSaveOrder() {
+    const dirtyTiers = getDirtyTierOrders(savedRoster, draftRoster);
+    if (dirtyTiers.length === 0 || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
 
     try {
-      const res = await fetch(`/api/admin/event-editions/${editionId}/sponsors/reorder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tier_rank: tierRank,
-          ordered_link_ids: [...orderedLinkIds],
-        }),
-      });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
-        setRosterSponsors(snapshot);
-        setMoveError(data.error ?? "Failed to reorder sponsors.");
-        return;
+      for (const tier of dirtyTiers) {
+        const res = await fetch(`/api/admin/event-editions/${editionId}/sponsors/reorder`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tier_rank: tier.tier_rank,
+            ordered_link_ids: tier.ordered_link_ids,
+          }),
+        });
+        const data = (await res.json()) as { ok: boolean; error?: string };
+        if (!res.ok || !data.ok) {
+          setSaveError(
+            data.error ??
+              "Failed to save order. Some tiers may have been saved — review the roster and try again.",
+          );
+          router.refresh();
+          return;
+        }
       }
+
+      setSavedRoster(draftRoster);
     } catch {
-      setRosterSponsors(snapshot);
-      setMoveError("Failed to reorder sponsors.");
+      setSaveError(
+        "Failed to save order. Some tiers may have been saved — review the roster and try again.",
+      );
+      router.refresh();
     } finally {
-      setMovePending(false);
+      setIsSaving(false);
     }
   }
 
+  function handleResetOrder() {
+    discardUnsavedOrderChanges();
+  }
+
   function handleLogoUpdated(companyId: string, update: LiveSponsorCompanyLogoUpdate) {
-    setRosterSponsors((current) => applyLiveSponsorCompanyLogoUpdate(current, companyId, update));
+    setDraftRoster((current) => applyLiveSponsorCompanyLogoUpdate(current, companyId, update));
+    setSavedRoster((current) => applyLiveSponsorCompanyLogoUpdate(current, companyId, update));
   }
 
   function handleMove(row: LiveSponsorRow, direction: SponsorMoveDirection) {
@@ -129,12 +199,20 @@ export function EditionSponsorsPanel({
       return;
     }
 
-    const nextOrder = computeMoveOrderedLinkIdsForSponsors(rosterSponsors, row, direction);
+    const nextOrder = computeMoveOrderedLinkIdsForSponsors(draftRoster, row, direction);
     if (nextOrder === null) {
       return;
     }
 
-    void handleReorderTier(row.tier_rank, nextOrder);
+    handleLocalReorderTier(row.tier_rank, nextOrder);
+  }
+
+  function openPanelAction(next: Exclude<PanelAction, null>) {
+    if (!confirmDiscardUnsavedOrder()) {
+      return;
+    }
+    discardUnsavedOrderChanges();
+    setAction(next);
   }
 
   return (
@@ -160,36 +238,38 @@ export function EditionSponsorsPanel({
       ) : null}
 
       <EditionSponsorsQAHeader
-        sponsorCount={rosterSponsors.length}
+        sponsorCount={draftRoster.length}
         tierCount={tierCount}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         editionSlug={editionSlug}
         eventWebsiteUrl={eventWebsiteUrl}
-        onAddSponsor={() => setAction({ type: "create" })}
+        onAddSponsor={() => openPanelAction({ type: "create" })}
       />
 
       {searchQuery.trim() !== "" ? (
         <p className="text-sm text-slate-500">Clear search to reorder sponsors.</p>
       ) : null}
 
-      {movePending ? (
-        <p className="text-sm text-slate-500" role="status" aria-live="polite">
-          Saving order…
-        </p>
+      {isOrderDirty ? (
+        <LiveSponsorOrderSaveBar
+          isSaving={isSaving}
+          onSave={() => void handleSaveOrder()}
+          onReset={handleResetOrder}
+        />
       ) : null}
 
-      {moveError ? <InlineErrorBanner message={moveError} /> : null}
+      {saveError ? <InlineErrorBanner message={saveError} /> : null}
 
       <EditionLiveSponsorsQARoster
         sponsors={filteredSponsors}
         emptySearch={emptySearch}
-        onEdit={(row) => setAction({ type: "edit", row })}
+        onEdit={(row) => openPanelAction({ type: "edit", row })}
         onLogo={(row) => setAction({ type: "logo", row })}
-        onRemove={(row) => setAction({ type: "remove", row })}
+        onRemove={(row) => openPanelAction({ type: "remove", row })}
         onMove={(row, direction) => handleMove(row, direction)}
         onReorderTier={(tierRank, orderedLinkIds) =>
-          void handleReorderTier(tierRank, orderedLinkIds)
+          handleLocalReorderTier(tierRank, orderedLinkIds)
         }
         reorderDisabled={reorderDisabled}
       />

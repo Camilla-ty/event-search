@@ -90,3 +90,73 @@ export function reorderLinkIdsByDrag(
   next.splice(newIndex, 0, moved);
   return next;
 }
+
+export type DirtyTierOrder = {
+  tier_rank: number | null;
+  ordered_link_ids: string[];
+};
+
+function tierRankSortKey(tierRank: number | null): string {
+  return tierRank === null ? "__null__" : String(tierRank);
+}
+
+function compareTierRankKeys(a: number | null, b: number | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
+}
+
+export function distinctTierRanks(sponsors: readonly LiveSponsorRow[]): (number | null)[] {
+  const byKey = new Map<string, number | null>();
+  for (const sponsor of sponsors) {
+    const key = tierRankSortKey(sponsor.tier_rank);
+    if (!byKey.has(key)) {
+      byKey.set(key, sponsor.tier_rank);
+    }
+  }
+  return Array.from(byKey.values()).sort(compareTierRankKeys);
+}
+
+export function getOrderedLinkIdsForTier(
+  sponsors: readonly LiveSponsorRow[],
+  tierRank: number | null,
+): string[] {
+  return sponsorsInTier(sponsors, tierRank).map((sponsor) => sponsor.id);
+}
+
+function orderedLinkIdsEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Tiers whose link order differs between saved and draft rosters. */
+export function getDirtyTierOrders(
+  saved: readonly LiveSponsorRow[],
+  draft: readonly LiveSponsorRow[],
+): DirtyTierOrder[] {
+  const tierRanks = distinctTierRanks([...saved, ...draft]);
+  const dirty: DirtyTierOrder[] = [];
+
+  for (const tierRank of tierRanks) {
+    const savedIds = getOrderedLinkIdsForTier(saved, tierRank);
+    const draftIds = getOrderedLinkIdsForTier(draft, tierRank);
+    if (!orderedLinkIdsEqual(savedIds, draftIds)) {
+      dirty.push({ tier_rank: tierRank, ordered_link_ids: [...draftIds] });
+    }
+  }
+
+  return dirty;
+}
+
+export function isRosterOrderDirty(
+  saved: readonly LiveSponsorRow[],
+  draft: readonly LiveSponsorRow[],
+): boolean {
+  return getDirtyTierOrders(saved, draft).length > 0;
+}
