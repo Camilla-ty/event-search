@@ -290,7 +290,7 @@ export function CompanyAdminForm({
         {mode === "edit" ? (
           <>
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Former / alternate names</span>
+              <span className="text-sm font-medium text-slate-700">Aliases</span>
               <textarea
                 value={values.aliases}
                 onChange={(e) => updateField("aliases", e.target.value)}
