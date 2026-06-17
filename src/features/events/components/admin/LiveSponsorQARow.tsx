@@ -4,7 +4,6 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 
-import { LiveSponsorBrandfetchButton } from "./LiveSponsorBrandfetchButton";
 import { LiveSponsorLogoPreview } from "./LiveSponsorLogoPreview";
 import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
 
@@ -16,6 +15,7 @@ type LiveSponsorQARowProps = {
   isOnlyInTier?: boolean;
   reorderDisabled?: boolean;
   onEdit?: (row: LiveSponsorRow) => void;
+  onLogo?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
   onMove?: (row: LiveSponsorRow, direction: SponsorMoveDirection) => void;
 };
@@ -28,6 +28,7 @@ export function LiveSponsorQARow({
   isOnlyInTier = false,
   reorderDisabled = false,
   onEdit,
+  onLogo,
   onRemove,
   onMove,
 }: LiveSponsorQARowProps) {
@@ -137,16 +138,14 @@ export function LiveSponsorQARow({
           </span>
         ) : null}
 
-        {companyId ? (
-          <LiveSponsorBrandfetchButton
-            companyId={companyId}
-            companyName={companyName}
-            domain={company?.domain ?? null}
-            logoUrl={company?.logo_url ?? null}
-            logoSource={company?.logo_source ?? null}
-            logoStatus={company?.logo_status ?? null}
-            disabled={reorderDisabled}
-          />
+        {companyId && onLogo ? (
+          <button
+            type="button"
+            className="text-sm text-brand-primary hover:underline"
+            onClick={() => onLogo(row)}
+          >
+            Logo
+          </button>
         ) : null}
 
         {onEdit ? (

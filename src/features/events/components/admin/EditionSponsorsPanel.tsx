@@ -14,6 +14,7 @@ import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/typ
 
 import { EditionLiveSponsorsQARoster } from "./EditionLiveSponsorsQARoster";
 import { EditionSponsorsQAHeader } from "./EditionSponsorsQAHeader";
+import { CompanyLogoDrawer } from "./CompanyLogoDrawer";
 import {
   countDistinctTiers,
   filterSponsorsBySearch,
@@ -22,7 +23,8 @@ import {
   applyTierDisplayOrder,
   computeMoveOrderedLinkIdsForSponsors,
 } from "./liveSponsorReorderClient";
-import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
+import { applyLiveSponsorCompanyLogoUpdate } from "./liveSponsorLogoUpdate";
+import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
 
@@ -33,6 +35,7 @@ export type ActiveImportInfo = {
 
 type PanelAction =
   | { type: "edit"; row: LiveSponsorRow }
+  | { type: "logo"; row: LiveSponsorRow }
   | { type: "create" }
   | { type: "remove"; row: LiveSponsorRow }
   | null;
@@ -117,6 +120,10 @@ export function EditionSponsorsPanel({
     }
   }
 
+  function handleLogoUpdated(companyId: string, update: LiveSponsorCompanyLogoUpdate) {
+    setRosterSponsors((current) => applyLiveSponsorCompanyLogoUpdate(current, companyId, update));
+  }
+
   function handleMove(row: LiveSponsorRow, direction: SponsorMoveDirection) {
     if (reorderDisabled) {
       return;
@@ -178,6 +185,7 @@ export function EditionSponsorsPanel({
         sponsors={filteredSponsors}
         emptySearch={emptySearch}
         onEdit={(row) => setAction({ type: "edit", row })}
+        onLogo={(row) => setAction({ type: "logo", row })}
         onRemove={(row) => setAction({ type: "remove", row })}
         onMove={(row, direction) => handleMove(row, direction)}
         onReorderTier={(tierRank, orderedLinkIds) =>
@@ -185,6 +193,15 @@ export function EditionSponsorsPanel({
         }
         reorderDisabled={reorderDisabled}
       />
+
+      {action?.type === "logo" ? (
+        <CompanyLogoDrawer
+          key={action.row.id}
+          row={action.row}
+          onClose={() => setAction(null)}
+          onUpdated={handleLogoUpdated}
+        />
+      ) : null}
 
       {action?.type === "edit" ? (
         <SponsorLinkDrawer

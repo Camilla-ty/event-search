@@ -1,0 +1,238 @@
+"use client";
+
+import { useState } from "react";
+
+import { AdminDrawerShell } from "@/src/features/admin/components/AdminDrawerShell";
+import { Button, InlineErrorBanner } from "@/src/components/common";
+import {
+  brandfetchUpgradeFailureMessage,
+  brandfetchUpgradeSkipMessage,
+} from "@/src/lib/companies/brandfetchUpgradeMessages";
+import type { BrandfetchUpgradeApiResponse } from "@/src/lib/companies/brandfetchUpgradeTypes";
+import { canUpgradeCompanyBrandfetchLogo } from "@/src/lib/companies/companyHasBrandfetchLogo";
+import { formInputClass } from "@/src/lib/design/classes";
+
+import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow } from "./liveSponsorTypes";
+
+type CompanyLogoDrawerProps = {
+  row: LiveSponsorRow;
+  onClose: () => void;
+  onUpdated: (companyId: string, update: LiveSponsorCompanyLogoUpdate) => void;
+};
+
+type PatchCompanyLogoResponse = {
+  ok: boolean;
+  error?: string;
+  company?: {
+    logo_url?: string | null;
+    logo_source?: string | null;
+    logo_status?: string | null;
+    logo_fetched_at?: string | null;
+  };
+  warnings?: string[];
+};
+
+function previewSrc(logoUrl: string | null, cacheKey: string | null): string {
+  const trimmed = logoUrl?.trim() ?? "";
+  if (!trimmed) return "";
+  if (!cacheKey) return trimmed;
+  const separator = trimmed.includes("?") ? "&" : "?";
+  return `${trimmed}${separator}v=${encodeURIComponent(cacheKey)}`;
+}
+
+export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawerProps) {
+  const company = row.companies;
+  const companyId = company?.id ?? "";
+  const companyName = company?.name?.trim() || "—";
+  const domain = company?.domain?.trim() || null;
+
+  const [saving, setSaving] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [logoUrlInput, setLogoUrlInput] = useState("");
+  const [storedLogoUrl, setStoredLogoUrl] = useState(company?.logo_url ?? null);
+  const [logoSource, setLogoSource] = useState(company?.logo_source ?? null);
+  const [logoStatus, setLogoStatus] = useState(company?.logo_status ?? null);
+  const [previewCacheKey, setPreviewCacheKey] = useState<string | null>(null);
+
+  if (!company?.id) {
+    return null;
+  }
+
+  const previewUrl = previewSrc(storedLogoUrl, previewCacheKey);
+  const canUpgradeBrandfetch = canUpgradeCompanyBrandfetchLogo({
+    domain,
+    logo_url: storedLogoUrl,
+    logo_source: logoSource,
+    logo_status: logoStatus,
+  });
+  const saveDisabled = logoUrlInput.trim() === "" || isUpgrading;
+
+  function applyLogoUpdate(update: LiveSponsorCompanyLogoUpdate, cacheKey: string) {
+    setStoredLogoUrl(update.logo_url);
+    setLogoSource(update.logo_source);
+    setLogoStatus(update.logo_status);
+    setPreviewCacheKey(cacheKey);
+    onUpdated(companyId, update);
+  }
+
+  async function handleSave() {
+    const trimmedInput = logoUrlInput.trim();
+    if (trimmedInput === "") {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+
+    try {
+      const response = await fetch(`/api/admin/companies/${companyId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ logo_url: trimmedInput }),
+      });
+      const data = (await response.json()) as PatchCompanyLogoResponse;
+      if (!response.ok || !data.ok || !data.company) {
+        setError(data.error ?? "Failed to save logo.");
+        setSaving(false);
+        return;
+      }
+
+      const cacheKey = data.company.logo_fetched_at ?? new Date().toISOString();
+      applyLogoUpdate(
+        {
+          logo_url: data.company.logo_url ?? null,
+          logo_source: data.company.logo_source ?? null,
+          logo_status: data.company.logo_status ?? null,
+          logo_fetched_at: data.company.logo_fetched_at ?? null,
+        },
+        cacheKey,
+      );
+      setLogoUrlInput("");
+      setSuccess(data.warnings?.[0] ?? "Logo saved.");
+    } catch {
+      setError("Failed to save logo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleBrandfetchUpgrade() {
+    setError(null);
+    setSuccess(null);
+    setIsUpgrading(true);
+
+    try {
+      const response = await fetch("/api/admin/companies/brandfetch-upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_ids: [companyId] }),
+      });
+      const data = (await response.json()) as BrandfetchUpgradeApiResponse;
+      if (!data.ok) {
+        setError(data.error ?? "Brandfetch upgrade request failed.");
+        return;
+      }
+
+      const item = data.results[0];
+      if (!item) {
+        setError("Brandfetch upgrade returned no result.");
+        return;
+      }
+
+      if (item.status === "upgraded") {
+        const fetchedAt = new Date().toISOString();
+        applyLogoUpdate(
+          {
+            logo_url: item.logoUrl,
+            logo_source: "brandfetch",
+            logo_status: "ok",
+            logo_fetched_at: fetchedAt,
+          },
+          fetchedAt,
+        );
+        setSuccess("Brandfetch logo downloaded and stored.");
+        return;
+      }
+
+      if (item.status === "skipped") {
+        setError(brandfetchUpgradeSkipMessage(item.reason));
+        return;
+      }
+
+      setError(brandfetchUpgradeFailureMessage(item.reason, item.message));
+    } catch {
+      setError("Brandfetch upgrade request failed.");
+    } finally {
+      setIsUpgrading(false);
+    }
+  }
+
+  return (
+    <AdminDrawerShell
+      title="Logo"
+      saving={saving || isUpgrading}
+      saveLabel="Save"
+      saveDisabled={saveDisabled}
+      onClose={onClose}
+      onSave={() => void handleSave()}
+    >
+      <div>
+        <p className="font-medium text-slate-900">{companyName}</p>
+        {domain ? <p className="text-slate-600">{domain}</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <p className="font-medium text-slate-700">Current logo</p>
+        {previewUrl ? (
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt={companyName.trim() ? `${companyName.trim()} logo` : "Company logo"}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No logo stored yet.</p>
+        )}
+      </div>
+
+      <label className="block space-y-2">
+        <span className="font-medium text-slate-700">Logo URL</span>
+        <input
+          type="url"
+          value={logoUrlInput}
+          onChange={(event) => setLogoUrlInput(event.target.value)}
+          disabled={saving || isUpgrading}
+          className={formInputClass}
+          placeholder="Paste logo image URL from the event website"
+          autoComplete="off"
+        />
+        <p className="text-xs text-slate-500">
+          Paste a verified logo image URL, then click Save. The image is downloaded and stored
+          automatically.
+        </p>
+      </label>
+
+      {canUpgradeBrandfetch ? (
+        <div className="border-t border-slate-200 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={saving || isUpgrading}
+            onClick={() => void handleBrandfetchUpgrade()}
+          >
+            {isUpgrading ? "Downloading…" : "Download Brandfetch logo"}
+          </Button>
+        </div>
+      ) : null}
+
+      {error ? <InlineErrorBanner message={error} /> : null}
+      {success ? <InlineErrorBanner message={success} variant="success" /> : null}
+    </AdminDrawerShell>
+  );
+}

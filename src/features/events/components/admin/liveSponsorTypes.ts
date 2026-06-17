@@ -1,3 +1,10 @@
+export type LiveSponsorCompanyLogoUpdate = {
+  logo_url: string | null;
+  logo_source: string | null;
+  logo_status: string | null;
+  logo_fetched_at?: string | null;
+};
+
 export type LiveSponsorRow = {
   id: string;
   tier_rank: number | null;
@@ -11,6 +18,7 @@ export type LiveSponsorRow = {
     logo_url: string | null;
     logo_source: string | null;
     logo_status: string | null;
+    logo_fetched_at: string | null;
   } | null;
 };
 

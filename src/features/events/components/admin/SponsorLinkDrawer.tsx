@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
-import { Button, InlineErrorBanner } from "@/src/components/common";
+import { InlineErrorBanner } from "@/src/components/common";
+import { AdminDrawerShell } from "@/src/features/admin/components/AdminDrawerShell";
 import { formInputClass } from "@/src/lib/design/classes";
 
 import type { LiveSponsorRow } from "./liveSponsorTypes";
@@ -54,55 +55,6 @@ export function SponsorLinkDrawer(props: SponsorLinkDrawerProps) {
       onClose={props.onClose}
       onSaved={props.onSaved}
     />
-  );
-}
-
-type DrawerShellProps = {
-  title: string;
-  saving: boolean;
-  saveLabel: string;
-  saveDisabled: boolean;
-  onClose: () => void;
-  onSave: () => void;
-  children: ReactNode;
-};
-
-function DrawerShell({
-  title,
-  saving,
-  saveLabel,
-  saveDisabled,
-  onClose,
-  onSave,
-  children,
-}: DrawerShellProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl"
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <Button variant="secondary" size="sm" onClick={onClose} disabled={saving}>
-            Close
-          </Button>
-        </div>
-
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4 text-sm">{children}</div>
-
-        <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button onClick={onSave} disabled={saving || saveDisabled}>
-            {saving ? "Saving…" : saveLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -239,7 +191,7 @@ function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
   }
 
   return (
-    <DrawerShell
+    <AdminDrawerShell
       title="Edit sponsor tier"
       saving={saving}
       saveLabel="Save"
@@ -275,7 +227,7 @@ function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
       />
 
       {error ? <InlineErrorBanner message={error} /> : null}
-    </DrawerShell>
+    </AdminDrawerShell>
   );
 }
 
@@ -383,7 +335,7 @@ function AddSponsorForm({
   }
 
   return (
-    <DrawerShell
+    <AdminDrawerShell
       title="Add sponsor"
       saving={saving}
       saveLabel="Add sponsor"
@@ -469,6 +421,6 @@ function AddSponsorForm({
       />
 
       {error ? <InlineErrorBanner message={error} /> : null}
-    </DrawerShell>
+    </AdminDrawerShell>
   );
 }

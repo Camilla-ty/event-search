@@ -14,6 +14,7 @@ type EditionLiveSponsorsTierSectionProps = {
   containerId: string;
   group: LiveSponsorTierGroup;
   onEdit?: (row: LiveSponsorRow) => void;
+  onLogo?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
   onMove?: (row: LiveSponsorRow, direction: SponsorMoveDirection) => void;
   reorderDisabled?: boolean;
@@ -23,6 +24,7 @@ export function EditionLiveSponsorsTierSection({
   containerId,
   group,
   onEdit,
+  onLogo,
   onRemove,
   onMove,
   reorderDisabled = false,
@@ -57,6 +59,7 @@ export function EditionLiveSponsorsTierSection({
                 isOnlyInTier={isOnlyInTier}
                 reorderDisabled={reorderDisabled}
                 onEdit={onEdit}
+                onLogo={onLogo}
                 onRemove={onRemove}
                 onMove={onMove}
               />

@@ -23,6 +23,7 @@ import type { LiveSponsorRow, LiveSponsorTierGroup, SponsorMoveDirection } from 
 type EditionLiveSponsorsQARosterProps = {
   sponsors: LiveSponsorRow[];
   onEdit?: (row: LiveSponsorRow) => void;
+  onLogo?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
   onMove?: (row: LiveSponsorRow, direction: SponsorMoveDirection) => void;
   onReorderTier?: (tierRank: number | null, orderedLinkIds: readonly string[]) => void;
@@ -49,6 +50,7 @@ function findTierGroupForLinkId(
 export function EditionLiveSponsorsQARoster({
   sponsors,
   onEdit,
+  onLogo,
   onRemove,
   onMove,
   onReorderTier,
@@ -123,6 +125,7 @@ export function EditionLiveSponsorsQARoster({
             containerId={tierContainerId(group)}
             group={group}
             onEdit={onEdit}
+            onLogo={onLogo}
             onRemove={onRemove}
             onMove={onMove}
             reorderDisabled={reorderDisabled}

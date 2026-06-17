@@ -122,6 +122,10 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
               typeof row.companies.logo_status === "string"
                 ? row.companies.logo_status
                 : null,
+            logo_fetched_at:
+              typeof row.companies.logo_fetched_at === "string"
+                ? row.companies.logo_fetched_at
+                : null,
           }
         : null,
   }));
