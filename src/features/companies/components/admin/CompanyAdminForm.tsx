@@ -11,6 +11,10 @@ import {
 } from "@/src/features/companies/components/admin/CompanyBrandfetchLogoUpgrade";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
+import {
+  formatAliasesForInput,
+  parseAliasesFromInput,
+} from "@/src/lib/companies/companyAliases";
 import { formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
 
@@ -20,6 +24,7 @@ type CompanyFormValues = {
   slug: string;
   city_id: string;
   logo_url: string;
+  aliases: string;
   short_description: string;
   description: string;
 };
@@ -49,6 +54,7 @@ type ApiResponse = {
     logo_source?: string | null;
     logo_status?: string | null;
     logo_fetched_at?: string | null;
+    aliases?: string[];
   };
   warnings?: string[];
 };
@@ -114,6 +120,12 @@ export function CompanyAdminForm({
           logo_fetched_at: data.company?.logo_fetched_at ?? null,
         });
       }
+      if (Array.isArray(data.company?.aliases)) {
+        setValues((prev) => ({
+          ...prev,
+          aliases: formatAliasesForInput(data.company?.aliases ?? []),
+        }));
+      }
       const warning = data.warnings?.[0];
       setResult({
         ok: true,
@@ -159,6 +171,7 @@ export function CompanyAdminForm({
         slug: effectiveSlug,
         city_id: values.city_id.trim() || null,
         logo_url: values.logo_url.trim() || null,
+        aliases: parseAliasesFromInput(values.aliases),
         short_description: values.short_description.trim() || null,
         description: values.description.trim() || null,
       }),
@@ -276,6 +289,21 @@ export function CompanyAdminForm({
 
         {mode === "edit" ? (
           <>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Former / alternate names</span>
+              <textarea
+                value={values.aliases}
+                onChange={(e) => updateField("aliases", e.target.value)}
+                disabled={isSubmitting}
+                rows={3}
+                className={formInputClass}
+                placeholder={"Bitfarms\nLegacy Name"}
+              />
+              <p className="text-xs text-slate-500">
+                One per line or comma-separated. Used for admin search only; public pages still
+                show the canonical company name.
+              </p>
+            </label>
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-700">Short description</span>
               <input

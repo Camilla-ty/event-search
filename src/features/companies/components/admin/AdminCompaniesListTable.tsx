@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AdminCompanyLogoCell } from "@/src/features/companies/components/admin/AdminCompanyLogoCell";
+import { AdminCompanySearchMatchHint } from "@/src/features/companies/components/admin/AdminCompanySearchMatchHint";
 import { BrandfetchUpgradeBatchToolbar } from "@/src/features/companies/components/admin/BrandfetchUpgradeBatchToolbar";
 import type { CompanyListFilter } from "@/src/features/companies/server/companyAdmin";
 import type { BrandfetchUpgradeBatchItem } from "@/src/lib/companies/brandfetchUpgradeBatchClient";
@@ -17,6 +18,7 @@ export type AdminCompaniesListRow = {
   logo_source: string | null;
   logo_status: string | null;
   sponsor_link_count: number;
+  matched_alias?: string | null;
 };
 
 type AdminCompaniesListTableProps = {
@@ -130,7 +132,13 @@ export function AdminCompaniesListTable({ companies, filter }: AdminCompaniesLis
                         logoSource={company.logo_source}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{company.name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      <div>{company.name}</div>
+                      <AdminCompanySearchMatchHint
+                        matchedAlias={company.matched_alias}
+                        className="mt-0.5 block"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{company.domain ?? "—"}</td>
                     {filter === "needs_logo_review" ? (
                       <td className="max-w-xs truncate px-4 py-3 text-slate-600">

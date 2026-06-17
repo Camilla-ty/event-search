@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { AdminCompaniesListTable } from "@/src/features/companies/components/admin/AdminCompaniesListTable";
+import { AdminCompaniesSearchForm } from "@/src/features/companies/components/admin/AdminCompaniesSearchForm";
 import {
   listCompaniesAdmin,
   type CompanyListFilter,
@@ -12,7 +13,7 @@ import { primaryCtaClass } from "@/src/lib/design/classes";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; search?: string }>;
 };
 
 const FILTER_OPTIONS: Array<{ value: CompanyListFilter; label: string }> = [
@@ -33,15 +34,20 @@ function parseFilter(value: string | undefined): CompanyListFilter {
   return "all";
 }
 
-function filterHref(filter: CompanyListFilter): string {
-  if (filter === "all") return "/admin/companies";
-  return `/admin/companies?filter=${filter}`;
+function filterHref(filter: CompanyListFilter, search?: string): string {
+  const params = new URLSearchParams();
+  if (filter !== "all") params.set("filter", filter);
+  const trimmed = search?.trim() ?? "";
+  if (trimmed !== "") params.set("search", trimmed);
+  const query = params.toString();
+  return query ? `/admin/companies?${query}` : "/admin/companies";
 }
 
 export default async function AdminCompaniesListPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filter = parseFilter(params.filter);
-  const companies = await listCompaniesAdmin({ filter });
+  const search = params.search?.trim() ?? "";
+  const companies = await listCompaniesAdmin({ filter, search: search || undefined });
 
   const activeFilterLabel =
     FILTER_OPTIONS.find((option) => option.value === filter)?.label ?? "All";
@@ -54,9 +60,11 @@ export default async function AdminCompaniesListPage({ searchParams }: PageProps
       <AdminPageHeader
         title="Companies"
         description={
-          filter === "all"
-            ? "Global sponsor directory."
-            : `${activeFilterLabel} (${companies.length})`
+          search !== ""
+            ? `Search: “${search}” (${companies.length})`
+            : filter === "all"
+              ? "Global sponsor directory."
+              : `${activeFilterLabel} (${companies.length})`
         }
         actions={
           <Link href="/admin/companies/new" className={`${primaryCtaClass} h-10`}>
@@ -71,7 +79,7 @@ export default async function AdminCompaniesListPage({ searchParams }: PageProps
           return (
             <Link
               key={option.value}
-              href={filterHref(option.value)}
+              href={filterHref(option.value, search)}
               className={
                 active
                   ? "rounded-full bg-brand-primary px-3 py-1.5 text-sm font-medium text-white"
@@ -84,6 +92,8 @@ export default async function AdminCompaniesListPage({ searchParams }: PageProps
         })}
       </div>
 
+      <AdminCompaniesSearchForm filter={filter} initialSearch={search} />
+
       <AdminCompaniesListTable
         filter={filter}
         companies={companies.map((company) => ({
@@ -95,6 +105,7 @@ export default async function AdminCompaniesListPage({ searchParams }: PageProps
           logo_source: company.logo_source,
           logo_status: company.logo_status,
           sponsor_link_count: company.sponsor_link_count,
+          matched_alias: company.matched_alias ?? null,
         }))}
       />
     </section>

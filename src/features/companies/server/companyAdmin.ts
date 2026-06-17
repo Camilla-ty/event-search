@@ -1,5 +1,11 @@
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
+import {
+  companyAliasMatchesSearch,
+  normalizeCompanyAliases,
+  parseCompanyAliasesFromRow,
+  resolveCompanySearchMatch,
+} from "@/src/lib/companies/companyAliases";
 import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
 import {
   logoMetadataPatchForLogoClear,
@@ -12,6 +18,29 @@ import {
   isSocialWebsiteCompany,
 } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+
+const COMPANY_ADMIN_SELECT =
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases";
+
+function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    slug: String(row.slug),
+    domain: typeof row.domain === "string" ? row.domain : null,
+    website: typeof row.website === "string" ? row.website : null,
+    logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+    logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
+    logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
+    logo_fetched_at: typeof row.logo_fetched_at === "string" ? row.logo_fetched_at : null,
+    logo_fetch_error: typeof row.logo_fetch_error === "string" ? row.logo_fetch_error : null,
+    short_description: typeof row.short_description === "string" ? row.short_description : null,
+    description: typeof row.description === "string" ? row.description : null,
+    city_id: typeof row.city_id === "string" ? row.city_id : null,
+    created_at: typeof row.created_at === "string" ? row.created_at : null,
+    aliases: parseCompanyAliasesFromRow(row.aliases),
+  };
+}
 
 export type CompanyAdminRow = {
   id: string;
@@ -28,10 +57,12 @@ export type CompanyAdminRow = {
   description: string | null;
   city_id: string | null;
   created_at: string | null;
+  aliases: string[];
 };
 
 export type CompanyListItem = CompanyAdminRow & {
   sponsor_link_count: number;
+  matched_alias?: string | null;
 };
 
 export type UpdateCompanyAdminInput = {
@@ -39,6 +70,7 @@ export type UpdateCompanyAdminInput = {
   slug?: string;
   website?: string;
   logo_url?: string | null;
+  aliases?: string[];
   short_description?: string | null;
   description?: string | null;
   city_id?: string | null;
@@ -126,31 +158,46 @@ function applyCompanyListFilter(
   });
 }
 
-export async function listCompaniesAdmin(
-  options?: ListCompaniesAdminOptions,
-): Promise<CompanyListItem[]> {
+async function searchCompaniesByPrimaryFields(term: string): Promise<CompanyAdminRow[]> {
   const supabase = createAdminClient();
-  let query = supabase
+  const { data, error } = await supabase
     .from("companies")
-    .select(
-      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
+    .select(COMPANY_ADMIN_SELECT)
+    .or(
+      `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%,website.ilike.%${term}%`,
     )
     .order("name", { ascending: true });
 
-  const term = options?.search?.trim() ?? "";
-  if (term !== "") {
-    query = query.or(
-      `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%,website.ilike.%${term}%`,
-    );
-  }
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>));
+}
 
-  const { data, error } = await query;
+async function searchCompaniesByAliasOnly(
+  term: string,
+  excludeIds: ReadonlySet<string>,
+): Promise<CompanyAdminRow[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select(COMPANY_ADMIN_SELECT)
+    .order("name", { ascending: true });
+
   if (error) throw new Error(error.message);
 
-  const filter = options?.filter ?? "all";
-  const companies = applyCompanyListFilter((data ?? []) as CompanyAdminRow[], filter);
-  if (companies.length === 0) return [];
+  const matches: CompanyAdminRow[] = [];
+  for (const row of data ?? []) {
+    const company = mapCompanyAdminRow(row as Record<string, unknown>);
+    if (excludeIds.has(company.id)) continue;
+    if (company.aliases.length === 0) continue;
+    if (!companyAliasMatchesSearch(company, term)) continue;
+    matches.push(company);
+  }
 
+  return matches;
+}
+
+async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
+  const supabase = createAdminClient();
   const { data: links, error: linkError } = await supabase
     .from("event_sponsors")
     .select("company_id");
@@ -164,25 +211,72 @@ export async function listCompaniesAdmin(
       countByCompany.set(cid, (countByCompany.get(cid) ?? 0) + 1);
     }
   }
+  return countByCompany;
+}
 
-  return companies.map((company) => ({
-    ...company,
-    sponsor_link_count: countByCompany.get(company.id) ?? 0,
-  }));
+function toCompanyListItems(
+  companies: CompanyAdminRow[],
+  countByCompany: Map<string, number>,
+  searchTerm?: string,
+): CompanyListItem[] {
+  const term = searchTerm?.trim() ?? "";
+  return companies.map((company) => {
+    const matched_alias =
+      term !== "" ? resolveCompanySearchMatch(company, term).matched_alias : null;
+    return {
+      ...company,
+      sponsor_link_count: countByCompany.get(company.id) ?? 0,
+      ...(term !== "" ? { matched_alias } : {}),
+    };
+  });
+}
+
+export async function listCompaniesAdmin(
+  options?: ListCompaniesAdminOptions,
+): Promise<CompanyListItem[]> {
+  const filter = options?.filter ?? "all";
+  const term = options?.search?.trim() ?? "";
+  const countByCompany = await loadSponsorLinkCounts();
+
+  if (term !== "") {
+    const primaryMatches = await searchCompaniesByPrimaryFields(term);
+    const filteredPrimary = applyCompanyListFilter(primaryMatches, filter);
+    const primaryIds = new Set(filteredPrimary.map((company) => company.id));
+    const aliasMatches = applyCompanyListFilter(
+      await searchCompaniesByAliasOnly(term, primaryIds),
+      filter,
+    );
+    return toCompanyListItems([...filteredPrimary, ...aliasMatches], countByCompany, term);
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select(COMPANY_ADMIN_SELECT)
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const companies = applyCompanyListFilter(
+    (data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>)),
+    filter,
+  );
+  if (companies.length === 0) return [];
+
+  return toCompanyListItems(companies, countByCompany);
 }
 
 export async function getCompanyAdminById(id: string): Promise<CompanyAdminRow | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("companies")
-    .select(
-      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
-    )
+    .select(COMPANY_ADMIN_SELECT)
     .eq("id", id)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as CompanyAdminRow | null;
+  if (!data) return null;
+  return mapCompanyAdminRow(data as Record<string, unknown>);
 }
 
 export async function updateCompanyAdmin(
@@ -194,7 +288,9 @@ export async function updateCompanyAdmin(
   const warnings: string[] = [];
   let existingRow: CompanyAdminRow | null = null;
 
-  if (input.logo_url !== undefined) {
+  const needsExistingRow = input.logo_url !== undefined || input.aliases !== undefined;
+
+  if (needsExistingRow) {
     existingRow = await getCompanyAdminById(id);
     if (!existingRow) {
       throw new Error("Company not found.");
@@ -211,6 +307,11 @@ export async function updateCompanyAdmin(
       throw new Error("Invalid company website");
     }
     patch.domain = domain;
+  }
+  if (input.aliases !== undefined && existingRow) {
+    const canonicalName =
+      typeof patch.name === "string" ? patch.name : existingRow.name;
+    patch.aliases = normalizeCompanyAliases(input.aliases, canonicalName);
   }
   if (input.logo_url !== undefined && existingRow) {
     const incomingLogoUrl = input.logo_url?.trim() || null;
@@ -237,11 +338,9 @@ export async function updateCompanyAdmin(
     .from("companies")
     .update(patch)
     .eq("id", id)
-    .select(
-      "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at",
-    )
+    .select(COMPANY_ADMIN_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
-  return { company: data as CompanyAdminRow, warnings };
+  return { company: mapCompanyAdminRow(data as Record<string, unknown>), warnings };
 }

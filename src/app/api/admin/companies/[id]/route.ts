@@ -5,6 +5,10 @@ import {
   updateCompanyAdmin,
 } from "@/src/features/companies/server/companyAdmin";
 import { enrichCompanyLogo } from "@/src/features/companies/server/createCompanyWithLogo";
+import {
+  MAX_COMPANY_ALIAS_LENGTH,
+  MAX_COMPANY_ALIASES,
+} from "@/src/lib/companies/companyAliases";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
@@ -34,6 +38,7 @@ type PatchCompanyBody = {
   slug?: string;
   website?: string;
   logo_url?: string | null;
+  aliases?: string[];
   short_description?: string | null;
   description?: string | null;
   city_id?: string | null;
@@ -83,6 +88,28 @@ export async function PATCH(request: Request, context: RouteContext) {
       typeof body.city_id === "string" && body.city_id.trim() !== ""
         ? body.city_id.trim()
         : null;
+  }
+  if (body.aliases !== undefined) {
+    if (!Array.isArray(body.aliases)) {
+      errors.push("aliases must be an array of strings");
+    } else {
+      for (const alias of body.aliases) {
+        if (typeof alias !== "string") {
+          errors.push("aliases must be an array of strings");
+          break;
+        }
+        if (alias.trim().length > MAX_COMPANY_ALIAS_LENGTH) {
+          errors.push(`each alias must be at most ${MAX_COMPANY_ALIAS_LENGTH} characters`);
+          break;
+        }
+      }
+      if (errors.length === 0 && body.aliases.length > MAX_COMPANY_ALIASES) {
+        errors.push(`at most ${MAX_COMPANY_ALIASES} aliases allowed`);
+      }
+      if (errors.length === 0) {
+        patch.aliases = body.aliases;
+      }
+    }
   }
 
   if (errors.length > 0) {

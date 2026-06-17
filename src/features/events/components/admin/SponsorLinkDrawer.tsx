@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { InlineErrorBanner } from "@/src/components/common";
 import { AdminDrawerShell } from "@/src/features/admin/components/AdminDrawerShell";
+import { AdminCompanySearchMatchHint } from "@/src/features/companies/components/admin/AdminCompanySearchMatchHint";
 import { formInputClass } from "@/src/lib/design/classes";
 
 import type { LiveSponsorRow } from "./liveSponsorTypes";
@@ -231,7 +232,12 @@ function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
   );
 }
 
-type CompanyOption = { id: string; name: string; domain: string | null };
+type CompanyOption = {
+  id: string;
+  name: string;
+  domain: string | null;
+  matched_alias?: string | null;
+};
 
 type AddSponsorFormProps = {
   editionId: string;
@@ -276,6 +282,10 @@ function AddSponsorForm({
             id: String(c.id),
             name: typeof c.name === "string" ? c.name : "—",
             domain: typeof c.domain === "string" ? c.domain : null,
+            matched_alias:
+              typeof c.matched_alias === "string" && c.matched_alias.trim() !== ""
+                ? c.matched_alias
+                : null,
           })),
         );
         setLastFetchedTerm(term);
@@ -376,7 +386,11 @@ function AddSponsorForm({
                     ].join(" ")}
                     onClick={() => setSelectedCompany(option)}
                   >
-                    {option.name}
+                    <span className="block">{option.name}</span>
+                    <AdminCompanySearchMatchHint
+                      matchedAlias={option.matched_alias}
+                      className="mt-0.5 block"
+                    />
                     {option.domain ? (
                       <span className="ml-2 text-xs text-slate-500">
                         {option.domain}
@@ -408,6 +422,10 @@ function AddSponsorForm({
         {selectedCompany ? (
           <p className="mt-2 text-xs text-slate-600">
             Selected: <span className="font-medium">{selectedCompany.name}</span>
+            <AdminCompanySearchMatchHint
+              matchedAlias={selectedCompany.matched_alias}
+              className="ml-1 inline"
+            />
           </p>
         ) : null}
       </div>
