@@ -78,6 +78,7 @@ export function EditionSponsorsQAHeader({
           onChange={(event) => onSearchQueryChange(event.target.value)}
           placeholder="Search sponsors by name or domain…"
           aria-label="Search sponsors by name or domain"
+          autoComplete="off"
           className={formInputClass}
         />
         {searchQuery.trim() !== "" ? (

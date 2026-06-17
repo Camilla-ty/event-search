@@ -1,6 +1,24 @@
-import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
-import { groupSponsorsByTier } from "./liveSponsorQaUtils";
+"use client";
+
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { useMemo } from "react";
+
 import { EditionLiveSponsorsTierSection } from "./EditionLiveSponsorsTierSection";
+import { groupSponsorsByTier } from "./liveSponsorQaUtils";
+import { reorderLinkIdsByDrag } from "./liveSponsorReorderClient";
+import type { LiveSponsorRow, LiveSponsorTierGroup, SponsorMoveDirection } from "./liveSponsorTypes";
 
 type EditionLiveSponsorsQARosterProps = {
   sponsors: LiveSponsorRow[];
@@ -12,6 +30,22 @@ type EditionLiveSponsorsQARosterProps = {
   emptySearch?: boolean;
 };
 
+function tierContainerId(group: LiveSponsorTierGroup): string {
+  return group.tierRank === null ? "tier-unranked" : `tier-${group.tierRank}`;
+}
+
+function findTierGroupForLinkId(
+  tierGroups: readonly LiveSponsorTierGroup[],
+  linkId: string,
+): LiveSponsorTierGroup | null {
+  for (const group of tierGroups) {
+    if (group.sponsors.some((sponsor) => sponsor.id === linkId)) {
+      return group;
+    }
+  }
+  return null;
+}
+
 export function EditionLiveSponsorsQARoster({
   sponsors,
   onEdit,
@@ -21,6 +55,45 @@ export function EditionLiveSponsorsQARoster({
   reorderDisabled = false,
   emptySearch = false,
 }: EditionLiveSponsorsQARosterProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 3 },
+    }),
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 3 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const tierGroups = useMemo(() => groupSponsorsByTier(sponsors), [sponsors]);
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    const activeId = String(active.id);
+    const overId = over ? String(over.id) : null;
+    const activeGroup = findTierGroupForLinkId(tierGroups, activeId);
+
+    if (reorderDisabled || !onReorderTier || !over || activeId === overId || !activeGroup) {
+      return;
+    }
+
+    const resolvedOverId = String(over.id);
+    const overGroup = findTierGroupForLinkId(tierGroups, resolvedOverId);
+    if (!overGroup || overGroup.tierRank !== activeGroup.tierRank) {
+      return;
+    }
+
+    const sponsorIds = activeGroup.sponsors.map((sponsor) => sponsor.id);
+    const nextOrder = reorderLinkIdsByDrag(sponsorIds, activeId, resolvedOverId);
+    if (nextOrder === null) {
+      return;
+    }
+
+    onReorderTier(activeGroup.tierRank, nextOrder);
+  }
+
   if (sponsors.length === 0) {
     if (emptySearch) {
       return (
@@ -37,21 +110,25 @@ export function EditionLiveSponsorsQARoster({
     );
   }
 
-  const tierGroups = groupSponsorsByTier(sponsors);
-
   return (
-    <div className="space-y-4">
-      {tierGroups.map((group) => (
-        <EditionLiveSponsorsTierSection
-          key={group.tierRank === null ? "unranked" : String(group.tierRank)}
-          group={group}
-          onEdit={onEdit}
-          onRemove={onRemove}
-          onMove={onMove}
-          onReorderTier={onReorderTier}
-          reorderDisabled={reorderDisabled}
-        />
-      ))}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-4">
+        {tierGroups.map((group) => (
+          <EditionLiveSponsorsTierSection
+            key={tierContainerId(group)}
+            containerId={tierContainerId(group)}
+            group={group}
+            onEdit={onEdit}
+            onRemove={onRemove}
+            onMove={onMove}
+            reorderDisabled={reorderDisabled}
+          />
+        ))}
+      </div>
+    </DndContext>
   );
 }

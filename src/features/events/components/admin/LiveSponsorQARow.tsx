@@ -13,6 +13,7 @@ type LiveSponsorQARowProps = {
   positionInTier: number;
   isFirstInTier: boolean;
   isLastInTier: boolean;
+  isOnlyInTier?: boolean;
   reorderDisabled?: boolean;
   onEdit?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
@@ -24,21 +25,25 @@ export function LiveSponsorQARow({
   positionInTier,
   isFirstInTier,
   isLastInTier,
+  isOnlyInTier = false,
   reorderDisabled = false,
   onEdit,
   onRemove,
   onMove,
 }: LiveSponsorQARowProps) {
+  const dragDisabled = reorderDisabled || isOnlyInTier;
+
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({
     id: row.id,
-    disabled: reorderDisabled,
+    disabled: dragDisabled,
   });
 
   const company = row.companies;
@@ -48,7 +53,9 @@ export function LiveSponsorQARow({
 
   const reorderBlockedTitle = reorderDisabled
     ? "Clear search to reorder sponsors"
-    : "Drag to reorder within tier";
+    : isOnlyInTier
+      ? "Add another sponsor to this tier to reorder"
+      : "Drag to reorder within tier";
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -65,22 +72,23 @@ export function LiveSponsorQARow({
       ].join(" ")}
     >
       <div className="flex shrink-0 items-start gap-2">
-        <button
-          type="button"
+        <div
+          ref={setActivatorNodeRef}
+          aria-label={reorderBlockedTitle}
+          title={reorderBlockedTitle}
           className={[
-            "mt-7 shrink-0 rounded px-1 py-0.5 text-slate-400",
-            reorderDisabled
+            "mt-7 shrink-0 rounded px-1 py-0.5 text-slate-400 select-none",
+            dragDisabled
               ? "cursor-not-allowed opacity-30"
               : "cursor-grab touch-none hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing",
           ].join(" ")}
-          aria-label={reorderBlockedTitle}
-          title={reorderBlockedTitle}
-          disabled={reorderDisabled}
           {...attributes}
           {...listeners}
+          tabIndex={dragDisabled ? -1 : 0}
+          aria-disabled={dragDisabled}
         >
           ⋮⋮
-        </button>
+        </div>
         <span
           className="mt-7 w-8 shrink-0 text-right text-xs font-medium tabular-nums text-slate-400"
           aria-label={`Position ${positionInTier} in tier`}
