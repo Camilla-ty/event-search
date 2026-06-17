@@ -2,9 +2,15 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type {
   EventSponsorCreatePayload,
+  EventSponsorTierReorderPayload,
   EventSponsorUpdatePatch,
   SponsorMoveDirection,
 } from "@/src/lib/validation/eventSponsor";
+
+import {
+  computeMoveOrderedLinkIds,
+  validateTierReorderLinkIds,
+} from "./eventSponsorReorder";
 
 export const DUPLICATE_SPONSOR_LINK_MESSAGE =
   "This company is already a sponsor of this edition.";
@@ -140,59 +146,69 @@ export async function createEventSponsorLinkAdmin(
   return toLinkRow(data as Record<string, unknown>);
 }
 
-/**
- * Moves a sponsor link one position up or down within its (edition, tier)
- * group. Renumbers the whole tier densely (1..n) in the same pass, so legacy
- * rows with null or duplicate display_order self-heal on first move.
- * Returns the moved row, or null if the link does not exist. Moving past a
- * tier boundary is a successful no-op.
- */
-export async function moveEventSponsorLinkAdmin(
-  linkId: string,
-  direction: SponsorMoveDirection,
-): Promise<EventSponsorLinkAdminRow | null> {
-  const supabase = createAdminClient();
-
-  const link = await getEventSponsorLinkAdminById(linkId);
-  if (!link) return null;
-
+async function loadEventSponsorTierSiblings(
+  supabase: AdminClient,
+  editionId: string,
+  tierRank: number | null,
+): Promise<EventSponsorLinkAdminRow[]> {
   let siblingsQuery = supabase
     .from("event_sponsors")
     .select(EVENT_SPONSOR_LINK_SELECT)
-    .eq("event_editions_id", link.event_editions_id)
+    .eq("event_editions_id", editionId)
     .order("display_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
   siblingsQuery =
-    link.tier_rank === null
+    tierRank === null
       ? siblingsQuery.is("tier_rank", null)
-      : siblingsQuery.eq("tier_rank", link.tier_rank);
+      : siblingsQuery.eq("tier_rank", tierRank);
 
   const { data, error } = await siblingsQuery;
   if (error) throw new Error(error.message);
 
-  const siblings = (data ?? []).map((row) => toLinkRow(row as Record<string, unknown>));
-  const index = siblings.findIndex((row) => row.id === link.id);
-  if (index === -1) return null;
+  return (data ?? []).map((row) => toLinkRow(row as Record<string, unknown>));
+}
 
-  const targetIndex = direction === "up" ? index - 1 : index + 1;
-  const ordered = [...siblings];
-  if (targetIndex >= 0 && targetIndex < ordered.length) {
-    const current = ordered[index];
-    const neighbor = ordered[targetIndex];
-    if (current === undefined || neighbor === undefined) {
-      throw new Error("Sponsor ordering is out of sync. Reload and try again.");
-    }
-    ordered[index] = neighbor;
-    ordered[targetIndex] = current;
+/**
+ * Renumbers one (edition, tier) group to match ordered_link_ids. Validates that
+ * the payload includes every sibling exactly once. Returns all rows in the tier
+ * after reorder (with dense display_order 1..n).
+ */
+export async function reorderEventSponsorLinksInTierAdmin(
+  editionId: string,
+  payload: EventSponsorTierReorderPayload,
+): Promise<EventSponsorLinkAdminRow[]> {
+  const supabase = createAdminClient();
+  const siblings = await loadEventSponsorTierSiblings(
+    supabase,
+    editionId,
+    payload.tier_rank,
+  );
+
+  const validation = validateTierReorderLinkIds(
+    payload.ordered_link_ids,
+    siblings.map((row) => row.id),
+  );
+  if (!validation.ok) {
+    throw new Error(validation.error);
   }
 
-  let movedRow: EventSponsorLinkAdminRow = link;
-  for (let position = 0; position < ordered.length; position += 1) {
-    const row = ordered[position];
-    if (row === undefined) continue;
+  const siblingsById = new Map(siblings.map((row) => [row.id, row]));
+  const updatedRows: EventSponsorLinkAdminRow[] = [];
+
+  for (let position = 0; position < payload.ordered_link_ids.length; position += 1) {
+    const linkId = payload.ordered_link_ids[position];
+    if (linkId === undefined) {
+      throw new Error("Sponsor ordering is out of sync. Reload and try again.");
+    }
+
+    const row = siblingsById.get(linkId);
+    if (row === undefined) {
+      throw new Error("Sponsor ordering is out of sync. Reload and try again.");
+    }
+
     const desiredOrder = position + 1;
     if (row.display_order === desiredOrder) {
-      if (row.id === link.id) movedRow = row;
+      updatedRows.push(row);
       continue;
     }
 
@@ -204,12 +220,52 @@ export async function moveEventSponsorLinkAdmin(
       .maybeSingle();
 
     if (updateError) throw new Error(updateError.message);
-    if (updated && row.id === link.id) {
-      movedRow = toLinkRow(updated as Record<string, unknown>);
+    if (!updated) {
+      throw new Error("Sponsor link not found.");
     }
+
+    updatedRows.push(toLinkRow(updated as Record<string, unknown>));
   }
 
-  return movedRow;
+  return updatedRows;
+}
+
+/**
+ * Moves a sponsor link one position up or down within its (edition, tier)
+ * group. Renumbers the whole tier densely (1..n) in the same pass, so legacy
+ * rows with null or duplicate display_order self-heal on first move.
+ * Returns the moved row, or null if the link does not exist. Moving past a
+ * tier boundary is a successful no-op.
+ */
+export async function moveEventSponsorLinkAdmin(
+  linkId: string,
+  direction: SponsorMoveDirection,
+): Promise<EventSponsorLinkAdminRow | null> {
+  const link = await getEventSponsorLinkAdminById(linkId);
+  if (!link) return null;
+
+  const supabase = createAdminClient();
+  const siblings = await loadEventSponsorTierSiblings(
+    supabase,
+    link.event_editions_id,
+    link.tier_rank,
+  );
+
+  const orderedLinkIds = siblings.map((row) => row.id);
+  const nextOrder = computeMoveOrderedLinkIds(orderedLinkIds, linkId, direction);
+  if (nextOrder === null) {
+    if (!orderedLinkIds.includes(linkId)) {
+      return null;
+    }
+    return link;
+  }
+
+  const updatedRows = await reorderEventSponsorLinksInTierAdmin(link.event_editions_id, {
+    tier_rank: link.tier_rank,
+    ordered_link_ids: [...nextOrder],
+  });
+
+  return updatedRows.find((row) => row.id === linkId) ?? link;
 }
 
 /** Deletes a live sponsor link. Returns the deleted row, or null if it did not exist. */

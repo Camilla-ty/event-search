@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { InlineErrorBanner } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
@@ -18,6 +18,10 @@ import {
   countDistinctTiers,
   filterSponsorsBySearch,
 } from "./liveSponsorQaUtils";
+import {
+  applyTierDisplayOrder,
+  computeMoveOrderedLinkIdsForSponsors,
+} from "./liveSponsorReorderClient";
 import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
@@ -57,16 +61,22 @@ export function EditionSponsorsPanel({
   const [movePending, setMovePending] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [rosterSponsors, setRosterSponsors] = useState<LiveSponsorRow[]>(sponsors);
 
-  const tierCount = useMemo(() => countDistinctTiers(sponsors), [sponsors]);
+  useEffect(() => {
+    setRosterSponsors(sponsors);
+  }, [sponsors]);
+
+  const tierCount = useMemo(() => countDistinctTiers(rosterSponsors), [rosterSponsors]);
   const filteredSponsors = useMemo(
-    () => filterSponsorsBySearch(sponsors, searchQuery),
-    [sponsors, searchQuery],
+    () => filterSponsorsBySearch(rosterSponsors, searchQuery),
+    [rosterSponsors, searchQuery],
   );
   const emptySearch = searchQuery.trim() !== "" && filteredSponsors.length === 0;
+  const reorderDisabled = searchQuery.trim() !== "" || movePending;
 
   const attachedCompanyIds = new Set<string>();
-  for (const sponsor of sponsors) {
+  for (const sponsor of rosterSponsors) {
     const companyId = sponsor.companies?.id;
     if (typeof companyId === "string" && companyId !== "") {
       attachedCompanyIds.add(companyId);
@@ -78,27 +88,46 @@ export function EditionSponsorsPanel({
     router.refresh();
   }
 
-  async function handleMove(row: LiveSponsorRow, direction: SponsorMoveDirection) {
+  async function handleReorderTier(tierRank: number | null, orderedLinkIds: readonly string[]) {
+    const snapshot = rosterSponsors;
+    setRosterSponsors(applyTierDisplayOrder(snapshot, tierRank, orderedLinkIds));
     setMovePending(true);
     setMoveError(null);
+
     try {
-      const res = await fetch(`/api/admin/event-sponsors/${row.id}/move`, {
+      const res = await fetch(`/api/admin/event-editions/${editionId}/sponsors/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ direction }),
+        body: JSON.stringify({
+          tier_rank: tierRank,
+          ordered_link_ids: [...orderedLinkIds],
+        }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setMoveError(data.error ?? "Failed to reorder sponsor.");
-        setMovePending(false);
+        setRosterSponsors(snapshot);
+        setMoveError(data.error ?? "Failed to reorder sponsors.");
         return;
       }
-      router.refresh();
-      setMovePending(false);
     } catch {
-      setMoveError("Failed to reorder sponsor.");
+      setRosterSponsors(snapshot);
+      setMoveError("Failed to reorder sponsors.");
+    } finally {
       setMovePending(false);
     }
+  }
+
+  function handleMove(row: LiveSponsorRow, direction: SponsorMoveDirection) {
+    if (reorderDisabled) {
+      return;
+    }
+
+    const nextOrder = computeMoveOrderedLinkIdsForSponsors(rosterSponsors, row, direction);
+    if (nextOrder === null) {
+      return;
+    }
+
+    void handleReorderTier(row.tier_rank, nextOrder);
   }
 
   return (
@@ -124,7 +153,7 @@ export function EditionSponsorsPanel({
       ) : null}
 
       <EditionSponsorsQAHeader
-        sponsorCount={sponsors.length}
+        sponsorCount={rosterSponsors.length}
         tierCount={tierCount}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
@@ -133,6 +162,16 @@ export function EditionSponsorsPanel({
         onAddSponsor={() => setAction({ type: "create" })}
       />
 
+      {searchQuery.trim() !== "" ? (
+        <p className="text-sm text-slate-500">Clear search to reorder sponsors.</p>
+      ) : null}
+
+      {movePending ? (
+        <p className="text-sm text-slate-500" role="status" aria-live="polite">
+          Saving order…
+        </p>
+      ) : null}
+
       {moveError ? <InlineErrorBanner message={moveError} /> : null}
 
       <EditionLiveSponsorsQARoster
@@ -140,8 +179,11 @@ export function EditionSponsorsPanel({
         emptySearch={emptySearch}
         onEdit={(row) => setAction({ type: "edit", row })}
         onRemove={(row) => setAction({ type: "remove", row })}
-        onMove={(row, direction) => void handleMove(row, direction)}
-        moveDisabled={movePending}
+        onMove={(row, direction) => handleMove(row, direction)}
+        onReorderTier={(tierRank, orderedLinkIds) =>
+          void handleReorderTier(tierRank, orderedLinkIds)
+        }
+        reorderDisabled={reorderDisabled}
       />
 
       {action?.type === "edit" ? (

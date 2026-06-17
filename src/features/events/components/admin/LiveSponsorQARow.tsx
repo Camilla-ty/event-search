@@ -1,3 +1,7 @@
+"use client";
+
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 
 import { LiveSponsorBrandfetchButton } from "./LiveSponsorBrandfetchButton";
@@ -9,7 +13,7 @@ type LiveSponsorQARowProps = {
   positionInTier: number;
   isFirstInTier: boolean;
   isLastInTier: boolean;
-  moveDisabled?: boolean;
+  reorderDisabled?: boolean;
   onEdit?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
   onMove?: (row: LiveSponsorRow, direction: SponsorMoveDirection) => void;
@@ -20,19 +24,63 @@ export function LiveSponsorQARow({
   positionInTier,
   isFirstInTier,
   isLastInTier,
-  moveDisabled = false,
+  reorderDisabled = false,
   onEdit,
   onRemove,
   onMove,
 }: LiveSponsorQARowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: row.id,
+    disabled: reorderDisabled,
+  });
+
   const company = row.companies;
   const companyId = company?.id;
   const companyName = company?.name?.trim() || "—";
   const domain = company?.domain?.trim() || null;
 
+  const reorderBlockedTitle = reorderDisabled
+    ? "Clear search to reorder sponsors"
+    : "Drag to reorder within tier";
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <li className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 last:border-0 sm:flex-row sm:items-start">
-      <div className="flex shrink-0 items-start gap-3">
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={[
+        "flex flex-col gap-3 border-b border-slate-100 px-4 py-3 last:border-0 sm:flex-row sm:items-start",
+        isDragging ? "relative z-10 bg-white shadow-sm" : "",
+      ].join(" ")}
+    >
+      <div className="flex shrink-0 items-start gap-2">
+        <button
+          type="button"
+          className={[
+            "mt-7 shrink-0 rounded px-1 py-0.5 text-slate-400",
+            reorderDisabled
+              ? "cursor-not-allowed opacity-30"
+              : "cursor-grab touch-none hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing",
+          ].join(" ")}
+          aria-label={reorderBlockedTitle}
+          title={reorderBlockedTitle}
+          disabled={reorderDisabled}
+          {...attributes}
+          {...listeners}
+        >
+          ⋮⋮
+        </button>
         <span
           className="mt-7 w-8 shrink-0 text-right text-xs font-medium tabular-nums text-slate-400"
           aria-label={`Position ${positionInTier} in tier`}
@@ -57,8 +105,10 @@ export function LiveSponsorQARow({
             <button
               type="button"
               aria-label="Move up within tier"
-              title="Move up within tier"
-              disabled={moveDisabled || isFirstInTier}
+              title={
+                reorderDisabled ? "Clear search to reorder sponsors" : "Move up within tier"
+              }
+              disabled={reorderDisabled || isFirstInTier}
               className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
               onClick={() => onMove(row, "up")}
             >
@@ -67,8 +117,10 @@ export function LiveSponsorQARow({
             <button
               type="button"
               aria-label="Move down within tier"
-              title="Move down within tier"
-              disabled={moveDisabled || isLastInTier}
+              title={
+                reorderDisabled ? "Clear search to reorder sponsors" : "Move down within tier"
+              }
+              disabled={reorderDisabled || isLastInTier}
               className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
               onClick={() => onMove(row, "down")}
             >
@@ -85,7 +137,7 @@ export function LiveSponsorQARow({
             logoUrl={company?.logo_url ?? null}
             logoSource={company?.logo_source ?? null}
             logoStatus={company?.logo_status ?? null}
-            disabled={moveDisabled}
+            disabled={reorderDisabled}
           />
         ) : null}
 

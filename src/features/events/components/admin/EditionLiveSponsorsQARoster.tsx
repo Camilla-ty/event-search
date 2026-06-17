@@ -7,7 +7,8 @@ type EditionLiveSponsorsQARosterProps = {
   onEdit?: (row: LiveSponsorRow) => void;
   onRemove?: (row: LiveSponsorRow) => void;
   onMove?: (row: LiveSponsorRow, direction: SponsorMoveDirection) => void;
-  moveDisabled?: boolean;
+  onReorderTier?: (tierRank: number | null, orderedLinkIds: readonly string[]) => void;
+  reorderDisabled?: boolean;
   emptySearch?: boolean;
 };
 
@@ -16,7 +17,8 @@ export function EditionLiveSponsorsQARoster({
   onEdit,
   onRemove,
   onMove,
-  moveDisabled = false,
+  onReorderTier,
+  reorderDisabled = false,
   emptySearch = false,
 }: EditionLiveSponsorsQARosterProps) {
   if (sponsors.length === 0) {
@@ -46,7 +48,8 @@ export function EditionLiveSponsorsQARoster({
           onEdit={onEdit}
           onRemove={onRemove}
           onMove={onMove}
-          moveDisabled={moveDisabled}
+          onReorderTier={onReorderTier}
+          reorderDisabled={reorderDisabled}
         />
       ))}
     </div>

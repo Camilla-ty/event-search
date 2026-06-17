@@ -100,6 +100,98 @@ export function validateEventSponsorUpdateBody(
 
 export type SponsorMoveDirection = "up" | "down";
 
+export type EventSponsorTierReorderPayload = {
+  tier_rank: number | null;
+  ordered_link_ids: string[];
+};
+
+function parseTierRankOrNull(
+  raw: unknown,
+): { ok: true; rank: number | null } | { ok: false; error: string } {
+  if (raw === null) {
+    return { ok: true, rank: null };
+  }
+  const parsed = parseTierRank(raw);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return { ok: true, rank: parsed.rank };
+}
+
+function parseOrderedLinkIds(
+  raw: unknown,
+): { ok: true; ids: string[] } | { ok: false; error: string } {
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: "ordered_link_ids must be an array." };
+  }
+  if (raw.length === 0) {
+    return { ok: false, error: "ordered_link_ids must not be empty." };
+  }
+  if (raw.length > TIER_RANK_MAX) {
+    return {
+      ok: false,
+      error: `ordered_link_ids must contain at most ${TIER_RANK_MAX} items.`,
+    };
+  }
+
+  const ids: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string" || !UUID_REGEX.test(item.trim())) {
+      return { ok: false, error: "ordered_link_ids must contain valid UUIDs." };
+    }
+    ids.push(item.trim());
+  }
+
+  return { ok: true, ids };
+}
+
+/** Validates a POST body for bulk reorder within one tier. */
+export function validateEventSponsorReorderBody(
+  body: Record<string, unknown>,
+):
+  | { ok: true; data: EventSponsorTierReorderPayload }
+  | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!("tier_rank" in body)) {
+    errors.push("tier_rank is required.");
+  }
+
+  let tierRank: number | null | undefined;
+  if ("tier_rank" in body) {
+    const parsedRank = parseTierRankOrNull(body.tier_rank);
+    if (parsedRank.ok) {
+      tierRank = parsedRank.rank;
+    } else {
+      errors.push(parsedRank.error);
+    }
+  }
+
+  let orderedLinkIds: string[] | undefined;
+  if (!("ordered_link_ids" in body)) {
+    errors.push("ordered_link_ids is required.");
+  } else {
+    const parsedIds = parseOrderedLinkIds(body.ordered_link_ids);
+    if (parsedIds.ok) {
+      orderedLinkIds = parsedIds.ids;
+    } else {
+      errors.push(parsedIds.error);
+    }
+  }
+
+  if (errors.length > 0 || tierRank === undefined || orderedLinkIds === undefined) {
+    return { ok: false, errors };
+  }
+
+  return {
+    ok: true,
+    data: {
+      tier_rank: tierRank,
+      ordered_link_ids: orderedLinkIds,
+    },
+  };
+}
+
 /** Validates a POST body for moving a sponsor within its tier. */
 export function validateEventSponsorMoveBody(
   body: Record<string, unknown>,
