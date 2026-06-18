@@ -5,6 +5,7 @@ import {
   countLiveSponsorsForEdition,
   getEventEditionAdminById,
 } from "@/src/features/events/server/eventEditionAdmin";
+import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { formatEditionWriteError } from "@/src/lib/errors/editionWriteError";
 import { validateEditionUpdateBody } from "@/src/lib/validation/eventEdition";
@@ -62,7 +63,40 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  const warnings: string[] = [];
+
+  if (body.logo_url !== undefined) {
+    const existing = await getEventEditionAdminById(id);
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+    }
+
+    const logoInput = validated.patch.logo_url as string | null;
+    const resolved = await resolveEventManualLogoUrl({
+      incomingLogoUrl: logoInput,
+      existingLogoUrl: existing.logo_url,
+      entityId: id,
+      storageNamespace: "event-editions",
+    });
+
+    if (!resolved.ok) {
+      warnings.push(resolved.warning);
+      delete validated.patch.logo_url;
+    } else if (resolved.applyPatch) {
+      validated.patch.logo_url = resolved.logo_url;
+    } else {
+      delete validated.patch.logo_url;
+    }
+  }
+
   if (Object.keys(validated.patch).length === 0) {
+    if (warnings.length > 0) {
+      const edition = await getEventEditionAdminById(id);
+      if (!edition) {
+        return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, edition, warnings });
+    }
     return NextResponse.json({ ok: false, error: "No fields to update." }, { status: 400 });
   }
 
@@ -76,7 +110,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       logo_url: validated.patch.logo_url as string | null | undefined,
       city_id: validated.patch.city_id as string | null | undefined,
     });
-    return NextResponse.json({ ok: true, edition });
+    return NextResponse.json({
+      ok: true,
+      edition,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     const friendly = formatEditionWriteError(message);

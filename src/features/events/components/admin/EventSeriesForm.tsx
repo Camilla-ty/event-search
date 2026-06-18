@@ -27,7 +27,12 @@ type EventSeriesFormProps = {
   initialKeywordIds: string[];
 };
 
-type ApiResponse = { ok: boolean; error?: string; series?: { id: string } };
+type ApiResponse = {
+  ok: boolean;
+  error?: string;
+  warnings?: string[];
+  series?: { id: string; logo_url?: string | null };
+};
 
 export function EventSeriesForm({
   mode,
@@ -41,7 +46,11 @@ export function EventSeriesForm({
   const [keywordIds, setKeywordIds] = useState<string[]>(initialKeywordIds);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    message: string;
+    variant?: "success" | "warning" | "error";
+  } | null>(null);
   const [slugModalOpen, setSlugModalOpen] = useState(false);
 
   const autoSlug = useMemo(() => slugify(values.name), [values.name]);
@@ -80,6 +89,38 @@ export function EventSeriesForm({
     return (await response.json()) as ApiResponse;
   }
 
+  function applySubmitResponse(data: ApiResponse) {
+    if (data.ok && data.series && mode === "create") {
+      router.push(`/admin/events/series/${data.series.id}`);
+      router.refresh();
+      return;
+    }
+
+    if (data.ok && mode === "edit" && seriesId) {
+      if (data.series?.logo_url !== undefined) {
+        setValues((prev) => ({
+          ...prev,
+          logo_url: data.series?.logo_url ?? "",
+        }));
+      }
+      setSlugModalOpen(false);
+      const warning = data.warnings?.[0];
+      setResult({
+        ok: true,
+        message: warning ?? "Series updated successfully.",
+        variant: warning ? "warning" : "success",
+      });
+      router.refresh();
+      return;
+    }
+
+    setResult({
+      ok: false,
+      message: data.error ?? "Request failed.",
+      variant: "error",
+    });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (slugChanged && !slugModalOpen) {
@@ -91,20 +132,17 @@ export function EventSeriesForm({
     setIsSubmitting(true);
     try {
       const data = await submitPayload();
-      if (data.ok && data.series) {
-        router.push(`/admin/events/series/${data.series.id}`);
-        router.refresh();
+      if (data.ok) {
+        applySubmitResponse(data);
         return;
       }
-      if (data.ok && mode === "edit" && seriesId) {
-        setSlugModalOpen(false);
-        setResult({ ok: true, message: "Series updated successfully." });
-        router.refresh();
-        return;
-      }
-      setResult({ ok: false, message: data.error ?? "Request failed." });
+      setResult({
+        ok: false,
+        message: data.error ?? "Request failed.",
+        variant: "error",
+      });
     } catch {
-      setResult({ ok: false, message: "Request failed." });
+      setResult({ ok: false, message: "Request failed.", variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -117,17 +155,16 @@ export function EventSeriesForm({
     try {
       const data = await submitPayload();
       if (data.ok) {
-        if (mode === "create" && data.series) {
-          router.push(`/admin/events/series/${data.series.id}`);
-        } else {
-          setResult({ ok: true, message: "Series updated successfully." });
-          router.refresh();
-        }
+        applySubmitResponse(data);
         return;
       }
-      setResult({ ok: false, message: data.error ?? "Request failed." });
+      setResult({
+        ok: false,
+        message: data.error ?? "Request failed.",
+        variant: "error",
+      });
     } catch {
-      setResult({ ok: false, message: "Request failed." });
+      setResult({ ok: false, message: "Request failed.", variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,11 +221,6 @@ export function EventSeriesForm({
             className={formInputClass}
             placeholder="https://example.com"
           />
-          {mode === "create" ? (
-            <p className="text-xs text-slate-500">
-              Logo is fetched automatically from this website after save.
-            </p>
-          ) : null}
         </label>
 
         {mode === "edit" ? (
@@ -200,10 +232,11 @@ export function EventSeriesForm({
               onChange={(e) => updateField("logo_url", e.target.value)}
               disabled={isSubmitting}
               className={formInputClass}
+              placeholder="https://…"
             />
             <p className="text-xs text-slate-500">
-              Review the auto-fetched logo. Paste a different URL to override, or clear this field
-              and save to fetch again from the website URL.
+              Paste an image URL to download and store in Supabase. Clear this field and save to
+              remove the logo.
             </p>
           </label>
         ) : null}
@@ -227,7 +260,7 @@ export function EventSeriesForm({
         <InlineErrorBanner
           className="mt-4"
           message={result.message}
-          variant={result.ok ? "success" : "error"}
+          variant={result.variant ?? (result.ok ? "success" : "error")}
         />
       ) : null}
 

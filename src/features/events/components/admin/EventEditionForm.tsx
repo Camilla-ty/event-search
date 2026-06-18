@@ -41,7 +41,8 @@ type EventEditionFormProps = {
 type ApiResponse = {
   ok: boolean;
   error?: string;
-  edition?: { id: string };
+  warnings?: string[];
+  edition?: { id: string; logo_url?: string | null };
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -74,7 +75,11 @@ export function EventEditionForm({
   const [values, setValues] = useState<EditionFormValues>(initial);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    ok: boolean;
+    message: string;
+    variant?: "success" | "warning" | "error";
+  } | null>(null);
   const [slugModalOpen, setSlugModalOpen] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState<"import" | "detail" | null>(null);
   const [siblings, setSiblings] = useState<EditionSiblingSummary[]>([]);
@@ -177,7 +182,11 @@ export function EventEditionForm({
     const data = (await response.json()) as ApiResponse;
 
     if (!data.ok) {
-      setResult({ ok: false, message: data.error ?? "Request failed." });
+      setResult({
+        ok: false,
+        message: data.error ?? "Request failed.",
+        variant: "error",
+      });
       return;
     }
 
@@ -191,7 +200,18 @@ export function EventEditionForm({
       return;
     }
 
-    setResult({ ok: true, message: "Edition updated successfully." });
+    if (data.edition?.logo_url !== undefined) {
+      setValues((prev) => ({
+        ...prev,
+        logo_url: data.edition?.logo_url ?? "",
+      }));
+    }
+    const warning = data.warnings?.[0];
+    setResult({
+      ok: true,
+      message: warning ?? "Edition updated successfully.",
+      variant: warning ? "warning" : "success",
+    });
     router.refresh();
   }
 
@@ -359,8 +379,8 @@ export function EventEditionForm({
                 placeholder="https://…"
               />
               <p className="text-xs text-slate-500">
-                Overrides the series logo for this edition. Leave blank to inherit the series
-                logo.
+                Paste an image URL to download and store in Supabase. Overrides the series logo for
+                this edition. Clear this field and save to inherit the series logo.
               </p>
             </label>
           ) : null}
@@ -431,7 +451,7 @@ export function EventEditionForm({
         {result ? (
           <InlineErrorBanner
             message={result.message}
-            variant={result.ok ? "success" : "error"}
+            variant={result.variant ?? (result.ok ? "success" : "error")}
           />
         ) : null}
       </div>

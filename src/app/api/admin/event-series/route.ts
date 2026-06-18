@@ -1,12 +1,13 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
-import { enrichEventSeriesLogo } from "@/src/features/events/server/enrichEventSeriesLogo";
+import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import {
   createEventSeries,
   listEventSeriesAdmin,
+  updateEventSeries,
 } from "@/src/features/events/server/eventSeriesAdmin";
 import { setSeriesKeywords } from "@/src/features/events/server/seriesKeywordsAdmin";
 
@@ -54,31 +55,48 @@ export async function POST(request: Request) {
   if (!slug) errors.push("slug is required");
 
   const website = body.website_url?.trim() || null;
-  const logo = body.logo_url?.trim() || null;
+  const logoInput =
+    body.logo_url === undefined ? null : body.logo_url?.trim() || null;
   if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");
-  if (logo && !isValidHttpUrl(logo)) errors.push("logo_url must be a valid URL");
+  if (logoInput && !isValidHttpUrl(logoInput)) errors.push("logo_url must be a valid URL");
 
   if (errors.length > 0) {
     return NextResponse.json({ ok: false, error: errors.join("; ") }, { status: 400 });
   }
 
   try {
-    const series = await createEventSeries({
+    let series = await createEventSeries({
       name,
       slug,
       description: body.description ?? null,
       website_url: website,
-      logo_url: logo,
+      logo_url: null,
     });
+
+    const warnings: string[] = [];
+
+    if (logoInput) {
+      const resolved = await resolveEventManualLogoUrl({
+        incomingLogoUrl: logoInput,
+        existingLogoUrl: null,
+        entityId: series.id,
+        storageNamespace: "event-series",
+      });
+      if (resolved.ok && resolved.applyPatch) {
+        series = await updateEventSeries(series.id, { logo_url: resolved.logo_url });
+      } else if (!resolved.ok) {
+        warnings.push(resolved.warning);
+      }
+    }
+
     if (Array.isArray(body.keyword_ids)) {
       await setSeriesKeywords(series.id, body.keyword_ids);
     }
-    if (website && !logo) {
-      after(async () => {
-        await enrichEventSeriesLogo(series.id, website);
-      });
-    }
-    return NextResponse.json({ ok: true, series }, { status: 201 });
+
+    return NextResponse.json(
+      { ok: true, series, ...(warnings.length > 0 ? { warnings } : {}) },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

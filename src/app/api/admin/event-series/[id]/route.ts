@@ -1,9 +1,9 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
-import { enrichEventSeriesLogo } from "@/src/features/events/server/enrichEventSeriesLogo";
+import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import {
   getEventSeriesAdminById,
   updateEventSeries,
@@ -58,6 +58,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const errors: string[] = [];
   const patch: PatchSeriesBody = {};
+  const warnings: string[] = [];
 
   if (body.name !== undefined) {
     const name = body.name.trim();
@@ -75,10 +76,30 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");
     else patch.website_url = website;
   }
+
   if (body.logo_url !== undefined) {
-    const logo = body.logo_url?.trim() || null;
-    if (logo && !isValidHttpUrl(logo)) errors.push("logo_url must be a valid URL");
-    else patch.logo_url = logo;
+    const logoInput = body.logo_url?.trim() || null;
+    if (logoInput && !isValidHttpUrl(logoInput)) {
+      errors.push("logo_url must be a valid URL");
+    } else {
+      const existing = await getEventSeriesAdminById(id);
+      if (!existing) {
+        return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+      }
+
+      const resolved = await resolveEventManualLogoUrl({
+        incomingLogoUrl: logoInput,
+        existingLogoUrl: existing.logo_url,
+        entityId: id,
+        storageNamespace: "event-series",
+      });
+
+      if (!resolved.ok) {
+        warnings.push(resolved.warning);
+      } else if (resolved.applyPatch) {
+        patch.logo_url = resolved.logo_url;
+      }
+    }
   }
 
   if (errors.length > 0) {
@@ -86,18 +107,29 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const series = await updateEventSeries(id, patch);
+    let series;
+    if (Object.keys(patch).length === 0) {
+      series = await getEventSeriesAdminById(id);
+      if (!series) {
+        return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+      }
+      if (warnings.length === 0) {
+        return NextResponse.json({ ok: false, error: "No fields to update." }, { status: 400 });
+      }
+    } else {
+      series = await updateEventSeries(id, patch);
+    }
+
     if (Array.isArray(body.keyword_ids)) {
       await setSeriesKeywords(id, body.keyword_ids);
     }
     const keywords = await getKeywordsForSeriesId(id);
-    const websiteForEnrich = series.website_url?.trim() ?? "";
-    if (websiteForEnrich !== "" && !(series.logo_url?.trim() ?? "")) {
-      after(async () => {
-        await enrichEventSeriesLogo(id, websiteForEnrich);
-      });
-    }
-    return NextResponse.json({ ok: true, series, keywords });
+    return NextResponse.json({
+      ok: true,
+      series,
+      keywords,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
