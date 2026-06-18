@@ -88,6 +88,20 @@ function needsReview(params: {
   };
 }
 
+/** Name/alias match without domain — proposed company, researcher must confirm. */
+function reviewWithProposal(
+  companyId: string,
+  match_method: Extract<ImportMatchMethod, "exact_name" | "alias">,
+): ImportMatchDecision {
+  return {
+    status: "needs_review",
+    match_method,
+    match_confidence: null,
+    proposed_company_id: companyId,
+    conflict_type: null,
+  };
+}
+
 function matchByDomain(
   row: ImportMatchableRow,
   context: ImportMatchContext,
@@ -141,7 +155,7 @@ function matchByExactName(
   if (candidates.length === 1) {
     const candidate = candidates[0];
     if (candidate) {
-      return autoReady(candidate.id, "exact_name");
+      return reviewWithProposal(candidate.id, "exact_name");
     }
   }
 
@@ -162,14 +176,14 @@ function matchByExactAlias(
   if (candidates.length === 1) {
     const candidate = candidates[0];
     if (candidate) {
-      return autoReady(candidate.id, "alias");
+      return reviewWithProposal(candidate.id, "alias");
     }
   }
 
   return null;
 }
 
-/** Identity-based import matching (Phase 1): exact domain, name, or alias only. */
+/** Identity-based import matching: domain auto-ready; name/alias are review suggestions. */
 export function matchImportRowIdentity(
   row: ImportMatchableRow,
   context: ImportMatchContext,

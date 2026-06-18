@@ -85,7 +85,7 @@ describe("companyImportMatching", () => {
     assert.equal(result.match_method, null);
   });
 
-  it("auto_ready on exact canonical name without domain", () => {
+  it("needs_review on exact canonical name without domain", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
@@ -94,12 +94,14 @@ describe("companyImportMatching", () => {
       directory,
     );
 
-    assert.equal(result.status, "auto_ready");
+    assert.equal(result.status, "needs_review");
     assert.equal(result.match_method, "exact_name");
+    assert.equal(result.match_confidence, null);
     assert.equal(result.proposed_company_id, "keel-id");
+    assert.equal(result.conflict_type, null);
   });
 
-  it("auto_ready on exact alias without domain", () => {
+  it("needs_review on exact alias without domain", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
@@ -108,9 +110,11 @@ describe("companyImportMatching", () => {
       directory,
     );
 
-    assert.equal(result.status, "auto_ready");
+    assert.equal(result.status, "needs_review");
     assert.equal(result.match_method, "alias");
+    assert.equal(result.match_confidence, null);
     assert.equal(result.proposed_company_id, "keel-id");
+    assert.equal(result.conflict_type, null);
   });
 
   it("needs_review when multiple companies share a domain", () => {

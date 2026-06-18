@@ -30,11 +30,7 @@ export type MatchResult = {
   intended_link_action: "create_new_link" | "update_tier" | "skip" | null;
 };
 
-export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = [
-  "domain",
-  "exact_name",
-  "alias",
-];
+export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain"];
 
 function attachLiveEditionFlags(
   row: MatchableRow,
