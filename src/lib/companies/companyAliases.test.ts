@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  appendCompanyAlias,
   findMatchingAlias,
   normalizeCompanyAliases,
   parseAliasesFromInput,
@@ -29,6 +30,21 @@ describe("companyAliases", () => {
       "OldCo",
       "Legacy",
     ]);
+  });
+
+  it("appendCompanyAlias dedupes and blocks canonical name", () => {
+    assert.deepEqual(appendCompanyAlias([], "Bitfarms", "Keel Infrastructure"), {
+      ok: true,
+      aliases: ["Bitfarms"],
+    });
+    assert.deepEqual(appendCompanyAlias(["Bitfarms"], "bitfarms", "Keel Infrastructure"), {
+      ok: false,
+      reason: "duplicate",
+    });
+    assert.deepEqual(
+      appendCompanyAlias([], "Keel Infrastructure", "Keel Infrastructure"),
+      { ok: false, reason: "canonical" },
+    );
   });
 
   it("finds alias match for Keel / Bitfarms example", () => {

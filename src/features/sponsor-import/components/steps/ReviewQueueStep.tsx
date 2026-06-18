@@ -16,6 +16,7 @@ import {
 import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
+import { hasImportRowMatchReason } from "../../importRowMatchReason";
 import { IMPORT_PROGRESS } from "../../importProgress";
 import {
   getBulkCreateNewButtonState,
@@ -25,6 +26,7 @@ import {
   resolveRowDomain,
 } from "../../reviewQueueEligibility";
 import { BulkReviewConfirmModal } from "../BulkReviewConfirmModal";
+import { ImportRowMatchReason } from "../ImportRowMatchReason";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 import { RowDecisionDrawer } from "../RowDecisionDrawer";
@@ -527,6 +529,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                       </th>
                       <th className="px-4 py-2">Row</th>
                       <th className="px-4 py-2">Company</th>
+                      <th className="px-4 py-2">Match</th>
                       <th className="px-4 py-2">Domain</th>
                       <th className="px-4 py-2">Tier</th>
                       <th className="px-4 py-2">Label</th>
@@ -537,7 +540,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                        <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
                           No rows in this filter.
                         </td>
                       </tr>
@@ -559,6 +562,17 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                             </td>
                             <td className="px-4 py-2">{row.excel_row_number}</td>
                             <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
+                            <td className="max-w-xs px-4 py-2">
+                              {hasImportRowMatchReason(row) || row.proposed_company_id ? (
+                                <ImportRowMatchReason
+                                  row={row}
+                                  layout="compact"
+                                  showMatchedCompany={Boolean(row.proposed_company_id)}
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </td>
                             <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
                             <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
                             <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>

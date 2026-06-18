@@ -24,6 +24,42 @@ export function formatAliasesForInput(aliases: readonly string[]): string {
   return aliases.join("\n");
 }
 
+export type AppendCompanyAliasResult =
+  | { ok: true; aliases: string[] }
+  | { ok: false; reason: "empty" | "duplicate" | "canonical" | "too_long" | "max" };
+
+/** Add one alias to a list with the same rules as admin save (no duplicate / canonical / limits). */
+export function appendCompanyAlias(
+  existing: readonly string[],
+  candidate: string,
+  canonicalName?: string | null,
+): AppendCompanyAliasResult {
+  const trimmed = candidate.trim();
+  if (trimmed === "") {
+    return { ok: false, reason: "empty" };
+  }
+  if (trimmed.length > MAX_COMPANY_ALIAS_LENGTH) {
+    return { ok: false, reason: "too_long" };
+  }
+  if (existing.length >= MAX_COMPANY_ALIASES) {
+    return { ok: false, reason: "max" };
+  }
+
+  const candidateKey = normalizeCompanyNameKey(trimmed);
+  const canonicalKey = canonicalName ? normalizeCompanyNameKey(canonicalName) : null;
+  if (canonicalKey !== null && candidateKey === canonicalKey) {
+    return { ok: false, reason: "canonical" };
+  }
+
+  for (const alias of existing) {
+    if (normalizeCompanyNameKey(alias) === candidateKey) {
+      return { ok: false, reason: "duplicate" };
+    }
+  }
+
+  return { ok: true, aliases: [...existing, trimmed] };
+}
+
 export function normalizeCompanyAliases(
   raw: readonly string[],
   canonicalName?: string | null,

@@ -30,7 +30,7 @@ export default async function NewCompanyAdminPage() {
           slug: "",
           city_id: "",
           logo_url: "",
-          aliases: "",
+          aliases: [],
           short_description: "",
           description: "",
         }}

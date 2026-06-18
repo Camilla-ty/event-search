@@ -8,7 +8,6 @@ import { CompanySponsorshipsTable } from "@/src/features/companies/components/ad
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { getCompanyAdminById } from "@/src/features/companies/server/companyAdmin";
 import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
-import { formatAliasesForInput } from "@/src/lib/companies/companyAliases";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +65,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           slug: company.slug,
           city_id: company.city_id ?? "",
           logo_url: company.logo_url ?? "",
-          aliases: formatAliasesForInput(company.aliases),
+          aliases: [...company.aliases],
           short_description: company.short_description ?? "",
           description: company.description ?? "",
         }}

@@ -33,6 +33,12 @@ export type SponsorImportBatch = {
   published_at?: string | null;
 };
 
+export type ProposedImportCompany = {
+  id: string;
+  name: string;
+  domain: string | null;
+};
+
 export type SponsorImportRow = {
   id: string;
   batch_id: string;
@@ -52,6 +58,7 @@ export type SponsorImportRow = {
   match_method: string | null;
   match_confidence: string | null;
   proposed_company_id: string | null;
+  proposed_company?: ProposedImportCompany | null;
   conflict_type: string | null;
   decision_type: string | null;
   resolved_company_id: string | null;

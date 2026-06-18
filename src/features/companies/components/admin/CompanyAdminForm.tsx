@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
@@ -9,12 +9,12 @@ import {
   CompanyBrandfetchLogoUpgrade,
   type CompanyLogoMetadata,
 } from "@/src/features/companies/components/admin/CompanyBrandfetchLogoUpgrade";
+import {
+  CompanyAliasesInput,
+  type CompanyAliasesInputHandle,
+} from "@/src/features/companies/components/admin/CompanyAliasesInput";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
-import {
-  formatAliasesForInput,
-  parseAliasesFromInput,
-} from "@/src/lib/companies/companyAliases";
 import { formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
 
@@ -24,7 +24,7 @@ type CompanyFormValues = {
   slug: string;
   city_id: string;
   logo_url: string;
-  aliases: string;
+  aliases: string[];
   short_description: string;
   description: string;
 };
@@ -69,6 +69,7 @@ export function CompanyAdminForm({
   initialLogoMetadata,
 }: CompanyAdminFormProps) {
   const router = useRouter();
+  const aliasesInputRef = useRef<CompanyAliasesInputHandle>(null);
   const [values, setValues] = useState<CompanyFormValues>(initial);
   const [logoMetadata, setLogoMetadata] = useState<CompanyLogoMetadata>(
     () =>
@@ -123,7 +124,7 @@ export function CompanyAdminForm({
       if (Array.isArray(data.company?.aliases)) {
         setValues((prev) => ({
           ...prev,
-          aliases: formatAliasesForInput(data.company?.aliases ?? []),
+          aliases: [...data.company?.aliases ?? []],
         }));
       }
       const warning = data.warnings?.[0];
@@ -148,6 +149,9 @@ export function CompanyAdminForm({
   }
 
   async function submitPayload() {
+    const aliasesForSave =
+      mode === "edit" ? (aliasesInputRef.current?.flushPending() ?? values.aliases) : values.aliases;
+
     if (mode === "create") {
       const response = await fetch("/api/companies", {
         method: "POST",
@@ -171,7 +175,7 @@ export function CompanyAdminForm({
         slug: effectiveSlug,
         city_id: values.city_id.trim() || null,
         logo_url: values.logo_url.trim() || null,
-        aliases: parseAliasesFromInput(values.aliases),
+        aliases: aliasesForSave,
         short_description: values.short_description.trim() || null,
         description: values.description.trim() || null,
       }),
@@ -289,21 +293,16 @@ export function CompanyAdminForm({
 
         {mode === "edit" ? (
           <>
-            <label className="block space-y-2">
+            <div className="space-y-2">
               <span className="text-sm font-medium text-slate-700">Aliases</span>
-              <textarea
+              <CompanyAliasesInput
+                ref={aliasesInputRef}
                 value={values.aliases}
-                onChange={(e) => updateField("aliases", e.target.value)}
+                onChange={(aliases) => updateField("aliases", aliases)}
+                canonicalName={values.name}
                 disabled={isSubmitting}
-                rows={3}
-                className={formInputClass}
-                placeholder={"Bitfarms\nLegacy Name"}
               />
-              <p className="text-xs text-slate-500">
-                One per line or comma-separated. Used for admin search only; public pages still
-                show the canonical company name.
-              </p>
-            </label>
+            </div>
             <label className="block space-y-2">
               <span className="text-sm font-medium text-slate-700">Short description</span>
               <input

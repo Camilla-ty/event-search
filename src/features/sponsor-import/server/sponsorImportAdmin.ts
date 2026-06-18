@@ -30,6 +30,7 @@ import {
 } from "./parseSpreadsheet";
 import { SPONSOR_IMPORT_BUCKET, SPONSOR_IMPORT_MAX_ROWS } from "../types";
 import { uploadSourceFile } from "./storage";
+import { enrichImportRowsWithProposedCompanies } from "./enrichImportRows";
 import { assignDuplicateClusters, validateRow } from "./validateRows";
 
 const BATCH_SELECT =
@@ -689,8 +690,9 @@ export async function listBatchRows(
 
   const allRows = await loadImportRows(batchId);
   const summary: RowSummary = summarizeRows(allRows);
+  const rows = await enrichImportRowsWithProposedCompanies(data ?? []);
 
-  return { rows: data ?? [], total: count ?? 0, page, pageSize, summary };
+  return { rows, total: count ?? 0, page, pageSize, summary };
 }
 
 export async function getBatchRowById(batchId: string, rowId: string) {
@@ -704,7 +706,8 @@ export async function getBatchRowById(batchId: string, rowId: string) {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new SponsorImportHttpError(404, "Row not found.");
-  return data;
+  const [row] = await enrichImportRowsWithProposedCompanies([data]);
+  return row ?? data;
 }
 
 export async function patchRowDecision(
@@ -775,7 +778,8 @@ export async function patchRowDecision(
     .single();
 
   if (updateError) throw new Error(updateError.message);
-  return updated;
+  const [enrichedRow] = await enrichImportRowsWithProposedCompanies([updated]);
+  return enrichedRow ?? updated;
 }
 
 function parseImportToDraftResultPayload(payload: unknown): ImportToDraftResult | null {

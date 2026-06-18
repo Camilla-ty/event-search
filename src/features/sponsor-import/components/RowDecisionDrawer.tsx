@@ -7,6 +7,8 @@ import { formInputClass } from "@/src/lib/design/classes";
 
 import { patchRowDecision } from "../client/api";
 import type { SponsorImportRow } from "../client/types";
+import { ImportRowMatchReason } from "./ImportRowMatchReason";
+import { hasImportRowMatchReason } from "../importRowMatchReason";
 
 type CompanyOption = { id: string; name: string; domain: string | null };
 
@@ -116,17 +118,15 @@ export function RowDecisionDrawer({
             </p>
           </div>
 
-          {row.match_method ? (
-            <p className="text-slate-600">
-              Match: {row.match_method}
-              {row.match_confidence ? ` (${row.match_confidence})` : ""}
-            </p>
-          ) : null}
-
-          {row.conflict_type ? (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-950">
-              Conflict: {row.conflict_type}
-            </p>
+          {hasImportRowMatchReason(row) || row.proposed_company_id ? (
+            <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="font-medium text-slate-800">Proposed match</p>
+              <ImportRowMatchReason
+                row={row}
+                layout="detail"
+                showMatchedCompany={Boolean(row.proposed_company_id)}
+              />
+            </div>
           ) : null}
 
           {isDuplicate ? (
@@ -164,7 +164,9 @@ export function RowDecisionDrawer({
                 disabled={loading || !row.proposed_company_id}
                 onClick={() => void decide("use_matched")}
               >
-                Use matched company
+                {row.proposed_company?.name
+                  ? `Use matched company: ${row.proposed_company.name}`
+                  : "Use matched company"}
               </Button>
               <Button
                 className="w-full justify-start"
