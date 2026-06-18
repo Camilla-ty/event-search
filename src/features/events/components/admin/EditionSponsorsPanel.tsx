@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { InlineErrorBanner } from "@/src/components/common";
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
 import {
   defaultStepForBatchStatus,
@@ -27,9 +26,25 @@ import {
 } from "./liveSponsorReorderClient";
 import { applyLiveSponsorCompanyLogoUpdate } from "./liveSponsorLogoUpdate";
 import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
-import { LiveSponsorOrderSaveBar } from "./LiveSponsorOrderSaveBar";
+import {
+  LiveSponsorOrderSaveFooter,
+  type LiveSponsorOrderSaveBarState,
+} from "./LiveSponsorOrderSaveBar";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
+
+const ORDER_SAVE_CONFIRM_MS = 2500;
+
+function resolveOrderSaveBarState(
+  isSaving: boolean,
+  saveError: string | null,
+  orderSaveJustSaved: boolean,
+): LiveSponsorOrderSaveBarState {
+  if (isSaving) return "saving";
+  if (saveError !== null) return "error";
+  if (orderSaveJustSaved) return "saved";
+  return "unsaved";
+}
 
 const UNSAVED_ORDER_CONFIRM_MESSAGE =
   "You have unsaved order changes. Continue and discard them?";
@@ -69,6 +84,7 @@ export function EditionSponsorsPanel({
   const [action, setAction] = useState<PanelAction>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [orderSaveJustSaved, setOrderSaveJustSaved] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [savedRoster, setSavedRoster] = useState<LiveSponsorRow[]>(sponsors);
   const [draftRoster, setDraftRoster] = useState<LiveSponsorRow[]>(sponsors);
@@ -106,6 +122,22 @@ export function EditionSponsorsPanel({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isOrderDirty]);
 
+  useEffect(() => {
+    if (!orderSaveJustSaved) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setOrderSaveJustSaved(false);
+    }, ORDER_SAVE_CONFIRM_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [orderSaveJustSaved]);
+
+  const orderSaveBarState = resolveOrderSaveBarState(isSaving, saveError, orderSaveJustSaved);
+  const showOrderSaveFooter =
+    isOrderDirty || isSaving || orderSaveJustSaved || saveError !== null;
+
   const tierCount = useMemo(() => countDistinctTiers(draftRoster), [draftRoster]);
   const filteredSponsors = useMemo(
     () => filterSponsorsBySearch(draftRoster, searchQuery),
@@ -125,6 +157,7 @@ export function EditionSponsorsPanel({
   function discardUnsavedOrderChanges() {
     setDraftRoster(savedRoster);
     setSaveError(null);
+    setOrderSaveJustSaved(false);
   }
 
   function confirmDiscardUnsavedOrder(): boolean {
@@ -142,6 +175,7 @@ export function EditionSponsorsPanel({
   function handleLocalReorderTier(tierRank: number | null, orderedLinkIds: readonly string[]) {
     setDraftRoster((current) => applyTierDisplayOrder(current, tierRank, orderedLinkIds));
     setSaveError(null);
+    setOrderSaveJustSaved(false);
   }
 
   async function handleSaveOrder() {
@@ -152,6 +186,7 @@ export function EditionSponsorsPanel({
 
     setIsSaving(true);
     setSaveError(null);
+    setOrderSaveJustSaved(false);
 
     try {
       for (const tier of dirtyTiers) {
@@ -175,6 +210,7 @@ export function EditionSponsorsPanel({
       }
 
       setSavedRoster(draftRoster);
+      setOrderSaveJustSaved(true);
     } catch {
       setSaveError(
         "Failed to save order. Some tiers may have been saved — review the roster and try again.",
@@ -216,7 +252,8 @@ export function EditionSponsorsPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={showOrderSaveFooter ? "pb-28" : undefined}>
+      <div className="space-y-4">
       {activeImport ? (
         <WarningBanner
           title="Import in progress"
@@ -250,16 +287,6 @@ export function EditionSponsorsPanel({
       {searchQuery.trim() !== "" ? (
         <p className="text-sm text-slate-500">Clear search to reorder sponsors.</p>
       ) : null}
-
-      {isOrderDirty ? (
-        <LiveSponsorOrderSaveBar
-          isSaving={isSaving}
-          onSave={() => void handleSaveOrder()}
-          onReset={handleResetOrder}
-        />
-      ) : null}
-
-      {saveError ? <InlineErrorBanner message={saveError} /> : null}
 
       <EditionLiveSponsorsQARoster
         sponsors={filteredSponsors}
@@ -311,6 +338,15 @@ export function EditionSponsorsPanel({
           onRemoved={handleDone}
         />
       ) : null}
+      </div>
+
+      <LiveSponsorOrderSaveFooter
+        visible={showOrderSaveFooter}
+        state={orderSaveBarState}
+        errorMessage={saveError}
+        onSave={() => void handleSaveOrder()}
+        onReset={handleResetOrder}
+      />
     </div>
   );
 }
