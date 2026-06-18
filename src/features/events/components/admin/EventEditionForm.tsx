@@ -21,6 +21,7 @@ type EditionFormValues = {
   name: string;
   slug: string;
   website_url: string;
+  logo_url: string;
   start_date: string;
   end_date: string;
   city_id: string;
@@ -157,7 +158,7 @@ export function EventEditionForm({
     if (mode === "create") {
       return { ...payload, series_id: values.series_id, year: yearNumber };
     }
-    return payload;
+    return { ...payload, logo_url: values.logo_url.trim() || null };
   }
 
   async function submitEdition(redirect: "import" | "detail" | "stay") {
@@ -345,6 +346,24 @@ export function EventEditionForm({
               placeholder="https://…"
             />
           </label>
+
+          {mode === "edit" ? (
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Edition logo URL</span>
+              <input
+                type="text"
+                value={values.logo_url}
+                onChange={(e) => updateField("logo_url", e.target.value)}
+                disabled={isSubmitting}
+                className={formInputClass}
+                placeholder="https://…"
+              />
+              <p className="text-xs text-slate-500">
+                Overrides the series logo for this edition. Leave blank to inherit the series
+                logo.
+              </p>
+            </label>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-2">

@@ -20,6 +20,7 @@ export type EventEditionRow = {
   start_date: string | null;
   end_date: string | null;
   website_url: string | null;
+  logo_url: string | null;
   city_id: string | null;
   created_at?: string | null;
 };
@@ -67,6 +68,7 @@ export async function updateEventEdition(
     start_date?: string | null;
     end_date?: string | null;
     website_url?: string | null;
+    logo_url?: string | null;
     city_id?: string | null;
   },
 ): Promise<EventEditionRow> {
@@ -80,6 +82,9 @@ export async function updateEventEdition(
   if (input.website_url !== undefined) {
     patch.website_url = input.website_url?.trim() || null;
   }
+  if (input.logo_url !== undefined) {
+    patch.logo_url = input.logo_url?.trim() || null;
+  }
   if (input.city_id !== undefined) patch.city_id = input.city_id;
 
   const { data, error } = await supabase
@@ -87,7 +92,7 @@ export async function updateEventEdition(
     .update(patch)
     .eq("id", id)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, created_at",
     )
     .single();
 

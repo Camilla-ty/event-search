@@ -15,6 +15,7 @@ import type { SponsorRecord } from "@/src/features/sponsors/components/search/ty
 import { BRAND_NAME } from "@/src/lib/design/brand";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
+import { resolveEditionDisplayLogo } from "@/src/lib/events/resolveEditionDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 import {
   buildEventDetailPath,
@@ -177,6 +178,10 @@ export default async function HomePage() {
                 <CardHeader className="flex items-center gap-3 space-y-0">
                   <SeriesLogo
                     series={event.event_series ?? null}
+                    logoUrl={resolveEditionDisplayLogo({
+                      logo_url: typeof event.logo_url === "string" ? event.logo_url : null,
+                      event_series: event.event_series,
+                    })}
                     fallbackName={event.name ?? null}
                     className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
                     monogramClassName="text-sm font-semibold text-slate-400"

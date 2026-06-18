@@ -10,6 +10,8 @@ export type SeriesLogoSource = {
 
 type SeriesLogoProps = {
   series: SeriesLogoSource | null | undefined;
+  /** Resolved logo URL (edition override or series logo). Wins over `series.logo_url`. */
+  logoUrl?: string | null;
   /** Monogram source when the edition has no linked series (e.g. the edition name). */
   fallbackName?: string | null;
   className?: string;
@@ -19,19 +21,21 @@ type SeriesLogoProps = {
 
 export function SeriesLogo({
   series,
+  logoUrl,
   fallbackName,
   className,
   imageClassName,
   monogramClassName,
 }: SeriesLogoProps) {
   const name = series?.name?.trim() || fallbackName?.trim() || null;
+  const resolvedLogoUrl = logoUrl ?? series?.logo_url ?? null;
 
   return (
     <CompanyLogo
       // domain is intentionally null: series logos must never fall back to Logo.dev.
       company={{
         name,
-        logo_url: series?.logo_url ?? null,
+        logo_url: resolvedLogoUrl,
         domain: null,
         logo_source: null,
         logo_status: null,

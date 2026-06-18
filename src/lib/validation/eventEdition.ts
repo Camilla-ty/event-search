@@ -112,6 +112,7 @@ export function validateEditionUpdateBody(body: {
   start_date?: string | null;
   end_date?: string | null;
   website_url?: string | null;
+  logo_url?: string | null;
   city_id?: string | null;
   series_id?: string;
   year?: number | string;
@@ -162,6 +163,15 @@ export function validateEditionUpdateBody(body: {
       errors.push("website_url must be a valid URL");
     } else {
       patch.website_url = websiteUrl;
+    }
+  }
+  if (body.logo_url !== undefined) {
+    const logoUrl =
+      body.logo_url === null || body.logo_url === "" ? null : body.logo_url.trim();
+    if (logoUrl && !isValidHttpUrl(logoUrl)) {
+      errors.push("logo_url must be a valid URL");
+    } else {
+      patch.logo_url = logoUrl;
     }
   }
   if (body.city_id !== undefined) {

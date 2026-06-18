@@ -8,6 +8,8 @@ export type EventRecord = {
     name?: string | null;
     logo_url?: string | null;
   } | null;
+  /** Edition logo, falling back to series logo when unset. */
+  display_logo_url?: string | null;
   cities?: {
     name?: string | null;
     states?: {
