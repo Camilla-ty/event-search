@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 
+import { LiveSponsorCompanyAliases } from "./LiveSponsorCompanyAliases";
 import { LiveSponsorLogoPreview } from "./LiveSponsorLogoPreview";
 import type { LiveSponsorRow, SponsorMoveDirection } from "./liveSponsorTypes";
 
@@ -105,6 +106,7 @@ export function LiveSponsorQARow({
 
       <div className="min-w-0 flex-1 pt-1">
         <p className="font-medium text-slate-900">{companyName}</p>
+        <LiveSponsorCompanyAliases aliases={company?.aliases ?? []} />
         {domain ? <p className="text-sm text-slate-500">{domain}</p> : null}
       </div>
 

@@ -1,3 +1,5 @@
+import type { LiveSponsorRow } from "@/src/features/events/components/admin/liveSponsorTypes";
+import { parseCompanyAliasesFromRow } from "@/src/lib/companies/companyAliases";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
 import { EVENT_EDITION_LIST_SELECT } from "@/src/lib/queries/events";
@@ -147,6 +149,92 @@ export async function countLiveSponsorsForEdition(editionId: string): Promise<nu
 
   if (error) throw new Error(error.message);
   return count ?? 0;
+}
+
+function companyIdKey(raw: unknown): string {
+  if (raw === null || raw === undefined) return "";
+  return String(raw).trim().toLowerCase();
+}
+
+/** Live sponsor roster for admin QA — includes company aliases (not used on public pages). */
+export async function getLiveSponsorsForEditionAdmin(
+  eventEditionId: string,
+): Promise<LiveSponsorRow[]> {
+  const supabase = createAdminClient();
+  const editionKey = eventEditionId.trim();
+
+  const { data: links, error } = await supabase
+    .from("event_sponsors")
+    .select("id, company_id, tier_rank, tier_label, display_order")
+    .eq("event_editions_id", editionKey)
+    .order("tier_rank", { ascending: true, nullsFirst: false })
+    .order("display_order", { ascending: true, nullsFirst: false })
+    .order("id", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const companyIds = [
+    ...new Set(
+      links
+        .map((link) => companyIdKey(link.company_id))
+        .filter((id) => id !== ""),
+    ),
+  ];
+
+  const companyById = new Map<
+    string,
+    {
+      id: string;
+      name: string | null;
+      slug: string | null;
+      domain: string | null;
+      logo_url: string | null;
+      logo_source: string | null;
+      logo_status: string | null;
+      logo_fetched_at: string | null;
+      aliases: string[];
+    }
+  >();
+
+  if (companyIds.length > 0) {
+    const { data: companies, error: companyError } = await supabase
+      .from("companies")
+      .select(
+        "id, name, slug, domain, logo_url, logo_source, logo_status, logo_fetched_at, aliases",
+      )
+      .in("id", companyIds);
+
+    if (companyError) throw new Error(companyError.message);
+
+    for (const row of companies ?? []) {
+      companyById.set(companyIdKey(row.id), {
+        id: String(row.id),
+        name: typeof row.name === "string" ? row.name : null,
+        slug: typeof row.slug === "string" ? row.slug : null,
+        domain: typeof row.domain === "string" ? row.domain : null,
+        logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+        logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
+        logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
+        logo_fetched_at:
+          typeof row.logo_fetched_at === "string" ? row.logo_fetched_at : null,
+        aliases: parseCompanyAliasesFromRow(row.aliases),
+      });
+    }
+  }
+
+  return links.map((link) => {
+    const company = companyById.get(companyIdKey(link.company_id)) ?? null;
+    return {
+      id: String(link.id),
+      tier_rank: typeof link.tier_rank === "number" ? link.tier_rank : null,
+      tier_label: typeof link.tier_label === "string" ? link.tier_label : null,
+      display_order: typeof link.display_order === "number" ? link.display_order : null,
+      companies: company,
+    };
+  });
 }
 
 export type EditionSiblingSummary = {

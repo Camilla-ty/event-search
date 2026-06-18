@@ -19,6 +19,7 @@ export type LiveSponsorRow = {
     logo_source: string | null;
     logo_status: string | null;
     logo_fetched_at: string | null;
+    aliases: string[];
   } | null;
 };
 

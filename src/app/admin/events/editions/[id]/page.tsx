@@ -6,7 +6,6 @@ import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrum
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
-import { getCompaniesByEventEdition } from "@/src/lib/queries/companies";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
 import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
@@ -22,6 +21,7 @@ import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/s
 import {
   countLiveSponsorsForEdition,
   getEventEditionAdminById,
+  getLiveSponsorsForEditionAdmin,
 } from "@/src/features/events/server/eventEditionAdmin";
 import { getSeriesOptions } from "@/src/features/events/server/getSeriesOptions";
 import { primaryCtaClass } from "@/src/lib/design/classes";
@@ -76,7 +76,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
       getCityOptions(),
       getSeriesOptions(),
       countLiveSponsorsForEdition(id),
-      getCompaniesByEventEdition(id),
+      getLiveSponsorsForEditionAdmin(id),
       getEditionImportsData(
         id,
         edition.name,
@@ -99,36 +99,6 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
     activeBatchId && parsedActiveStatus
       ? { batchId: activeBatchId, status: parsedActiveStatus }
       : null;
-
-  const sponsorRows = sponsors.map((row) => ({
-    id: String(row.id),
-    tier_rank: typeof row.tier_rank === "number" ? row.tier_rank : null,
-    tier_label: typeof row.tier_label === "string" ? row.tier_label : null,
-    display_order: typeof row.display_order === "number" ? row.display_order : null,
-    companies:
-      row.companies && typeof row.companies === "object"
-        ? {
-            id: String(row.companies.id),
-            name: typeof row.companies.name === "string" ? row.companies.name : null,
-            slug: typeof row.companies.slug === "string" ? row.companies.slug : null,
-            domain: typeof row.companies.domain === "string" ? row.companies.domain : null,
-            logo_url:
-              typeof row.companies.logo_url === "string" ? row.companies.logo_url : null,
-            logo_source:
-              typeof row.companies.logo_source === "string"
-                ? row.companies.logo_source
-                : null,
-            logo_status:
-              typeof row.companies.logo_status === "string"
-                ? row.companies.logo_status
-                : null,
-            logo_fetched_at:
-              typeof row.companies.logo_fetched_at === "string"
-                ? row.companies.logo_fetched_at
-                : null,
-          }
-        : null,
-  }));
 
   return (
     <section>
@@ -224,7 +194,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
               editionYear={edition.year}
               editionSlug={edition.slug}
               eventWebsiteUrl={edition.website_url}
-              sponsors={sponsorRows}
+              sponsors={sponsors}
               activeImport={activeImport}
             />
           }
