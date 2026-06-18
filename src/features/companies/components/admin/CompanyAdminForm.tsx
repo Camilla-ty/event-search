@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
@@ -15,8 +16,10 @@ import {
 } from "@/src/features/companies/components/admin/CompanyAliasesInput";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
-import { formInputClass } from "@/src/lib/design/classes";
+import { feedbackSuccessClass, feedbackWarningClass, formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
+
+type CreateSubmitIntent = "another" | "edit";
 
 type CompanyFormValues = {
   name: string;
@@ -43,6 +46,7 @@ type FormResult = {
   ok: boolean;
   message: string;
   variant: "error" | "success" | "warning";
+  createdCompany?: { id: string; name: string };
 };
 
 type ApiResponse = {
@@ -70,6 +74,8 @@ export function CompanyAdminForm({
 }: CompanyAdminFormProps) {
   const router = useRouter();
   const aliasesInputRef = useRef<CompanyAliasesInputHandle>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const createIntentRef = useRef<CreateSubmitIntent>("another");
   const [values, setValues] = useState<CompanyFormValues>(initial);
   const [logoMetadata, setLogoMetadata] = useState<CompanyLogoMetadata>(
     () =>
@@ -93,8 +99,39 @@ export function CompanyAdminForm({
   const effectiveSlug = slugTouched ? values.slug : autoSlug;
   const slugChanged = mode === "edit" && effectiveSlug !== initial.slug;
 
-  function applySubmitResponse(data: ApiResponse) {
+  useEffect(() => {
+    if (!result?.createdCompany || result.variant === "error") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setResult((prev) =>
+        prev?.createdCompany ? null : prev,
+      );
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [result?.createdCompany, result?.variant]);
+
+  function applySubmitResponse(data: ApiResponse, createIntent: CreateSubmitIntent = "edit") {
     if (data.ok && data.company && mode === "create") {
+      if (createIntent === "another") {
+        const createdName = values.name.trim() || "Company";
+        const warning = data.warnings?.[0];
+        setValues(initial);
+        setSlugTouched(false);
+        setResult({
+          ok: true,
+          message: warning ? `Created ${createdName}. ${warning}` : `Created ${createdName}.`,
+          variant: warning ? "warning" : "success",
+          createdCompany: { id: data.company.id, name: createdName },
+        });
+        window.requestAnimationFrame(() => {
+          nameInputRef.current?.focus();
+        });
+        return;
+      }
+
       const warning = data.warnings?.[0];
       const query = warning ? `?logoWarning=${encodeURIComponent(warning)}` : "";
       router.push(`/admin/companies/${data.company.id}${query}`);
@@ -190,10 +227,12 @@ export function CompanyAdminForm({
       return;
     }
 
+    const createIntent = mode === "create" ? createIntentRef.current : "edit";
+
     setResult(null);
     setIsSubmitting(true);
     try {
-      applySubmitResponse(await submitPayload());
+      applySubmitResponse(await submitPayload(), createIntent);
     } catch {
       setResult({ ok: false, message: "Request failed.", variant: "error" });
     } finally {
@@ -210,6 +249,7 @@ export function CompanyAdminForm({
         <label className="block space-y-2">
           <span className="text-sm font-medium text-slate-700">Company name</span>
           <input
+            ref={nameInputRef}
             type="text"
             required
             value={values.name}
@@ -326,16 +366,52 @@ export function CompanyAdminForm({
           </>
         ) : null}
 
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? "Saving…"
-            : mode === "create"
-              ? "Create company"
-              : "Save changes"}
-        </Button>
+        {mode === "create" ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              onClick={() => {
+                createIntentRef.current = "another";
+              }}
+            >
+              {isSubmitting ? "Saving…" : "Save & create another"}
+            </Button>
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={isSubmitting}
+              onClick={() => {
+                createIntentRef.current = "edit";
+              }}
+            >
+              Create company & edit
+            </Button>
+          </div>
+        ) : (
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Save changes"}
+          </Button>
+        )}
       </form>
 
-      {result ? (
+      {result?.createdCompany ? (
+        <div
+          role="status"
+          className={[
+            result.variant === "warning" ? feedbackWarningClass : feedbackSuccessClass,
+            "mt-4 text-sm",
+          ].join(" ")}
+        >
+          <span>{result.message}</span>{" "}
+          <Link
+            href={`/admin/companies/${result.createdCompany.id}`}
+            className="font-medium text-brand-primary hover:underline"
+          >
+            Edit {result.createdCompany.name} →
+          </Link>
+        </div>
+      ) : result ? (
         <InlineErrorBanner
           className="mt-4"
           message={result.message}
@@ -354,8 +430,9 @@ export function CompanyAdminForm({
           setSlugModalOpen(false);
           setResult(null);
           setIsSubmitting(true);
+          const createIntent = mode === "create" ? createIntentRef.current : "edit";
           try {
-            applySubmitResponse(await submitPayload());
+            applySubmitResponse(await submitPayload(), createIntent);
           } catch {
             setResult({ ok: false, message: "Request failed.", variant: "error" });
           } finally {
