@@ -1,3 +1,11 @@
+import { parseCompanyAliasesFromRow } from "@/src/lib/companies/companyAliases";
+import {
+  buildImportMatchContext,
+  matchImportRowIdentity,
+  type ImportMatchCompany,
+  type ImportMatchContext,
+  type ImportMatchMethod,
+} from "@/src/lib/companies/companyImportMatching";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type { SponsorImportRowStatus } from "../types";
@@ -13,7 +21,7 @@ export type MatchableRow = {
 
 export type MatchResult = {
   status: SponsorImportRowStatus;
-  match_method: "domain" | null;
+  match_method: ImportMatchMethod | null;
   match_confidence: "high" | null;
   proposed_company_id: string | null;
   conflict_type: "multiple_candidates" | "domain_name_mismatch" | null;
@@ -22,78 +30,22 @@ export type MatchResult = {
   intended_link_action: "create_new_link" | "update_tier" | "skip" | null;
 };
 
-function nameSimilarity(a: string, b: string): boolean {
-  const na = a.trim().toLowerCase();
-  const nb = b.trim().toLowerCase();
-  if (na === nb) return true;
-  if (na.includes(nb) || nb.includes(na)) return true;
-  return false;
-}
+export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = [
+  "domain",
+  "exact_name",
+  "alias",
+];
 
-export async function matchRow(
+function attachLiveEditionFlags(
   row: MatchableRow,
-  eventEditionId: string,
-  companiesByDomain: Map<string, Array<{ id: string; name: string; domain: string }>>,
+  decision: ReturnType<typeof matchImportRowIdentity>,
   liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>,
-): Promise<MatchResult> {
-  if (row.has_blocking_validation) {
-    return {
-      status: "needs_review",
-      match_method: null,
-      match_confidence: null,
-      proposed_company_id: null,
-      conflict_type: null,
-      already_on_live_sponsor_id: null,
-      already_on_live_tier_rank: null,
-      intended_link_action: null,
-    };
-  }
-
-  const domain = row.normalized_domain?.toLowerCase() ?? null;
-  if (!domain) {
-    return {
-      status: "needs_review",
-      match_method: null,
-      match_confidence: null,
-      proposed_company_id: null,
-      conflict_type: null,
-      already_on_live_sponsor_id: null,
-      already_on_live_tier_rank: null,
-      intended_link_action: "create_new_link",
-    };
-  }
-
-  const candidates = companiesByDomain.get(domain) ?? [];
-  let status: SponsorImportRowStatus = "needs_review";
-  let proposed_company_id: string | null = null;
-  let conflict_type: MatchResult["conflict_type"] = null;
-
-  if (candidates.length === 1) {
-    const candidate = candidates[0];
-    if (!candidate) {
-      status = "needs_review";
-    } else {
-      proposed_company_id = candidate.id;
-      const rowName = row.normalized_company_name ?? "";
-      if (rowName && !nameSimilarity(rowName, candidate.name)) {
-        status = "needs_review";
-        conflict_type = "domain_name_mismatch";
-      } else {
-        status = "auto_ready";
-      }
-    }
-  } else if (candidates.length > 1) {
-    status = "needs_review";
-    conflict_type = "multiple_candidates";
-  } else {
-    status = "needs_review";
-  }
-
+): MatchResult {
   let already_on_live_sponsor_id: string | null = null;
   let already_on_live_tier_rank: number | null = null;
   let intended_link_action: MatchResult["intended_link_action"] = "create_new_link";
 
-  const companyIdForLive = proposed_company_id;
+  const companyIdForLive = decision.proposed_company_id;
   if (companyIdForLive) {
     const live = liveByCompanyId.get(companyIdForLive);
     if (live) {
@@ -109,45 +61,68 @@ export async function matchRow(
   }
 
   return {
-    status,
-    match_method: status === "auto_ready" ? "domain" : null,
-    match_confidence: status === "auto_ready" ? "high" : null,
-    proposed_company_id,
-    conflict_type,
+    status: decision.status,
+    match_method: decision.match_method,
+    match_confidence: decision.match_confidence,
+    proposed_company_id: decision.proposed_company_id,
+    conflict_type: decision.conflict_type,
     already_on_live_sponsor_id,
     already_on_live_tier_rank,
     intended_link_action,
   };
 }
 
+export async function matchRow(
+  row: MatchableRow,
+  context: ImportMatchContext,
+  liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>,
+): Promise<MatchResult> {
+  if (row.has_blocking_validation) {
+    return {
+      status: "needs_review",
+      match_method: null,
+      match_confidence: null,
+      proposed_company_id: null,
+      conflict_type: null,
+      already_on_live_sponsor_id: null,
+      already_on_live_tier_rank: null,
+      intended_link_action: null,
+    };
+  }
+
+  const decision = matchImportRowIdentity(
+    {
+      normalized_domain: row.normalized_domain,
+      normalized_company_name: row.normalized_company_name,
+    },
+    context,
+  );
+
+  return attachLiveEditionFlags(row, decision, liveByCompanyId);
+}
+
 export async function loadMatchContext(eventEditionId: string): Promise<{
-  companiesByDomain: Map<string, Array<{ id: string; name: string; domain: string }>>;
+  matchContext: ImportMatchContext;
   liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>;
 }> {
   const supabase = createAdminClient();
 
   const { data: companies, error: companyError } = await supabase
     .from("companies")
-    .select("id, name, domain")
-    .not("domain", "is", null);
+    .select("id, name, domain, aliases");
 
   if (companyError) {
     throw new Error(companyError.message);
   }
 
-  const companiesByDomain = new Map<string, Array<{ id: string; name: string; domain: string }>>();
-  for (const c of companies ?? []) {
-    const domain =
-      typeof c.domain === "string" ? c.domain.trim().toLowerCase() : "";
-    if (!domain) continue;
-    const list = companiesByDomain.get(domain) ?? [];
-    list.push({
-      id: String(c.id),
-      name: String(c.name),
-      domain,
-    });
-    companiesByDomain.set(domain, list);
-  }
+  const importCompanies: ImportMatchCompany[] = (companies ?? []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : null,
+    aliases: parseCompanyAliasesFromRow(row.aliases),
+  }));
+
+  const matchContext = buildImportMatchContext(importCompanies);
 
   const { data: liveLinks, error: liveError } = await supabase
     .from("event_sponsors")
@@ -163,10 +138,9 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
     const companyId = String(link.company_id);
     liveByCompanyId.set(companyId, {
       id: String(link.id),
-      tier_rank:
-        typeof link.tier_rank === "number" ? link.tier_rank : null,
+      tier_rank: typeof link.tier_rank === "number" ? link.tier_rank : null,
     });
   }
 
-  return { companiesByDomain, liveByCompanyId };
+  return { matchContext, liveByCompanyId };
 }

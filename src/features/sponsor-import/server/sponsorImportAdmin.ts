@@ -20,7 +20,7 @@ import {
   type ImportRowRecord,
 } from "./batchGuards";
 import { SponsorImportHttpError } from "./errors";
-import { loadMatchContext, matchRow } from "./matchRows";
+import { loadMatchContext, matchRow, AUTO_READY_MATCH_METHODS } from "./matchRows";
 import { materializeDraftLinks } from "./materializeDraft";
 import {
   detectSourceFormat,
@@ -406,7 +406,7 @@ export async function runBatchMatching(batchId: string, actorId: string) {
     .update({ processing_phase: "matching", updated_at: new Date().toISOString() })
     .eq("id", batchId);
 
-  const { companiesByDomain, liveByCompanyId } = await loadMatchContext(
+  const { matchContext, liveByCompanyId } = await loadMatchContext(
     String(batch.event_edition_id),
   );
 
@@ -433,8 +433,7 @@ export async function runBatchMatching(batchId: string, actorId: string) {
         mapped_tier_rank: row.mapped_tier_rank as number | null,
         has_blocking_validation: Boolean(row.has_blocking_validation),
       },
-      String(batch.event_edition_id),
-      companiesByDomain,
+      matchContext,
       liveByCompanyId,
     );
 
@@ -479,23 +478,13 @@ export async function bulkAcceptDomainMatches(batchId: string, actorId: string) 
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
-  const { data: rows, error: selectError } = await supabase
-    .from("sponsor_import_rows")
-    .select("id")
-    .eq("batch_id", batchId)
-    .eq("status", "auto_ready")
-    .eq("match_method", "domain")
-    .eq("match_confidence", "high");
-
-  if (selectError) throw new Error(selectError.message);
-
   const { data: autoRows, error: fetchError } = await supabase
     .from("sponsor_import_rows")
     .select("id, proposed_company_id")
     .eq("batch_id", batchId)
     .eq("status", "auto_ready")
-    .eq("match_method", "domain")
-    .eq("match_confidence", "high");
+    .eq("match_confidence", "high")
+    .in("match_method", [...AUTO_READY_MATCH_METHODS]);
 
   if (fetchError) throw new Error(fetchError.message);
 
