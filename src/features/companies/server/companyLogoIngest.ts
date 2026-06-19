@@ -4,13 +4,17 @@ import {
 } from "@/src/lib/companies/logoDevServer";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
+import {
+  COMPANY_LOGO_BUCKET,
+  COMPANY_LOGO_STORAGE_NAMESPACE,
+  extensionForContentType,
+  MAX_COMPANY_LOGO_SIZE_BYTES,
+  uploadCompanyLogoBytes,
+} from "./companyLogoStorage";
 import type { CompanyLogoIngestResult } from "./companyLogoMetadata";
 
-const DEFAULT_LOGO_BUCKET = process.env.BACKFILL_LOGO_BUCKET ?? "company-logos";
-const DEFAULT_STORAGE_NAMESPACE = "companies";
 const FETCH_TIMEOUT_MS = 5000;
 const HTML_FETCH_TIMEOUT_MS = 6000;
-const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = [
   "image/png",
@@ -36,6 +40,9 @@ type LogoStrategy = {
 
 export type CompanyLogoIngestOptions = {
   dryRun?: boolean;
+  /** Required for company logo uploads (default companies namespace). */
+  companyId?: string;
+  /** Non-company namespaces (e.g. event-series). Out of scope for companyId migration. */
   storageNamespace?: string;
 };
 
@@ -46,17 +53,6 @@ function normalizeDomain(domain: string): string {
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
-}
-
-function extensionFor(contentType: string): string {
-  const value = contentType.toLowerCase();
-  if (value.includes("png")) return "png";
-  if (value.includes("jpeg") || value.includes("jpg")) return "jpg";
-  if (value.includes("webp")) return "webp";
-  if (value.includes("svg")) return "svg";
-  if (value.includes("gif")) return "gif";
-  if (value.includes("icon")) return "ico";
-  return "bin";
 }
 
 function isAllowedImageContentType(contentType: string): boolean {
@@ -95,11 +91,11 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
   const contentLengthHeader = response.headers.get("content-length");
   if (contentLengthHeader) {
     const length = Number(contentLengthHeader);
-    if (Number.isFinite(length) && length > MAX_LOGO_SIZE_BYTES) return null;
+    if (Number.isFinite(length) && length > MAX_COMPANY_LOGO_SIZE_BYTES) return null;
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) return null;
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_COMPANY_LOGO_SIZE_BYTES) return null;
 
   return { bytes, contentType, sourceUrl: url };
 }
@@ -183,44 +179,26 @@ const LOW_QUALITY_STRATEGIES: readonly LogoStrategy[] = [
   { name: "google-favicon", run: tryGoogleFaviconLogo },
 ];
 
-function storagePath(
-  domain: string,
+function entityLogoStoragePath(
+  identityKey: string,
   contentType: string,
   storageNamespace: string,
 ): string {
-  return `${storageNamespace}/${domain}/logo.${extensionFor(contentType)}`;
+  return `${storageNamespace}/${identityKey}/logo.${extensionForContentType(contentType)}`;
 }
 
-async function resolveExistingLogoUrlByDomain(identityKey: string): Promise<string | null> {
-  const key = identityKey.trim().toLowerCase();
-  if (!key) return null;
-
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select("logo_url")
-    .eq("domain", key)
-    .not("logo_url", "is", null)
-    .limit(1);
-
-  if (error) return null;
-
-  const logoUrl = data?.[0]?.logo_url;
-  return typeof logoUrl === "string" && logoUrl.trim().length > 0 ? logoUrl.trim() : null;
-}
-
-async function uploadCompanyLogo(
-  domain: string,
+async function uploadEntityLogo(
+  identityKey: string,
   image: FetchedImage,
   storageNamespace: string,
 ): Promise<string | null> {
   const supabase = createAdminClient();
-  const path = storagePath(domain, image.contentType, storageNamespace);
+  const path = entityLogoStoragePath(identityKey, image.contentType, storageNamespace);
   const contentType =
     image.contentType.split(";")[0]?.trim() || image.contentType;
 
   const { error: uploadError } = await supabase.storage
-    .from(DEFAULT_LOGO_BUCKET)
+    .from(COMPANY_LOGO_BUCKET)
     .upload(path, image.bytes, {
       upsert: true,
       contentType,
@@ -231,7 +209,7 @@ async function uploadCompanyLogo(
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from(DEFAULT_LOGO_BUCKET).getPublicUrl(path);
+  } = supabase.storage.from(COMPANY_LOGO_BUCKET).getPublicUrl(path);
 
   return publicUrl || null;
 }
@@ -243,6 +221,10 @@ function strategiesForDomain(): readonly LogoStrategy[] {
     : [...HIGH_QUALITY_STRATEGIES, ...LOW_QUALITY_STRATEGIES];
 }
 
+function isCompanyLogoNamespace(storageNamespace: string): boolean {
+  return storageNamespace === COMPANY_LOGO_STORAGE_NAMESPACE;
+}
+
 /**
  * Fetch a company logo once, upload to Supabase Storage, return the public URL.
  * Does not write to the database — callers apply `companyLogoMetadataPatch`.
@@ -251,7 +233,10 @@ export async function ingestCompanyLogoByDomain(
   domain: string,
   options?: CompanyLogoIngestOptions,
 ): Promise<CompanyLogoIngestResult> {
-  const storageNamespace = options?.storageNamespace?.trim() || DEFAULT_STORAGE_NAMESPACE;
+  const storageNamespace = options?.storageNamespace?.trim() || COMPANY_LOGO_STORAGE_NAMESPACE;
+  const isCompanyNamespace = isCompanyLogoNamespace(storageNamespace);
+  const companyId = options?.companyId?.trim() ?? "";
+
   const identityKey = domain.trim().toLowerCase();
   if (!identityKey) {
     return {
@@ -259,6 +244,16 @@ export async function ingestCompanyLogoByDomain(
       logoUrl: null,
       strategy: null,
       error: null,
+      preview: null,
+    };
+  }
+
+  if (isCompanyNamespace && !companyId) {
+    return {
+      status: "error",
+      logoUrl: null,
+      strategy: null,
+      error: "missing_company_id",
       preview: null,
     };
   }
@@ -271,17 +266,6 @@ export async function ingestCompanyLogoByDomain(
       strategy: null,
       error: null,
       preview: null,
-    };
-  }
-
-  const existingLogoUrl = await resolveExistingLogoUrlByDomain(identityKey);
-  if (existingLogoUrl) {
-    return {
-      status: "ok",
-      logoUrl: existingLogoUrl,
-      strategy: "existing_db",
-      error: null,
-      preview: `${existingLogoUrl} (existing)`,
     };
   }
 
@@ -304,21 +288,37 @@ export async function ingestCompanyLogoByDomain(
     if (!image) continue;
 
     if (options?.dryRun) {
-      const ext = extensionFor(image.contentType);
-      const previewPath = `${storageNamespace}/${identityKey}/logo.${ext}`;
+      const ext = extensionForContentType(image.contentType);
+      const previewPath = isCompanyNamespace
+        ? `${COMPANY_LOGO_STORAGE_NAMESPACE}/${companyId}/logo.${ext}`
+        : `${storageNamespace}/${identityKey}/logo.${ext}`;
       return {
         status: "ok",
         logoUrl: null,
         strategy: strategy.name,
         error: null,
-        preview: `dry-run: would upload ${DEFAULT_LOGO_BUCKET}/${previewPath} (via ${strategy.name})`,
+        preview: `dry-run: would upload ${COMPANY_LOGO_BUCKET}/${previewPath} (via ${strategy.name})`,
       };
     }
 
-    const publicUrl = await uploadCompanyLogo(identityKey, image, storageNamespace);
-    if (!publicUrl) {
-      lastError = "upload_failed";
-      continue;
+    let publicUrl: string | null = null;
+    if (isCompanyNamespace) {
+      const upload = await uploadCompanyLogoBytes({
+        companyId,
+        bytes: image.bytes,
+        contentType: image.contentType,
+      });
+      if (!upload.ok) {
+        lastError = upload.error;
+        continue;
+      }
+      publicUrl = upload.publicUrl;
+    } else {
+      publicUrl = await uploadEntityLogo(identityKey, image, storageNamespace);
+      if (!publicUrl) {
+        lastError = "upload_failed";
+        continue;
+      }
     }
 
     return {
@@ -344,24 +344,60 @@ export async function ingestCompanyLogoByDomain(
 }
 
 export type ManualCompanyLogoIngestResult =
-  | { ok: true; storageUrl: string }
+  | { ok: true; storageUrl: string; storagePath: string }
   | { ok: false; error: string };
 
 /**
- * Download an admin-provided logo URL and upload it to Supabase Storage.
+ * Download an admin-provided logo URL and upload it to company Storage.
  * Does not write to the database.
  */
 export async function ingestManualCompanyLogoFromUrl(
   externalUrl: string,
-  storageIdentityKey: string,
-  options?: Pick<CompanyLogoIngestOptions, "storageNamespace">,
+  companyId: string,
 ): Promise<ManualCompanyLogoIngestResult> {
   const trimmedUrl = externalUrl.trim();
-  const identityKey = storageIdentityKey.trim().toLowerCase();
+  const trimmedCompanyId = companyId.trim();
   if (!trimmedUrl) {
     return { ok: false, error: "empty_url" };
   }
-  if (!identityKey) {
+  if (!trimmedCompanyId) {
+    return { ok: false, error: "missing_company_id" };
+  }
+
+  const image = await downloadImage(trimmedUrl);
+  if (!image) {
+    return { ok: false, error: "download_failed" };
+  }
+
+  const upload = await uploadCompanyLogoBytes({
+    companyId: trimmedCompanyId,
+    bytes: image.bytes,
+    contentType: image.contentType,
+  });
+
+  if (!upload.ok) {
+    return { ok: false, error: upload.error };
+  }
+
+  return { ok: true, storageUrl: upload.publicUrl, storagePath: upload.storagePath };
+}
+
+/**
+ * Download a pasted logo URL for non-company entities (event series/editions).
+ * Does not write to the database.
+ */
+export async function ingestManualEntityLogoFromUrl(
+  externalUrl: string,
+  entityId: string,
+  storageNamespace: string,
+): Promise<ManualCompanyLogoIngestResult> {
+  const trimmedUrl = externalUrl.trim();
+  const trimmedEntityId = entityId.trim();
+  const trimmedNamespace = storageNamespace.trim();
+  if (!trimmedUrl) {
+    return { ok: false, error: "empty_url" };
+  }
+  if (!trimmedEntityId || !trimmedNamespace) {
     return { ok: false, error: "missing_storage_key" };
   }
 
@@ -370,11 +406,14 @@ export async function ingestManualCompanyLogoFromUrl(
     return { ok: false, error: "download_failed" };
   }
 
-  const storageNamespace = options?.storageNamespace?.trim() || DEFAULT_STORAGE_NAMESPACE;
-  const publicUrl = await uploadCompanyLogo(identityKey, image, storageNamespace);
+  const publicUrl = await uploadEntityLogo(trimmedEntityId, image, trimmedNamespace);
   if (!publicUrl) {
     return { ok: false, error: "upload_failed" };
   }
 
-  return { ok: true, storageUrl: publicUrl };
+  return {
+    ok: true,
+    storageUrl: publicUrl,
+    storagePath: entityLogoStoragePath(trimmedEntityId, image.contentType, trimmedNamespace),
+  };
 }

@@ -7,6 +7,7 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";
 import { ingestCompanyLogoByDomain } from "./companyLogoIngest";
+import { scheduleCompanyLogoCleanupAfterPersist } from "./companyLogoStorage";
 
 export { normalizeDomainFromWebsite };
 
@@ -155,10 +156,19 @@ export async function enrichCompanyLogo(
       return;
     }
 
-    const ingestResult = await ingestCompanyLogoByDomain(normalizedDomain);
+    const ingestResult = await ingestCompanyLogoByDomain(normalizedDomain, {
+      companyId,
+    });
     const patch = companyLogoMetadataPatch(ingestResult);
 
     await supabase.from("companies").update(patch).eq("id", companyId);
+
+    if (ingestResult.status === "ok" && ingestResult.logoUrl) {
+      scheduleCompanyLogoCleanupAfterPersist({
+        companyId,
+        publicUrl: ingestResult.logoUrl,
+      });
+    }
   } catch {
     // Best-effort enrichment; failures must not affect the API response.
   }

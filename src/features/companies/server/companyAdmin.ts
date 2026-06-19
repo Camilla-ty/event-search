@@ -1,5 +1,6 @@
 import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
+import { scheduleCompanyLogoCleanupAfterPersist, uploadCompanyLogoBytes, verifyCompanyLogoStorageObject } from "@/src/features/companies/server/companyLogoStorage";
 import {
   normalizeCompanyAliases,
   parseCompanyAliasesFromRow,
@@ -10,6 +11,7 @@ import {
   logoMetadataPatchForManualLogoStorage,
 } from "@/src/lib/companies/logoMetadataPatch";
 import { MANUAL_LOGO_IMPORT_FAILED_EDIT_WARNING } from "@/src/lib/companies/manualLogoIngestMessages";
+import { validateCompanyLogoUpload } from "@/src/lib/companies/companyLogoUploadValidation";
 import {
   companyMissingLogo,
   companyNeedsLogoReview,
@@ -85,7 +87,11 @@ async function resolveManualLogoPatch(params: {
   existing: CompanyAdminRow;
   incomingLogoUrl: string | null;
   domainForLogo: string | null;
-}): Promise<{ patch: Record<string, unknown>; warnings: string[] }> {
+}): Promise<{
+  patch: Record<string, unknown>;
+  warnings: string[];
+  persistedLogoUrl?: string;
+}> {
   const warnings: string[] = [];
   const existingLogo = params.existing.logo_url?.trim() || null;
 
@@ -110,16 +116,16 @@ async function resolveManualLogoPatch(params: {
     };
   }
 
-  const storageKey = params.domainForLogo?.trim() || params.existing.id;
   const ingest = await ingestManualCompanyLogoFromUrl(
     params.incomingLogoUrl,
-    storageKey,
+    params.existing.id,
   );
 
   if (ingest.ok) {
     return {
       patch: logoMetadataPatchForManualLogoStorage(ingest.storageUrl),
       warnings,
+      persistedLogoUrl: ingest.storageUrl,
     };
   }
 
@@ -247,6 +253,7 @@ export async function updateCompanyAdmin(
   const patch: Record<string, unknown> = {};
   const warnings: string[] = [];
   let existingRow: CompanyAdminRow | null = null;
+  let persistedLogoUrl: string | undefined;
 
   const needsExistingRow = input.logo_url !== undefined || input.aliases !== undefined;
 
@@ -285,6 +292,7 @@ export async function updateCompanyAdmin(
     });
     warnings.push(...logoPatch.warnings);
     Object.assign(patch, logoPatch.patch);
+    persistedLogoUrl = logoPatch.persistedLogoUrl;
   }
   if (input.short_description !== undefined) {
     patch.short_description = input.short_description?.trim() || null;
@@ -302,5 +310,80 @@ export async function updateCompanyAdmin(
     .single();
 
   if (error) throw new Error(error.message);
+
+  if (persistedLogoUrl) {
+    scheduleCompanyLogoCleanupAfterPersist({
+      companyId: id,
+      publicUrl: persistedLogoUrl,
+    });
+  }
+
   return { company: mapCompanyAdminRow(data as Record<string, unknown>), warnings };
+}
+
+export type UploadCompanyLogoFileInput = {
+  bytes: Uint8Array;
+  mimeType: string;
+};
+
+export type UploadCompanyLogoFileAdminResult =
+  | { ok: true; company: CompanyAdminRow }
+  | { ok: false; status: 400 | 404 | 500; error: string };
+
+export async function uploadCompanyLogoFileAdmin(
+  companyId: string,
+  input: UploadCompanyLogoFileInput,
+): Promise<UploadCompanyLogoFileAdminResult> {
+  const existing = await getCompanyAdminById(companyId);
+  if (!existing) {
+    return { ok: false, status: 404, error: "Company not found." };
+  }
+
+  const validation = validateCompanyLogoUpload({
+    bytes: input.bytes,
+    mimeType: input.mimeType,
+  });
+  if (!validation.ok) {
+    return { ok: false, status: 400, error: validation.message };
+  }
+
+  const upload = await uploadCompanyLogoBytes({
+    companyId,
+    bytes: input.bytes,
+    contentType: validation.contentType,
+  });
+  if (!upload.ok) {
+    const message =
+      upload.error === "file_too_large"
+        ? "Logo must be 2 MB or smaller."
+        : upload.error === "empty_file"
+          ? "Logo file is empty."
+          : "Logo upload failed.";
+    return { ok: false, status: 500, error: message };
+  }
+
+  const verified = await verifyCompanyLogoStorageObject(upload.storagePath);
+  if (!verified.ok) {
+    return { ok: false, status: 500, error: "Uploaded logo could not be verified." };
+  }
+
+  const supabase = createAdminClient();
+  const patch = logoMetadataPatchForManualLogoStorage(upload.publicUrl);
+  const { data, error } = await supabase
+    .from("companies")
+    .update(patch)
+    .eq("id", companyId)
+    .select(COMPANY_ADMIN_SELECT)
+    .single();
+
+  if (error) {
+    return { ok: false, status: 500, error: error.message };
+  }
+
+  scheduleCompanyLogoCleanupAfterPersist({
+    companyId,
+    publicUrl: upload.publicUrl,
+  });
+
+  return { ok: true, company: mapCompanyAdminRow(data as Record<string, unknown>) };
 }

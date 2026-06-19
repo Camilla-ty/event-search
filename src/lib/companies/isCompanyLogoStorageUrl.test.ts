@@ -1,22 +1,33 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
 
 describe("isCompanyLogoStorageUrl", () => {
-  it("returns true for a company-logos public object URL", () => {
-    expect(
+  it("returns true for a legacy domain-based company-logos public object URL", () => {
+    assert.equal(
       isCompanyLogoStorageUrl(
         "https://example.supabase.co/storage/v1/object/public/company-logos/companies/acme.com/logo.png",
       ),
-    ).toBe(true);
+      true,
+    );
+  });
+
+  it("returns true for a companyId-based company-logos public object URL", () => {
+    assert.equal(
+      isCompanyLogoStorageUrl(
+        "https://example.supabase.co/storage/v1/object/public/company-logos/companies/550e8400-e29b-41d4-a716-446655440000/logo.png",
+      ),
+      true,
+    );
   });
 
   it("returns false for external URLs", () => {
-    expect(isCompanyLogoStorageUrl("https://cdn.example.com/logo.png")).toBe(false);
+    assert.equal(isCompanyLogoStorageUrl("https://cdn.example.com/logo.png"), false);
   });
 
   it("returns false for empty values", () => {
-    expect(isCompanyLogoStorageUrl(null)).toBe(false);
-    expect(isCompanyLogoStorageUrl("")).toBe(false);
+    assert.equal(isCompanyLogoStorageUrl(null), false);
+    assert.equal(isCompanyLogoStorageUrl(""), false);
   });
 });

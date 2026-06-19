@@ -1,4 +1,4 @@
-import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
+import { ingestManualEntityLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
 import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
 import { EVENT_LOGO_IMPORT_FAILED_WARNING } from "@/src/lib/companies/manualLogoIngestMessages";
 
@@ -36,10 +36,10 @@ export async function resolveEventManualLogoUrl(params: {
     };
   }
 
-  const ingest = await ingestManualCompanyLogoFromUrl(
+  const ingest = await ingestManualEntityLogoFromUrl(
     incoming,
     params.entityId,
-    { storageNamespace: params.storageNamespace },
+    params.storageNamespace,
   );
 
   if (ingest.ok) {

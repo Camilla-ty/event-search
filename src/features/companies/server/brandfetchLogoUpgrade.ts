@@ -10,6 +10,10 @@ import type {
   BrandfetchUpgradeItemResult,
   BrandfetchUpgradeSkipReason,
 } from "@/src/lib/companies/brandfetchUpgradeTypes";
+import {
+  scheduleCompanyLogoCleanupAfterPersist,
+  uploadCompanyLogoBytes,
+} from "@/src/features/companies/server/companyLogoStorage";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export type {
@@ -19,8 +23,6 @@ export type {
   BrandfetchUpgradeSkipReason,
 } from "@/src/lib/companies/brandfetchUpgradeTypes";
 
-const DEFAULT_LOGO_BUCKET = process.env.BACKFILL_LOGO_BUCKET ?? "company-logos";
-const DEFAULT_STORAGE_NAMESPACE = "companies";
 const BRANDFETCH_API_TIMEOUT_MS = 10_000;
 const DOWNLOAD_TIMEOUT_MS = 10_000;
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
@@ -78,16 +80,6 @@ function getBrandfetchApiKey(): string | null {
   return key ? key : null;
 }
 
-function extensionFor(contentType: string): string {
-  const value = contentType.toLowerCase();
-  if (value.includes("png")) return "png";
-  if (value.includes("jpeg") || value.includes("jpg")) return "jpg";
-  if (value.includes("webp")) return "webp";
-  if (value.includes("svg")) return "svg";
-  if (value.includes("gif")) return "gif";
-  return "bin";
-}
-
 function isAllowedImageContentType(contentType: string): boolean {
   const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   return ALLOWED_IMAGE_TYPES.includes(base);
@@ -131,41 +123,6 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) return null;
 
   return { bytes, contentType, sourceUrl: url };
-}
-
-function storagePath(
-  domain: string,
-  contentType: string,
-  storageNamespace: string,
-): string {
-  return `${storageNamespace}/${domain}/logo.${extensionFor(contentType)}`;
-}
-
-async function uploadCompanyLogo(
-  domain: string,
-  image: FetchedImage,
-  storageNamespace: string,
-): Promise<string | null> {
-  const supabase = createAdminClient();
-  const path = storagePath(domain, image.contentType, storageNamespace);
-  const contentType =
-    image.contentType.split(";")[0]?.trim() || image.contentType;
-
-  const { error: uploadError } = await supabase.storage
-    .from(DEFAULT_LOGO_BUCKET)
-    .upload(path, image.bytes, {
-      upsert: true,
-      contentType,
-      cacheControl: "3600",
-    });
-
-  if (uploadError) return null;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(DEFAULT_LOGO_BUCKET).getPublicUrl(path);
-
-  return publicUrl || null;
 }
 
 function themeRank(theme: string | null | undefined): number {
@@ -324,8 +281,12 @@ async function upgradeSingleCompany(
     };
   }
 
-  const storageUrl = await uploadCompanyLogo(domain, image, DEFAULT_STORAGE_NAMESPACE);
-  if (!storageUrl) {
+  const upload = await uploadCompanyLogoBytes({
+    companyId: company.id,
+    bytes: image.bytes,
+    contentType: image.contentType,
+  });
+  if (!upload.ok) {
     return {
       companyId: company.id,
       companyName: company.name,
@@ -337,7 +298,7 @@ async function upgradeSingleCompany(
   const supabase = createAdminClient();
   const { error: updateError } = await supabase
     .from("companies")
-    .update(logoMetadataPatchForBrandfetchLogoStorage(storageUrl))
+    .update(logoMetadataPatchForBrandfetchLogoStorage(upload.publicUrl))
     .eq("id", company.id);
 
   if (updateError) {
@@ -350,11 +311,16 @@ async function upgradeSingleCompany(
     };
   }
 
+  scheduleCompanyLogoCleanupAfterPersist({
+    companyId: company.id,
+    publicUrl: upload.publicUrl,
+  });
+
   return {
     companyId: company.id,
     companyName: company.name,
     status: "upgraded",
-    logoUrl: storageUrl,
+    logoUrl: upload.publicUrl,
   };
 }
 

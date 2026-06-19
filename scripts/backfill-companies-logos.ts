@@ -27,6 +27,7 @@
 
 import { companyLogoMetadataPatch } from "@/src/features/companies/server/companyLogoMetadata";
 import { ingestCompanyLogoByDomain } from "@/src/features/companies/server/companyLogoIngest";
+import { scheduleCompanyLogoCleanupAfterPersist } from "@/src/features/companies/server/companyLogoStorage";
 
 import { createBackfillSupabaseClient } from "./backfill/core/supabase";
 import { readBackfillEnv } from "./backfill/core/env";
@@ -81,7 +82,10 @@ async function resolveCompanyLogo(row: CompanyLogoRow): Promise<BackfillResolved
   if (!domain) return null;
 
   const env = readBackfillEnv();
-  const result = await ingestCompanyLogoByDomain(domain, { dryRun: env.dryRun });
+  const result = await ingestCompanyLogoByDomain(domain, {
+    companyId: row.id,
+    dryRun: env.dryRun,
+  });
 
   if (result.status === "skipped") {
     return null;
@@ -130,6 +134,20 @@ async function main() {
       return null;
     },
     resolveValue: resolveCompanyLogo,
+    onRowUpdated: (row, resolved) => {
+      const logoUrl =
+        typeof resolved.value === "string"
+          ? resolved.value
+          : typeof resolved.patch?.logo_url === "string"
+            ? resolved.patch.logo_url
+            : null;
+      if (logoUrl) {
+        scheduleCompanyLogoCleanupAfterPersist({
+          companyId: row.id,
+          publicUrl: logoUrl,
+        });
+      }
+    },
     orderBy: { column: "name", ascending: true },
   });
 }

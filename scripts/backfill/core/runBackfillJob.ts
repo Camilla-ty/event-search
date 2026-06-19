@@ -27,6 +27,7 @@ export type BackfillJobConfig<Row extends BackfillRow> = {
   label: (row: Row) => string;
   shouldSkip?: (row: Row) => BackfillSkip | null;
   resolveValue: (row: Row) => Promise<BackfillResolvedValue | null>;
+  onRowUpdated?: (row: Row, resolved: BackfillResolvedValue) => Promise<void> | void;
   orderBy?: {
     column: string;
     ascending?: boolean;
@@ -219,6 +220,15 @@ export async function runBackfillJob<Row extends BackfillRow>(
 
       updated += 1;
       console.log(`[ok]   (${progress}) ${label} -> ${previewText}`);
+
+      if (config.onRowUpdated) {
+        try {
+          await config.onRowUpdated(row, resolved);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "unknown";
+          console.warn(`[warn] (${progress}) ${label} - onRowUpdated failed:`, message);
+        }
+      }
     }
 
     if (env.delayMs > 0) {

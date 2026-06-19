@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
+import { scheduleCompanyLogoCleanupAfterPersist } from "@/src/features/companies/server/companyLogoStorage";
 import {
   applyManualCompanyLogoStorage,
   createCompany,
@@ -102,9 +103,13 @@ export async function POST(request: Request) {
           company = await applyManualCompanyLogoStorage(company.id, manualLogoUrl);
           skipAutoEnrich = true;
         } else {
-          const ingest = await ingestManualCompanyLogoFromUrl(manualLogoUrl, domain);
+          const ingest = await ingestManualCompanyLogoFromUrl(manualLogoUrl, company.id);
           if (ingest.ok) {
             company = await applyManualCompanyLogoStorage(company.id, ingest.storageUrl);
+            scheduleCompanyLogoCleanupAfterPersist({
+              companyId: company.id,
+              publicUrl: ingest.storageUrl,
+            });
             skipAutoEnrich = true;
           } else {
             warnings.push(MANUAL_LOGO_IMPORT_FAILED_WARNING);
