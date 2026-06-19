@@ -200,7 +200,7 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
     <AdminDrawerShell
       title="Logo"
       saving={actionsDisabled}
-      saveLabel="Save"
+      saveLabel="Import from URL"
       saveDisabled={saveDisabled}
       onClose={onClose}
       onSave={() => void handleSave()}
@@ -208,6 +208,9 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
       <div>
         <p className="font-medium text-slate-900">{companyName}</p>
         {domain ? <p className="text-slate-600">{domain}</p> : null}
+        <p className="mt-2 text-sm text-slate-600">
+          Two ways to set the logo. Each action saves immediately.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -226,25 +229,28 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
         )}
       </div>
 
-      <label className="block space-y-2">
-        <span className="font-medium text-slate-700">Paste logo URL</span>
-        <input
-          type="url"
-          value={logoUrlInput}
-          onChange={(event) => setLogoUrlInput(event.target.value)}
-          disabled={actionsDisabled}
-          className={formInputClass}
-          placeholder="Paste logo image URL from the event website"
-          autoComplete="off"
-        />
-        <p className="text-xs text-slate-500">
-          Paste a verified logo image URL, then click Save. The image is downloaded and stored
-          automatically.
-        </p>
-      </label>
+      <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+        <h3 className="font-medium text-slate-900">Import from URL</h3>
+        <label className="block space-y-2">
+          <span className="sr-only">Logo image URL</span>
+          <input
+            type="url"
+            value={logoUrlInput}
+            onChange={(event) => setLogoUrlInput(event.target.value)}
+            disabled={actionsDisabled}
+            className={formInputClass}
+            placeholder="https://example.com/logo.png"
+            autoComplete="off"
+          />
+          <p className="text-xs text-slate-500">
+            Paste a direct image URL (PNG, JPG, or WebP). Click Import from URL to download and
+            store it.
+          </p>
+        </label>
+      </section>
 
-      <div className="space-y-3 border-t border-slate-200 pt-4">
-        <p className="font-medium text-slate-700">Upload logo file</p>
+      <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+        <h3 className="font-medium text-slate-900">Upload file</h3>
         <input
           key={fileInputKey}
           ref={fileInputRef}
@@ -267,8 +273,8 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
           </p>
         ) : null}
         <p className="text-xs text-slate-500">
-          Upload a PNG, JPG, or WebP logo up to 2 MB. For SVG logos, use Chrome DevTools → Capture
-          node screenshot, then upload the PNG.
+          Choose a file, then click Upload file. The logo is saved immediately — you don&apos;t need
+          Import from URL.
         </p>
         <Button
           type="button"
@@ -277,9 +283,9 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
           disabled={uploadDisabled}
           onClick={() => void handleUpload()}
         >
-          {isUploading ? "Uploading…" : "Upload logo"}
+          {isUploading ? "Uploading…" : "Upload file"}
         </Button>
-      </div>
+      </section>
 
       {error ? <InlineErrorBanner message={error} /> : null}
       {success ? <InlineErrorBanner message={success} variant="success" /> : null}
