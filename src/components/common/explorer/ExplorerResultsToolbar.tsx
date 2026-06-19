@@ -12,6 +12,7 @@ type ExplorerResultsToolbarProps<T extends string> = {
   sortOptions: ExplorerSortOption<T>[];
   onSortChange: (value: T) => void;
   onOpenFilters: () => void;
+  showSort?: boolean;
 };
 
 export function ExplorerResultsToolbar<T extends string>({
@@ -21,6 +22,7 @@ export function ExplorerResultsToolbar<T extends string>({
   sortOptions,
   onSortChange,
   onOpenFilters,
+  showSort = true,
 }: ExplorerResultsToolbarProps<T>) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -38,20 +40,22 @@ export function ExplorerResultsToolbar<T extends string>({
           Filters
         </button>
 
-        <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-          Sort by
-          <select
-            value={sort}
-            onChange={(event) => onSortChange(event.target.value as T)}
-            className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showSort ? (
+          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+            Sort by
+            <select
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value as T)}
+              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
     </div>
   );

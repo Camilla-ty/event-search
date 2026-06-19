@@ -21,6 +21,8 @@ export type EventRecord = {
   } | null;
 };
 
+export type ExplorerView = "list" | "calendar";
+
 export type EventFilters = {
   query: string;
   industry: string;

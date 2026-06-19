@@ -10,16 +10,23 @@ import {
   PageHeader,
 } from "@/src/components/common/explorer";
 import type { EventExplorerActiveTopic } from "@/src/features/events/server/getEventExplorerData";
+import { getCurrentMonthKey } from "@/src/features/events/lib/eventCalendarGrouping";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
-import { buildTopicHubPath } from "@/src/lib/routes/explorerUrls";
+import {
+  buildTopicHubPath,
+  parseEventExplorerMonth,
+  parseEventExplorerView,
+} from "@/src/lib/routes/explorerUrls";
 
+import { EventCalendar } from "./EventCalendar";
 import { EventGrid } from "./EventGrid";
+import { EventViewToggle } from "./EventViewToggle";
 import { FilterPanel } from "./FilterPanel";
-import type { EventFilters, EventRecord } from "./types";
+import type { EventFilters, EventRecord, ExplorerView } from "./types";
 
 type SortValue = "date" | "name";
 
@@ -69,6 +76,14 @@ export function EventExplorerPage({
   const [sort, setSort] = useState<SortValue>("date");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const explorerView = parseEventExplorerView(searchParams.get("view"));
+  const calendarMonth = parseEventExplorerMonth(searchParams.get("month"));
+  const defaultCalendarMonth = useMemo(() => {
+    const fromStartFilter = parseEventExplorerMonth(filters.startDate.slice(0, 7));
+    if (fromStartFilter !== null) return fromStartFilter;
+    return getCurrentMonthKey();
+  }, [filters.startDate]);
+  const visibleCalendarMonth = calendarMonth ?? defaultCalendarMonth;
   const topicSlug = (initialFilters?.topic ?? searchParams.get("topic") ?? "").trim();
   const clearTopicHref = useMemo(() => {
     const next = new URLSearchParams(searchParams.toString());
@@ -162,12 +177,62 @@ export function EventExplorerPage({
     if (topicSlug !== "") next.set("topic", topicSlug);
     else next.delete("topic");
 
+    if (explorerView === "calendar") {
+      next.set("view", "calendar");
+      next.set("month", visibleCalendarMonth);
+    } else {
+      next.delete("view");
+      next.delete("month");
+    }
+
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
       router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
     }
-  }, [filters, pathname, router, searchParams, topicSlug]);
+  }, [explorerView, filters, pathname, router, searchParams, topicSlug, visibleCalendarMonth]);
+
+  function buildExplorerSearchParams(options?: { view?: ExplorerView; month?: string }) {
+    const next = new URLSearchParams();
+    const nextView = options?.view ?? explorerView;
+    const nextMonth = options?.month ?? visibleCalendarMonth;
+
+    if (filters.query.trim()) next.set("q", filters.query.trim());
+    if (filters.industry !== "all") next.set("industry", filters.industry);
+    if (filters.region !== "all") next.set("region", filters.region);
+    if (filters.type !== "all") next.set("type", filters.type);
+    if (filters.startDate) next.set("start", filters.startDate);
+    if (filters.endDate) next.set("end", filters.endDate);
+    if (topicSlug !== "") next.set("topic", topicSlug);
+
+    if (nextView === "calendar") {
+      next.set("view", "calendar");
+      next.set("month", nextMonth);
+    }
+
+    return next;
+  }
+
+  function replaceExplorerUrl(options?: { view?: ExplorerView; month?: string }) {
+    const next = buildExplorerSearchParams(options);
+    const nextValue = next.toString();
+    router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+  }
+
+  function handleViewChange(nextView: ExplorerView) {
+    if (nextView === "list") {
+      setPage(1);
+    }
+
+    replaceExplorerUrl({
+      view: nextView,
+      month: nextView === "calendar" ? visibleCalendarMonth : undefined,
+    });
+  }
+
+  function handleCalendarMonthChange(month: string) {
+    replaceExplorerUrl({ view: "calendar", month });
+  }
 
   function handleReset() {
     setFilters({
@@ -222,21 +287,35 @@ export function EventExplorerPage({
               </Link>
             </div>
           ) : null}
-          <ExplorerResultsToolbar
-            total={filteredAndSorted.length}
-            entityLabel="events"
-            sort={sort}
-            sortOptions={EVENT_SORT_OPTIONS}
-            onSortChange={setSort}
-            onOpenFilters={() => setMobileFiltersOpen(true)}
-          />
-          <EventGrid
-            events={filteredAndSorted}
-            loading={false}
-            page={page}
-            onPageChange={setPage}
-            onReset={handleReset}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <EventViewToggle view={explorerView} onViewChange={handleViewChange} />
+            <div className="min-w-0 flex-1">
+              <ExplorerResultsToolbar
+                total={filteredAndSorted.length}
+                entityLabel="events"
+                sort={sort}
+                sortOptions={EVENT_SORT_OPTIONS}
+                onSortChange={setSort}
+                onOpenFilters={() => setMobileFiltersOpen(true)}
+                showSort={explorerView === "list"}
+              />
+            </div>
+          </div>
+          {explorerView === "list" ? (
+            <EventGrid
+              events={filteredAndSorted}
+              loading={false}
+              page={page}
+              onPageChange={setPage}
+              onReset={handleReset}
+            />
+          ) : (
+            <EventCalendar
+              events={filteredAndSorted}
+              month={visibleCalendarMonth}
+              onMonthChange={handleCalendarMonthChange}
+            />
+          )}
         </div>
       </div>
 

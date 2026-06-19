@@ -23,6 +23,8 @@ type EventsPageProps = {
     start?: string;
     end?: string;
     topic?: string;
+    view?: string;
+    month?: string;
   }>;
 };
 

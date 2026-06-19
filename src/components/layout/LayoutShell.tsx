@@ -11,6 +11,7 @@ import { BrowseMobileHeader } from "./BrowseMobileHeader";
 import { GlobalSearchBar } from "./GlobalSearchBar";
 import { MobilePrimaryNav } from "./MobilePrimaryNav";
 import { NavigationShell } from "./NavigationShell";
+import { PublicMobileDesktopNotice } from "./PublicMobileDesktopNotice";
 import { SkipLink } from "./SkipLink";
 
 export type LayoutShellProps = {
@@ -66,6 +67,7 @@ export function LayoutShell({
           <main id="main-content" className={tokens.main}>
             <div className={tokens.page}>{children}</div>
           </main>
+          <PublicMobileDesktopNotice />
         </div>
       </div>
     );

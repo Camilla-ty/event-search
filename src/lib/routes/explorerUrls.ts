@@ -7,6 +7,26 @@ export function buildSponsorSearchUrl(query?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+export type EventExplorerView = "list" | "calendar";
+
+export function parseEventExplorerView(
+  raw: string | null | undefined,
+): EventExplorerView {
+  const trimmed = (raw ?? "").trim().toLowerCase();
+  if (trimmed === "calendar") return "calendar";
+  return "list";
+}
+
+export function parseEventExplorerMonth(raw: string | null | undefined): string | null {
+  const trimmed = (raw ?? "").trim();
+  if (!/^\d{4}-\d{2}$/.test(trimmed)) return null;
+
+  const month = Number(trimmed.slice(5, 7));
+  if (month < 1 || month > 12) return null;
+
+  return trimmed;
+}
+
 export function buildEventExplorerUrl(query?: string): string {
   const url = new URL("/events", "http://local");
   const trimmed = query?.trim() ?? "";
