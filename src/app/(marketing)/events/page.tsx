@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
@@ -20,11 +22,12 @@ type EventsPageProps = {
     type?: string;
     start?: string;
     end?: string;
+    topic?: string;
   }>;
 };
 
 export default async function EventsPageRoute({ searchParams }: EventsPageProps) {
-  const { q, industry, region, type, start, end } = await searchParams;
+  const { q, industry, region, type, start, end, topic } = await searchParams;
   const data = await getEventExplorerData({
     query: q,
     industry,
@@ -32,6 +35,7 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
     type,
     startDate: start,
     endDate: end,
+    topic,
   });
   const events: EventRecord[] = (data.editions ?? []).map((edition) => ({
     id: String(edition.id),
@@ -75,7 +79,10 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
         type: data.filters.type ?? "all",
         startDate: data.filters.startDate ?? "",
         endDate: data.filters.endDate ?? "",
+        topic: data.filters.topic ?? "",
       }}
+      activeTopic={data.activeTopic}
+      topicUnknown={data.topicUnknown}
     />
   );
 }

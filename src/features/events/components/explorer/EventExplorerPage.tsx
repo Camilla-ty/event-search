@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -8,10 +9,13 @@ import {
   MobileFilterDrawer,
   PageHeader,
 } from "@/src/components/common/explorer";
+import type { EventExplorerActiveTopic } from "@/src/features/events/server/getEventExplorerData";
+import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
+import { buildTopicHubPath } from "@/src/lib/routes/explorerUrls";
 
 import { EventGrid } from "./EventGrid";
 import { FilterPanel } from "./FilterPanel";
@@ -31,11 +35,14 @@ const defaultFilters: EventFilters = {
   type: "all",
   startDate: "",
   endDate: "",
+  topic: "",
 };
 
 type EventExplorerPageProps = {
   events: EventRecord[];
   initialFilters?: EventFilters;
+  activeTopic?: EventExplorerActiveTopic | null;
+  topicUnknown?: boolean;
 };
 
 function normalize(value: string | null | undefined) {
@@ -52,6 +59,8 @@ function eventDateValue(input?: string | null) {
 export function EventExplorerPage({
   events,
   initialFilters,
+  activeTopic = null,
+  topicUnknown = false,
 }: EventExplorerPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -60,6 +69,15 @@ export function EventExplorerPage({
   const [sort, setSort] = useState<SortValue>("date");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const topicSlug = (initialFilters?.topic ?? searchParams.get("topic") ?? "").trim();
+  const clearTopicHref = useMemo(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("topic");
+    const value = next.toString();
+    return value ? `${pathname}?${value}` : pathname;
+  }, [pathname, searchParams]);
+  const topicHubHref =
+    activeTopic !== null ? buildTopicHubPath(activeTopic.slug) : null;
 
   const industries = useMemo(() => {
     const values = events
@@ -141,15 +159,21 @@ export function EventExplorerPage({
     if (filters.endDate) next.set("end", filters.endDate);
     else next.delete("end");
 
+    if (topicSlug !== "") next.set("topic", topicSlug);
+    else next.delete("topic");
+
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
       router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
     }
-  }, [filters, pathname, router, searchParams]);
+  }, [filters, pathname, router, searchParams, topicSlug]);
 
   function handleReset() {
-    setFilters(defaultFilters);
+    setFilters({
+      ...(initialFilters ?? defaultFilters),
+      topic: topicSlug,
+    });
     setSort("date");
     setPage(1);
   }
@@ -175,6 +199,29 @@ export function EventExplorerPage({
         </div>
 
         <div className="space-y-4">
+          {topicSlug !== "" ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-primary/20 bg-brand-primary-muted px-4 py-3 text-sm text-slate-700">
+              <span className="font-medium text-slate-900">
+                Topic:{" "}
+                {activeTopic ? (
+                  topicHubHref ? (
+                    <Link href={topicHubHref} className={brandLinkClass}>
+                      {activeTopic.name}
+                    </Link>
+                  ) : (
+                    activeTopic.name
+                  )
+                ) : topicUnknown ? (
+                  `${topicSlug} (not found)`
+                ) : (
+                  topicSlug
+                )}
+              </span>
+              <Link href={clearTopicHref} className={`${brandLinkClass} ml-auto`}>
+                Clear topic
+              </Link>
+            </div>
+          ) : null}
           <ExplorerResultsToolbar
             total={filteredAndSorted.length}
             entityLabel="events"

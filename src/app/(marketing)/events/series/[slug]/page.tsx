@@ -51,7 +51,7 @@ export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
         ← Back to Events
       </Link>
 
-      <SeriesHubHeader series={data.series} />
+      <SeriesHubHeader series={data.series} topics={data.topics} />
       <SeriesEditionsList editions={data.editions} />
     </section>
   );

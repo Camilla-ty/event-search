@@ -3,3 +3,9 @@ export type KeywordRow = {
   name: string;
   slug: string;
 };
+
+export type PublicKeywordSummary = {
+  id: string;
+  name: string;
+  slug: string;
+};

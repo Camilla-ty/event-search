@@ -23,6 +23,21 @@ export function buildEventExplorerUpcomingUrl(fromDate?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+export function buildTopicHubPath(slug: string): string | null {
+  const trimmed = slug.trim();
+  if (trimmed === "") return null;
+  return `/topics/${encodeURIComponent(trimmed)}`;
+}
+
+export function buildEventExplorerTopicUrl(slug: string): string {
+  const url = new URL("/events", "http://local");
+  const trimmed = slug.trim();
+  if (trimmed !== "") {
+    url.searchParams.set("topic", trimmed);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
 export function buildSponsorProfilePath(company: {
   slug?: string | null;
   id?: string | null;

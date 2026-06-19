@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
+import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
@@ -12,6 +13,7 @@ import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateR
 import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
+import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
@@ -79,13 +81,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const seriesId = readSeriesId(edition, series);
   const seriesHubHref = series ? buildSeriesHubPath(series) : null;
 
-  const relatedEditions =
+  const [relatedEditions, topics] = await Promise.all([
     seriesId !== null && editionId !== null
-      ? await getRelatedEditions({
+      ? getRelatedEditions({
           seriesId,
           excludeEditionId: editionId,
         })
-      : [];
+      : Promise.resolve([]),
+    seriesId !== null
+      ? getPublicKeywordsForSeriesId(seriesId)
+      : Promise.resolve([]),
+  ]);
 
   const sponsors = filterDisplayableSponsors(
     (edition.event_sponsors ?? []) as EventSponsorRow[],
@@ -151,6 +157,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <p className="text-sm text-slate-500">
               {formatEventDateRange(edition.start_date, edition.end_date)}
             </p>
+            <PublicTopicsSection topics={topics} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">

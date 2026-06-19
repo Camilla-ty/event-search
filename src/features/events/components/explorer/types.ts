@@ -28,4 +28,5 @@ export type EventFilters = {
   type: string;
   startDate: string;
   endDate: string;
+  topic: string;
 };

@@ -1,25 +1,9 @@
-type SeriesKeywordChip = {
-  id: string;
-  name: string;
-};
+import { KeywordChipList } from "@/src/features/events/components/KeywordChipList";
 
 type SeriesKeywordsChipsProps = {
-  keywords: SeriesKeywordChip[];
+  keywords: ReadonlyArray<{ id: string; name: string }>;
 };
 
 export function SeriesKeywordsChips({ keywords }: SeriesKeywordsChipsProps) {
-  if (keywords.length === 0) return null;
-
-  return (
-    <ul className="flex flex-wrap gap-2">
-      {keywords.map((keyword) => (
-        <li
-          key={keyword.id}
-          className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm text-slate-800"
-        >
-          {keyword.name}
-        </li>
-      ))}
-    </ul>
-  );
+  return <KeywordChipList keywords={keywords} variant="static" />;
 }
