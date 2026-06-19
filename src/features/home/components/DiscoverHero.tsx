@@ -7,8 +7,8 @@ export function DiscoverHero() {
         {BRAND_NAME}
       </h1>
       <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-        Event industry intelligence — see what&apos;s coming up and what&apos;s new
-        across events and sponsors.
+        Event industry intelligence — browse upcoming events and the latest event
+        coverage added to {BRAND_NAME}.
       </p>
     </section>
   );

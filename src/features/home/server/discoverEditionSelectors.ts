@@ -30,12 +30,21 @@ export function isUpcomingEdition(
   const startDate = readIsoDate(edition.start_date);
   const endDate = readIsoDate(edition.end_date);
 
-  if (startDate !== "") {
-    return startDate >= today;
+  if (startDate === "" && endDate === "") {
+    return false;
   }
 
-  if (endDate !== "") {
-    return endDate >= today;
+  if (startDate !== "" && startDate >= today) {
+    return true;
+  }
+
+  if (
+    startDate !== "" &&
+    endDate !== "" &&
+    startDate <= today &&
+    endDate >= today
+  ) {
+    return true;
   }
 
   return false;
