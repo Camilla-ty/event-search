@@ -13,6 +13,10 @@ type ExplorerResultsToolbarProps<T extends string> = {
   onSortChange: (value: T) => void;
   onOpenFilters: () => void;
   showSort?: boolean;
+  calendarCounts?: {
+    primaryLine: string;
+    secondaryLine: string | null;
+  } | null;
 };
 
 export function ExplorerResultsToolbar<T extends string>({
@@ -23,13 +27,25 @@ export function ExplorerResultsToolbar<T extends string>({
   onSortChange,
   onOpenFilters,
   showSort = true,
+  calendarCounts = null,
 }: ExplorerResultsToolbarProps<T>) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-sm text-slate-600">
-        <span className="font-semibold text-slate-900">{total.toLocaleString()}</span>{" "}
-        {entityLabel} found
-      </p>
+      {calendarCounts ? (
+        <div className="space-y-1 text-sm text-slate-600">
+          <p>
+            <span className="font-semibold text-slate-900">{calendarCounts.primaryLine}</span>
+          </p>
+          {calendarCounts.secondaryLine ? (
+            <p>{calendarCounts.secondaryLine}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{total.toLocaleString()}</span>{" "}
+          {entityLabel} found
+        </p>
+      )}
 
       <div className="flex items-center gap-2">
         <button

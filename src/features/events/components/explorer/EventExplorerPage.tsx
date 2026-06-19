@@ -10,7 +10,14 @@ import {
   PageHeader,
 } from "@/src/components/common/explorer";
 import type { EventExplorerActiveTopic } from "@/src/features/events/server/getEventExplorerData";
-import { getCurrentMonthKey } from "@/src/features/events/lib/eventCalendarGrouping";
+import {
+  eventsIntersectMonth,
+  formatCalendarMonthLabel,
+  getCurrentMonthKey,
+} from "@/src/features/events/lib/eventCalendarGrouping";
+import { buildCalendarToolbarCounts } from "@/src/features/events/lib/eventExplorerCounts";
+import { filterEventRecords } from "@/src/features/events/lib/eventExplorerFilters";
+import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   explorerFilterStickyClass,
@@ -51,17 +58,6 @@ type EventExplorerPageProps = {
   activeTopic?: EventExplorerActiveTopic | null;
   topicUnknown?: boolean;
 };
-
-function normalize(value: string | null | undefined) {
-  return (value ?? "").toLowerCase();
-}
-
-function eventDateValue(input?: string | null) {
-  if (!input) return "";
-  const date = new Date(input);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
-}
 
 export function EventExplorerPage({
   events,
@@ -116,43 +112,33 @@ export function EventExplorerPage({
   }, [events]);
 
   const filteredAndSorted = useMemo(() => {
-    const filtered = events.filter((event) => {
-      const query = normalize(filters.query);
-      const eventName = normalize(event.name);
-      const cityName = normalize(event.cities?.name);
-      const countryName = normalize(event.cities?.countries?.name);
-      const seriesName = event.event_series?.name ?? "";
-      const regionName = event.cities?.countries?.name ?? "";
-
-      const matchesQuery =
-        !query ||
-        eventName.includes(query) ||
-        cityName.includes(query) ||
-        countryName.includes(query);
-      const matchesIndustry = filters.industry === "all" || seriesName === filters.industry;
-      const matchesRegion = filters.region === "all" || regionName === filters.region;
-      const matchesType = filters.type === "all" || seriesName === filters.type;
-
-      const startValue = eventDateValue(event.start_date);
-      const endValue = eventDateValue(event.end_date ?? event.start_date);
-      const afterStart = !filters.startDate || !endValue || endValue >= filters.startDate;
-      const beforeEnd = !filters.endDate || !startValue || startValue <= filters.endDate;
-
-      return matchesQuery && matchesIndustry && matchesRegion && matchesType && afterStart && beforeEnd;
-    });
+    const filtered = filterEventRecords(events, filters);
 
     return filtered.sort((a, b) => {
       if (sort === "name") {
         return (a.name ?? "").localeCompare(b.name ?? "");
       }
-      const aValue = eventDateValue(a.start_date);
-      const bValue = eventDateValue(b.start_date);
-      if (!aValue && !bValue) return 0;
-      if (!aValue) return 1;
-      if (!bValue) return -1;
+      const aValue = readEventIsoDate(a.start_date);
+      const bValue = readEventIsoDate(b.start_date);
+      if (aValue === "" && bValue === "") return 0;
+      if (aValue === "") return 1;
+      if (bValue === "") return -1;
       return aValue.localeCompare(bValue);
     });
   }, [events, filters, sort]);
+
+  const calendarToolbarCounts = useMemo(() => {
+    if (explorerView !== "calendar") return null;
+
+    const totalMatchingCount = filteredAndSorted.length;
+    const monthEventCount = eventsIntersectMonth(
+      filteredAndSorted,
+      visibleCalendarMonth,
+    ).length;
+    const monthLabel = formatCalendarMonthLabel(visibleCalendarMonth);
+
+    return buildCalendarToolbarCounts(monthEventCount, monthLabel, totalMatchingCount);
+  }, [explorerView, filteredAndSorted, visibleCalendarMonth]);
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams.toString());
@@ -298,6 +284,7 @@ export function EventExplorerPage({
                 onSortChange={setSort}
                 onOpenFilters={() => setMobileFiltersOpen(true)}
                 showSort={explorerView === "list"}
+                calendarCounts={calendarToolbarCounts}
               />
             </div>
           </div>

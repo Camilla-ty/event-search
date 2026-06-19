@@ -67,6 +67,19 @@ describe("filterEventRecords", () => {
       filterEventRecords(events, { ...defaultFilters, query: "london" }).map((event) => event.id),
       ["2"],
     );
+    assert.deepEqual(
+      filterEventRecords(
+        [
+          makeEvent({
+            id: "3",
+            name: "Singapore Edition 2026",
+            event_series: { name: "UniqueSeriesName", logo_url: null },
+          }),
+        ],
+        { ...defaultFilters, query: "uniqueseriesname" },
+      ).map((event) => event.id),
+      ["3"],
+    );
   });
 
   it("applies region and date overlap filters", () => {
