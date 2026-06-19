@@ -1,0 +1,3 @@
+{"type":"meta","generated_at":"2026-06-19T08:41:21.271Z","table":"event_editions","column":"logo_url","non_null_count":2}
+{"type":"edition_logo_url","id":"7d1c9537-06b9-41b9-ab4d-3a0b6ed36c16","name":"Bitcoin 2025 Las Vegas","logo_url":"https://poawdqmrrzqfaaxubqrz.supabase.co/storage/v1/object/public/company-logos/event-editions/7d1c9537-06b9-41b9-ab4d-3a0b6ed36c16/logo.svg"}
+{"type":"edition_logo_url","id":"e64f2830-df7b-433f-af6b-4952e389902d","name":"NFT.NYC 2025","logo_url":"https://poawdqmrrzqfaaxubqrz.supabase.co/storage/v1/object/public/company-logos/event-editions/e64f2830-df7b-433f-af6b-4952e389902d/logo.jpg"}

@@ -39,7 +39,6 @@ export function SeriesEditionsList({ editions }: SeriesEditionsListProps) {
               <div className="flex min-w-0 items-start gap-3">
                 <SeriesLogo
                   series={edition.event_series}
-                  logoUrl={edition.display_logo_url}
                   fallbackName={edition.name}
                   className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
                   monogramClassName="text-base font-semibold text-slate-400"

@@ -17,7 +17,7 @@ import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/serie
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
-import { resolveEditionDisplayLogo } from "@/src/lib/events/resolveEditionDisplayLogo";
+import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
 import { createClient } from "@/src/lib/supabase/server";
@@ -99,10 +99,16 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const isAuthenticated = user !== null;
   const sponsorCount = sponsors.length;
   const eventSlug = typeof edition.slug === "string" ? edition.slug : "";
-  const displayLogoUrl = resolveEditionDisplayLogo({
-    logo_url: typeof edition.logo_url === "string" ? edition.logo_url : null,
-    event_series: edition.event_series,
-  });
+  const seriesLogoUrl = resolveSeriesDisplayLogo(
+    edition.event_series && typeof edition.event_series === "object"
+      ? {
+          logo_url:
+            typeof edition.event_series.logo_url === "string"
+              ? edition.event_series.logo_url
+              : null,
+        }
+      : null,
+  );
 
   const seriesBrandLabel = series?.name ?? null;
 
@@ -116,7 +122,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_1fr] lg:grid-cols-[minmax(0,380px)_1fr]">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted">
-          {displayLogoUrl ? (
+          {seriesLogoUrl ? (
             <div className="aspect-[16/9] w-full p-8">
               <SeriesLogo
                 series={{
@@ -129,7 +135,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                       ? edition.event_series.logo_url
                       : null,
                 }}
-                logoUrl={displayLogoUrl}
                 fallbackName={typeof edition.name === "string" ? edition.name : null}
                 className="flex h-full w-full items-center justify-center"
                 imageClassName="max-h-full max-w-full object-contain"

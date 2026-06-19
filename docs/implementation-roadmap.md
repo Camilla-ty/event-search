@@ -88,7 +88,7 @@ Admins can create and manage Event Series and Event Editions, maintain companies
 
 **API:** POST/PATCH series (admin auth, service role or authenticated admin client per project pattern).
 
-**Fields:** name, slug (auto), description, website_url (create); logo_url editable on edit only (auto-fetched after create save).
+**Fields:** name, slug (auto), description, website_url (create); logo_url editable on edit only (manual paste — event logos are manual-only).
 
 #### 1.4 Event Editions
 

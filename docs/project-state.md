@@ -24,7 +24,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 | **Companies** | `companies` | Canonical company entity. No separate sponsors table — "sponsor" = company linked to an edition. |
 | **Event Sponsors** | `event_sponsors` | Edition-scoped join: `tier_rank`, `tier_label`, `display_order` (dense 1..n within edition + tier). `UNIQUE (event_editions_id, company_id)`. |
 | **Keywords** | `keyword`, `event_series_keyword` | Attach to series; editions inherit (read-only chips on edition profile). |
-| **Logos** | columns on `companies`; `event_series.logo_url` | Companies: Logo.dev ingest + metadata. Event series: create = website-only + async auto-fetch; edit = review/override `logo_url`. |
+| **Logos** | columns on `companies`; `event_series.logo_url` | Companies: Logo.dev ingest + metadata. Event series: manual-only (`logo_url` pasted on edit). Event logos are manual-only. |
 | **Imports** | `sponsor_import_*` (4 tables) | Excel pipeline → validate/match → draft links → publish RPC. One active batch per edition. |
 
 ### Access rules (RLS)

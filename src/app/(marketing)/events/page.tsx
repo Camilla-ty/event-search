@@ -3,7 +3,6 @@ import Link from "next/link";
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
-import { resolveEditionDisplayLogo } from "@/src/lib/events/resolveEditionDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 
 export const dynamic = "force-dynamic";
@@ -51,10 +50,6 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
           logo_url: edition.event_series.logo_url ?? null,
         }
       : null,
-    display_logo_url: resolveEditionDisplayLogo({
-      logo_url: typeof edition.logo_url === "string" ? edition.logo_url : null,
-      event_series: edition.event_series,
-    }),
     cities: edition.cities
       ? {
           name: edition.cities.name ?? null,

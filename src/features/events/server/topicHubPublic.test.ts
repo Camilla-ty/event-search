@@ -68,7 +68,6 @@ describe("sortPublicEditionsForTopicHub", () => {
         start_date: "2024-03-01",
         end_date: null,
         locationLabel: "",
-        display_logo_url: null,
         event_series: null,
       },
       {
@@ -79,7 +78,6 @@ describe("sortPublicEditionsForTopicHub", () => {
         start_date: "2026-10-01",
         end_date: null,
         locationLabel: "",
-        display_logo_url: null,
         event_series: null,
       },
       {
@@ -90,7 +88,6 @@ describe("sortPublicEditionsForTopicHub", () => {
         start_date: "2026-06-01",
         end_date: null,
         locationLabel: "",
-        display_logo_url: null,
         event_series: null,
       },
     ];

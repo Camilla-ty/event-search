@@ -235,8 +235,8 @@ export function EventSeriesForm({
               placeholder="https://…"
             />
             <p className="text-xs text-slate-500">
-              Paste an image URL to download and store in Supabase. Clear this field and save to
-              remove the logo.
+              Event logos are manual-only. Paste an image URL to download and store in Supabase.
+              Clear this field and save to remove the logo.
             </p>
           </label>
         ) : null}

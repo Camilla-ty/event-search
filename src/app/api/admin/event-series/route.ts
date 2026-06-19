@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
+import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
   createEventSeries,
   listEventSeriesAdmin,
@@ -74,19 +75,29 @@ export async function POST(request: Request) {
     });
 
     const warnings: string[] = [];
+    let persistedLogoUrl: string | null | undefined;
 
     if (logoInput) {
       const resolved = await resolveEventManualLogoUrl({
         incomingLogoUrl: logoInput,
         existingLogoUrl: null,
-        entityId: series.id,
-        storageNamespace: "event-series",
+        seriesId: series.id,
       });
       if (resolved.ok && resolved.applyPatch) {
         series = await updateEventSeries(series.id, { logo_url: resolved.logo_url });
+        if (resolved.persistedLogoUrl !== undefined) {
+          persistedLogoUrl = resolved.persistedLogoUrl;
+        }
       } else if (!resolved.ok) {
         warnings.push(resolved.warning);
       }
+    }
+
+    if (persistedLogoUrl !== undefined) {
+      scheduleEventSeriesLogoCleanupAfterPersist({
+        seriesId: series.id,
+        publicUrl: persistedLogoUrl,
+      });
     }
 
     if (Array.isArray(body.keyword_ids)) {

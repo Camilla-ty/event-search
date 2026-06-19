@@ -2,7 +2,7 @@
 
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 
-/** Minimal series shape: `event_series.logo_url` is the only logo source for events. */
+/** Minimal series shape. Event logos are manual-only; `event_series.logo_url` is the logo source. */
 export type SeriesLogoSource = {
   name?: string | null;
   logo_url?: string | null;
@@ -10,8 +10,6 @@ export type SeriesLogoSource = {
 
 type SeriesLogoProps = {
   series: SeriesLogoSource | null | undefined;
-  /** Resolved logo URL (edition override or series logo). Wins over `series.logo_url`. */
-  logoUrl?: string | null;
   /** Monogram source when the edition has no linked series (e.g. the edition name). */
   fallbackName?: string | null;
   className?: string;
@@ -21,18 +19,17 @@ type SeriesLogoProps = {
 
 export function SeriesLogo({
   series,
-  logoUrl,
   fallbackName,
   className,
   imageClassName,
   monogramClassName,
 }: SeriesLogoProps) {
   const name = series?.name?.trim() || fallbackName?.trim() || null;
-  const resolvedLogoUrl = logoUrl ?? series?.logo_url ?? null;
+  const resolvedLogoUrl = series?.logo_url ?? null;
 
   return (
     <CompanyLogo
-      // domain is intentionally null: series logos must never fall back to Logo.dev.
+      // domain is intentionally null: event logos are manual-only (no Logo.dev fallback).
       company={{
         name,
         logo_url: resolvedLogoUrl,

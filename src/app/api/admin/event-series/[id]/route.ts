@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
+import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
   getEventSeriesAdminById,
   updateEventSeries,
@@ -59,6 +60,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const errors: string[] = [];
   const patch: PatchSeriesBody = {};
   const warnings: string[] = [];
+  let persistedLogoUrl: string | null | undefined;
 
   if (body.name !== undefined) {
     const name = body.name.trim();
@@ -90,14 +92,16 @@ export async function PATCH(request: Request, context: RouteContext) {
       const resolved = await resolveEventManualLogoUrl({
         incomingLogoUrl: logoInput,
         existingLogoUrl: existing.logo_url,
-        entityId: id,
-        storageNamespace: "event-series",
+        seriesId: id,
       });
 
       if (!resolved.ok) {
         warnings.push(resolved.warning);
       } else if (resolved.applyPatch) {
         patch.logo_url = resolved.logo_url;
+        if (resolved.persistedLogoUrl !== undefined) {
+          persistedLogoUrl = resolved.persistedLogoUrl;
+        }
       }
     }
   }
@@ -118,6 +122,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
     } else {
       series = await updateEventSeries(id, patch);
+      if (persistedLogoUrl !== undefined) {
+        scheduleEventSeriesLogoCleanupAfterPersist({
+          seriesId: id,
+          publicUrl: persistedLogoUrl,
+        });
+      }
     }
 
     if (Array.isArray(body.keyword_ids)) {

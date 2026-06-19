@@ -15,6 +15,5 @@ export type PublicEditionSummary = {
   start_date: string | null;
   end_date: string | null;
   locationLabel: string;
-  display_logo_url: string | null;
   event_series: Pick<PublicEventSeriesSummary, "name" | "logo_url"> | null;
 };

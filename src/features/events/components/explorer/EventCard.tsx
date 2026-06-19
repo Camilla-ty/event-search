@@ -29,7 +29,6 @@ export function EventCard({ event }: { event: EventRecord }) {
       <div className="flex items-start gap-3">
         <SeriesLogo
           series={event.event_series}
-          logoUrl={event.display_logo_url}
           fallbackName={event.name}
           className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
           monogramClassName="text-base font-semibold text-slate-400"

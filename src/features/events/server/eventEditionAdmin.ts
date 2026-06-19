@@ -42,7 +42,6 @@ export type UpdateEventEditionAdminInput = {
   start_date?: string | null;
   end_date?: string | null;
   website_url?: string | null;
-  logo_url?: string | null;
   city_id?: string | null;
 };
 

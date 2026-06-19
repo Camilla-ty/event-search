@@ -2,7 +2,6 @@ import type {
   PublicEditionSummary,
   PublicEventSeriesSummary,
 } from "@/src/features/events/types/publicEdition";
-import { resolveEditionDisplayLogo } from "@/src/lib/events/resolveEditionDisplayLogo";
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
 
 function readCityEmbed(raw: unknown): {
@@ -65,10 +64,6 @@ export function mapPublicEditionRow(raw: unknown): PublicEditionSummary | null {
       city: cities?.name ?? null,
       state: cities?.states?.name ?? null,
       country: cities?.countries?.name ?? null,
-    }),
-    display_logo_url: resolveEditionDisplayLogo({
-      logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
-      event_series: series,
     }),
     event_series: series
       ? { name: series.name, logo_url: series.logo_url }

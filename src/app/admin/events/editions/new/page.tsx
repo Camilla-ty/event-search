@@ -41,7 +41,6 @@ export default async function AdminCreateEventEditionPage({ searchParams }: Page
           name: "",
           slug: "",
           website_url: "",
-          logo_url: "",
           start_date: "",
           end_date: "",
           city_id: "",

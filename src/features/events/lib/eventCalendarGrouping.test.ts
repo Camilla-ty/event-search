@@ -21,7 +21,6 @@ function makeEvent(
     start_date,
     end_date: end_date ?? null,
     event_series: { name: "Series", logo_url: null },
-    display_logo_url: null,
     cities: null,
   };
 }

@@ -68,7 +68,6 @@ export async function updateEventEdition(
     start_date?: string | null;
     end_date?: string | null;
     website_url?: string | null;
-    logo_url?: string | null;
     city_id?: string | null;
   },
 ): Promise<EventEditionRow> {
@@ -81,9 +80,6 @@ export async function updateEventEdition(
   if (input.end_date !== undefined) patch.end_date = input.end_date;
   if (input.website_url !== undefined) {
     patch.website_url = input.website_url?.trim() || null;
-  }
-  if (input.logo_url !== undefined) {
-    patch.logo_url = input.logo_url?.trim() || null;
   }
   if (input.city_id !== undefined) patch.city_id = input.city_id;
 

@@ -89,7 +89,7 @@ flowchart TD
 |------|--------|--------|
 | 1 | Dashboard or `/admin/events` | Click **Events** → **Series** |
 | 2 | Series list | **Create series** |
-| 3 | Create series form | Enter name; slug auto-updates; optional description and website (logo auto-fetched after save) |
+| 3 | Create series form | Enter name; slug auto-updates; optional description and website |
 | 4 | Create series form | **Create series** |
 | 5 | Series detail | Review; optionally **Create edition** (series pre-filled) |
 
@@ -158,8 +158,8 @@ flowchart TD
 | Name | `event_series.name` | **Yes** | Yes | Unique |
 | Slug | `event_series.slug` | **Yes** | Yes | Auto from name; preview |
 | Description | `event_series.description` | No | Yes | Textarea |
-| Website URL | `event_series.website_url` | No | Yes | Logo auto-fetched after save on create |
-| Logo URL | `event_series.logo_url` | No | Edit only | Review auto-fetched logo; manual override or clear to re-fetch |
+| Website URL | `event_series.website_url` | No | Yes | Optional marketing link |
+| Logo URL | `event_series.logo_url` | No | Edit only | Manual paste only — event logos are manual-only |
 
 ### 3.2 Edit Event Series (P1-A05)
 

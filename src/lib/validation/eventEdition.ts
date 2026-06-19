@@ -125,6 +125,9 @@ export function validateEditionUpdateBody(body: {
   if (body.year !== undefined) {
     errors.push("year cannot be changed");
   }
+  if (body.logo_url !== undefined) {
+    errors.push("logo_url cannot be updated on event editions; edit the event series logo instead");
+  }
 
   const patch: Record<string, unknown> = {};
 
@@ -163,15 +166,6 @@ export function validateEditionUpdateBody(body: {
       errors.push("website_url must be a valid URL");
     } else {
       patch.website_url = websiteUrl;
-    }
-  }
-  if (body.logo_url !== undefined) {
-    const logoUrl =
-      body.logo_url === null || body.logo_url === "" ? null : body.logo_url.trim();
-    if (logoUrl && !isValidHttpUrl(logoUrl)) {
-      errors.push("logo_url must be a valid URL");
-    } else {
-      patch.logo_url = logoUrl;
     }
   }
   if (body.city_id !== undefined) {

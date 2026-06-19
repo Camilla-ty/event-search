@@ -22,7 +22,6 @@ function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): E
     start_date: overrides.start_date ?? "2026-06-15",
     end_date: overrides.end_date ?? "2026-06-15",
     event_series: overrides.event_series ?? { name: "Sample Series", logo_url: null },
-    display_logo_url: overrides.display_logo_url ?? null,
     cities: overrides.cities ?? {
       name: "Singapore",
       states: null,

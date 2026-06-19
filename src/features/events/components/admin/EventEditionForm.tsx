@@ -21,7 +21,6 @@ type EditionFormValues = {
   name: string;
   slug: string;
   website_url: string;
-  logo_url: string;
   start_date: string;
   end_date: string;
   city_id: string;
@@ -42,7 +41,7 @@ type ApiResponse = {
   ok: boolean;
   error?: string;
   warnings?: string[];
-  edition?: { id: string; logo_url?: string | null };
+  edition?: { id: string };
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -163,7 +162,7 @@ export function EventEditionForm({
     if (mode === "create") {
       return { ...payload, series_id: values.series_id, year: yearNumber };
     }
-    return { ...payload, logo_url: values.logo_url.trim() || null };
+    return payload;
   }
 
   async function submitEdition(redirect: "import" | "detail" | "stay") {
@@ -200,12 +199,6 @@ export function EventEditionForm({
       return;
     }
 
-    if (data.edition?.logo_url !== undefined) {
-      setValues((prev) => ({
-        ...prev,
-        logo_url: data.edition?.logo_url ?? "",
-      }));
-    }
     const warning = data.warnings?.[0];
     setResult({
       ok: true,
@@ -366,24 +359,6 @@ export function EventEditionForm({
               placeholder="https://…"
             />
           </label>
-
-          {mode === "edit" ? (
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Edition logo URL</span>
-              <input
-                type="text"
-                value={values.logo_url}
-                onChange={(e) => updateField("logo_url", e.target.value)}
-                disabled={isSubmitting}
-                className={formInputClass}
-                placeholder="https://…"
-              />
-              <p className="text-xs text-slate-500">
-                Paste an image URL to download and store in Supabase. Overrides the series logo for
-                this edition. Clear this field and save to inherit the series logo.
-              </p>
-            </label>
-          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-2">

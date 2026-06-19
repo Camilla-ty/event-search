@@ -180,7 +180,6 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                   name: edition.name,
                   slug: edition.slug,
                   website_url: edition.website_url ?? "",
-                  logo_url: edition.logo_url ?? "",
                   start_date: edition.start_date ?? "",
                   end_date: edition.end_date ?? "",
                   city_id: edition.city_id ?? "",

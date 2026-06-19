@@ -2,7 +2,11 @@ import {
   fetchLogoDevImage,
   getLogoDevServerPublishableKey,
 } from "@/src/lib/companies/logoDevServer";
-import { createAdminClient } from "@/src/lib/supabase/admin";
+
+import {
+  EVENT_LOGO_AUTO_ENRICH_REJECTED_ERROR,
+  isEventLogoStorageNamespace,
+} from "@/src/lib/events/eventLogoPolicy";
 
 import {
   COMPANY_LOGO_BUCKET,
@@ -40,9 +44,12 @@ type LogoStrategy = {
 
 export type CompanyLogoIngestOptions = {
   dryRun?: boolean;
-  /** Required for company logo uploads (default companies namespace). */
+  /** Required for company logo uploads. */
   companyId?: string;
-  /** Non-company namespaces (e.g. event-series). Out of scope for companyId migration. */
+  /**
+   * @deprecated Event logos are manual-only. Non-company namespaces are rejected.
+   * Kept only so callers fail fast with a policy error instead of silently ingesting.
+   */
   storageNamespace?: string;
 };
 
@@ -171,41 +178,6 @@ const LOW_QUALITY_STRATEGIES: readonly LogoStrategy[] = [
   { name: "google-favicon", run: tryGoogleFaviconLogo },
 ];
 
-function entityLogoStoragePath(
-  identityKey: string,
-  contentType: string,
-  storageNamespace: string,
-): string {
-  return `${storageNamespace}/${identityKey}/logo.${extensionForContentType(contentType)}`;
-}
-
-async function uploadEntityLogo(
-  identityKey: string,
-  image: FetchedImage,
-  storageNamespace: string,
-): Promise<string | null> {
-  const supabase = createAdminClient();
-  const path = entityLogoStoragePath(identityKey, image.contentType, storageNamespace);
-  const contentType =
-    image.contentType.split(";")[0]?.trim() || image.contentType;
-
-  const { error: uploadError } = await supabase.storage
-    .from(COMPANY_LOGO_BUCKET)
-    .upload(path, image.bytes, {
-      upsert: true,
-      contentType,
-      cacheControl: "3600",
-    });
-
-  if (uploadError) return null;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(COMPANY_LOGO_BUCKET).getPublicUrl(path);
-
-  return publicUrl || null;
-}
-
 function strategiesForDomain(): readonly LogoStrategy[] {
   const hqOnly = isHighQualityOnlyMode();
   return hqOnly
@@ -219,6 +191,7 @@ function isCompanyLogoNamespace(storageNamespace: string): boolean {
 
 /**
  * Fetch a company logo once, upload to Supabase Storage, return the public URL.
+ * Company auto-enrich only — event logos are manual-only.
  * Does not write to the database — callers apply `companyLogoMetadataPatch`.
  */
 export async function ingestCompanyLogoByDomain(
@@ -226,8 +199,20 @@ export async function ingestCompanyLogoByDomain(
   options?: CompanyLogoIngestOptions,
 ): Promise<CompanyLogoIngestResult> {
   const storageNamespace = options?.storageNamespace?.trim() || COMPANY_LOGO_STORAGE_NAMESPACE;
-  const isCompanyNamespace = isCompanyLogoNamespace(storageNamespace);
   const companyId = options?.companyId?.trim() ?? "";
+
+  if (
+    !isCompanyLogoNamespace(storageNamespace) ||
+    isEventLogoStorageNamespace(storageNamespace)
+  ) {
+    return {
+      status: "error",
+      logoUrl: null,
+      strategy: null,
+      error: EVENT_LOGO_AUTO_ENRICH_REJECTED_ERROR,
+      preview: null,
+    };
+  }
 
   const identityKey = domain.trim().toLowerCase();
   if (!identityKey) {
@@ -240,7 +225,7 @@ export async function ingestCompanyLogoByDomain(
     };
   }
 
-  if (isCompanyNamespace && !companyId) {
+  if (!companyId) {
     return {
       status: "error",
       logoUrl: null,
@@ -281,9 +266,7 @@ export async function ingestCompanyLogoByDomain(
 
     if (options?.dryRun) {
       const ext = extensionForContentType(image.contentType);
-      const previewPath = isCompanyNamespace
-        ? `${COMPANY_LOGO_STORAGE_NAMESPACE}/${companyId}/logo.${ext}`
-        : `${storageNamespace}/${identityKey}/logo.${ext}`;
+      const previewPath = `${COMPANY_LOGO_STORAGE_NAMESPACE}/${companyId}/logo.${ext}`;
       return {
         status: "ok",
         logoUrl: null,
@@ -293,32 +276,22 @@ export async function ingestCompanyLogoByDomain(
       };
     }
 
-    let publicUrl: string | null = null;
-    if (isCompanyNamespace) {
-      const upload = await uploadCompanyLogoBytes({
-        companyId,
-        bytes: image.bytes,
-        contentType: image.contentType,
-      });
-      if (!upload.ok) {
-        lastError = upload.error;
-        continue;
-      }
-      publicUrl = upload.publicUrl;
-    } else {
-      publicUrl = await uploadEntityLogo(identityKey, image, storageNamespace);
-      if (!publicUrl) {
-        lastError = "upload_failed";
-        continue;
-      }
+    const upload = await uploadCompanyLogoBytes({
+      companyId,
+      bytes: image.bytes,
+      contentType: image.contentType,
+    });
+    if (!upload.ok) {
+      lastError = upload.error;
+      continue;
     }
 
     return {
       status: "ok",
-      logoUrl: publicUrl,
+      logoUrl: upload.publicUrl,
       strategy: strategy.name,
       error: null,
-      preview: `${publicUrl} (via ${strategy.name})`,
+      preview: `${upload.publicUrl} (via ${strategy.name})`,
     };
   }
 
@@ -372,40 +345,4 @@ export async function ingestManualCompanyLogoFromUrl(
   }
 
   return { ok: true, storageUrl: upload.publicUrl, storagePath: upload.storagePath };
-}
-
-/**
- * Download a pasted logo URL for non-company entities (event series/editions).
- * Does not write to the database.
- */
-export async function ingestManualEntityLogoFromUrl(
-  externalUrl: string,
-  entityId: string,
-  storageNamespace: string,
-): Promise<ManualCompanyLogoIngestResult> {
-  const trimmedUrl = externalUrl.trim();
-  const trimmedEntityId = entityId.trim();
-  const trimmedNamespace = storageNamespace.trim();
-  if (!trimmedUrl) {
-    return { ok: false, error: "empty_url" };
-  }
-  if (!trimmedEntityId || !trimmedNamespace) {
-    return { ok: false, error: "missing_storage_key" };
-  }
-
-  const image = await downloadImage(trimmedUrl);
-  if (!image) {
-    return { ok: false, error: "download_failed" };
-  }
-
-  const publicUrl = await uploadEntityLogo(trimmedEntityId, image, trimmedNamespace);
-  if (!publicUrl) {
-    return { ok: false, error: "upload_failed" };
-  }
-
-  return {
-    ok: true,
-    storageUrl: publicUrl,
-    storagePath: entityLogoStoragePath(trimmedEntityId, image.contentType, trimmedNamespace),
-  };
 }

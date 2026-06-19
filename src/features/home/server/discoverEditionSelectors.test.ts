@@ -22,7 +22,6 @@ function edition(
     start_date: null,
     end_date: null,
     locationLabel: "",
-    display_logo_url: null,
     event_series: null,
     created_at: "2026-06-01T12:00:00Z",
     ...overrides,
