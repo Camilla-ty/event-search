@@ -8,12 +8,11 @@
  *   npm run backfill:event-series-logos
  *
  * Resolution order (best to worst):
- *   1. Brandfetch CDN (only if BRANDFETCH_CLIENT_ID is set)
- *   2. Clearbit logo provider
- *   3. og:image / twitter:image from the homepage
- *   4. /favicon.ico
- *   5. Google s2 favicons (size 128)
- * Set BACKFILL_LOGO_HQ_ONLY=1 to disable steps 4 and 5 for major-brand reruns.
+ *   1. Clearbit logo provider
+ *   2. og:image / twitter:image from the homepage
+ *   3. /favicon.ico
+ *   4. Google s2 favicons (size 128)
+ * Set BACKFILL_LOGO_HQ_ONLY=1 to disable steps 3 and 4 for major-brand reruns.
  *
  * Optional env knobs:
  *   BACKFILL_DRY_RUN=1
@@ -22,7 +21,6 @@
  *   BACKFILL_FORCE_OVERWRITE=1
  *   BACKFILL_LOGO_BUCKET=company-logos
  *   BACKFILL_LOGO_HQ_ONLY=1
- *   BRANDFETCH_CLIENT_ID=...
  */
 
 import { createBackfillSupabaseClient } from "./backfill/core/supabase";

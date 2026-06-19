@@ -144,16 +144,6 @@ function extractOgImageUrl(html: string, baseDomain: string): string | null {
   return `https://${baseDomain}/${trimmed}`;
 }
 
-async function tryBrandfetchLogo(
-  domain: string,
-): Promise<FetchedImage | null> {
-  const clientId = process.env.BRANDFETCH_CLIENT_ID?.trim();
-  if (!clientId) return null;
-
-  const url = `https://cdn.brandfetch.io/${encodeURIComponent(domain)}?c=${encodeURIComponent(clientId)}`;
-  return downloadImage(url);
-}
-
 async function tryProviderLogo(domain: string): Promise<FetchedImage | null> {
   return downloadImage(getLogoProviderUrl(domain));
 }
@@ -191,7 +181,6 @@ type LogoStrategy = {
 };
 
 const HIGH_QUALITY_STRATEGIES: readonly LogoStrategy[] = [
-  { name: "brandfetch", highQuality: true, run: tryBrandfetchLogo },
   { name: "clearbit", highQuality: true, run: tryProviderLogo },
   { name: "og-image", highQuality: true, run: tryOgImageLogo },
 ];

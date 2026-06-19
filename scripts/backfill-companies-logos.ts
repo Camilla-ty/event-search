@@ -9,10 +9,9 @@
  *
  * Resolution order (best to worst):
  *   1. Logo.dev (LOGO_DEV_PUBLISHABLE_KEY)
- *   2. Brandfetch CDN (BRANDFETCH_CLIENT_ID)
- *   3. og:image / twitter:image from the homepage
- *   4. /favicon.ico
- *   5. Google s2 favicons (size 128)
+ *   2. og:image / twitter:image from the homepage
+ *   3. /favicon.ico
+ *   4. Google s2 favicons (size 128)
  *
  * Optional env knobs:
  *   BACKFILL_DRY_RUN=1
@@ -22,7 +21,6 @@
  *   BACKFILL_LOGO_BUCKET=company-logos
  *   BACKFILL_LOGO_HQ_ONLY=1
  *   LOGO_DEV_PUBLISHABLE_KEY=pk_...
- *   BRANDFETCH_CLIENT_ID=...
  */
 
 import { companyLogoMetadataPatch } from "@/src/features/companies/server/companyLogoMetadata";

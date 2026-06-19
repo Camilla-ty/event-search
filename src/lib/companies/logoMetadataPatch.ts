@@ -10,16 +10,6 @@ export function logoMetadataPatchForManualLogoStorage(storageUrl: string): Recor
   };
 }
 
-export function logoMetadataPatchForBrandfetchLogoStorage(storageUrl: string): Record<string, unknown> {
-  return {
-    logo_url: storageUrl,
-    logo_source: "brandfetch",
-    logo_status: "ok",
-    logo_fetched_at: new Date().toISOString(),
-    logo_fetch_error: null,
-  };
-}
-
 /** Reset logo metadata when an admin clears the logo URL field. */
 export function logoMetadataPatchForLogoClear(params: {
   domain: string | null | undefined;

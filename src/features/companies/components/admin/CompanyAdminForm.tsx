@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
 import {
-  CompanyBrandfetchLogoUpgrade,
+  CompanyLogoPreview,
   type CompanyLogoMetadata,
-} from "@/src/features/companies/components/admin/CompanyBrandfetchLogoUpgrade";
+} from "@/src/features/companies/components/admin/CompanyLogoPreview";
 import {
   CompanyAliasesInput,
   type CompanyAliasesInputHandle,
@@ -318,18 +318,7 @@ export function CompanyAdminForm({
           </label>
         ) : null}
 
-        {mode === "edit" && companyId ? (
-          <CompanyBrandfetchLogoUpgrade
-            companyId={companyId}
-            domain={readOnlyDomain ?? null}
-            metadata={logoMetadata}
-            disabled={isSubmitting}
-            onMetadataChange={(next) => {
-              setLogoMetadata(next);
-              setValues((prev) => ({ ...prev, logo_url: next.logo_url }));
-            }}
-          />
-        ) : null}
+        {mode === "edit" ? <CompanyLogoPreview metadata={logoMetadata} /> : null}
 
         {mode === "edit" ? (
           <>

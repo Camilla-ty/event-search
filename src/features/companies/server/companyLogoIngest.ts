@@ -139,13 +139,6 @@ async function tryLogoDevLogo(domain: string): Promise<FetchedImage | null> {
   };
 }
 
-async function tryBrandfetchLogo(domain: string): Promise<FetchedImage | null> {
-  const clientId = process.env.BRANDFETCH_CLIENT_ID?.trim();
-  if (!clientId) return null;
-  const url = `https://cdn.brandfetch.io/${encodeURIComponent(domain)}?c=${encodeURIComponent(clientId)}`;
-  return downloadImage(url);
-}
-
 async function tryFaviconLogo(domain: string): Promise<FetchedImage | null> {
   return downloadImage(`https://${domain}/favicon.ico`);
 }
@@ -170,7 +163,6 @@ async function tryOgImageLogo(domain: string): Promise<FetchedImage | null> {
 
 const HIGH_QUALITY_STRATEGIES: readonly LogoStrategy[] = [
   { name: "logo_dev", run: tryLogoDevLogo },
-  { name: "brandfetch", run: tryBrandfetchLogo },
   { name: "og-image", run: tryOgImageLogo },
 ];
 

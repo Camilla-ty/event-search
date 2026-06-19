@@ -4,12 +4,6 @@ import { useRef, useState } from "react";
 
 import { AdminDrawerShell } from "@/src/features/admin/components/AdminDrawerShell";
 import { Button, InlineErrorBanner } from "@/src/components/common";
-import {
-  brandfetchUpgradeFailureMessage,
-  brandfetchUpgradeSkipMessage,
-} from "@/src/lib/companies/brandfetchUpgradeMessages";
-import type { BrandfetchUpgradeApiResponse } from "@/src/lib/companies/brandfetchUpgradeTypes";
-import { canUpgradeCompanyBrandfetchLogo } from "@/src/lib/companies/companyHasBrandfetchLogo";
 import { formInputClass } from "@/src/lib/design/classes";
 
 import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow } from "./liveSponsorTypes";
@@ -83,7 +77,6 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
 
   const [saving, setSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [logoUrlInput, setLogoUrlInput] = useState("");
@@ -91,8 +84,6 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
   const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [storedLogoUrl, setStoredLogoUrl] = useState(company?.logo_url ?? null);
-  const [logoSource, setLogoSource] = useState(company?.logo_source ?? null);
-  const [logoStatus, setLogoStatus] = useState(company?.logo_status ?? null);
   const [previewCacheKey, setPreviewCacheKey] = useState<string | null>(null);
 
   if (!company?.id) {
@@ -100,20 +91,12 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
   }
 
   const previewUrl = previewSrc(storedLogoUrl, previewCacheKey);
-  const canUpgradeBrandfetch = canUpgradeCompanyBrandfetchLogo({
-    domain,
-    logo_url: storedLogoUrl,
-    logo_source: logoSource,
-    logo_status: logoStatus,
-  });
-  const saveDisabled = logoUrlInput.trim() === "" || isUpgrading || isUploading;
-  const actionsDisabled = saving || isUploading || isUpgrading;
+  const saveDisabled = logoUrlInput.trim() === "" || isUploading;
+  const actionsDisabled = saving || isUploading;
   const uploadDisabled = selectedFile === null || actionsDisabled;
 
   function applyLogoUpdate(update: LiveSponsorCompanyLogoUpdate, cacheKey: string) {
     setStoredLogoUrl(update.logo_url);
-    setLogoSource(update.logo_source);
-    setLogoStatus(update.logo_status);
     setPreviewCacheKey(cacheKey);
     onUpdated(companyId, update);
   }
@@ -213,57 +196,6 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
     }
   }
 
-  async function handleBrandfetchUpgrade() {
-    setError(null);
-    setSuccess(null);
-    setIsUpgrading(true);
-
-    try {
-      const response = await fetch("/api/admin/companies/brandfetch-upgrade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_ids: [companyId] }),
-      });
-      const data = (await response.json()) as BrandfetchUpgradeApiResponse;
-      if (!data.ok) {
-        setError(data.error ?? "Brandfetch upgrade request failed.");
-        return;
-      }
-
-      const item = data.results[0];
-      if (!item) {
-        setError("Brandfetch upgrade returned no result.");
-        return;
-      }
-
-      if (item.status === "upgraded") {
-        const fetchedAt = new Date().toISOString();
-        applyLogoUpdate(
-          {
-            logo_url: item.logoUrl,
-            logo_source: "brandfetch",
-            logo_status: "ok",
-            logo_fetched_at: fetchedAt,
-          },
-          fetchedAt,
-        );
-        setSuccess("Brandfetch logo downloaded and stored.");
-        return;
-      }
-
-      if (item.status === "skipped") {
-        setError(brandfetchUpgradeSkipMessage(item.reason));
-        return;
-      }
-
-      setError(brandfetchUpgradeFailureMessage(item.reason, item.message));
-    } catch {
-      setError("Brandfetch upgrade request failed.");
-    } finally {
-      setIsUpgrading(false);
-    }
-  }
-
   return (
     <AdminDrawerShell
       title="Logo"
@@ -348,20 +280,6 @@ export function CompanyLogoDrawer({ row, onClose, onUpdated }: CompanyLogoDrawer
           {isUploading ? "Uploading…" : "Upload logo"}
         </Button>
       </div>
-
-      {canUpgradeBrandfetch ? (
-        <div className="border-t border-slate-200 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={actionsDisabled}
-            onClick={() => void handleBrandfetchUpgrade()}
-          >
-            {isUpgrading ? "Downloading…" : "Download Brandfetch logo"}
-          </Button>
-        </div>
-      ) : null}
 
       {error ? <InlineErrorBanner message={error} /> : null}
       {success ? <InlineErrorBanner message={success} variant="success" /> : null}

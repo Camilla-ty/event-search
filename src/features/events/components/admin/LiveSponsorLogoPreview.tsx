@@ -22,13 +22,14 @@ function logoSourceBadge(logoSource: string | null | undefined): SourceBadge | n
   switch (source) {
     case "manual":
       return { label: "Manual", variant: "neutral" };
-    case "brandfetch":
-      return { label: "Brandfetch", variant: "accent" };
     case "storage":
       return { label: "Auto", variant: "default" };
     case "logo_dev":
       return { label: "Legacy", variant: "warning" };
     default:
+      if (source && source !== "none") {
+        return { label: "Auto", variant: "default" };
+      }
       return null;
   }
 }

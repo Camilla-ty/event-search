@@ -1,5 +1,5 @@
-/** manual = admin-curated; brandfetch = admin Brand API upgrade; storage = auto-ingest; none = no logo path */
-export const LOGO_SOURCES = ["manual", "brandfetch", "storage", "logo_dev", "none"] as const;
+/** manual = admin-curated; storage = auto-ingest; none = no logo path */
+export const LOGO_SOURCES = ["manual", "storage", "logo_dev", "none"] as const;
 export type LogoSource = (typeof LOGO_SOURCES)[number];
 
 export const LOGO_STATUSES = ["ok", "pending", "missing", "error", "skipped"] as const;
