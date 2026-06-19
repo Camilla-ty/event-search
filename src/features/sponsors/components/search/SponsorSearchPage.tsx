@@ -136,7 +136,7 @@ export function SponsorSearchPage({
   return (
     <section className="space-y-4">
       <PageHeader
-        title="Sponsor Search"
+        title="Sponsors"
         description="Find and connect with sponsors that fit your event."
       />
 

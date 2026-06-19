@@ -4,14 +4,20 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
+import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
 import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
+import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
+import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
+import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
+import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveEditionDisplayLogo } from "@/src/lib/events/resolveEditionDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
+import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +26,14 @@ type EventDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-function formatDateRange(start?: string | null, end?: string | null) {
-  if (!start && !end) return "Date TBC";
-  if (!start) return end ?? "Date TBC";
-  if (!end || end === start) return start;
-  return `${start} - ${end}`;
+function readSeriesId(
+  edition: { series_id?: unknown; event_series?: unknown },
+  series: PublicEventSeriesSummary | null,
+): string | null {
+  if (typeof edition.series_id === "string" && edition.series_id.trim() !== "") {
+    return edition.series_id.trim();
+  }
+  return series?.id ?? null;
 }
 
 export async function generateMetadata({
@@ -62,6 +71,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
+  const editionId =
+    typeof edition.id === "string" && edition.id.trim() !== ""
+      ? edition.id.trim()
+      : null;
+  const series = mapPublicEventSeries(edition.event_series);
+  const seriesId = readSeriesId(edition, series);
+  const seriesHubHref = series ? buildSeriesHubPath(series) : null;
+
+  const relatedEditions =
+    seriesId !== null && editionId !== null
+      ? await getRelatedEditions({
+          seriesId,
+          excludeEditionId: editionId,
+        })
+      : [];
+
   const sponsors = filterDisplayableSponsors(
     (edition.event_sponsors ?? []) as EventSponsorRow[],
   );
@@ -73,11 +98,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     event_series: edition.event_series,
   });
 
+  const seriesBrandLabel = series?.name ?? null;
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <Link href="/events" className={`text-sm ${brandLinkClass}`}>
-          ← Back to Events Explorer
+          ← Back to Events
         </Link>
       </div>
 
@@ -110,13 +137,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="space-y-2">
-            <Badge variant="neutral">{edition.event_series?.name ?? "Event"}</Badge>
+            {seriesBrandLabel && seriesHubHref ? (
+              <Link href={seriesHubHref}>
+                <Badge variant="neutral">{seriesBrandLabel}</Badge>
+              </Link>
+            ) : (
+              <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
+            )}
             <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
             <p className="text-sm text-slate-600">
               {formatLocationFromCityEmbed(edition.cities) || "Location not set"}
             </p>
             <p className="text-sm text-slate-500">
-              {formatDateRange(edition.start_date, edition.end_date)}
+              {formatEventDateRange(edition.start_date, edition.end_date)}
             </p>
           </div>
 
@@ -130,10 +163,17 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <p className="text-lg font-semibold text-slate-900">{edition.year ?? "TBC"}</p>
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Category</p>
-              <p className="text-lg font-semibold text-slate-900">
-                {edition.event_series?.name ?? "General"}
-              </p>
+              <p className="text-xs text-slate-500">Event brand</p>
+              {seriesBrandLabel && seriesHubHref ? (
+                <Link
+                  href={seriesHubHref}
+                  className={`text-lg font-semibold ${brandLinkClass}`}
+                >
+                  {seriesBrandLabel}
+                </Link>
+              ) : (
+                <p className="text-lg font-semibold text-slate-900">Not set</p>
+              )}
             </div>
           </div>
         </div>
@@ -146,6 +186,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             "Detailed event description will be expanded as the content model evolves."}
         </p>
       </section>
+
+      {seriesBrandLabel && seriesHubHref ? (
+        <RelatedEditionsSection
+          seriesName={seriesBrandLabel}
+          seriesHubHref={seriesHubHref}
+          editions={relatedEditions}
+        />
+      ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <EventSponsorsSection
@@ -163,8 +211,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             >
               View Sponsors
             </Link>
+            {seriesHubHref ? (
+              <Link href={seriesHubHref} className={`${secondaryCtaClass} h-10 w-full`}>
+                View event brand
+              </Link>
+            ) : null}
             <Link href="/events" className={`${secondaryCtaClass} h-10 w-full`}>
-              Back to Explorer
+              Back to Events
             </Link>
           </div>
         </div>

@@ -157,7 +157,7 @@ export function EventExplorerPage({
   return (
     <section className="space-y-4">
       <PageHeader
-        title="Events Explorer"
+        title="Events"
         description="Discover events, analyze sponsor activity, and find new opportunities."
       />
 

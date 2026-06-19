@@ -20,7 +20,7 @@ export default function ExhibitorsPage() {
         <CardHeader>
           <CardTitle>Exhibitor directory</CardTitle>
           <CardDescription>
-            Use Events Explorer and Sponsors Search for active intelligence today.
+            Use Events and Sponsors for active intelligence today.
           </CardDescription>
         </CardHeader>
         <CardContent>

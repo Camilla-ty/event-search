@@ -8,7 +8,7 @@ import type { CompanyPublicRow } from "@/src/lib/queries/companies";
 export const dynamic = "force-dynamic";
 
 export const metadata = createPageMetadata({
-  title: "Sponsors Search",
+  title: "Sponsors",
   description: "Find and analyze sponsors and companies across events.",
   path: "/sponsors",
 });

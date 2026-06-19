@@ -7,7 +7,7 @@ import { createPageMetadata } from "@/src/lib/metadata/site";
 export const dynamic = "force-dynamic";
 
 export const metadata = createPageMetadata({
-  title: "Events Explorer",
+  title: "Events",
   description: "Discover and analyze events, sponsors, and opportunities across the industry.",
   path: "/events",
 });

@@ -5,10 +5,9 @@ export type NavItem = {
 
 /** Apollo-style primary sidebar navigation. */
 export const primaryNavItems: NavItem[] = [
-  { href: "/", label: "Home" },
-  { href: "/events", label: "Events Explorer" },
-  { href: "/sponsors", label: "Sponsors Search" },
-  { href: "/exhibitors", label: "Exhibitors" },
+  { href: "/", label: "Discover" },
+  { href: "/events", label: "Events" },
+  { href: "/sponsors", label: "Sponsors" },
 ];
 
 /** @deprecated Use primaryNavItems — kept for imports during migration. */

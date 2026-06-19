@@ -35,3 +35,13 @@ export function buildEventDetailPath(event: {
   const segment = slug !== "" ? slug : id;
   return segment !== "" ? `/events/${encodeURIComponent(segment)}` : null;
 }
+
+export function buildSeriesHubPath(series: {
+  slug?: string | null;
+  id?: string | null;
+}): string | null {
+  const slug = series.slug?.trim() ?? "";
+  const id = series.id?.trim() ?? "";
+  const segment = slug !== "" ? slug : id;
+  return segment !== "" ? `/events/series/${encodeURIComponent(segment)}` : null;
+}
