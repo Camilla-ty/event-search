@@ -16,6 +16,13 @@ export function buildEventExplorerUrl(query?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+export function buildEventExplorerUpcomingUrl(fromDate?: string): string {
+  const url = new URL("/events", "http://local");
+  const date = fromDate?.trim() || new Date().toISOString().slice(0, 10);
+  url.searchParams.set("start", date);
+  return `${url.pathname}${url.search}`;
+}
+
 export function buildSponsorProfilePath(company: {
   slug?: string | null;
   id?: string | null;
