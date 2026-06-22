@@ -1,8 +1,10 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
+import { parseSponsorDiscoverySuggestQuery } from "@/src/features/sponsors/server/sponsorDiscoverySuggestParams";
 
 import { Button } from "@/src/components/common/Button";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
@@ -18,7 +20,8 @@ import { useSponsorSuggestions } from "./useSponsorSuggestions";
 
 type SponsorSearchComboboxProps = {
   placeholder?: string;
-  defaultValue?: string;
+  /** Synced from `/sponsors?q=` when on the discovery page. */
+  queryFromUrl?: string;
   ariaLabel?: string;
   className?: string;
   submitVariant?: "primary" | "secondary";
@@ -34,7 +37,7 @@ function suggestItemLogoFields(item: SponsorSuggestItem) {
 
 export function SponsorSearchCombobox({
   placeholder = "Search sponsoring companies…",
-  defaultValue = "",
+  queryFromUrl = "",
   ariaLabel = "Search sponsoring companies globally",
   className,
   submitVariant = "secondary",
@@ -42,13 +45,21 @@ export function SponsorSearchCombobox({
   const router = useRouter();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const normalizedQueryFromUrl = parseSponsorDiscoverySuggestQuery(queryFromUrl);
 
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValue] = useState(normalizedQueryFromUrl);
   const [isFocused, setIsFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(false);
+
+  useEffect(() => {
+    setValue(normalizedQueryFromUrl);
+    setActiveIndex(-1);
+    setSuggestionsEnabled(false);
+  }, [normalizedQueryFromUrl]);
 
   const { trimmedQuery, eligible, items, total, loading, error, fetched } =
-    useSponsorSuggestions(value);
+    useSponsorSuggestions(value, { enabled: suggestionsEnabled });
 
   const showSeeAllFooter = total > items.length;
   const optionCount = items.length + (showSeeAllFooter ? 1 : 0);
@@ -167,10 +178,14 @@ export function SponsorSearchCombobox({
           type="search"
           value={value}
           onChange={(event) => {
+            setSuggestionsEnabled(true);
             setValue(event.target.value);
             resetActiveIndex();
           }}
-          onFocus={() => setIsFocused(true)}
+          onFocus={() => {
+            setIsFocused(true);
+            setSuggestionsEnabled(true);
+          }}
           onBlur={() => {
             window.setTimeout(() => {
               setIsFocused(false);

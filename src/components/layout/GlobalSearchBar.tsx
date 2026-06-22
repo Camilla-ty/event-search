@@ -1,10 +1,11 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { SearchBar } from "@/src/components/common";
 import { SponsorSearchCombobox } from "@/src/features/sponsors/components/search/SponsorSearchCombobox";
+import { parseSponsorDiscoverySuggestQuery } from "@/src/features/sponsors/server/sponsorDiscoverySuggestParams";
 import { buildEventExplorerUrl } from "@/src/lib/routes/explorerUrls";
 
 export type GlobalSearchScope = "sponsors" | "events";
@@ -19,7 +20,15 @@ function scopeForPathname(pathname: string): GlobalSearchScope {
 export function GlobalSearchBar({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [scope, setScope] = useState<GlobalSearchScope>(() => scopeForPathname(pathname));
+
+  const sponsorQueryFromUrl = useMemo(() => {
+    if (pathname !== "/sponsors") {
+      return "";
+    }
+    return parseSponsorDiscoverySuggestQuery(searchParams.get("q"));
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     setScope(scopeForPathname(pathname));
@@ -70,6 +79,7 @@ export function GlobalSearchBar({ className }: { className?: string }) {
       </div>
       {scope === "sponsors" ? (
         <SponsorSearchCombobox
+          queryFromUrl={sponsorQueryFromUrl}
           ariaLabel="Search sponsoring companies globally"
           placeholder="Search sponsoring companies…"
           className="min-w-0 w-full"

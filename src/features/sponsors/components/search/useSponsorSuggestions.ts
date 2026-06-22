@@ -65,7 +65,15 @@ export type UseSponsorSuggestionsState = {
   fetched: boolean;
 };
 
-export function useSponsorSuggestions(query: string): UseSponsorSuggestionsState {
+type UseSponsorSuggestionsOptions = {
+  enabled?: boolean;
+};
+
+export function useSponsorSuggestions(
+  query: string,
+  options: UseSponsorSuggestionsOptions = {},
+): UseSponsorSuggestionsState {
+  const enabled = options.enabled ?? true;
   const trimmedQuery = query.trim();
   const eligible = isSponsorDiscoverySuggestQueryEligible(trimmedQuery);
 
@@ -76,7 +84,7 @@ export function useSponsorSuggestions(query: string): UseSponsorSuggestionsState
   const [fetched, setFetched] = useState(false);
 
   useEffect(() => {
-    if (!eligible) {
+    if (!enabled || !eligible) {
       setItems([]);
       setTotal(0);
       setLoading(false);
@@ -139,7 +147,7 @@ export function useSponsorSuggestions(query: string): UseSponsorSuggestionsState
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [eligible, trimmedQuery]);
+  }, [enabled, eligible, trimmedQuery]);
 
   return {
     trimmedQuery,
