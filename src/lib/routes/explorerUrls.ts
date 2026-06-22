@@ -43,6 +43,15 @@ export function buildEventExplorerUpcomingUrl(fromDate?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+export function buildEventExplorerCalendarUrl(month?: string): string {
+  const url = new URL("/events", "http://local");
+  url.searchParams.set("view", "calendar");
+  const normalizedMonth =
+    parseEventExplorerMonth(month) ?? new Date().toISOString().slice(0, 7);
+  url.searchParams.set("month", normalizedMonth);
+  return `${url.pathname}${url.search}`;
+}
+
 export function buildTopicHubPath(slug: string): string | null {
   const trimmed = slug.trim();
   if (trimmed === "") return null;

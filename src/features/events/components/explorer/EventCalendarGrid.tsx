@@ -6,20 +6,34 @@ import {
   type MonthGridBounds,
 } from "@/src/features/events/lib/eventCalendarGrouping";
 
-import { EventCalendarDayCell } from "./EventCalendarDayCell";
+import {
+  EventCalendarDayCell,
+  type EventCalendarDayCellVariant,
+} from "./EventCalendarDayCell";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 type EventCalendarGridProps = {
   bounds: MonthGridBounds;
   eventsByDay: EventsByDay<EventRecord>;
+  variant?: EventCalendarDayCellVariant;
+  roundedBottom?: boolean;
 };
 
-export function EventCalendarGrid({ bounds, eventsByDay }: EventCalendarGridProps) {
+export function EventCalendarGrid({
+  bounds,
+  eventsByDay,
+  variant = "default",
+  roundedBottom = true,
+}: EventCalendarGridProps) {
   const gridDays = listGridDays(bounds.gridStart, bounds.gridEnd);
 
   return (
-    <div className="overflow-hidden rounded-b-xl border border-t-0 border-slate-200 bg-white">
+    <div
+      className={`overflow-hidden border border-t-0 border-slate-200 bg-white ${
+        roundedBottom ? "rounded-b-xl" : ""
+      }`}
+    >
       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
         {WEEKDAY_LABELS.map((label) => (
           <div
@@ -38,6 +52,7 @@ export function EventCalendarGrid({ bounds, eventsByDay }: EventCalendarGridProp
             isoDate={isoDate}
             isCurrentMonth={isIsoDateInMonth(isoDate, bounds.month)}
             events={eventsByDay.get(isoDate) ?? []}
+            variant={variant}
           />
         ))}
       </div>

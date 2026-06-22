@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildEventExplorerCalendarUrl,
   buildEventExplorerTopicUrl,
   buildTopicHubPath,
   parseEventExplorerMonth,
@@ -21,6 +22,24 @@ describe("buildEventExplorerTopicUrl", () => {
     assert.equal(buildEventExplorerTopicUrl("crypto"), "/events?topic=crypto");
     assert.equal(buildEventExplorerTopicUrl(" web3 "), "/events?topic=web3");
     assert.equal(buildEventExplorerTopicUrl(""), "/events");
+  });
+});
+
+describe("buildEventExplorerCalendarUrl", () => {
+  it("builds an events explorer URL with calendar view and month", () => {
+    assert.equal(
+      buildEventExplorerCalendarUrl("2026-06"),
+      "/events?view=calendar&month=2026-06",
+    );
+    assert.equal(
+      buildEventExplorerCalendarUrl(" 2026-01 "),
+      "/events?view=calendar&month=2026-01",
+    );
+  });
+
+  it("falls back to the current month when month is invalid", () => {
+    const href = buildEventExplorerCalendarUrl("invalid");
+    assert.match(href, /^\/events\?view=calendar&month=\d{4}-\d{2}$/);
   });
 });
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { DiscoverCalendarUpcomingSection } from "@/src/features/home/components/DiscoverCalendarUpcomingSection";
 import { DiscoverEditionList } from "@/src/features/home/components/DiscoverEditionList";
 import { DiscoverEventModule } from "@/src/features/home/components/DiscoverEventModule";
 import { DiscoverHero } from "@/src/features/home/components/DiscoverHero";
@@ -18,23 +19,18 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default async function DiscoverPage() {
-  const { upcoming, recentlyAdded } = await getDiscoverHomeData();
+  const { upcoming, recentlyAdded, calendarEvents } = await getDiscoverHomeData();
   const upcomingViewAllHref = buildEventExplorerUpcomingUrl();
 
   return (
     <div className="space-y-8">
       <DiscoverHero />
 
-      <DiscoverEventModule
-        title="Upcoming Events"
-        description="Events with upcoming or in-progress dates."
-        viewAllHref={upcomingViewAllHref}
-        emptyMessage="No upcoming events with scheduled dates."
-        emptyActionHref={upcomingViewAllHref}
-        isEmpty={upcoming.length === 0}
-      >
-        <DiscoverEditionList editions={upcoming} />
-      </DiscoverEventModule>
+      <DiscoverCalendarUpcomingSection
+        calendarEvents={calendarEvents}
+        upcoming={upcoming}
+        upcomingViewAllHref={upcomingViewAllHref}
+      />
 
       <DiscoverEventModule
         title="Recently Added Events"

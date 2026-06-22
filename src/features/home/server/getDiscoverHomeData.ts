@@ -1,3 +1,5 @@
+import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import { readEventDateRange } from "@/src/features/events/lib/readEventIsoDate";
 import { mapPublicEditionRow } from "@/src/features/events/server/mapPublicEditionRow";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
 import {
@@ -12,7 +14,20 @@ import { getEventEditions } from "@/src/lib/queries/events";
 export type DiscoverHomeData = {
   upcoming: PublicEditionSummary[];
   recentlyAdded: PublicEditionSummary[];
+  calendarEvents: EventRecord[];
 };
+
+function mapEditionToEventRecord(edition: PublicEditionSummary): EventRecord {
+  return {
+    id: edition.id,
+    slug: edition.slug,
+    name: edition.name,
+    start_date: edition.start_date,
+    end_date: edition.end_date,
+    event_series: edition.event_series,
+    cities: null,
+  };
+}
 
 export async function getDiscoverHomeData(options?: {
   moduleLimit?: number;
@@ -34,8 +49,13 @@ export async function getDiscoverHomeData(options?: {
     });
   }
 
+  const calendarEvents = editions
+    .filter((edition) => readEventDateRange(edition) !== null)
+    .map(mapEditionToEventRecord);
+
   return {
     upcoming: selectUpcomingEditions(editions, { limit }),
     recentlyAdded: selectRecentlyAddedEditions(editions, { limit }),
+    calendarEvents,
   };
 }

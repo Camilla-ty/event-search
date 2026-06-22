@@ -42,7 +42,7 @@ export function EventCalendarHeader({ month, onMonthChange }: EventCalendarHeade
         </button>
       </div>
 
-      <h2 className="text-lg font-semibold text-slate-900">{formatCalendarMonthLabel(month)}</h2>
+      <p className="text-lg font-semibold text-slate-900">{formatCalendarMonthLabel(month)}</p>
 
       <button
         type="button"
