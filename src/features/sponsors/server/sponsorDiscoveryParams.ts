@@ -1,0 +1,118 @@
+import type {
+  SponsorDiscoveryParams,
+  SponsorDiscoverySearchInput,
+  SponsorDiscoverySort,
+} from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
+
+export const SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE = 20;
+export const SPONSOR_DISCOVERY_MIN_PAGE_SIZE = 1;
+export const SPONSOR_DISCOVERY_MAX_PAGE_SIZE = 100;
+export const SPONSOR_DISCOVERY_MIN_PAGE = 1;
+export const SPONSOR_DISCOVERY_MAX_PAGE = 9999;
+export const SPONSOR_DISCOVERY_MAX_QUERY_LENGTH = 200;
+
+const VALID_SORTS = new Set<SponsorDiscoverySort>(["activity", "name", "count", "tier"]);
+
+function readQueryRaw(input: SponsorDiscoverySearchInput): string {
+  if (typeof input.q === "string") return input.q;
+  if (typeof input.query === "string") return input.query;
+  return "";
+}
+
+export function parseSponsorDiscoveryQuery(raw: string | null | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed.length <= SPONSOR_DISCOVERY_MAX_QUERY_LENGTH) {
+    return trimmed;
+  }
+  return trimmed.slice(0, SPONSOR_DISCOVERY_MAX_QUERY_LENGTH);
+}
+
+export function parseSponsorDiscoveryEventSlug(
+  raw: string | null | undefined,
+): string | null {
+  const trimmed = (raw ?? "").trim();
+  return trimmed !== "" ? trimmed : null;
+}
+
+export function parseSponsorDiscoverySort(
+  raw: string | null | undefined,
+  hasEventFilter: boolean,
+): SponsorDiscoverySort {
+  const normalized = (raw ?? "").trim().toLowerCase();
+  if (normalized === "tier") {
+    return hasEventFilter ? "tier" : "activity";
+  }
+  if (VALID_SORTS.has(normalized as SponsorDiscoverySort)) {
+    return normalized as SponsorDiscoverySort;
+  }
+  return "activity";
+}
+
+export function parseSponsorDiscoveryPage(raw: string | number | null | undefined): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const value = Math.floor(raw);
+    if (value >= SPONSOR_DISCOVERY_MIN_PAGE && value <= SPONSOR_DISCOVERY_MAX_PAGE) {
+      return value;
+    }
+    return SPONSOR_DISCOVERY_MIN_PAGE;
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed === "") return SPONSOR_DISCOVERY_MIN_PAGE;
+    const parsed = Number.parseInt(trimmed, 10);
+    if (
+      Number.isFinite(parsed) &&
+      parsed >= SPONSOR_DISCOVERY_MIN_PAGE &&
+      parsed <= SPONSOR_DISCOVERY_MAX_PAGE
+    ) {
+      return parsed;
+    }
+  }
+
+  return SPONSOR_DISCOVERY_MIN_PAGE;
+}
+
+export function parseSponsorDiscoveryPageSize(
+  raw: string | number | null | undefined,
+): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const value = Math.floor(raw);
+    if (value >= SPONSOR_DISCOVERY_MIN_PAGE_SIZE && value <= SPONSOR_DISCOVERY_MAX_PAGE_SIZE) {
+      return value;
+    }
+    return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed === "") return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
+    const parsed = Number.parseInt(trimmed, 10);
+    if (
+      Number.isFinite(parsed) &&
+      parsed >= SPONSOR_DISCOVERY_MIN_PAGE_SIZE &&
+      parsed <= SPONSOR_DISCOVERY_MAX_PAGE_SIZE
+    ) {
+      return parsed;
+    }
+  }
+
+  return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
+}
+
+export function parseSponsorDiscoveryParams(
+  input: SponsorDiscoverySearchInput,
+): SponsorDiscoveryParams {
+  const eventSlug = parseSponsorDiscoveryEventSlug(
+    input.eventSlug ?? input.event ?? null,
+  );
+  const query = parseSponsorDiscoveryQuery(readQueryRaw(input));
+
+  return {
+    query,
+    eventSlug,
+    sort: parseSponsorDiscoverySort(input.sort, eventSlug !== null),
+    page: parseSponsorDiscoveryPage(input.page),
+    pageSize: parseSponsorDiscoveryPageSize(input.pageSize),
+  };
+}

@@ -1,3 +1,14 @@
+export type FilterState = {
+  query: string;
+  eventSlug: string | null;
+};
+
+export type SponsorEventContext = {
+  slug: string;
+  name: string | null;
+};
+
+/** @deprecated Edition-scoped roster card; replaced by SponsorDiscoveryCard in PR4. */
 export type SponsorCompany = {
   id?: string | null;
   slug?: string | null;
@@ -11,21 +22,11 @@ export type SponsorCompany = {
   logo_status?: string | null;
 };
 
+/** @deprecated Edition-scoped roster row; replaced by SponsorDiscoveryRow in PR4. */
 export type SponsorRecord = {
   id: string;
   tier_rank?: number | null;
   tier_label?: string | null;
   display_order?: number | null;
   companies?: SponsorCompany | null;
-};
-
-export type FilterState = {
-  query: string;
-  industry: string;
-  eventSlug: string | null;
-};
-
-export type SponsorEventContext = {
-  slug: string;
-  name: string | null;
 };

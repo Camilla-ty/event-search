@@ -12,91 +12,80 @@ import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
+import type { SponsorDiscoveryParams } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
 
+import type { SponsorDiscoveryRow, SponsorDiscoverySort } from "./discoveryTypes";
 import { FilterPanel } from "./FilterPanel";
+import { SponsorDiscoveryList } from "./SponsorDiscoveryList";
 import { SponsorEventContextBanner } from "./SponsorEventContextBanner";
-import { SponsorList } from "./SponsorList";
-import type { FilterState, SponsorEventContext, SponsorRecord } from "./types";
+import type { FilterState, SponsorEventContext } from "./types";
 
-type SortValue = "tier" | "name";
-
-const SPONSOR_SORT_OPTIONS = [
-  { value: "tier" as const, label: "Tier rank" },
-  { value: "name" as const, label: "Name" },
+const GLOBAL_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
+  { value: "activity", label: "Latest activity" },
+  { value: "name", label: "Name" },
+  { value: "count", label: "Sponsorship count" },
 ];
 
-type SponsorSearchPageProps = {
-  sponsors: SponsorRecord[];
-  initialFilters?: FilterState;
-  eventContext?: SponsorEventContext | null;
-};
+const EVENT_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
+  { value: "tier", label: "Tier rank" },
+  ...GLOBAL_SORT_OPTIONS,
+];
 
 const defaultFilters: FilterState = {
   query: "",
-  industry: "all",
   eventSlug: null,
 };
 
-function normalizeText(value: string | null | undefined) {
-  return (value ?? "").toLowerCase();
-}
+type SponsorSearchPageProps = {
+  rows: SponsorDiscoveryRow[];
+  total: number;
+  params: SponsorDiscoveryParams;
+  eventContext: SponsorEventContext | null;
+  eventUnknown: boolean;
+};
 
 export function SponsorSearchPage({
-  sponsors,
-  initialFilters,
+  rows,
+  total,
+  params,
   eventContext = null,
+  eventUnknown = false,
 }: SponsorSearchPageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<FilterState>(initialFilters ?? defaultFilters);
-  const [sort, setSort] = useState<SortValue>("tier");
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<FilterState>({
+    query: params.query,
+    eventSlug: params.eventSlug,
+  });
+  const [sort, setSort] = useState<SponsorDiscoverySort>(params.sort);
+  const [page, setPage] = useState(params.page);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const industries = useMemo(() => {
-    const values = sponsors
-      .map((sponsor) => sponsor.companies?.industry)
-      .filter((industry): industry is string => Boolean(industry?.trim()));
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
-  }, [sponsors]);
+  const hasEventFilter = params.eventSlug !== null;
+  const showEventTier = hasEventFilter && !eventUnknown;
 
-  const filteredAndSorted = useMemo(() => {
-    const byFilter = sponsors.filter((sponsor) => {
-      const name = normalizeText(sponsor.companies?.name);
-      const industry = sponsor.companies?.industry ?? "";
-      const query = normalizeText(filters.query);
-      const queryMatch = !query || name.includes(query);
-      const industryMatch = filters.industry === "all" || industry === filters.industry;
-      return queryMatch && industryMatch;
-    });
+  const sortOptions = useMemo(
+    () => (showEventTier ? EVENT_SORT_OPTIONS : GLOBAL_SORT_OPTIONS),
+    [showEventTier],
+  );
 
-    return byFilter.sort((a, b) => {
-      if (sort === "name") {
-        return (a.companies?.name ?? "").localeCompare(b.companies?.name ?? "");
-      }
-      const ar = a.tier_rank ?? Number.POSITIVE_INFINITY;
-      const br = b.tier_rank ?? Number.POSITIVE_INFINITY;
-      if (ar !== br) return ar - br;
-      const ao = a.display_order ?? Number.POSITIVE_INFINITY;
-      const bo = b.display_order ?? Number.POSITIVE_INFINITY;
-      if (ao !== bo) return ao - bo;
-      return (a.companies?.name ?? "").localeCompare(b.companies?.name ?? "");
+  useEffect(() => {
+    setFilters({
+      query: params.query,
+      eventSlug: params.eventSlug,
     });
-  }, [filters.industry, filters.query, sort, sponsors]);
+    setSort(params.sort);
+    setPage(params.page);
+  }, [params.eventSlug, params.page, params.query, params.sort]);
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams.toString());
+
     if (filters.query.trim()) {
       next.set("q", filters.query.trim());
     } else {
       next.delete("q");
-    }
-
-    if (filters.industry !== "all") {
-      next.set("industry", filters.industry);
-    } else {
-      next.delete("industry");
     }
 
     const eventSlug = filters.eventSlug?.trim() ?? "";
@@ -106,16 +95,40 @@ export function SponsorSearchPage({
       next.delete("event");
     }
 
+    if (sort !== "activity") {
+      next.set("sort", sort);
+    } else {
+      next.delete("sort");
+    }
+
+    if (page !== 1) {
+      next.set("page", String(page));
+    } else {
+      next.delete("page");
+    }
+
+    next.delete("industry");
+
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
       router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
     }
-  }, [filters, pathname, router, searchParams]);
+  }, [filters, page, pathname, router, searchParams, sort]);
+
+  function handleFilterChange(next: FilterState) {
+    setFilters(next);
+    setPage(1);
+  }
+
+  function handleSortChange(next: SponsorDiscoverySort) {
+    setSort(next);
+    setPage(1);
+  }
 
   function handleReset() {
     setFilters(defaultFilters);
-    setSort("tier");
+    setSort("activity");
     setPage(1);
   }
 
@@ -125,54 +138,52 @@ export function SponsorSearchPage({
   }
 
   const activeEventSlug = filters.eventSlug?.trim() ?? "";
-  const activeEventContext =
-    activeEventSlug !== ""
-      ? {
-          slug: activeEventSlug,
-          name: eventContext?.name ?? null,
-        }
-      : null;
+  const showEventBanner = activeEventSlug !== "";
 
   return (
     <section className="space-y-4">
       <PageHeader
         title="Sponsors"
-        description="Find and connect with sponsors that fit your event."
+        description="Discover companies that sponsor events across EventPixels."
       />
 
       <div className={explorerPageGridClass}>
         <div className="hidden md:block">
           <FilterPanel
             filters={filters}
-            industries={industries}
-            eventName={activeEventContext?.name ?? null}
-            onChange={setFilters}
+            eventName={eventContext?.name ?? null}
+            eventUnknown={eventUnknown}
+            onChange={handleFilterChange}
             onReset={handleReset}
             className={explorerFilterStickyClass}
           />
         </div>
 
         <div className="space-y-4">
-          {activeEventContext ? (
+          {showEventBanner ? (
             <SponsorEventContextBanner
-              eventName={activeEventContext.name}
+              eventSlug={activeEventSlug}
+              eventName={eventContext?.name ?? null}
+              eventUnknown={eventUnknown}
               onClear={clearEventScope}
             />
           ) : null}
           <ExplorerResultsToolbar
-            total={filteredAndSorted.length}
+            total={total}
             entityLabel="sponsors"
             sort={sort}
-            sortOptions={SPONSOR_SORT_OPTIONS}
-            onSortChange={setSort}
+            sortOptions={sortOptions}
+            onSortChange={handleSortChange}
             onOpenFilters={() => setMobileFiltersOpen(true)}
           />
-          <SponsorList
-            sponsors={filteredAndSorted}
-            loading={false}
-            onReset={handleReset}
+          <SponsorDiscoveryList
+            rows={rows}
+            total={total}
             page={page}
+            pageSize={params.pageSize}
+            showEventTier={showEventTier}
             onPageChange={setPage}
+            onReset={handleReset}
           />
         </div>
       </div>
@@ -183,9 +194,9 @@ export function SponsorSearchPage({
       >
         <FilterPanel
           filters={filters}
-          industries={industries}
-          eventName={activeEventContext?.name ?? null}
-          onChange={setFilters}
+          eventName={eventContext?.name ?? null}
+          eventUnknown={eventUnknown}
+          onChange={handleFilterChange}
           onReset={handleReset}
         />
       </MobileFilterDrawer>
