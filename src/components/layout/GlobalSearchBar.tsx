@@ -4,10 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { SearchBar } from "@/src/components/common";
-import {
-  buildEventExplorerUrl,
-  buildSponsorSearchUrl,
-} from "@/src/lib/routes/explorerUrls";
+import { SponsorSearchCombobox } from "@/src/features/sponsors/components/search/SponsorSearchCombobox";
+import { buildEventExplorerUrl } from "@/src/lib/routes/explorerUrls";
 
 export type GlobalSearchScope = "sponsors" | "events";
 
@@ -27,10 +25,8 @@ export function GlobalSearchBar({ className }: { className?: string }) {
     setScope(scopeForPathname(pathname));
   }, [pathname]);
 
-  function handleSearch(query: string) {
-    const target =
-      scope === "events" ? buildEventExplorerUrl(query) : buildSponsorSearchUrl(query);
-    router.push(target);
+  function handleEventSearch(query: string) {
+    router.push(buildEventExplorerUrl(query));
   }
 
   return (
@@ -72,21 +68,22 @@ export function GlobalSearchBar({ className }: { className?: string }) {
           Events
         </button>
       </div>
-      <SearchBar
-        ariaLabel={
-          scope === "events"
-            ? "Search events by name, series, or location"
-            : "Search sponsoring companies globally"
-        }
-        placeholder={
-          scope === "events"
-            ? "Search events by name, series, or location…"
-            : "Search sponsoring companies…"
-        }
-        onSearch={handleSearch}
-        className="min-w-0 w-full"
-        submitVariant="secondary"
-      />
+      {scope === "sponsors" ? (
+        <SponsorSearchCombobox
+          ariaLabel="Search sponsoring companies globally"
+          placeholder="Search sponsoring companies…"
+          className="min-w-0 w-full"
+          submitVariant="secondary"
+        />
+      ) : (
+        <SearchBar
+          ariaLabel="Search events by name, series, or location"
+          placeholder="Search events by name, series, or location…"
+          onSearch={handleEventSearch}
+          className="min-w-0 w-full"
+          submitVariant="secondary"
+        />
+      )}
     </div>
   );
 }
