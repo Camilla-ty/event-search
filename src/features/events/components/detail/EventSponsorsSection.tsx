@@ -32,7 +32,7 @@ export function EventSponsorsSection({
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">Related Sponsors</h2>
         <Link href={sponsorsExplorerHref} className={`text-sm ${brandLinkClass}`}>
-          Explore sponsors
+          Search sponsors for this event
         </Link>
       </div>
 
@@ -51,9 +51,9 @@ export function EventSponsorsSection({
           <p className="text-sm text-slate-600">
             Use{" "}
             <Link href={sponsorsExplorerHref} className={brandLinkClass}>
-              Explore sponsors
+              Search sponsors for this event
             </Link>{" "}
-            in Actions to browse the full list for this event. Sign up to save lists and unlock
+            in Actions to find sponsors on EventPixels. Sign up to save lists and unlock account
             account features.
           </p>
           <Link

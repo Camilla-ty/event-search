@@ -76,12 +76,12 @@ export function GlobalSearchBar({ className }: { className?: string }) {
         ariaLabel={
           scope === "events"
             ? "Search events by name, series, or location"
-            : "Search sponsors and companies"
+            : "Search sponsoring companies globally"
         }
         placeholder={
           scope === "events"
             ? "Search events by name, series, or location…"
-            : "Search sponsors and companies…"
+            : "Search sponsoring companies…"
         }
         onSearch={handleSearch}
         className="min-w-0 w-full"

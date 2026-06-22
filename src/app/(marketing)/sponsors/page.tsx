@@ -19,7 +19,6 @@ type SponsorsPageProps = {
     q?: string;
     sort?: string;
     page?: string;
-    industry?: string;
   }>;
 };
 

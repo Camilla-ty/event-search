@@ -221,7 +221,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               href={`/sponsors?event=${eventSlug}`}
               className={`${primaryCtaClass} h-10 w-full`}
             >
-              View Sponsors
+              Search event sponsors
             </Link>
             {seriesHubHref ? (
               <Link href={seriesHubHref} className={`${secondaryCtaClass} h-10 w-full`}>
