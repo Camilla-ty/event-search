@@ -14,12 +14,26 @@ export type SponsorDetailSeries = {
   name: string;
 };
 
+export type SponsorDetailEditionEntry = {
+  edition: SponsorDetailEvent;
+  tierRank: number | null;
+  tierLabel: string | null;
+};
+
 export type SponsorDetailSeriesGroup = {
   series: SponsorDetailSeries;
-  editions: SponsorDetailEvent[];
+  editions: SponsorDetailEditionEntry[];
+};
+
+export type SponsorDetailSummary = {
+  sponsoredEditionCount: number;
+  /** Set only for authenticated responses. */
+  latestActivityAt?: string | null;
 };
 
 export type SponsorDetailData = {
   company: SponsorDetailCompany;
+  isAuthenticated: boolean;
+  summary: SponsorDetailSummary;
   eventSeriesGroups: SponsorDetailSeriesGroup[];
 };

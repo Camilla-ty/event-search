@@ -4,9 +4,11 @@ import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
+import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
+import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 function formatDateRange(start?: string | null, end?: string | null) {
   if (!start && !end) return "Date TBC";
@@ -19,13 +21,28 @@ function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
 }
 
+function formatSponsoredEditionCount(count: number): string {
+  const value = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+  return `Sponsored ${value.toLocaleString()} ${pluralize(value, "event", "events")}`;
+}
+
+function formatTierLabel(tierRank: number | null, tierLabel: string | null): string | null {
+  if (tierLabel !== null) return tierLabel;
+  if (tierRank !== null) return `Tier ${tierRank}`;
+  return null;
+}
+
 export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
-  const { company, eventSeriesGroups } = data;
+  const { company, isAuthenticated, summary, eventSeriesGroups } = data;
   const locationLabel = formatLocationFromCityEmbed(company.cities);
   const websiteDisplay = formatPublicCompanyWebsite({
     website: company.website,
     domain: company.domain,
   });
+  const profilePath = buildSponsorProfilePath(company);
+  const loginHref =
+    profilePath !== null ? buildLoginEntryUrl(profilePath) : buildLoginEntryUrl("/sponsors");
+  const hasSponsorships = summary.sponsoredEditionCount > 0;
 
   return (
     <section className="space-y-8">
@@ -92,13 +109,25 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
       ) : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Sponsored Events</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Sponsorship history</h2>
 
-        {eventSeriesGroups.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">
-            No linked events yet. Sponsor links come from{" "}
-            <code className="rounded bg-slate-100 px-1">event_sponsors</code> for this company.
-          </p>
+        {!isAuthenticated ? (
+          <div className="mt-4 space-y-4">
+            {hasSponsorships ? (
+              <p className="text-sm font-medium text-slate-900">
+                {formatSponsoredEditionCount(summary.sponsoredEditionCount)}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">No sponsorship history recorded yet.</p>
+            )}
+            {hasSponsorships ? (
+              <Link href={loginHref} className={`${secondaryCtaClass} inline-flex h-10 px-4`}>
+                Sign in to view full sponsorship history
+              </Link>
+            ) : null}
+          </div>
+        ) : eventSeriesGroups.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">No sponsorship history recorded yet.</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {eventSeriesGroups.map((group) => {
@@ -114,7 +143,8 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
                     </summary>
 
                     <ul className="divide-y divide-slate-100 border-t border-slate-200">
-                      {group.editions.map((edition) => {
+                      {group.editions.map((entry) => {
+                        const edition = entry.edition;
                         const hrefId = edition.slug ?? edition.id;
                         const year =
                           typeof edition.year === "number" ? edition.year : null;
@@ -127,17 +157,27 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
                         const metaParts: string[] = [];
                         if (year !== null) metaParts.push(String(year));
                         if (hasUsableDateRange) metaParts.push(dateRange);
+                        const tierDisplay = formatTierLabel(
+                          entry.tierRank,
+                          entry.tierLabel,
+                        );
+
                         return (
                           <li
                             key={String(edition.id)}
                             className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                           >
-                            <div className="min-w-0">
+                            <div className="min-w-0 space-y-1">
                               <p className="font-medium text-slate-900">
                                 {edition.name ?? "Untitled event"}
                               </p>
                               {metaParts.length > 0 ? (
-                                <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
+                                <p className="text-xs text-slate-500">
+                                  {metaParts.join(" · ")}
+                                </p>
+                              ) : null}
+                              {tierDisplay ? (
+                                <Badge variant="success">{tierDisplay}</Badge>
                               ) : null}
                             </div>
                             <Link
