@@ -55,3 +55,5 @@ ORDER BY p.proname;
 -- P3: merge_companies with keep_canonical on all conflicts → success + execution_snapshot.phase = 2
 -- P4: Zero-dependency merge with {} resolutions → still succeeds (Phase 1 regression)
 -- P5: Loser slug present in company_slug_redirects after merge with different slugs
+-- P6: Slug-order fix — run supabase/verify/company_merge_slug_order_post_migration.sql (S8)
+-- P7: Domain-order fix — run supabase/verify/company_merge_domain_order_post_migration.sql (S9)
