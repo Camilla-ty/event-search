@@ -2,12 +2,22 @@
 
 import Link from "next/link";
 
-import { Badge, Button } from "@/src/components/common";
+import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { SponsorDiscoveryRow } from "./discoveryTypes";
+
+const cardSurfaceClass =
+  "grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[auto_1fr] md:items-center";
+
+const cardInteractiveClass = [
+  cardSurfaceClass,
+  "cursor-pointer transition",
+  "hover:border-brand-primary/40 hover:bg-brand-primary-muted/30",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
 
 function publicTierLabel(raw: string | null | undefined): string | null {
   if (typeof raw !== "string") return null;
@@ -28,34 +38,25 @@ function formatEditionCount(count: number): string {
   return `${value.toLocaleString()} ${value === 1 ? "event" : "events"}`;
 }
 
-type SponsorDiscoveryCardProps = {
+type SponsorDiscoveryCardContentProps = {
   row: SponsorDiscoveryRow;
-  /** When true, show tier_label badge if event_tier is present (event-filter mode only). */
-  showEventTier?: boolean;
+  companyName: string;
+  location: string;
+  metaParts: string[];
+  shortDescription: string;
+  tierLabel: string | null;
 };
 
-export function SponsorDiscoveryCard({
+function SponsorDiscoveryCardContent({
   row,
-  showEventTier = false,
-}: SponsorDiscoveryCardProps) {
-  const companyName = row.name.trim() !== "" ? row.name.trim() : "Unknown Sponsor";
-  const location =
-    row.location_label?.trim() !== "" ? row.location_label?.trim() : "Location not set";
-  const shortDescription = row.short_description?.trim() ?? "";
-  const activityYear = activityYearFromIso(row.latest_activity_at);
-  const tierLabel =
-    showEventTier && row.event_tier !== null
-      ? publicTierLabel(row.event_tier.tier_label)
-      : null;
-  const profileHref = buildSponsorProfilePath({ slug: row.slug, id: row.id });
-
-  const metaParts: string[] = [formatEditionCount(row.sponsored_edition_count)];
-  if (activityYear !== null) {
-    metaParts.push(`Active ${activityYear}`);
-  }
-
+  companyName,
+  location,
+  metaParts,
+  shortDescription,
+  tierLabel,
+}: SponsorDiscoveryCardContentProps) {
   return (
-    <article className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[auto_1fr_auto] md:items-center">
+    <>
       <CompanyLogo
         company={companyLogoFieldsFromRow(row)}
         className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
@@ -75,21 +76,56 @@ export function SponsorDiscoveryCard({
           </div>
         ) : null}
       </div>
+    </>
+  );
+}
 
-      <div className="flex items-center justify-start md:justify-end">
-        {profileHref ? (
-          <Link
-            href={profileHref}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
-          >
-            View Profile
-          </Link>
-        ) : (
-          <Button variant="secondary" size="sm" disabled>
-            View Profile
-          </Button>
-        )}
-      </div>
-    </article>
+type SponsorDiscoveryCardProps = {
+  row: SponsorDiscoveryRow;
+  /** When true, show tier_label badge if event_tier is present (event-filter mode only). */
+  showEventTier?: boolean;
+};
+
+export function SponsorDiscoveryCard({
+  row,
+  showEventTier = false,
+}: SponsorDiscoveryCardProps) {
+  const companyName = row.name.trim() !== "" ? row.name.trim() : "Unknown Sponsor";
+  const locationLabel = row.location_label?.trim() ?? "";
+  const location = locationLabel !== "" ? locationLabel : "Location not set";
+  const shortDescription = row.short_description?.trim() ?? "";
+  const activityYear = activityYearFromIso(row.latest_activity_at);
+  const tierLabel =
+    showEventTier && row.event_tier !== null
+      ? publicTierLabel(row.event_tier.tier_label)
+      : null;
+  const profileHref = buildSponsorProfilePath({ slug: row.slug, id: row.id });
+
+  const metaParts: string[] = [formatEditionCount(row.sponsored_edition_count)];
+  if (activityYear !== null) {
+    metaParts.push(`Active ${activityYear}`);
+  }
+
+  const contentProps: SponsorDiscoveryCardContentProps = {
+    row,
+    companyName,
+    location,
+    metaParts,
+    shortDescription,
+    tierLabel,
+  };
+
+  if (!profileHref) {
+    return (
+      <article className={cardSurfaceClass}>
+        <SponsorDiscoveryCardContent {...contentProps} />
+      </article>
+    );
+  }
+
+  return (
+    <Link href={profileHref} className={cardInteractiveClass}>
+      <SponsorDiscoveryCardContent {...contentProps} />
+    </Link>
   );
 }
