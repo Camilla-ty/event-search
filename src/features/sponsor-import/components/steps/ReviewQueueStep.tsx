@@ -17,6 +17,7 @@ import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import { hasImportRowMatchReason } from "../../importRowMatchReason";
+import { IMPORT_TO_DRAFT_FAILED_MESSAGE } from "../../importToDraftClient";
 import { IMPORT_PROGRESS } from "../../importProgress";
 import {
   getBulkCreateNewButtonState,
@@ -305,16 +306,20 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     setProgressMessage(IMPORT_PROGRESS.importingToDraft);
     setError(null);
 
-    const result = await importToDraft(batch.id);
-    if (!result.ok) {
+    try {
+      const result = await importToDraft(batch.id);
+      if (!result.ok) {
+        setError(result.error || IMPORT_TO_DRAFT_FAILED_MESSAGE);
+        return;
+      }
+      router.push(flowHref(batch.id, "draft"));
+    } catch {
+      setError(IMPORT_TO_DRAFT_FAILED_MESSAGE);
+    } finally {
       importToDraftInFlight.current = false;
       setActionLoading(false);
       setProgressMessage(null);
-      setError(result.error);
-      return;
     }
-
-    router.push(flowHref(batch.id, "draft"));
   }
 
   async function applyBulkAction(action: PendingBulkAction) {

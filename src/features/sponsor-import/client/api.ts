@@ -1,3 +1,7 @@
+import {
+  IMPORT_TO_DRAFT_FAILED_MESSAGE,
+  IMPORT_TO_DRAFT_TIMEOUT_MS,
+} from "../importToDraftClient";
 import type { ColumnMapping } from "../types";
 import type {
   ApiErr,
@@ -133,11 +137,30 @@ export async function patchRowDecision(
   return parseJson<ApiOk<{ row: SponsorImportRow }>>(res);
 }
 
-export async function importToDraft(batchId: string) {
-  const res = await fetch(`/api/admin/sponsor-imports/batches/${batchId}/import-to-draft`, {
-    method: "POST",
-  });
-  return parseJson<ApiOk<{ result: Record<string, number> }>>(res);
+export async function importToDraft(
+  batchId: string,
+): Promise<ApiOk<{ result: Record<string, number> }> | ApiErr> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), IMPORT_TO_DRAFT_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`/api/admin/sponsor-imports/batches/${batchId}/import-to-draft`, {
+      method: "POST",
+      signal: controller.signal,
+    });
+    const data = await parseJson<ApiOk<{ result: Record<string, number> }>>(res);
+    if (!data.ok) {
+      return data;
+    }
+    if (!res.ok) {
+      return { ok: false, error: IMPORT_TO_DRAFT_FAILED_MESSAGE };
+    }
+    return data;
+  } catch {
+    return { ok: false, error: IMPORT_TO_DRAFT_FAILED_MESSAGE };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function fetchDraftLinks(batchId: string) {

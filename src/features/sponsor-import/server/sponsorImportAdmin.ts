@@ -15,6 +15,7 @@ import {
   assertBatchNotTerminal,
   assertBatchStatus,
   assertImportToDraftGuards,
+  isStaleImportToDraftClaim,
   summarizeRows,
   type BatchRow,
   type ImportRowRecord,
@@ -133,7 +134,10 @@ export async function getBatchSpreadsheetHeaders(batchId: string): Promise<strin
 }
 
 export async function getBatchAdmin(batchId: string) {
-  const batch = await getBatchRow(batchId);
+  let batch = await getBatchRow(batchId);
+  if (await recoverStaleImportToDraftPhase(batchId, batch)) {
+    batch = await getBatchRow(batchId);
+  }
   const [rows, headers] = await Promise.all([
     loadImportRows(batchId),
     getBatchSpreadsheetHeaders(batchId),
@@ -847,6 +851,51 @@ async function resolveIdempotentImportToDraftResult(
   return (await loadImportToDraftResultFromLog(batchId)) ?? summarizeImportToDraftFromDb(batchId);
 }
 
+/** Clear orphaned importing_to_draft when a prior attempt died mid-flight (e.g. serverless timeout). */
+async function recoverStaleImportToDraftPhase(
+  batchId: string,
+  batch: BatchRow,
+): Promise<boolean> {
+  if (!isStaleImportToDraftClaim(batch)) {
+    return false;
+  }
+
+  const supabase = createAdminClient();
+  const { count, error: countError } = await supabase
+    .from("sponsor_import_draft_links")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId);
+
+  if (countError) throw new Error(countError.message);
+  if ((count ?? 0) > 0) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from("sponsor_import_batches")
+    .update({ processing_phase: null, updated_at: new Date().toISOString() })
+    .eq("id", batchId)
+    .eq("status", "review")
+    .eq("processing_phase", "importing_to_draft")
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+async function clearOrphanedImportToDraftPhase(batchId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("sponsor_import_batches")
+    .update({ processing_phase: null, updated_at: new Date().toISOString() })
+    .eq("id", batchId)
+    .eq("status", "review")
+    .eq("processing_phase", "importing_to_draft");
+
+  if (error) throw new Error(error.message);
+}
+
 export async function importBatchToDraft(batchId: string, actorId: string) {
   let batch = await getBatchRow(batchId);
 
@@ -856,12 +905,16 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
 
   assertBatchStatus(batch, ["review"]);
 
+  if (await recoverStaleImportToDraftPhase(batchId, batch)) {
+    batch = await getBatchRow(batchId);
+  }
+
   const rows = await loadImportRows(batchId);
   assertImportToDraftGuards(rows);
 
   const supabase = createAdminClient();
   const now = new Date().toISOString();
-  const { data: claimed, error: claimError } = await supabase
+  let { data: claimed, error: claimError } = await supabase
     .from("sponsor_import_batches")
     .update({ processing_phase: "importing_to_draft", updated_at: now })
     .eq("id", batchId)
@@ -877,30 +930,48 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
     if (batch.status === "draft") {
       return resolveIdempotentImportToDraftResult(batchId);
     }
-    if (batch.processing_phase === "importing_to_draft") {
+    if (
+      batch.processing_phase === "importing_to_draft" &&
+      (await recoverStaleImportToDraftPhase(batchId, batch))
+    ) {
+      const reclaim = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: "importing_to_draft", updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .is("processing_phase", null)
+        .select("id")
+        .maybeSingle();
+      if (reclaim.error) throw new Error(reclaim.error.message);
+      claimed = reclaim.data;
+    }
+    if (!claimed) {
+      if (batch.processing_phase === "importing_to_draft") {
+        throw new SponsorImportHttpError(
+          409,
+          "Import to draft is already in progress. Wait for it to finish before retrying.",
+        );
+      }
       throw new SponsorImportHttpError(
         409,
-        "Import to draft is already in progress. Wait for it to finish before retrying.",
+        "Import to draft could not start. Refresh the page and try again.",
+        { status: batch.status, processing_phase: batch.processing_phase },
       );
     }
-    throw new SponsorImportHttpError(
-      409,
-      "Import to draft could not start. Refresh the page and try again.",
-      { status: batch.status, processing_phase: batch.processing_phase },
-    );
   }
 
-  const { data: resolvedRows, error } = await supabase
-    .from("sponsor_import_rows")
-    .select(
-      "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label, draft_link_id",
-    )
-    .eq("batch_id", batchId)
-    .eq("status", "resolved");
-
-  if (error) throw new Error(error.message);
-
+  let importSucceeded = false;
   try {
+    const { data: resolvedRows, error } = await supabase
+      .from("sponsor_import_rows")
+      .select(
+        "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label, draft_link_id",
+      )
+      .eq("batch_id", batchId)
+      .eq("status", "resolved");
+
+    if (error) throw new Error(error.message);
+
     const result = await materializeDraftLinks(
       batchId,
       String(batch.event_edition_id),
@@ -936,13 +1007,12 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
       affectedCount: result.rows_materialized,
     });
 
+    importSucceeded = true;
     return result;
-  } catch (e) {
-    await supabase
-      .from("sponsor_import_batches")
-      .update({ processing_phase: null, updated_at: new Date().toISOString() })
-      .eq("id", batchId);
-    throw e;
+  } finally {
+    if (!importSucceeded) {
+      await clearOrphanedImportToDraftPhase(batchId);
+    }
   }
 }
 

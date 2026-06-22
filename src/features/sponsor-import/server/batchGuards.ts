@@ -11,7 +11,25 @@ export type BatchRow = {
   status: SponsorImportBatchStatus;
   review_acknowledged_at: string | null;
   processing_phase: string | null;
+  updated_at?: string | null;
 };
+
+/** Orphaned import-to-draft claims older than this may be auto-cleared when no draft links exist. */
+export const STALE_IMPORT_TO_DRAFT_MS = 5 * 60 * 1000;
+
+export function isStaleImportToDraftClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  if (batch.processing_phase !== "importing_to_draft" || batch.status !== "review") {
+    return false;
+  }
+  const updatedAt = batch.updated_at;
+  if (!updatedAt) {
+    return true;
+  }
+  return nowMs - new Date(updatedAt).getTime() >= STALE_IMPORT_TO_DRAFT_MS;
+}
 
 export type ImportRowRecord = {
   id: string;

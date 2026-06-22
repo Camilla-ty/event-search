@@ -4,6 +4,8 @@ import { sponsorImportErrorResponse } from "@/src/features/sponsor-import/server
 import { importBatchToDraft } from "@/src/features/sponsor-import/server/sponsorImportAdmin";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 
+export const maxDuration = 300;
+
 type RouteContext = { params: Promise<{ batchId: string }> };
 
 export async function POST(_request: Request, context: RouteContext) {
