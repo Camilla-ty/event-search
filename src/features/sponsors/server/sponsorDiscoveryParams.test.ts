@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildSponsorDiscoveryPath,
+  clampSponsorDiscoveryPage,
   parseSponsorDiscoveryEventSlug,
   parseSponsorDiscoveryPage,
   parseSponsorDiscoveryPageSize,
@@ -10,6 +12,7 @@ import {
   parseSponsorDiscoverySort,
   SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE,
   SPONSOR_DISCOVERY_MAX_QUERY_LENGTH,
+  sponsorDiscoveryTotalPages,
 } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
 
 describe("parseSponsorDiscoveryQuery", () => {
@@ -107,5 +110,50 @@ describe("parseSponsorDiscoveryParams", () => {
       query: "from-query",
     });
     assert.equal(params.query, "from-q");
+  });
+});
+
+describe("sponsorDiscoveryTotalPages", () => {
+  it("computes pages from total and page size", () => {
+    assert.equal(sponsorDiscoveryTotalPages(0, 20), 1);
+    assert.equal(sponsorDiscoveryTotalPages(1226, 20), 62);
+    assert.equal(sponsorDiscoveryTotalPages(20, 20), 1);
+    assert.equal(sponsorDiscoveryTotalPages(21, 20), 2);
+  });
+});
+
+describe("clampSponsorDiscoveryPage", () => {
+  it("clamps out-of-range pages to the last valid page", () => {
+    assert.equal(clampSponsorDiscoveryPage(9999, 1226, 20), 62);
+    assert.equal(clampSponsorDiscoveryPage(2, 1226, 20), 2);
+    assert.equal(clampSponsorDiscoveryPage(1, 1226, 20), 1);
+  });
+});
+
+describe("buildSponsorDiscoveryPath", () => {
+  it("omits default params from the path", () => {
+    assert.equal(
+      buildSponsorDiscoveryPath({
+        query: "",
+        eventSlug: null,
+        sort: "activity",
+        page: 1,
+        pageSize: 20,
+      }),
+      "/sponsors",
+    );
+  });
+
+  it("includes non-default params", () => {
+    assert.equal(
+      buildSponsorDiscoveryPath({
+        query: "acme",
+        eventSlug: "btc-prague-2026",
+        sort: "name",
+        page: 2,
+        pageSize: 20,
+      }),
+      "/sponsors?q=acme&event=btc-prague-2026&sort=name&page=2",
+    );
   });
 });

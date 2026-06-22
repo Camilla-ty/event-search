@@ -54,4 +54,6 @@ export type SponsorDiscoveryResult = {
   params: SponsorDiscoveryParams;
   eventContext: SponsorDiscoveryEventContext | null;
   eventUnknown: boolean;
+  /** True when the requested page was out of range and results use a clamped page. */
+  pageWasClamped?: boolean;
 };

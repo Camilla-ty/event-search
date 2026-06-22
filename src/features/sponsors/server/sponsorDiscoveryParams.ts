@@ -100,6 +100,45 @@ export function parseSponsorDiscoveryPageSize(
   return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
 }
 
+export function sponsorDiscoveryTotalPages(total: number, pageSize: number): number {
+  if (total <= 0) return 1;
+  const safePageSize = pageSize > 0 ? pageSize : 1;
+  return Math.max(1, Math.ceil(total / safePageSize));
+}
+
+export function clampSponsorDiscoveryPage(
+  page: number,
+  total: number,
+  pageSize: number,
+): number {
+  const totalPages = sponsorDiscoveryTotalPages(total, pageSize);
+  const safePage = page >= SPONSOR_DISCOVERY_MIN_PAGE ? page : SPONSOR_DISCOVERY_MIN_PAGE;
+  return Math.min(safePage, totalPages);
+}
+
+export function buildSponsorDiscoveryPath(params: SponsorDiscoveryParams): string {
+  const search = new URLSearchParams();
+
+  if (params.query.trim() !== "") {
+    search.set("q", params.query.trim());
+  }
+
+  if (params.eventSlug !== null && params.eventSlug.trim() !== "") {
+    search.set("event", params.eventSlug.trim());
+  }
+
+  if (params.sort !== "activity") {
+    search.set("sort", params.sort);
+  }
+
+  if (params.page !== SPONSOR_DISCOVERY_MIN_PAGE) {
+    search.set("page", String(params.page));
+  }
+
+  const query = search.toString();
+  return query !== "" ? `/sponsors?${query}` : "/sponsors";
+}
+
 export function parseSponsorDiscoveryParams(
   input: SponsorDiscoverySearchInput,
 ): SponsorDiscoveryParams {

@@ -1,6 +1,10 @@
 import { mapSponsorDiscoveryRpcResponse } from "@/src/features/sponsors/server/mapSponsorDiscoveryRpcResponse";
-import { parseSponsorDiscoveryParams } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
+import {
+  clampSponsorDiscoveryPage,
+  parseSponsorDiscoveryParams,
+} from "@/src/features/sponsors/server/sponsorDiscoveryParams";
 import type {
+  SponsorDiscoveryParams,
   SponsorDiscoveryResult,
   SponsorDiscoverySearchInput,
 } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
@@ -8,10 +12,9 @@ import { getCompaniesByIds } from "@/src/lib/queries/companies";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { createClient } from "@/src/lib/supabase/server";
 
-export async function getSponsorDiscoveryPage(
-  input: SponsorDiscoverySearchInput,
+async function fetchSponsorDiscoveryPage(
+  params: SponsorDiscoveryParams,
 ): Promise<SponsorDiscoveryResult> {
-  const params = parseSponsorDiscoveryParams(input);
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("sponsor_discovery_page", {
@@ -46,5 +49,43 @@ export async function getSponsorDiscoveryPage(
       ...row,
       location_label: locationByCompanyId.get(row.id) ?? null,
     })),
+  };
+}
+
+export async function getSponsorDiscoveryPage(
+  input: SponsorDiscoverySearchInput,
+): Promise<SponsorDiscoveryResult> {
+  const params = parseSponsorDiscoveryParams(input);
+  const result = await fetchSponsorDiscoveryPage(params);
+
+  const shouldClampPage =
+    result.total > 0 &&
+    result.rows.length === 0 &&
+    params.page > 1 &&
+    !result.eventUnknown;
+
+  if (!shouldClampPage) {
+    return result;
+  }
+
+  const clampedPage = clampSponsorDiscoveryPage(
+    params.page,
+    result.total,
+    params.pageSize,
+  );
+
+  if (clampedPage === params.page) {
+    return result;
+  }
+
+  const clampedParams: SponsorDiscoveryParams = {
+    ...params,
+    page: clampedPage,
+  };
+  const clampedResult = await fetchSponsorDiscoveryPage(clampedParams);
+
+  return {
+    ...clampedResult,
+    pageWasClamped: true,
   };
 }

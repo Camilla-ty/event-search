@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -20,6 +20,8 @@ import { SponsorDiscoveryList } from "./SponsorDiscoveryList";
 import { SponsorEventContextBanner } from "./SponsorEventContextBanner";
 import type { FilterState, SponsorEventContext } from "./types";
 
+const SEARCH_DEBOUNCE_MS = 400;
+
 const GLOBAL_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
   { value: "activity", label: "Latest activity" },
   { value: "name", label: "Name" },
@@ -30,11 +32,6 @@ const EVENT_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
   { value: "tier", label: "Tier rank" },
   ...GLOBAL_SORT_OPTIONS,
 ];
-
-const defaultFilters: FilterState = {
-  query: "",
-  eventSlug: null,
-};
 
 type SponsorSearchPageProps = {
   rows: SponsorDiscoveryRow[];
@@ -54,10 +51,11 @@ export function SponsorSearchPage({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<FilterState>({
-    query: params.query,
-    eventSlug: params.eventSlug,
-  });
+  const [isPending, startTransition] = useTransition();
+
+  const [searchDraft, setSearchDraft] = useState(params.query);
+  const [committedQuery, setCommittedQuery] = useState(params.query);
+  const [eventSlug, setEventSlug] = useState<string | null>(params.eventSlug);
   const [sort, setSort] = useState<SponsorDiscoverySort>(params.sort);
   const [page, setPage] = useState(params.page);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -70,27 +68,49 @@ export function SponsorSearchPage({
     [showEventTier],
   );
 
+  const isNavigating =
+    isPending ||
+    committedQuery !== params.query ||
+    eventSlug !== params.eventSlug ||
+    sort !== params.sort ||
+    page !== params.page;
+
   useEffect(() => {
-    setFilters({
-      query: params.query,
-      eventSlug: params.eventSlug,
-    });
+    setSearchDraft(params.query);
+    setCommittedQuery(params.query);
+    setEventSlug(params.eventSlug);
     setSort(params.sort);
     setPage(params.page);
   }, [params.eventSlug, params.page, params.query, params.sort]);
 
   useEffect(() => {
+    const trimmedDraft = searchDraft.trim();
+    if (trimmedDraft === committedQuery) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setCommittedQuery(trimmedDraft);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [committedQuery, searchDraft]);
+
+  useEffect(() => {
     const next = new URLSearchParams(searchParams.toString());
 
-    if (filters.query.trim()) {
-      next.set("q", filters.query.trim());
+    if (committedQuery !== "") {
+      next.set("q", committedQuery);
     } else {
       next.delete("q");
     }
 
-    const eventSlug = filters.eventSlug?.trim() ?? "";
-    if (eventSlug !== "") {
-      next.set("event", eventSlug);
+    const activeEventSlug = eventSlug?.trim() ?? "";
+    if (activeEventSlug !== "") {
+      next.set("event", activeEventSlug);
     } else {
       next.delete("event");
     }
@@ -112,13 +132,14 @@ export function SponsorSearchPage({
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
-      router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+      startTransition(() => {
+        router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+      });
     }
-  }, [filters, page, pathname, router, searchParams, sort]);
+  }, [committedQuery, eventSlug, page, pathname, router, searchParams, sort]);
 
-  function handleFilterChange(next: FilterState) {
-    setFilters(next);
-    setPage(1);
+  function handleSearchChange(query: string) {
+    setSearchDraft(query);
   }
 
   function handleSortChange(next: SponsorDiscoverySort) {
@@ -127,18 +148,28 @@ export function SponsorSearchPage({
   }
 
   function handleReset() {
-    setFilters(defaultFilters);
+    setSearchDraft("");
+    setCommittedQuery("");
+    setEventSlug(null);
     setSort("activity");
     setPage(1);
   }
 
   function clearEventScope() {
-    setFilters((current) => ({ ...current, eventSlug: null }));
+    setEventSlug(null);
     setPage(1);
+    if (sort === "tier") {
+      setSort("activity");
+    }
   }
 
-  const activeEventSlug = filters.eventSlug?.trim() ?? "";
+  const activeEventSlug = eventSlug?.trim() ?? "";
   const showEventBanner = activeEventSlug !== "";
+
+  const filterState: FilterState = {
+    query: searchDraft,
+    eventSlug,
+  };
 
   return (
     <section className="space-y-4">
@@ -150,10 +181,10 @@ export function SponsorSearchPage({
       <div className={explorerPageGridClass}>
         <div className="hidden md:block">
           <FilterPanel
-            filters={filters}
+            filters={filterState}
             eventName={eventContext?.name ?? null}
             eventUnknown={eventUnknown}
-            onChange={handleFilterChange}
+            onChange={(next) => handleSearchChange(next.query)}
             onReset={handleReset}
             className={explorerFilterStickyClass}
           />
@@ -179,9 +210,11 @@ export function SponsorSearchPage({
           <SponsorDiscoveryList
             rows={rows}
             total={total}
-            page={page}
+            page={params.page}
             pageSize={params.pageSize}
             showEventTier={showEventTier}
+            loading={isNavigating}
+            eventUnknown={eventUnknown}
             onPageChange={setPage}
             onReset={handleReset}
           />
@@ -193,10 +226,10 @@ export function SponsorSearchPage({
         onClose={() => setMobileFiltersOpen(false)}
       >
         <FilterPanel
-          filters={filters}
+          filters={filterState}
           eventName={eventContext?.name ?? null}
           eventUnknown={eventUnknown}
-          onChange={handleFilterChange}
+          onChange={(next) => handleSearchChange(next.query)}
           onReset={handleReset}
         />
       </MobileFilterDrawer>

@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
+
 import { SponsorSearchPage } from "@/src/features/sponsors/components/search/SponsorSearchPage";
 import { getSponsorDiscoveryPage } from "@/src/features/sponsors/server/getSponsorDiscoveryPage";
+import { buildSponsorDiscoveryPath } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +31,10 @@ export default async function SponsorsPage({ searchParams }: SponsorsPageProps) 
     sort,
     page,
   });
+
+  if (data.pageWasClamped) {
+    redirect(buildSponsorDiscoveryPath(data.params));
+  }
 
   return (
     <SponsorSearchPage
