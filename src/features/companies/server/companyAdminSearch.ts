@@ -10,7 +10,7 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { CompanyAdminRow } from "./companyAdmin";
 
 const COMPANY_ADMIN_SEARCH_SELECT =
-  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases";
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases, status, merged_into_company_id, merged_at";
 
 function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
   return {
@@ -29,6 +29,10 @@ function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
     city_id: typeof row.city_id === "string" ? row.city_id : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
     aliases: parseCompanyAliasesFromRow(row.aliases),
+    status: typeof row.status === "string" ? row.status : "active",
+    merged_into_company_id:
+      typeof row.merged_into_company_id === "string" ? row.merged_into_company_id : null,
+    merged_at: typeof row.merged_at === "string" ? row.merged_at : null,
   };
 }
 
@@ -47,6 +51,7 @@ async function fetchPrimarySearchCandidates(term: string): Promise<CompanyAdminR
   const { data, error } = await supabase
     .from("companies")
     .select(COMPANY_ADMIN_SEARCH_SELECT)
+    .eq("status", "active")
     .or(
       `name.ilike.%${term}%,slug.ilike.%${term}%,domain.ilike.%${term}%,website.ilike.%${term}%`,
     );
@@ -62,7 +67,8 @@ async function fetchAliasSearchCandidates(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("companies")
-    .select(COMPANY_ADMIN_SEARCH_SELECT);
+    .select(COMPANY_ADMIN_SEARCH_SELECT)
+    .eq("status", "active");
 
   if (error) throw new Error(error.message);
 

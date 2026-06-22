@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 
 import {
   getCompanyAdminById,
+  MERGED_COMPANY_READ_ONLY_MESSAGE,
   updateCompanyAdmin,
 } from "@/src/features/companies/server/companyAdmin";
 import { enrichCompanyLogo } from "@/src/features/companies/server/createCompanyWithLogo";
@@ -136,6 +137,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const status = message === MERGED_COMPANY_READ_ONLY_MESSAGE ? 409 : 500;
+    return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

@@ -38,6 +38,7 @@ type CompanyAdminFormProps = {
   initial: CompanyFormValues;
   cities: CityOption[];
   readOnlyDomain?: string | null;
+  readOnly?: boolean;
   initialNotice?: string | null;
   initialLogoMetadata?: CompanyLogoMetadata;
 };
@@ -69,6 +70,7 @@ export function CompanyAdminForm({
   initial,
   cities,
   readOnlyDomain,
+  readOnly = false,
   initialNotice,
   initialLogoMetadata,
 }: CompanyAdminFormProps) {
@@ -94,6 +96,8 @@ export function CompanyAdminForm({
     return { ok: true, message: notice, variant: "warning" };
   });
   const [slugModalOpen, setSlugModalOpen] = useState(false);
+
+  const fieldsDisabled = isSubmitting || readOnly;
 
   const autoSlug = useMemo(() => slugify(values.name), [values.name]);
   const effectiveSlug = slugTouched ? values.slug : autoSlug;
@@ -222,6 +226,7 @@ export function CompanyAdminForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (readOnly) return;
     if (slugChanged && !slugModalOpen) {
       setSlugModalOpen(true);
       return;
@@ -254,7 +259,7 @@ export function CompanyAdminForm({
             required
             value={values.name}
             onChange={(e) => updateField("name", e.target.value)}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
           />
         </label>
@@ -266,7 +271,7 @@ export function CompanyAdminForm({
             required
             value={values.website}
             onChange={(e) => updateField("website", e.target.value)}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
             placeholder="https://acme.com"
           />
@@ -289,7 +294,7 @@ export function CompanyAdminForm({
               setSlugTouched(true);
               updateField("slug", e.target.value);
             }}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
           />
           <p className="text-xs text-slate-500">Public path: /sponsors/{effectiveSlug || "…"}</p>
@@ -299,7 +304,7 @@ export function CompanyAdminForm({
           value={values.city_id}
           onChange={(cityId) => updateField("city_id", cityId)}
           initialCities={cities}
-          disabled={isSubmitting}
+          disabled={fieldsDisabled}
           emptyLabel="No city / Unknown"
         />
 
@@ -310,7 +315,7 @@ export function CompanyAdminForm({
               type="text"
               value={values.logo_url}
               onChange={(e) => updateField("logo_url", e.target.value)}
-              disabled={isSubmitting}
+              disabled={fieldsDisabled}
               className={formInputClass}
               placeholder="https://…"
             />
@@ -329,7 +334,7 @@ export function CompanyAdminForm({
                 value={values.aliases}
                 onChange={(aliases) => updateField("aliases", aliases)}
                 canonicalName={values.name}
-                disabled={isSubmitting}
+                disabled={fieldsDisabled}
               />
             </div>
             <label className="block space-y-2">
@@ -338,7 +343,7 @@ export function CompanyAdminForm({
                 type="text"
                 value={values.short_description}
                 onChange={(e) => updateField("short_description", e.target.value)}
-                disabled={isSubmitting}
+                disabled={fieldsDisabled}
                 className={formInputClass}
               />
             </label>
@@ -347,7 +352,7 @@ export function CompanyAdminForm({
               <textarea
                 value={values.description}
                 onChange={(e) => updateField("description", e.target.value)}
-                disabled={isSubmitting}
+                disabled={fieldsDisabled}
                 rows={4}
                 className={formInputClass}
               />
@@ -359,7 +364,7 @@ export function CompanyAdminForm({
           <div className="flex flex-wrap gap-2">
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={fieldsDisabled}
               onClick={() => {
                 createIntentRef.current = "another";
               }}
@@ -369,7 +374,7 @@ export function CompanyAdminForm({
             <Button
               type="submit"
               variant="secondary"
-              disabled={isSubmitting}
+              disabled={fieldsDisabled}
               onClick={() => {
                 createIntentRef.current = "edit";
               }}
@@ -377,7 +382,7 @@ export function CompanyAdminForm({
               Create company & edit
             </Button>
           </div>
-        ) : (
+        ) : readOnly ? null : (
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Saving…" : "Save changes"}
           </Button>

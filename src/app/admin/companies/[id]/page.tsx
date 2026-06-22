@@ -4,21 +4,28 @@ import { notFound } from "next/navigation";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { CompanyAdminForm } from "@/src/features/companies/components/admin/CompanyAdminForm";
+import { CompanyAdminMergeActions } from "@/src/features/companies/components/admin/CompanyAdminMergeActions";
+import { CompanyAdminStatusBadge } from "@/src/features/companies/components/admin/CompanyAdminStatusBadge";
+import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
-import { getCompanyAdminById } from "@/src/features/companies/server/companyAdmin";
+import {
+  getCompanyAdminById,
+  isCompanyAdminEditable,
+} from "@/src/features/companies/server/companyAdmin";
 import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
+import { feedbackWarningClass } from "@/src/lib/design/classes";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ logoWarning?: string }>;
+  searchParams: Promise<{ logoWarning?: string; merged?: string; merge_id?: string }>;
 };
 
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { logoWarning } = await searchParams;
+  const { logoWarning, merged, merge_id: mergeId } = await searchParams;
   const [company, cities, sponsorships] = await Promise.all([
     getCompanyAdminById(id),
     getCityOptions(),
@@ -26,6 +33,13 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
   ]);
 
   if (!company) notFound();
+
+  const isEditable = isCompanyAdminEditable(company);
+  const canonicalCompany =
+    company.merged_into_company_id !== null
+      ? await getCompanyAdminById(company.merged_into_company_id)
+      : null;
+  const showMergeSuccess = merged === "1" && typeof mergeId === "string" && mergeId.trim() !== "";
 
   return (
     <section>
@@ -36,27 +50,56 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           { label: company.name },
         ]}
       />
+
+      {showMergeSuccess ? <CompanyMergeSuccessBanner mergeId={mergeId.trim()} /> : null}
+
       <AdminPageHeader
         title={company.name}
-        description="Edit company profile."
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            <CompanyAdminStatusBadge status={company.status} />
+            <span>
+              {isEditable
+                ? "Edit company profile."
+                : "Merged company profile (read-only)."}
+            </span>
+          </span>
+        }
         actions={
-          company.slug ? (
-            <Link
-              href={`/sponsors/${company.slug}`}
-              className="text-sm text-brand-primary hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View public page ↗
-            </Link>
-          ) : null
+          <>
+            {isEditable ? <CompanyAdminMergeActions companyId={company.id} /> : null}
+            {company.slug && isEditable ? (
+              <Link
+                href={`/sponsors/${company.slug}`}
+                className="inline-flex h-10 items-center text-sm text-brand-primary hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View public page ↗
+              </Link>
+            ) : null}
+          </>
         }
       />
+
+      {!isEditable && canonicalCompany ? (
+        <div className={`${feedbackWarningClass} mb-6 text-sm`}>
+          This company was merged into{" "}
+          <Link
+            href={`/admin/companies/${canonicalCompany.id}`}
+            className="font-medium text-brand-primary hover:underline"
+          >
+            {canonicalCompany.name}
+          </Link>
+          . The duplicate record is kept for audit and sponsorship history.
+        </div>
+      ) : null}
 
       <CompanyAdminForm
         mode="edit"
         companyId={company.id}
         cities={cities}
+        readOnly={!isEditable}
         readOnlyDomain={company.domain}
         initialNotice={logoWarning ?? null}
         initial={{

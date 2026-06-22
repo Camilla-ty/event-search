@@ -8,7 +8,7 @@ import {
   listCompaniesAdmin,
   type CompanyListFilter,
 } from "@/src/features/companies/server/companyAdmin";
-import { primaryCtaClass } from "@/src/lib/design/classes";
+import { primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +67,14 @@ export default async function AdminCompaniesListPage({ searchParams }: PageProps
               : `${activeFilterLabel} (${companies.length})`
         }
         actions={
-          <Link href="/admin/companies/new" className={`${primaryCtaClass} h-10`}>
-            Create company
-          </Link>
+          <>
+            <Link href="/admin/companies/merge" className={`${secondaryCtaClass} h-10`}>
+              Merge duplicates
+            </Link>
+            <Link href="/admin/companies/new" className={`${primaryCtaClass} h-10`}>
+              Create company
+            </Link>
+          </>
         }
       />
 

@@ -22,7 +22,7 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
 
 const COMPANY_ADMIN_SELECT =
-  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases";
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases, status, merged_into_company_id, merged_at";
 
 function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
   return {
@@ -41,6 +41,10 @@ function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
     city_id: typeof row.city_id === "string" ? row.city_id : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
     aliases: parseCompanyAliasesFromRow(row.aliases),
+    status: typeof row.status === "string" ? row.status : "active",
+    merged_into_company_id:
+      typeof row.merged_into_company_id === "string" ? row.merged_into_company_id : null,
+    merged_at: typeof row.merged_at === "string" ? row.merged_at : null,
   };
 }
 
@@ -60,6 +64,9 @@ export type CompanyAdminRow = {
   city_id: string | null;
   created_at: string | null;
   aliases: string[];
+  status: string;
+  merged_into_company_id: string | null;
+  merged_at: string | null;
 };
 
 export type CompanyListItem = CompanyAdminRow & {
@@ -202,6 +209,20 @@ function searchHitsToCompanyListItems(
   }));
 }
 
+function isActiveAdminCompany(company: CompanyAdminRow): boolean {
+  return company.status !== "merged";
+}
+
+export function isCompanyAdminEditable(company: CompanyAdminRow): boolean {
+  return isActiveAdminCompany(company);
+}
+
+export const MERGED_COMPANY_READ_ONLY_MESSAGE = "Merged companies are read-only.";
+
+function filterActiveAdminCompanies<T extends CompanyAdminRow>(companies: readonly T[]): T[] {
+  return companies.filter(isActiveAdminCompany);
+}
+
 export async function listCompaniesAdmin(
   options?: ListCompaniesAdminOptions,
 ): Promise<CompanyListItem[]> {
@@ -211,7 +232,7 @@ export async function listCompaniesAdmin(
 
   if (term !== "") {
     const hits = await searchCompaniesAdmin({ query: term });
-    const filtered = applyCompanyListFilter(hits, filter);
+    const filtered = applyCompanyListFilter(filterActiveAdminCompanies(hits), filter);
     return searchHitsToCompanyListItems(filtered, countByCompany);
   }
 
@@ -219,6 +240,7 @@ export async function listCompaniesAdmin(
   const { data, error } = await supabase
     .from("companies")
     .select(COMPANY_ADMIN_SELECT)
+    .eq("status", "active")
     .order("name", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -250,19 +272,17 @@ export async function updateCompanyAdmin(
   input: UpdateCompanyAdminInput,
 ): Promise<UpdateCompanyAdminResult> {
   const supabase = createAdminClient();
+  const existing = await getCompanyAdminById(id);
+  if (!existing) {
+    throw new Error("Company not found.");
+  }
+  if (!isCompanyAdminEditable(existing)) {
+    throw new Error(MERGED_COMPANY_READ_ONLY_MESSAGE);
+  }
+
   const patch: Record<string, unknown> = {};
   const warnings: string[] = [];
-  let existingRow: CompanyAdminRow | null = null;
   let persistedLogoUrl: string | undefined;
-
-  const needsExistingRow = input.logo_url !== undefined || input.aliases !== undefined;
-
-  if (needsExistingRow) {
-    existingRow = await getCompanyAdminById(id);
-    if (!existingRow) {
-      throw new Error("Company not found.");
-    }
-  }
 
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.slug !== undefined) patch.slug = input.slug.trim();
@@ -275,18 +295,18 @@ export async function updateCompanyAdmin(
     }
     patch.domain = domain;
   }
-  if (input.aliases !== undefined && existingRow) {
+  if (input.aliases !== undefined) {
     const canonicalName =
-      typeof patch.name === "string" ? patch.name : existingRow.name;
+      typeof patch.name === "string" ? patch.name : existing.name;
     patch.aliases = normalizeCompanyAliases(input.aliases, canonicalName);
   }
-  if (input.logo_url !== undefined && existingRow) {
+  if (input.logo_url !== undefined) {
     const incomingLogoUrl = input.logo_url?.trim() || null;
     const domainForLogo =
-      (typeof patch.domain === "string" ? patch.domain : null) ?? existingRow.domain;
+      (typeof patch.domain === "string" ? patch.domain : null) ?? existing.domain;
 
     const logoPatch = await resolveManualLogoPatch({
-      existing: existingRow,
+      existing,
       incomingLogoUrl,
       domainForLogo,
     });
@@ -328,7 +348,7 @@ export type UploadCompanyLogoFileInput = {
 
 export type UploadCompanyLogoFileAdminResult =
   | { ok: true; company: CompanyAdminRow }
-  | { ok: false; status: 400 | 404 | 500; error: string };
+  | { ok: false; status: 400 | 404 | 409 | 500; error: string };
 
 export async function uploadCompanyLogoFileAdmin(
   companyId: string,
@@ -337,6 +357,9 @@ export async function uploadCompanyLogoFileAdmin(
   const existing = await getCompanyAdminById(companyId);
   if (!existing) {
     return { ok: false, status: 404, error: "Company not found." };
+  }
+  if (!isCompanyAdminEditable(existing)) {
+    return { ok: false, status: 409, error: MERGED_COMPANY_READ_ONLY_MESSAGE };
   }
 
   const validation = validateCompanyLogoUpload({
