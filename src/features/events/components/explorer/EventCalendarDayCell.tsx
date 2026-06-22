@@ -4,6 +4,8 @@ import { getTodayIsoDate } from "@/src/features/events/lib/eventCalendarGrouping
 import { EventCalendarEventChip } from "./EventCalendarEventChip";
 
 const MAX_VISIBLE_EVENTS = 3;
+const COMPACT_MOBILE_VISIBLE_EVENTS = 1;
+const COMPACT_DESKTOP_VISIBLE_EVENTS = 2;
 
 export type EventCalendarDayCellVariant = "default" | "compact";
 
@@ -48,16 +50,35 @@ export function EventCalendarDayCell({
   );
   const visibleEvents = sortedEvents.slice(0, MAX_VISIBLE_EVENTS);
   const overflowCount = sortedEvents.length - visibleEvents.length;
+  const compactMobileOverflow = Math.max(
+    0,
+    sortedEvents.length - COMPACT_MOBILE_VISIBLE_EVENTS,
+  );
+  const compactDesktopOverflow = Math.max(
+    0,
+    sortedEvents.length - COMPACT_DESKTOP_VISIBLE_EVENTS,
+  );
+  const primaryCompactEvent = sortedEvents[0];
+  const secondaryCompactEvent = sortedEvents[1];
+  const compactAccessibleLabel = isCompact
+    ? formatDayCellAccessibleLabel(isoDate, eventCount)
+    : undefined;
+  const defaultAccessibleLabel =
+    !isCompact && eventCount === 0
+      ? formatDayCellAccessibleLabel(isoDate, eventCount)
+      : undefined;
 
   return (
     <div
-      aria-label={formatDayCellAccessibleLabel(isoDate, eventCount)}
+      role={isCompact ? "group" : undefined}
+      aria-label={compactAccessibleLabel ?? defaultAccessibleLabel}
       className={`border-b border-r border-slate-100 p-2 last:border-r-0 ${
-        isCompact ? "min-h-16" : "min-h-28"
+        isCompact ? "min-h-20 lg:min-h-24" : "min-h-28"
       } ${isCurrentMonth ? "bg-white" : "bg-slate-50/80"}`}
     >
       <div className="mb-1 flex items-center justify-between gap-1">
         <span
+          aria-hidden={isCompact ? true : undefined}
           className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full text-xs font-medium ${
             isToday
               ? "bg-brand-primary text-white"
@@ -72,12 +93,37 @@ export function EventCalendarDayCell({
 
       {isCompact ? (
         eventCount > 0 ? (
-          <div className="flex items-center gap-1 px-0.5">
-            <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-primary"
-              aria-hidden="true"
-            />
-            <span className="text-xs font-medium text-slate-600">{eventCount}</span>
+          <div className="space-y-1">
+            {primaryCompactEvent ? (
+              <EventCalendarEventChip
+                key={`${isoDate}-${primaryCompactEvent.id}`}
+                event={primaryCompactEvent}
+              />
+            ) : null}
+            {secondaryCompactEvent ? (
+              <div className="hidden lg:block">
+                <EventCalendarEventChip
+                  key={`${isoDate}-${secondaryCompactEvent.id}`}
+                  event={secondaryCompactEvent}
+                />
+              </div>
+            ) : null}
+            {compactMobileOverflow > 0 ? (
+              <p
+                aria-hidden="true"
+                className="px-1 text-xs font-medium text-slate-500 lg:hidden"
+              >
+                +{compactMobileOverflow} more
+              </p>
+            ) : null}
+            {compactDesktopOverflow > 0 ? (
+              <p
+                aria-hidden="true"
+                className="hidden px-1 text-xs font-medium text-slate-500 lg:block"
+              >
+                +{compactDesktopOverflow} more
+              </p>
+            ) : null}
           </div>
         ) : null
       ) : (
