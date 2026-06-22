@@ -11,7 +11,7 @@ type ExplorerResultsToolbarProps<T extends string> = {
   sort: T;
   sortOptions: ExplorerSortOption<T>[];
   onSortChange: (value: T) => void;
-  onOpenFilters: () => void;
+  onOpenFilters?: () => void;
   showSort?: boolean;
   calendarCounts?: {
     primaryLine: string;
@@ -48,13 +48,15 @@ export function ExplorerResultsToolbar<T extends string>({
       )}
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onOpenFilters}
-          className="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 md:hidden"
-        >
-          Filters
-        </button>
+        {onOpenFilters ? (
+          <button
+            type="button"
+            onClick={onOpenFilters}
+            className="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 md:hidden"
+          >
+            Filters
+          </button>
+        ) : null}
 
         {showSort ? (
           <label className="inline-flex items-center gap-2 text-sm text-slate-600">
