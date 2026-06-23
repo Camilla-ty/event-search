@@ -52,3 +52,5 @@ schema_dump.sql
 # Supabase CLI local temp state
 supabase/.temp/
 
+# Script run artifacts (audit/cleanup JSONL backups — generated locally)
+scripts/artifacts/

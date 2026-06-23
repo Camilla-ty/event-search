@@ -142,7 +142,7 @@ async function resolveManualLogoPatch(params: {
 
 export type CompanyListFilter =
   | "all"
-  | "social_website"
+  | "social_website" // legacy filter id; admin UI label is "Hosted platform website"
   | "missing_logo"
   | "needs_logo_review";
 

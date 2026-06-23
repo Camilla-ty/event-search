@@ -210,11 +210,6 @@ export function normalizeCompanyIdentityFromWebsite(website: string): string {
   return resolved.status === "domain" ? resolved.domain : "";
 }
 
-export function isSocialWebsiteCompany(company: { website?: string | null }): boolean {
-  const website = company.website?.trim() ?? "";
-  return website !== "" && isSocialPlatformWebsite(website);
-}
-
 export function isHostedPlatformCompany(company: { website?: string | null }): boolean {
   const website = company.website?.trim() ?? "";
   return website !== "" && isHostedPlatformWebsite(website);
