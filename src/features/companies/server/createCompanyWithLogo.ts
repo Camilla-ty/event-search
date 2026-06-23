@@ -2,7 +2,7 @@ import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
 import { logoMetadataPatchForManualLogoStorage } from "@/src/lib/companies/logoMetadataPatch";
 import { shouldAutoEnrichCompanyLogo } from "@/src/lib/companies/shouldAutoEnrichCompanyLogo";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
-import { isHostedPlatformWebsite } from "@/src/lib/domain/socialPlatformWebsite";
+import { isHostedPlatformWebsite } from "@/src/lib/domain/hostedPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";

@@ -2,7 +2,7 @@ import {
   fetchLogoDevImage,
   getLogoDevServerPublishableKey,
 } from "@/src/lib/companies/logoDevServer";
-import { isHostedPlatformIdentityKey } from "@/src/lib/domain/socialPlatformWebsite";
+import { isHostedPlatformIdentityKey } from "@/src/lib/domain/hostedPlatformWebsite";
 
 import {
   EVENT_LOGO_AUTO_ENRICH_REJECTED_ERROR,
