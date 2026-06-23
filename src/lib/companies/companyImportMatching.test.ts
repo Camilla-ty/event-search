@@ -148,4 +148,26 @@ describe("companyImportMatching", () => {
     assert.equal(result.proposed_company_id, null);
     assert.equal(result.match_method, null);
   });
+
+  it("community rows (null domain) never auto-match and never collapse together", () => {
+    // Two unrelated communities that previously would both normalize to a bare
+    // host (e.g. discord.com) now carry a null domain and cannot domain-match.
+    const context = buildImportMatchContext([
+      company({ id: "existing", name: "Existing Discord Co", domain: null, aliases: [] }),
+    ]);
+
+    const communityA = matchImportRowIdentity(
+      { normalized_domain: null, normalized_company_name: "Community A" },
+      context,
+    );
+    const communityB = matchImportRowIdentity(
+      { normalized_domain: null, normalized_company_name: "Community B" },
+      context,
+    );
+
+    assert.equal(communityA.status, "needs_review");
+    assert.equal(communityA.match_method, null);
+    assert.equal(communityB.status, "needs_review");
+    assert.equal(communityB.match_method, null);
+  });
 });

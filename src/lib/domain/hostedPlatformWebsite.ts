@@ -94,6 +94,36 @@ function matchesHostedPlatformPath(host: string, pathname: string): boolean {
   );
 }
 
+/**
+ * Multi-tenant community / social hosts whose URLs must NOT become a company
+ * identity key. A bare host here (e.g. `discord.com`) would silently merge
+ * unrelated entities, so these resolve to "no identity" (null domain) instead.
+ */
+function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
+  const path = normalizePathname(pathname);
+
+  switch (host) {
+    case "discord.com":
+    case "discordapp.com":
+    case "discord.gg":
+    case "instagram.com":
+    case "tiktok.com":
+    case "github.com":
+      return true;
+    case "linkedin.com":
+      // Company pages keep a path-aware identity; personal profiles and the
+      // bare host do not.
+      return !path.startsWith("/company/");
+    case "t.me":
+    case "telegram.me":
+      // B1: only invite/group links are non-identity; t.me/{handle} keeps its
+      // existing path-aware identity.
+      return path.startsWith("/+") || path.startsWith("/joinchat/");
+    default:
+      return false;
+  }
+}
+
 /** True when the website URL points at a known social / link-aggregator platform page. */
 export function isSocialPlatformWebsite(website: string): boolean {
   const parsed = parseWebsiteUrl(website);
@@ -124,31 +154,60 @@ export function isHostedPlatformIdentityKey(identity: string): boolean {
 }
 
 /**
- * Canonical company identity for matching and dedup.
- * Corporate sites: hostname only. Hosted platforms: hostname + pathname.
+ * Resolution of a raw website into a company identity. Three outcomes:
+ * - `domain`: a usable identity key (corporate host, or path-aware hosted page).
+ * - `no_identity`: a valid URL on a multi-tenant community/social platform that
+ *   must not become an identity key (domain should be stored as null).
+ * - `unparseable`: empty or not a usable URL (treated as an invalid website).
  */
-export function normalizeCompanyIdentityFromWebsite(website: string): string {
+export type CompanyWebsiteIdentity =
+  | { status: "domain"; domain: string }
+  | { status: "no_identity" }
+  | { status: "unparseable" };
+
+export function resolveCompanyWebsiteIdentity(website: string): CompanyWebsiteIdentity {
   const trimmed = website.trim();
-  if (trimmed === "") return "";
+  if (trimmed === "") return { status: "unparseable" };
 
   const parsed = parseWebsiteUrl(trimmed);
   if (parsed) {
     const host = normalizeHost(parsed.hostname);
-    if (!host) return "";
+    if (!host) return { status: "unparseable" };
+
+    if (matchesNonIdentityPlatform(host, parsed.pathname)) {
+      return { status: "no_identity" };
+    }
 
     if (matchesHostedPlatformPath(host, parsed.pathname)) {
       const path = normalizePathname(parsed.pathname);
-      return `${host}${path}`;
+      return { status: "domain", domain: `${host}${path}` };
     }
 
-    return host;
+    return { status: "domain", domain: host };
   }
 
-  return trimmed
+  const fallback = trimmed
     .toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
+  if (fallback === "") return { status: "unparseable" };
+  return { status: "domain", domain: fallback };
+}
+
+/** True when the website is a multi-tenant community/social URL with no company identity. */
+export function isCommunityPlatformWebsite(website: string): boolean {
+  return resolveCompanyWebsiteIdentity(website).status === "no_identity";
+}
+
+/**
+ * Canonical company identity for matching and dedup.
+ * Corporate sites: hostname only. Hosted platforms: hostname + pathname.
+ * Returns "" for community/social URLs (no identity) and unparseable input.
+ */
+export function normalizeCompanyIdentityFromWebsite(website: string): string {
+  const resolved = resolveCompanyWebsiteIdentity(website);
+  return resolved.status === "domain" ? resolved.domain : "";
 }
 
 export function isSocialWebsiteCompany(company: { website?: string | null }): boolean {

@@ -3,10 +3,12 @@ import { describe, it } from "node:test";
 
 import {
   companyNeedsLogoReview,
+  isCommunityPlatformWebsite,
   isHostedPlatformIdentityKey,
   isHostedPlatformWebsite,
   isSocialPlatformWebsite,
   normalizeCompanyIdentityFromWebsite,
+  resolveCompanyWebsiteIdentity,
 } from "./hostedPlatformWebsite";
 
 describe("isHostedPlatformWebsite", () => {
@@ -134,6 +136,122 @@ describe("normalizeCompanyIdentityFromWebsite", () => {
   it("collapses bare marketplace hosts to hostname only", () => {
     assert.equal(normalizeCompanyIdentityFromWebsite("https://opensea.io/"), "opensea.io");
     assert.equal(normalizeCompanyIdentityFromWebsite("https://magiceden.io"), "magiceden.io");
+  });
+});
+
+describe("resolveCompanyWebsiteIdentity", () => {
+  it("treats Discord invite/community URLs as no_identity", () => {
+    assert.deepEqual(
+      resolveCompanyWebsiteIdentity("https://discord.com/invite/qx2Vy5GCZ7"),
+      { status: "no_identity" },
+    );
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://discord.gg/qx2Vy5GCZ7"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(
+      resolveCompanyWebsiteIdentity("https://discordapp.com/invite/abc"),
+      { status: "no_identity" },
+    );
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://discord.com"), {
+      status: "no_identity",
+    });
+  });
+
+  it("treats Instagram, TikTok, and GitHub URLs as no_identity", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://instagram.com/acme"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.instagram.com"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://tiktok.com/@acme"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://github.com/acme"), {
+      status: "no_identity",
+    });
+  });
+
+  it("treats LinkedIn personal profiles and bare host as no_identity", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.linkedin.com/in/jane"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://linkedin.com"), {
+      status: "no_identity",
+    });
+  });
+
+  it("keeps LinkedIn company pages as a path-aware identity", () => {
+    assert.deepEqual(
+      resolveCompanyWebsiteIdentity("https://www.linkedin.com/company/atlantic-hpc/"),
+      { status: "domain", domain: "linkedin.com/company/atlantic-hpc" },
+    );
+  });
+
+  it("applies B1 Telegram rules: handles keep identity, invites do not", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://t.me/acmecorp"), {
+      status: "domain",
+      domain: "t.me/acmecorp",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://telegram.me/acmecorp"), {
+      status: "domain",
+      domain: "telegram.me/acmecorp",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://t.me/+AbC123xyz"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://t.me/joinchat/AbC123"), {
+      status: "no_identity",
+    });
+  });
+
+  it("keeps corporate and existing hosted identities unchanged", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.acme.com/about"), {
+      status: "domain",
+      domain: "acme.com",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://x.com/somecompany"), {
+      status: "domain",
+      domain: "x.com/somecompany",
+    });
+    assert.deepEqual(
+      resolveCompanyWebsiteIdentity("https://opensea.io/collection/nekocore"),
+      { status: "domain", domain: "opensea.io/collection/nekocore" },
+    );
+  });
+
+  it("treats empty input as unparseable", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity(""), { status: "unparseable" });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("   "), { status: "unparseable" });
+  });
+
+  it("normalizeCompanyIdentityFromWebsite returns empty for community URLs", () => {
+    assert.equal(
+      normalizeCompanyIdentityFromWebsite("https://discord.com/invite/abc"),
+      "",
+    );
+    assert.equal(normalizeCompanyIdentityFromWebsite("https://instagram.com/acme"), "");
+    assert.equal(normalizeCompanyIdentityFromWebsite("https://www.acme.com/about"), "acme.com");
+  });
+});
+
+describe("isCommunityPlatformWebsite", () => {
+  it("matches the non-identity platforms", () => {
+    assert.equal(isCommunityPlatformWebsite("https://discord.gg/abc"), true);
+    assert.equal(isCommunityPlatformWebsite("https://instagram.com/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://github.com/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://www.linkedin.com/in/jane"), true);
+    assert.equal(isCommunityPlatformWebsite("https://t.me/+invite"), true);
+  });
+
+  it("does not match corporate or path-aware hosted identities", () => {
+    assert.equal(isCommunityPlatformWebsite("https://acme.com"), false);
+    assert.equal(
+      isCommunityPlatformWebsite("https://www.linkedin.com/company/atlantic-hpc/"),
+      false,
+    );
+    assert.equal(isCommunityPlatformWebsite("https://t.me/acmecorp"), false);
+    assert.equal(isCommunityPlatformWebsite("https://opensea.io/collection/nekocore"), false);
   });
 });
 

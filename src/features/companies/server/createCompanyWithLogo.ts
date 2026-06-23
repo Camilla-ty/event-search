@@ -2,7 +2,10 @@ import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
 import { logoMetadataPatchForManualLogoStorage } from "@/src/lib/companies/logoMetadataPatch";
 import { shouldAutoEnrichCompanyLogo } from "@/src/lib/companies/shouldAutoEnrichCompanyLogo";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
-import { isHostedPlatformWebsite } from "@/src/lib/domain/hostedPlatformWebsite";
+import {
+  isHostedPlatformWebsite,
+  resolveCompanyWebsiteIdentity,
+} from "@/src/lib/domain/hostedPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";
@@ -53,10 +56,13 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
 
   let normalizedDomain: string | null = null;
   if (hasWebsite) {
-    normalizedDomain = normalizeDomainFromWebsite(trimmedWebsite);
-    if (!normalizedDomain) {
+    const identity = resolveCompanyWebsiteIdentity(trimmedWebsite);
+    if (identity.status === "unparseable") {
       throw new Error("Invalid company website");
     }
+    // Community/social URLs (no_identity) are stored with a null domain so they
+    // never become a shared identity key.
+    normalizedDomain = identity.status === "domain" ? identity.domain : null;
   }
 
   const isHostedPlatform = hasWebsite && isHostedPlatformWebsite(trimmedWebsite);

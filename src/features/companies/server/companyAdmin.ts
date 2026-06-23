@@ -1,4 +1,3 @@
-import { normalizeDomainFromWebsite } from "@/src/features/companies/server/createCompanyWithLogo";
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
 import { scheduleCompanyLogoCleanupAfterPersist, uploadCompanyLogoBytes, verifyCompanyLogoStorageObject } from "@/src/features/companies/server/companyLogoStorage";
 import {
@@ -16,7 +15,8 @@ import {
   companyMissingLogo,
   companyNeedsLogoReview,
   isHostedPlatformCompany,
-} from "@/src/lib/domain/socialPlatformWebsite";
+  resolveCompanyWebsiteIdentity,
+} from "@/src/lib/domain/hostedPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
@@ -289,11 +289,12 @@ export async function updateCompanyAdmin(
   if (input.website !== undefined) {
     const website = input.website.trim();
     patch.website = website;
-    const domain = normalizeDomainFromWebsite(website);
-    if (!domain) {
+    const identity = resolveCompanyWebsiteIdentity(website);
+    if (identity.status === "unparseable") {
       throw new Error("Invalid company website");
     }
-    patch.domain = domain;
+    // Community/social URLs (no_identity) clear the domain identity key.
+    patch.domain = identity.status === "domain" ? identity.domain : null;
   }
   if (input.aliases !== undefined) {
     const canonicalName =

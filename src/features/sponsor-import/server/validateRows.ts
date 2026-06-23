@@ -1,4 +1,4 @@
-import { normalizeDomain } from "@/src/lib/domain/normalizeDomain";
+import { resolveCompanyWebsiteIdentity } from "@/src/lib/domain/hostedPlatformWebsite";
 import { slugify } from "@/src/lib/slugify";
 
 import type { ValidationIssue } from "../types";
@@ -44,7 +44,9 @@ function buildIssues(input: RowValidationInput): {
   const websiteRaw = input.raw_website?.trim() ?? "";
   const normalized_company_name = name || null;
   const normalized_website = websiteRaw || null;
-  const normalized_domain = websiteRaw ? normalizeDomain(websiteRaw) : null;
+  const websiteIdentity = websiteRaw ? resolveCompanyWebsiteIdentity(websiteRaw) : null;
+  const normalized_domain =
+    websiteIdentity?.status === "domain" ? websiteIdentity.domain : null;
   const proposed_slug = name ? slugify(name) : null;
 
   if (!name) {
@@ -61,11 +63,18 @@ function buildIssues(input: RowValidationInput): {
       severity: "warning",
       message: "No website — company will be created by name only.",
     });
-  } else if (!normalized_domain) {
+  } else if (websiteIdentity?.status === "unparseable") {
     issues.push({
       type: "invalid_website",
       severity: "blocking",
       message: "Website could not be parsed into a domain.",
+    });
+  } else if (websiteIdentity?.status === "no_identity") {
+    issues.push({
+      type: "community_website",
+      severity: "warning",
+      message:
+        "Community/social link has no company domain — needs manual review before import.",
     });
   }
 
