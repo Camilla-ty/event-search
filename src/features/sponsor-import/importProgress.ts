@@ -6,6 +6,7 @@ export const IMPORT_PROGRESS = {
   validating:
     "Checking the uploaded file for duplicate companies, missing required fields, invalid websites, and tier data…",
   matching: "Matching companies…",
+  materializingCompanies: "Creating companies…",
   importingToDraft: "Creating draft links…",
   publishing: "Publishing to edition…",
   loadingDraft: "Loading draft links…",
@@ -28,6 +29,8 @@ export function processingPhaseLabel(
       return IMPORT_PROGRESS.validating;
     case "matching":
       return IMPORT_PROGRESS.matching;
+    case "materializing_companies":
+      return IMPORT_PROGRESS.materializingCompanies;
     case "importing_to_draft":
       return IMPORT_PROGRESS.importingToDraft;
     case "publishing":

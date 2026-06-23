@@ -11,6 +11,7 @@ import {
   bulkApplyRowDecisions,
   fetchRows,
   importToDraft,
+  materializeCompaniesChunk,
   runMatching,
 } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
@@ -18,6 +19,10 @@ import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../cli
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import { hasImportRowMatchReason } from "../../importRowMatchReason";
 import { IMPORT_TO_DRAFT_FAILED_MESSAGE } from "../../importToDraftClient";
+import {
+  materializeCompaniesProgressLabel,
+  runCompanyMaterialization,
+} from "../../materializeCompaniesClient";
 import { IMPORT_PROGRESS } from "../../importProgress";
 import {
   getBulkCreateNewButtonState,
@@ -303,10 +308,29 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     if (importToDraftInFlight.current) return;
     importToDraftInFlight.current = true;
     setActionLoading(true);
-    setProgressMessage(IMPORT_PROGRESS.importingToDraft);
+    setProgressMessage(IMPORT_PROGRESS.materializingCompanies);
     setError(null);
 
     try {
+      // Phase 1 — chunked company materialization (resumable; avoids the
+      // monolithic timeout for large batches). Companies are persisted per
+      // chunk via resolved_company_id, so a retry skips completed rows.
+      const materialized = await runCompanyMaterialization(
+        (cursor) =>
+          materializeCompaniesChunk(batch.id, cursor === undefined ? {} : { cursor }),
+        {
+          onProgress: (progress) =>
+            setProgressMessage(materializeCompaniesProgressLabel(progress)),
+        },
+      );
+      if (!materialized.ok) {
+        setError(materialized.error);
+        return;
+      }
+
+      // Phase 2 — draft-link creation (existing path, not chunked). Companies
+      // are already resolved, so this stage only builds draft links.
+      setProgressMessage(IMPORT_PROGRESS.importingToDraft);
       const result = await importToDraft(batch.id);
       if (!result.ok) {
         setError(result.error || IMPORT_TO_DRAFT_FAILED_MESSAGE);

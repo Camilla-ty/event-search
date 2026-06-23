@@ -2,7 +2,11 @@ import {
   IMPORT_TO_DRAFT_FAILED_MESSAGE,
   IMPORT_TO_DRAFT_TIMEOUT_MS,
 } from "../importToDraftClient";
-import type { ColumnMapping } from "../types";
+import {
+  MATERIALIZE_CHUNK_TIMEOUT_MS,
+  MATERIALIZE_COMPANIES_FAILED_MESSAGE,
+} from "../materializeCompaniesClient";
+import type { ColumnMapping, MaterializeCompaniesChunkResult } from "../types";
 import type {
   ApiErr,
   ApiOk,
@@ -135,6 +139,38 @@ export async function patchRowDecision(
     body: JSON.stringify(body),
   });
   return parseJson<ApiOk<{ row: SponsorImportRow }>>(res);
+}
+
+export async function materializeCompaniesChunk(
+  batchId: string,
+  body: { cursor?: number; limit?: number } = {},
+): Promise<ApiOk<{ result: MaterializeCompaniesChunkResult }> | ApiErr> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), MATERIALIZE_CHUNK_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(
+      `/api/admin/sponsor-imports/batches/${batchId}/materialize-companies/chunk`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
+    );
+    const data = await parseJson<ApiOk<{ result: MaterializeCompaniesChunkResult }>>(res);
+    if (!data.ok) {
+      return data;
+    }
+    if (!res.ok) {
+      return { ok: false, error: MATERIALIZE_COMPANIES_FAILED_MESSAGE };
+    }
+    return data;
+  } catch {
+    return { ok: false, error: MATERIALIZE_COMPANIES_FAILED_MESSAGE };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function importToDraft(
