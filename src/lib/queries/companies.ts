@@ -203,6 +203,24 @@ export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id
 }
 
 /**
+ * Total count of all sponsor links for an edition across all tiers.
+ * Uses the admin client so the result is auth-independent — safe to call from
+ * server components only. Returns a number (0 when the edition has no sponsors
+ * or does not exist). Never exposes company names, tiers, or any other detail.
+ */
+export async function getTotalSponsorCount(eventEditionId: string): Promise<number> {
+  const editionKey = normalizeEditionIdForQuery(eventEditionId);
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from("event_sponsors")
+    .select("id", { count: "exact", head: true })
+    .eq("event_editions_id", editionKey);
+
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
  * Sponsor links for an edition in canonical order:
  * `tier_rank ASC NULLS LAST, display_order ASC NULLS LAST, id ASC`.
  * Company fields always come from `companies` (batch by `company_id`), not from embeds.

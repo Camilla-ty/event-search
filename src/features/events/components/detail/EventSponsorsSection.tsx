@@ -13,12 +13,14 @@ type EventSponsorsSectionProps = {
   sponsors: EventSponsorRow[];
   isAuthenticated: boolean;
   eventSlug?: string;
+  totalSponsorCount?: number;
 };
 
 export function EventSponsorsSection({
   sponsors,
   isAuthenticated,
   eventSlug = "",
+  totalSponsorCount,
 }: EventSponsorsSectionProps) {
   const pathname = usePathname();
   const signupHref = buildSignupEntryUrl(pathname);
@@ -30,7 +32,9 @@ export function EventSponsorsSection({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">Related Sponsors</h2>
+        <h2 className="text-lg font-semibold text-slate-900">
+          Sponsors{totalSponsorCount != null && totalSponsorCount > 0 ? ` (${totalSponsorCount})` : ""}
+        </h2>
         <Link href={sponsorsExplorerHref} className={`text-sm ${brandLinkClass}`}>
           Search sponsors for this event
         </Link>
@@ -49,12 +53,7 @@ export function EventSponsorsSection({
       {!isAuthenticated ? (
         <div className="mt-6 border-t border-slate-200 pt-5">
           <p className="text-sm text-slate-600">
-            Use{" "}
-            <Link href={sponsorsExplorerHref} className={brandLinkClass}>
-              Search sponsors for this event
-            </Link>{" "}
-            in Actions to find sponsors on EventPixels. Sign up to save lists and unlock account
-            account features.
+            Showing top-tier sponsors. Sign up to see the full list.
           </p>
           <Link
             href={signupHref}

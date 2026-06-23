@@ -13,6 +13,7 @@ import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateR
 import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
+import { getTotalSponsorCount } from "@/src/lib/queries/companies";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
@@ -81,7 +82,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const seriesId = readSeriesId(edition, series);
   const seriesHubHref = series ? buildSeriesHubPath(series) : null;
 
-  const [relatedEditions, topics] = await Promise.all([
+  const [relatedEditions, topics, totalSponsorCount] = await Promise.all([
     seriesId !== null && editionId !== null
       ? getRelatedEditions({
           seriesId,
@@ -91,13 +92,13 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     seriesId !== null
       ? getPublicKeywordsForSeriesId(seriesId)
       : Promise.resolve([]),
+    editionId !== null ? getTotalSponsorCount(editionId) : Promise.resolve(0),
   ]);
 
   const sponsors = filterDisplayableSponsors(
     (edition.event_sponsors ?? []) as EventSponsorRow[],
   );
   const isAuthenticated = user !== null;
-  const sponsorCount = sponsors.length;
   const eventSlug = typeof edition.slug === "string" ? edition.slug : "";
   const seriesLogoUrl = resolveSeriesDisplayLogo(
     edition.event_series && typeof edition.event_series === "object"
@@ -168,7 +169,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-slate-200 p-3">
               <p className="text-xs text-slate-500">Sponsors</p>
-              <p className="text-lg font-semibold text-slate-900">{sponsorCount}</p>
+              <p className="text-lg font-semibold text-slate-900">{totalSponsorCount}</p>
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
               <p className="text-xs text-slate-500">Year</p>
@@ -212,6 +213,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           sponsors={sponsors}
           isAuthenticated={isAuthenticated}
           eventSlug={eventSlug}
+          totalSponsorCount={totalSponsorCount}
         />
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
