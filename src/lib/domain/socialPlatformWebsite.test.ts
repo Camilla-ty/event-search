@@ -93,4 +93,15 @@ describe("companyNeedsLogoReview", () => {
       false,
     );
   });
+
+  it("flags marketplace companies without a manual logo", () => {
+    assert.equal(
+      companyNeedsLogoReview({
+        website: "https://opensea.io/collection/nekocore",
+        logo_url: null,
+        logo_source: "none",
+      }),
+      true,
+    );
+  });
 });

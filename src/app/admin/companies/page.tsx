@@ -18,7 +18,7 @@ type PageProps = {
 
 const FILTER_OPTIONS: Array<{ value: CompanyListFilter; label: string }> = [
   { value: "all", label: "All" },
-  { value: "social_website", label: "Social website" },
+  { value: "social_website", label: "Hosted platform website" },
   { value: "missing_logo", label: "Missing logo" },
   { value: "needs_logo_review", label: "Needs logo review" },
 ];

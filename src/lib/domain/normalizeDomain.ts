@@ -1,6 +1,6 @@
-import { normalizeCompanyIdentityFromWebsite } from "./socialPlatformWebsite";
+import { normalizeCompanyIdentityFromWebsite } from "./hostedPlatformWebsite";
 
-/** Normalize a website URL to a canonical company identity (hostname, or host+path for social). */
+/** Normalize a website URL to a canonical company identity (hostname, or host+path for hosted platforms). */
 export function normalizeDomainFromWebsite(website: string): string {
   return normalizeCompanyIdentityFromWebsite(website);
 }

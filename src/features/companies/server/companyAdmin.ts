@@ -15,7 +15,7 @@ import { validateCompanyLogoUpload } from "@/src/lib/companies/companyLogoUpload
 import {
   companyMissingLogo,
   companyNeedsLogoReview,
-  isSocialWebsiteCompany,
+  isHostedPlatformCompany,
 } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
@@ -160,7 +160,7 @@ function applyCompanyListFilter<T extends CompanyAdminRow>(
   return companies.filter((company) => {
     switch (filter) {
       case "social_website":
-        return isSocialWebsiteCompany(company);
+        return isHostedPlatformCompany(company);
       case "missing_logo":
         return companyMissingLogo(company);
       case "needs_logo_review":

@@ -2,6 +2,7 @@ import {
   fetchLogoDevImage,
   getLogoDevServerPublishableKey,
 } from "@/src/lib/companies/logoDevServer";
+import { isHostedPlatformIdentityKey } from "@/src/lib/domain/socialPlatformWebsite";
 
 import {
   EVENT_LOGO_AUTO_ENRICH_REJECTED_ERROR,
@@ -216,6 +217,16 @@ export async function ingestCompanyLogoByDomain(
 
   const identityKey = domain.trim().toLowerCase();
   if (!identityKey) {
+    return {
+      status: "skipped",
+      logoUrl: null,
+      strategy: null,
+      error: null,
+      preview: null,
+    };
+  }
+
+  if (isHostedPlatformIdentityKey(identityKey)) {
     return {
       status: "skipped",
       logoUrl: null,

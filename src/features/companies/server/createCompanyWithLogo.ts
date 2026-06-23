@@ -2,7 +2,7 @@ import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
 import { logoMetadataPatchForManualLogoStorage } from "@/src/lib/companies/logoMetadataPatch";
 import { shouldAutoEnrichCompanyLogo } from "@/src/lib/companies/shouldAutoEnrichCompanyLogo";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
-import { isSocialPlatformWebsite } from "@/src/lib/domain/socialPlatformWebsite";
+import { isHostedPlatformWebsite } from "@/src/lib/domain/socialPlatformWebsite";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";
@@ -59,10 +59,10 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
     }
   }
 
-  const isSocialWebsite = hasWebsite && isSocialPlatformWebsite(trimmedWebsite);
+  const isHostedPlatform = hasWebsite && isHostedPlatformWebsite(trimmedWebsite);
   const logoMeta = initialLogoMetadata({
     logo_url: null,
-    domain: hasWebsite && !isSocialWebsite ? normalizedDomain : null,
+    domain: hasWebsite && !isHostedPlatform ? normalizedDomain : null,
   });
 
   const insertPayload: Record<string, unknown> = {
@@ -130,7 +130,7 @@ export async function enrichCompanyLogo(
 ): Promise<void> {
   try {
     const trimmedWebsite = website.trim();
-    if (!trimmedWebsite || isSocialPlatformWebsite(trimmedWebsite)) {
+    if (!trimmedWebsite || isHostedPlatformWebsite(trimmedWebsite)) {
       return;
     }
 

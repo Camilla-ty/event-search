@@ -14,14 +14,22 @@ export type BatchRow = {
   updated_at?: string | null;
 };
 
-/** Orphaned import-to-draft claims older than this may be auto-cleared when no draft links exist. */
+/** Orphaned import processing claims older than this may be auto-cleared when no draft links exist. */
 export const STALE_IMPORT_TO_DRAFT_MS = 5 * 60 * 1000;
 
-export function isStaleImportToDraftClaim(
+const STALE_RECOVERABLE_PROCESSING_PHASES = new Set([
+  "importing_to_draft",
+  "materializing_companies",
+]);
+
+export function isStaleImportProcessingPhaseClaim(
   batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
   nowMs = Date.now(),
 ): boolean {
-  if (batch.processing_phase !== "importing_to_draft" || batch.status !== "review") {
+  if (batch.status !== "review") {
+    return false;
+  }
+  if (!batch.processing_phase || !STALE_RECOVERABLE_PROCESSING_PHASES.has(batch.processing_phase)) {
     return false;
   }
   const updatedAt = batch.updated_at;
@@ -29,6 +37,26 @@ export function isStaleImportToDraftClaim(
     return true;
   }
   return nowMs - new Date(updatedAt).getTime() >= STALE_IMPORT_TO_DRAFT_MS;
+}
+
+export function isStaleImportToDraftClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  return (
+    batch.processing_phase === "importing_to_draft" &&
+    isStaleImportProcessingPhaseClaim(batch, nowMs)
+  );
+}
+
+export function isStaleMaterializingCompaniesClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  return (
+    batch.processing_phase === "materializing_companies" &&
+    isStaleImportProcessingPhaseClaim(batch, nowMs)
+  );
 }
 
 export type ImportRowRecord = {

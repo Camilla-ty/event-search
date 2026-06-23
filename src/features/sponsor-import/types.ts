@@ -13,6 +13,7 @@ export type SponsorImportProcessingPhase =
   | "parsing"
   | "validating"
   | "matching"
+  | "materializing_companies"
   | "importing_to_draft"
   | "publishing";
 
@@ -34,6 +35,7 @@ export type SponsorImportActionType =
   | "validation_run"
   | "matching_run"
   | "bulk_accept_domain_matches"
+  | "materialize_companies_chunk"
   | "import_to_draft"
   | "review_acknowledged"
   | "publish"
@@ -92,4 +94,15 @@ export type ImportToDraftResult = {
   draft_links_created: number;
   draft_links_updated: number;
   rows_materialized: number;
+};
+
+export type MaterializeCompaniesChunkResult = {
+  examined_count: number;
+  skipped_count: number;
+  materialized_count: number;
+  companies_created: number;
+  total_resolved_rows: number;
+  rows_with_company_id: number;
+  done: boolean;
+  next_cursor: number | null;
 };

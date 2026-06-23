@@ -10,6 +10,7 @@
     "backfill:companies-logos": "tsx --env-file=.env.local scripts/backfill-companies-logos.ts",
     "migrate:company-logos": "tsx --env-file=.env.local scripts/migrate-company-logos-to-company-id.ts",
     "cleanup:legacy-company-logos": "tsx --env-file=.env.local scripts/cleanup-legacy-company-logo-paths.ts",
+    "cleanup:hosted-platform-identity": "tsx --env-file=.env.local scripts/cleanup-hosted-platform-identity-pr3a.ts",
     "backfill:event-series-descriptions": "tsx --env-file=.env.local scripts/backfill-event-series-descriptions.ts",
     "audit:event-logo-storage": "tsx --env-file=.env.local scripts/audit-event-logo-storage.ts",
     "cleanup:event-logo-storage": "tsx --env-file=.env.local scripts/cleanup-event-logo-storage.ts",
