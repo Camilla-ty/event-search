@@ -160,6 +160,9 @@ export function assignDuplicateClusters(rows: ValidatedImportRow[]): ValidatedIm
     const sorted = [...ids].sort((a, b) => {
       const rowA = rows.find((r) => r.id === a);
       const rowB = rows.find((r) => r.id === b);
+      const tierA = rowA?.mapped_tier_rank ?? Number.POSITIVE_INFINITY;
+      const tierB = rowB?.mapped_tier_rank ?? Number.POSITIVE_INFINITY;
+      if (tierA !== tierB) return tierA - tierB;
       return (rowA?.excel_row_number ?? 0) - (rowB?.excel_row_number ?? 0);
     });
     const canonicalId = sorted[0];
@@ -187,7 +190,7 @@ export function assignDuplicateClusters(rows: ValidatedImportRow[]): ValidatedIm
       duplicate_cluster_key: cluster.clusterKey,
       duplicate_role: isCanonical ? "canonical" : "duplicate",
       duplicate_of_row_id: isCanonical ? null : cluster.canonicalId,
-      duplicate_resolution: isCanonical ? null : "pending",
+      duplicate_resolution: isCanonical ? "kept" : "excluded",
     };
   });
 }

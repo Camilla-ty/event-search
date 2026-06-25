@@ -84,9 +84,15 @@ function duplicateClusterSize(row: SponsorImportRow): number | null {
 function duplicateHelperText(row: SponsorImportRow): string | null {
   const size = duplicateClusterSize(row);
   if (!size) return null;
+  if (row.status === "excluded") {
+    return "Excluded automatically. Use this row instead only if its sponsorship details are correct.";
+  }
+  if (row.duplicate_resolution === "kept") {
+    return "Selected automatically by sponsorship tier, then spreadsheet order.";
+  }
   const otherCount = size - 1;
   const noun = otherCount === 1 ? "duplicate" : "duplicates";
-  return `Keeping this row excludes the other ${otherCount} ${noun}.`;
+  return `Choosing this row excludes the other ${otherCount} ${noun}.`;
 }
 
 function sponsorshipLabel(row: SponsorImportRow): { primary: string; secondary: string | null } {
@@ -101,10 +107,12 @@ function sponsorshipLabel(row: SponsorImportRow): { primary: string; secondary: 
 function duplicateStatusLabel(row: SponsorImportRow): { primary: string; secondary: string | null } | null {
   if (!duplicateClusterSize(row)) return null;
   if (row.status === "excluded") {
-    return { primary: "Excluded", secondary: "Duplicate row" };
+    return { primary: "Excluded", secondary: "automatic duplicate" };
   }
-  if (row.duplicate_resolution === "kept" || row.status === "resolved") {
-    return { primary: "Kept", secondary: "Will import" };
+  if (row.duplicate_resolution === "kept") {
+    if (row.status === "resolved") return { primary: "Selected", secondary: "will import" };
+    if (row.status === "auto_ready") return { primary: "Selected", secondary: "auto-ready" };
+    return { primary: "Selected", secondary: "needs review" };
   }
   return { primary: "Duplicate", secondary: "needs choice" };
 }
@@ -667,9 +675,19 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                                   <p className="font-semibold text-slate-800">
                                     Duplicate ({duplicateSize} rows)
                                   </p>
-                                  <p className="font-medium text-slate-700">
-                                    Choose which row to keep.
-                                  </p>
+                                  {row.duplicate_resolution === "kept" ? (
+                                    <p className="font-medium text-emerald-800">
+                                      Selected by default.
+                                    </p>
+                                  ) : row.status === "excluded" ? (
+                                    <p className="font-medium text-slate-700">
+                                      Not selected by default.
+                                    </p>
+                                  ) : (
+                                    <p className="font-medium text-slate-700">
+                                      Review this duplicate.
+                                    </p>
+                                  )}
                                   <p>{duplicateHelperText(row)}</p>
                                 </div>
                               ) : null}
@@ -714,14 +732,14 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                               ) : null}
                             </td>
                             <td className="sticky right-0 bg-white px-4 py-2 shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]">
-                              {duplicateSize && row.status !== "excluded" ? (
+                              {duplicateSize && row.status === "excluded" ? (
                                 <Button
                                   size="sm"
                                   variant="secondary"
                                   disabled={actionLoading}
                                   onClick={() => void handleKeepDuplicateRow(row)}
                                 >
-                                  Keep this row
+                                  Use this row instead
                                 </Button>
                               ) : row.status === "needs_review" ? (
                                 <Button

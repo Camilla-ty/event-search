@@ -404,11 +404,11 @@ export async function runBatchValidation(batchId: string, actorId: string) {
     const prior = rawRows?.find((x) => String(x.id) === row.id);
     const priorStatus = prior ? String(prior.status) : "needs_review";
     const nextStatus =
-      row.has_blocking_validation || priorStatus === "excluded"
-        ? priorStatus === "excluded"
-          ? "excluded"
-          : "needs_review"
-        : priorStatus;
+      row.duplicate_resolution === "excluded" || priorStatus === "excluded"
+        ? "excluded"
+        : row.has_blocking_validation
+          ? "needs_review"
+          : priorStatus;
 
     const { error: rowError } = await supabase
       .from("sponsor_import_rows")

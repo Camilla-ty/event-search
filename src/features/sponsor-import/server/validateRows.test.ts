@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { validateRow } from "./validateRows";
+import { summarizeRows, type ImportRowRecord } from "./batchGuards";
+import { assignDuplicateClusters, validateRow, type ValidatedImportRow } from "./validateRows";
 
 describe("validateRow", () => {
   it("allows blank website when name and tier are present", () => {
@@ -112,5 +113,68 @@ describe("validateRow", () => {
     assert.equal(linkedin.normalized_domain, "linkedin.com/company/atlantic-hpc");
     assert.equal(opensea.has_blocking_validation, false);
     assert.equal(linkedin.has_blocking_validation, false);
+  });
+});
+
+describe("assignDuplicateClusters", () => {
+  function row(params: {
+    id: string;
+    excel_row_number: number;
+    name?: string;
+    domain?: string;
+    tier: number;
+  }): ValidatedImportRow {
+    return {
+      id: params.id,
+      excel_row_number: params.excel_row_number,
+      status: "needs_review",
+      normalized_company_name: params.name ?? "Google",
+      normalized_website: null,
+      normalized_domain: params.domain ?? "google.com",
+      proposed_slug: "google",
+      mapped_tier_rank: params.tier,
+      mapped_tier_label: null,
+      validation_issues: [],
+      has_blocking_validation: false,
+      duplicate_cluster_key: null,
+      duplicate_role: null,
+      duplicate_of_row_id: null,
+      duplicate_resolution: null,
+    };
+  }
+
+  function summaryRows(rows: ValidatedImportRow[]): ImportRowRecord[] {
+    return rows.map((r) => ({
+      id: r.id,
+      status: r.duplicate_resolution === "excluded" ? "excluded" : "needs_review",
+      has_blocking_validation: r.has_blocking_validation,
+      duplicate_role: r.duplicate_role,
+      duplicate_resolution: r.duplicate_resolution,
+    }));
+  }
+
+  it("automatically keeps the highest sponsorship tier in a duplicate cluster", () => {
+    const rows = assignDuplicateClusters([
+      row({ id: "row-1", excel_row_number: 10, tier: 3 }),
+      row({ id: "row-2", excel_row_number: 11, tier: 1 }),
+      row({ id: "row-3", excel_row_number: 12, tier: 2 }),
+    ]);
+
+    assert.equal(rows.find((r) => r.id === "row-2")?.duplicate_resolution, "kept");
+    assert.equal(rows.find((r) => r.id === "row-1")?.duplicate_resolution, "excluded");
+    assert.equal(rows.find((r) => r.id === "row-3")?.duplicate_resolution, "excluded");
+    assert.equal(summarizeRows(summaryRows(rows)).pending_duplicate_count, 0);
+  });
+
+  it("keeps the first occurrence when duplicate rows have the same tier", () => {
+    const rows = assignDuplicateClusters([
+      row({ id: "row-1", excel_row_number: 10, tier: 2 }),
+      row({ id: "row-2", excel_row_number: 11, tier: 2 }),
+    ]);
+
+    assert.equal(rows.find((r) => r.id === "row-1")?.duplicate_resolution, "kept");
+    assert.equal(rows.find((r) => r.id === "row-2")?.duplicate_resolution, "excluded");
+    assert.equal(rows.find((r) => r.id === "row-2")?.duplicate_of_row_id, "row-1");
+    assert.equal(summarizeRows(summaryRows(rows)).pending_duplicate_count, 0);
   });
 });
