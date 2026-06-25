@@ -1,5 +1,5 @@
-/** Client-side timeout for import-to-draft (below typical serverless maxDuration). */
-export const IMPORT_TO_DRAFT_TIMEOUT_MS = 150_000;
+/** Client-side timeout for finalize import-to-draft (fast server path). */
+export const FINALIZE_IMPORT_TO_DRAFT_TIMEOUT_MS = 60_000;
 
-export const IMPORT_TO_DRAFT_FAILED_MESSAGE =
-  "Import to draft failed or timed out. No draft was created. You can retry.";
+export const FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE =
+  "Could not finalize the draft. Finish creating draft links if needed, then retry.";

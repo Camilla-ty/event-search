@@ -5,6 +5,7 @@ import type {
   DraftDiffSummary,
   ImportToDraftResult,
   MaterializeCompaniesChunkResult,
+  MaterializeDraftLinksChunkResult,
   PublishResult,
   RowSummary,
   SponsorImportBatchStatus,
@@ -22,7 +23,7 @@ import {
 import { SponsorImportHttpError } from "./errors";
 import { loadMatchContext, matchRow, AUTO_READY_MATCH_METHODS } from "./matchRows";
 import { materializeCompaniesChunk } from "./materializeCompanies";
-import { materializeDraftLinks } from "./materializeDraft";
+import { materializeDraftLinksChunk } from "./materializeDraft";
 import {
   detectSourceFormat,
   guessColumnMapping,
@@ -33,6 +34,12 @@ import { SPONSOR_IMPORT_BUCKET, SPONSOR_IMPORT_MAX_ROWS } from "../types";
 import { uploadSourceFile } from "./storage";
 import { enrichImportRowsWithProposedCompanies } from "./enrichImportRows";
 import { assignDuplicateClusters, validateRow } from "./validateRows";
+import {
+  summarizeImportToDraftFinalizeResult,
+  summarizeMaterializeCompaniesChunkResult,
+  summarizeMaterializeDraftLinksChunkResult,
+  withImportToDraftPipelineLog,
+} from "./importToDraftPipelineLog";
 
 const BATCH_SELECT =
   "id, event_edition_id, status, processing_phase, source_filename, source_file_storage_path, source_file_format, source_sheet_name, source_row_count, source_file_checksum, column_mapping, created_by, published_by, discarded_by, review_acknowledged_by, published_at, discarded_at, review_acknowledged_at, discard_reason, created_at, updated_at";
@@ -937,6 +944,26 @@ async function loadImportToDraftResultFromLog(
   return parseImportToDraftResultPayload(data?.payload);
 }
 
+async function countCompaniesCreatedFromImportLogs(batchId: string): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("sponsor_import_admin_action_logs")
+    .select("payload")
+    .eq("batch_id", batchId)
+    .eq("action_type", "materialize_companies_chunk");
+
+  if (error) throw new Error(error.message);
+
+  let total = 0;
+  for (const row of data ?? []) {
+    const payload = row.payload as Record<string, unknown> | null;
+    if (payload && typeof payload.companies_created === "number") {
+      total += payload.companies_created;
+    }
+  }
+  return total;
+}
+
 async function summarizeImportToDraftFromDb(batchId: string): Promise<ImportToDraftResult> {
   const supabase = createAdminClient();
   const { count: linkCount, error: linkError } = await supabase
@@ -949,11 +976,12 @@ async function summarizeImportToDraftFromDb(batchId: string): Promise<ImportToDr
     .from("sponsor_import_rows")
     .select("id", { count: "exact", head: true })
     .eq("batch_id", batchId)
+    .eq("status", "resolved")
     .not("draft_link_id", "is", null);
   if (rowError) throw new Error(rowError.message);
 
   return {
-    companies_created: 0,
+    companies_created: await countCompaniesCreatedFromImportLogs(batchId),
     draft_links_created: linkCount ?? 0,
     draft_links_updated: 0,
     rows_materialized: rowsMaterialized ?? 0,
@@ -976,17 +1004,24 @@ async function recoverStaleImportProcessingPhase(
   }
 
   const supabase = createAdminClient();
-  const { count, error: countError } = await supabase
-    .from("sponsor_import_draft_links")
-    .select("id", { count: "exact", head: true })
-    .eq("batch_id", batchId);
+  const phase = batch.processing_phase;
 
-  if (countError) throw new Error(countError.message);
-  if ((count ?? 0) > 0) {
-    return false;
+  // Company materialization should not leave draft links behind; if any exist,
+  // do not auto-clear a stale materializing_companies claim.
+  if (phase === "materializing_companies") {
+    const { count, error: countError } = await supabase
+      .from("sponsor_import_draft_links")
+      .select("id", { count: "exact", head: true })
+      .eq("batch_id", batchId);
+
+    if (countError) throw new Error(countError.message);
+    if ((count ?? 0) > 0) {
+      return false;
+    }
   }
 
-  const phase = batch.processing_phase;
+  // importing_to_draft may legitimately have partial draft links after a timeout;
+  // allow stale recovery so chunked draft-link materialization can resume.
   if (!phase) {
     return false;
   }
@@ -1012,19 +1047,7 @@ async function recoverStaleImportToDraftPhase(
   return recoverStaleImportProcessingPhase(batchId, batch);
 }
 
-async function clearOrphanedImportToDraftPhase(batchId: string): Promise<void> {
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("sponsor_import_batches")
-    .update({ processing_phase: null, updated_at: new Date().toISOString() })
-    .eq("id", batchId)
-    .eq("status", "review")
-    .eq("processing_phase", "importing_to_draft");
-
-  if (error) throw new Error(error.message);
-}
-
-export async function runMaterializeCompaniesChunk(
+async function executeRunMaterializeCompaniesChunk(
   batchId: string,
   actorId: string,
   options: { cursor?: number; limit?: number } = {},
@@ -1036,15 +1059,18 @@ export async function runMaterializeCompaniesChunk(
     batch = await getBatchRow(batchId);
   }
 
+  const rows = await loadImportRows(batchId);
+  assertImportToDraftGuards(rows);
+
   if (batch.processing_phase === "importing_to_draft") {
+    if (await isCompanyMaterializationComplete(batchId)) {
+      return buildCompletedCompanyMaterializationResult(batchId);
+    }
     throw new SponsorImportHttpError(
       409,
       "Import-to-draft is already in progress.",
     );
   }
-
-  const rows = await loadImportRows(batchId);
-  assertImportToDraftGuards(rows);
 
   const supabase = createAdminClient();
   const now = new Date().toISOString();
@@ -1084,6 +1110,9 @@ export async function runMaterializeCompaniesChunk(
       }
       if (!claimed && batch.processing_phase !== "materializing_companies") {
         if (batch.processing_phase === "importing_to_draft") {
+          if (await isCompanyMaterializationComplete(batchId)) {
+            return buildCompletedCompanyMaterializationResult(batchId);
+          }
           throw new SponsorImportHttpError(
             409,
             "Import-to-draft is already in progress.",
@@ -1129,7 +1158,253 @@ export async function runMaterializeCompaniesChunk(
   return result;
 }
 
-export async function importBatchToDraft(batchId: string, actorId: string) {
+export async function runMaterializeCompaniesChunk(
+  batchId: string,
+  actorId: string,
+  options: { cursor?: number; limit?: number } = {},
+): Promise<MaterializeCompaniesChunkResult> {
+  return withImportToDraftPipelineLog(
+    {
+      batchId,
+      phase: "materialize_companies_chunk",
+      actorId,
+      cursor: options.cursor,
+      limit: options.limit,
+    },
+    () => executeRunMaterializeCompaniesChunk(batchId, actorId, options),
+    summarizeMaterializeCompaniesChunkResult,
+  );
+}
+
+async function isCompanyMaterializationComplete(batchId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved")
+    .is("resolved_company_id", null);
+
+  if (error) throw new Error(error.message);
+  return (count ?? 0) === 0;
+}
+
+async function buildCompletedCompanyMaterializationResult(
+  batchId: string,
+): Promise<MaterializeCompaniesChunkResult> {
+  const supabase = createAdminClient();
+  const { count: totalResolved, error } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved");
+
+  if (error) throw new Error(error.message);
+
+  const total = totalResolved ?? 0;
+  return {
+    examined_count: 0,
+    skipped_count: 0,
+    materialized_count: 0,
+    companies_created: 0,
+    total_resolved_rows: total,
+    rows_with_company_id: total,
+    done: true,
+    next_cursor: null,
+  };
+}
+
+async function assertCompanyMaterializationComplete(batchId: string): Promise<void> {
+  if (!(await isCompanyMaterializationComplete(batchId))) {
+    throw new SponsorImportHttpError(
+      409,
+      "Company materialization must finish before creating draft links.",
+    );
+  }
+}
+
+async function assertAllResolvedRowsLinked(batchId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { count: totalResolved, error: totalError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved");
+
+  if (totalError) throw new Error(totalError.message);
+
+  const { count: linked, error: linkedError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved")
+    .not("draft_link_id", "is", null);
+
+  if (linkedError) throw new Error(linkedError.message);
+
+  const resolvedTotal = totalResolved ?? 0;
+  const linkedTotal = linked ?? 0;
+
+  if (resolvedTotal === 0) {
+    throw new SponsorImportHttpError(422, "No resolved rows to import to draft.");
+  }
+
+  if (linkedTotal < resolvedTotal) {
+    throw new SponsorImportHttpError(
+      422,
+      "Draft-link materialization is incomplete. Finish creating draft links before finalizing.",
+      { resolved_rows: resolvedTotal, rows_with_draft_link: linkedTotal },
+    );
+  }
+}
+
+function assertImportToDraftNotBlockedByProcessingPhase(batch: BatchRow): void {
+  if (batch.processing_phase === "materializing_companies") {
+    throw new SponsorImportHttpError(
+      409,
+      "Company materialization is in progress. Wait for it to finish before import-to-draft.",
+    );
+  }
+  if (batch.processing_phase === "importing_to_draft") {
+    throw new SponsorImportHttpError(
+      409,
+      "Draft-link materialization is in progress. Wait for it to finish before finalizing.",
+    );
+  }
+}
+
+async function executeRunMaterializeDraftLinksChunk(
+  batchId: string,
+  actorId: string,
+  options: { cursor?: number; limit?: number } = {},
+): Promise<MaterializeDraftLinksChunkResult> {
+  let batch = await getBatchRow(batchId);
+  assertBatchStatus(batch, ["review"]);
+
+  if (await recoverStaleImportProcessingPhase(batchId, batch)) {
+    batch = await getBatchRow(batchId);
+  }
+
+  if (batch.processing_phase === "materializing_companies") {
+    throw new SponsorImportHttpError(
+      409,
+      "Company materialization is in progress. Wait for it to finish before creating draft links.",
+    );
+  }
+
+  const rows = await loadImportRows(batchId);
+  assertImportToDraftGuards(rows);
+  await assertCompanyMaterializationComplete(batchId);
+
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  if (batch.processing_phase !== "importing_to_draft") {
+    const { data: initialClaim, error: claimError } = await supabase
+      .from("sponsor_import_batches")
+      .update({ processing_phase: "importing_to_draft", updated_at: now })
+      .eq("id", batchId)
+      .eq("status", "review")
+      .is("processing_phase", null)
+      .select("id")
+      .maybeSingle();
+
+    if (claimError) throw new Error(claimError.message);
+    let claimed = initialClaim;
+
+    if (!claimed) {
+      batch = await getBatchRow(batchId);
+      if (
+        batch.processing_phase === "importing_to_draft" &&
+        (await recoverStaleImportProcessingPhase(batchId, batch))
+      ) {
+        const reclaim = await supabase
+          .from("sponsor_import_batches")
+          .update({
+            processing_phase: "importing_to_draft",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", batchId)
+          .eq("status", "review")
+          .is("processing_phase", null)
+          .select("id")
+          .maybeSingle();
+        if (reclaim.error) throw new Error(reclaim.error.message);
+        claimed = reclaim.data;
+      }
+      if (!claimed && batch.processing_phase !== "importing_to_draft") {
+        if (batch.processing_phase === "materializing_companies") {
+          throw new SponsorImportHttpError(
+            409,
+            "Company materialization is in progress. Wait for it to finish before creating draft links.",
+          );
+        }
+        throw new SponsorImportHttpError(
+          409,
+          "Draft-link materialization could not start. Refresh the page and try again.",
+          { status: batch.status, processing_phase: batch.processing_phase },
+        );
+      }
+    }
+  } else {
+    const { error: touchError } = await supabase
+      .from("sponsor_import_batches")
+      .update({ updated_at: now })
+      .eq("id", batchId)
+      .eq("status", "review")
+      .eq("processing_phase", "importing_to_draft");
+    if (touchError) throw new Error(touchError.message);
+  }
+
+  const result = await materializeDraftLinksChunk(
+    batchId,
+    String(batch.event_edition_id),
+    options,
+  );
+
+  if (result.done) {
+    const { error: clearError } = await supabase
+      .from("sponsor_import_batches")
+      .update({ processing_phase: null, updated_at: new Date().toISOString() })
+      .eq("id", batchId)
+      .eq("status", "review")
+      .eq("processing_phase", "importing_to_draft");
+    if (clearError) throw new Error(clearError.message);
+  }
+
+  await appendActionLog({
+    batchId,
+    actorId,
+    actionType: "materialize_draft_links_chunk",
+    payload: result,
+    affectedCount: result.rows_linked,
+  });
+
+  return result;
+}
+
+export async function runMaterializeDraftLinksChunk(
+  batchId: string,
+  actorId: string,
+  options: { cursor?: number; limit?: number } = {},
+): Promise<MaterializeDraftLinksChunkResult> {
+  return withImportToDraftPipelineLog(
+    {
+      batchId,
+      phase: "materialize_draft_links_chunk",
+      actorId,
+      cursor: options.cursor,
+      limit: options.limit,
+    },
+    () => executeRunMaterializeDraftLinksChunk(batchId, actorId, options),
+    summarizeMaterializeDraftLinksChunkResult,
+  );
+}
+
+async function executeImportBatchToDraft(
+  batchId: string,
+  actorId: string,
+): Promise<ImportToDraftResult> {
   let batch = await getBatchRow(batchId);
 
   if (batch.status === "draft") {
@@ -1140,120 +1415,71 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
 
   if (await recoverStaleImportToDraftPhase(batchId, batch)) {
     batch = await getBatchRow(batchId);
+    if (batch.status === "draft") {
+      return resolveIdempotentImportToDraftResult(batchId);
+    }
   }
+
+  assertImportToDraftNotBlockedByProcessingPhase(batch);
 
   const rows = await loadImportRows(batchId);
   assertImportToDraftGuards(rows);
+  await assertCompanyMaterializationComplete(batchId);
+  await assertAllResolvedRowsLinked(batchId);
 
   const supabase = createAdminClient();
-  const now = new Date().toISOString();
-  const { data: initialClaim, error: claimError } = await supabase
+  const result = await summarizeImportToDraftFromDb(batchId);
+
+  const { data: finalized, error: updateError } = await supabase
     .from("sponsor_import_batches")
-    .update({ processing_phase: "importing_to_draft", updated_at: now })
+    .update({
+      status: "draft",
+      processing_phase: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", batchId)
     .eq("status", "review")
-    .is("processing_phase", null)
     .select("id")
     .maybeSingle();
 
-  if (claimError) throw new Error(claimError.message);
-  let claimed = initialClaim;
+  if (updateError) throw new Error(updateError.message);
 
-  if (!claimed) {
+  if (!finalized) {
     batch = await getBatchRow(batchId);
     if (batch.status === "draft") {
       return resolveIdempotentImportToDraftResult(batchId);
     }
-    if (
-      batch.processing_phase === "importing_to_draft" &&
-      (await recoverStaleImportToDraftPhase(batchId, batch))
-    ) {
-      const reclaim = await supabase
-        .from("sponsor_import_batches")
-        .update({ processing_phase: "importing_to_draft", updated_at: new Date().toISOString() })
-        .eq("id", batchId)
-        .eq("status", "review")
-        .is("processing_phase", null)
-        .select("id")
-        .maybeSingle();
-      if (reclaim.error) throw new Error(reclaim.error.message);
-      claimed = reclaim.data;
-    }
-    if (!claimed) {
-      if (batch.processing_phase === "importing_to_draft") {
-        throw new SponsorImportHttpError(
-          409,
-          "Import to draft is already in progress. Wait for it to finish before retrying.",
-        );
-      }
-      if (batch.processing_phase === "materializing_companies") {
-        throw new SponsorImportHttpError(
-          409,
-          "Company materialization is in progress. Wait for it to finish before import-to-draft.",
-        );
-      }
-      throw new SponsorImportHttpError(
-        409,
-        "Import to draft could not start. Refresh the page and try again.",
-        { status: batch.status, processing_phase: batch.processing_phase },
-      );
-    }
-  }
-
-  let importSucceeded = false;
-  try {
-    const { data: resolvedRows, error } = await supabase
-      .from("sponsor_import_rows")
-      .select(
-        "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, mapped_tier_rank, mapped_tier_label, draft_link_id",
-      )
-      .eq("batch_id", batchId)
-      .eq("status", "resolved");
-
-    if (error) throw new Error(error.message);
-
-    const result = await materializeDraftLinks(
-      batchId,
-      String(batch.event_edition_id),
-      (resolvedRows ?? []).map((r) => ({
-        id: String(r.id),
-        excel_row_number: Number(r.excel_row_number),
-        decision_type: r.decision_type as string | null,
-        resolved_company_id: r.resolved_company_id as string | null,
-        proposed_company_id: r.proposed_company_id as string | null,
-        normalized_company_name: r.normalized_company_name as string | null,
-        normalized_website: r.normalized_website as string | null,
-        proposed_slug: r.proposed_slug as string | null,
-        mapped_tier_rank: r.mapped_tier_rank as number | null,
-        mapped_tier_label: r.mapped_tier_label as string | null,
-        draft_link_id: r.draft_link_id as string | null,
-      })),
+    throw new SponsorImportHttpError(
+      409,
+      "Import to draft could not finalize. Refresh the page and try again.",
+      { status: batch.status, processing_phase: batch.processing_phase },
     );
-
-    await supabase
-      .from("sponsor_import_batches")
-      .update({
-        status: "draft",
-        processing_phase: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", batchId);
-
-    await appendActionLog({
-      batchId,
-      actorId,
-      actionType: "import_to_draft",
-      payload: result,
-      affectedCount: result.rows_materialized,
-    });
-
-    importSucceeded = true;
-    return result;
-  } finally {
-    if (!importSucceeded) {
-      await clearOrphanedImportToDraftPhase(batchId);
-    }
   }
+
+  await appendActionLog({
+    batchId,
+    actorId,
+    actionType: "import_to_draft",
+    payload: result,
+    affectedCount: result.rows_materialized,
+  });
+
+  return result;
+}
+
+export async function importBatchToDraft(
+  batchId: string,
+  actorId: string,
+): Promise<ImportToDraftResult> {
+  return withImportToDraftPipelineLog(
+    {
+      batchId,
+      phase: "import_to_draft_finalize",
+      actorId,
+    },
+    () => executeImportBatchToDraft(batchId, actorId),
+    summarizeImportToDraftFinalizeResult,
+  );
 }
 
 export async function listDraftLinks(batchId: string) {

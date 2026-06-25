@@ -36,6 +36,7 @@ export type SponsorImportActionType =
   | "matching_run"
   | "bulk_accept_domain_matches"
   | "materialize_companies_chunk"
+  | "materialize_draft_links_chunk"
   | "import_to_draft"
   | "review_acknowledged"
   | "publish"
@@ -103,6 +104,18 @@ export type MaterializeCompaniesChunkResult = {
   companies_created: number;
   total_resolved_rows: number;
   rows_with_company_id: number;
+  done: boolean;
+  next_cursor: number | null;
+};
+
+export type MaterializeDraftLinksChunkResult = {
+  examined_count: number;
+  skipped_count: number;
+  links_created: number;
+  links_updated: number;
+  rows_linked: number;
+  total_resolved_rows: number;
+  rows_with_draft_link: number;
   done: boolean;
   next_cursor: number | null;
 };

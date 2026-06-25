@@ -1,12 +1,18 @@
 import {
-  IMPORT_TO_DRAFT_FAILED_MESSAGE,
-  IMPORT_TO_DRAFT_TIMEOUT_MS,
+  FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE,
+  FINALIZE_IMPORT_TO_DRAFT_TIMEOUT_MS,
 } from "../importToDraftClient";
 import {
   MATERIALIZE_CHUNK_TIMEOUT_MS,
   MATERIALIZE_COMPANIES_FAILED_MESSAGE,
 } from "../materializeCompaniesClient";
-import type { ColumnMapping, MaterializeCompaniesChunkResult } from "../types";
+import { MATERIALIZE_DRAFT_LINKS_FAILED_MESSAGE } from "../materializeDraftLinksClient";
+import { postSponsorImportJson } from "../sponsorImportRequestClient";
+import type {
+  ColumnMapping,
+  MaterializeCompaniesChunkResult,
+  MaterializeDraftLinksChunkResult,
+} from "../types";
 import type {
   ApiErr,
   ApiOk,
@@ -145,58 +151,40 @@ export async function materializeCompaniesChunk(
   batchId: string,
   body: { cursor?: number; limit?: number } = {},
 ): Promise<ApiOk<{ result: MaterializeCompaniesChunkResult }> | ApiErr> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), MATERIALIZE_CHUNK_TIMEOUT_MS);
+  return postSponsorImportJson<ApiOk<{ result: MaterializeCompaniesChunkResult }>>(
+    `/api/admin/sponsor-imports/batches/${batchId}/materialize-companies/chunk`,
+    {
+      timeoutMs: MATERIALIZE_CHUNK_TIMEOUT_MS,
+      retryMessage: MATERIALIZE_COMPANIES_FAILED_MESSAGE,
+      body,
+    },
+  );
+}
 
-  try {
-    const res = await fetch(
-      `/api/admin/sponsor-imports/batches/${batchId}/materialize-companies/chunk`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      },
-    );
-    const data = await parseJson<ApiOk<{ result: MaterializeCompaniesChunkResult }>>(res);
-    if (!data.ok) {
-      return data;
-    }
-    if (!res.ok) {
-      return { ok: false, error: MATERIALIZE_COMPANIES_FAILED_MESSAGE };
-    }
-    return data;
-  } catch {
-    return { ok: false, error: MATERIALIZE_COMPANIES_FAILED_MESSAGE };
-  } finally {
-    clearTimeout(timeoutId);
-  }
+export async function materializeDraftLinksChunk(
+  batchId: string,
+  body: { cursor?: number; limit?: number } = {},
+): Promise<ApiOk<{ result: MaterializeDraftLinksChunkResult }> | ApiErr> {
+  return postSponsorImportJson<ApiOk<{ result: MaterializeDraftLinksChunkResult }>>(
+    `/api/admin/sponsor-imports/batches/${batchId}/materialize-draft-links/chunk`,
+    {
+      timeoutMs: MATERIALIZE_CHUNK_TIMEOUT_MS,
+      retryMessage: MATERIALIZE_DRAFT_LINKS_FAILED_MESSAGE,
+      body,
+    },
+  );
 }
 
 export async function importToDraft(
   batchId: string,
 ): Promise<ApiOk<{ result: Record<string, number> }> | ApiErr> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), IMPORT_TO_DRAFT_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(`/api/admin/sponsor-imports/batches/${batchId}/import-to-draft`, {
-      method: "POST",
-      signal: controller.signal,
-    });
-    const data = await parseJson<ApiOk<{ result: Record<string, number> }>>(res);
-    if (!data.ok) {
-      return data;
-    }
-    if (!res.ok) {
-      return { ok: false, error: IMPORT_TO_DRAFT_FAILED_MESSAGE };
-    }
-    return data;
-  } catch {
-    return { ok: false, error: IMPORT_TO_DRAFT_FAILED_MESSAGE };
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  return postSponsorImportJson<ApiOk<{ result: Record<string, number> }>>(
+    `/api/admin/sponsor-imports/batches/${batchId}/import-to-draft`,
+    {
+      timeoutMs: FINALIZE_IMPORT_TO_DRAFT_TIMEOUT_MS,
+      retryMessage: FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE,
+    },
+  );
 }
 
 export async function fetchDraftLinks(batchId: string) {

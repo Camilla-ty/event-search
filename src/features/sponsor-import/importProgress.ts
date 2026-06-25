@@ -7,6 +7,8 @@ export const IMPORT_PROGRESS = {
     "Checking the uploaded file for duplicate companies, missing required fields, invalid websites, and tier data…",
   matching: "Matching companies…",
   materializingCompanies: "Creating companies…",
+  materializingDraftLinks: "Creating draft links…",
+  finalizingDraft: "Finalizing draft…",
   importingToDraft: "Creating draft links…",
   publishing: "Publishing to edition…",
   loadingDraft: "Loading draft links…",

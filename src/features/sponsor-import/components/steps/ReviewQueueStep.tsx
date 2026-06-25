@@ -12,6 +12,7 @@ import {
   fetchRows,
   importToDraft,
   materializeCompaniesChunk,
+  materializeDraftLinksChunk,
   patchRowDecision,
   runMatching,
 } from "../../client/api";
@@ -19,11 +20,15 @@ import { flowHref } from "../../client/resumeStep";
 import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import { hasImportRowMatchReason } from "../../importRowMatchReason";
-import { IMPORT_TO_DRAFT_FAILED_MESSAGE } from "../../importToDraftClient";
+import { FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE } from "../../importToDraftClient";
 import {
   materializeCompaniesProgressLabel,
   runCompanyMaterialization,
 } from "../../materializeCompaniesClient";
+import {
+  materializeDraftLinksProgressLabel,
+  runDraftLinkMaterialization,
+} from "../../materializeDraftLinksClient";
 import { IMPORT_PROGRESS } from "../../importProgress";
 import {
   getBulkCreateNewButtonState,
@@ -379,9 +384,6 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     setError(null);
 
     try {
-      // Phase 1 — chunked company materialization (resumable; avoids the
-      // monolithic timeout for large batches). Companies are persisted per
-      // chunk via resolved_company_id, so a retry skips completed rows.
       const materialized = await runCompanyMaterialization(
         (cursor) =>
           materializeCompaniesChunk(batch.id, cursor === undefined ? {} : { cursor }),
@@ -395,17 +397,26 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         return;
       }
 
-      // Phase 2 — draft-link creation (existing path, not chunked). Companies
-      // are already resolved, so this stage only builds draft links.
-      setProgressMessage(IMPORT_PROGRESS.importingToDraft);
+      const linked = await runDraftLinkMaterialization(
+        (cursor) =>
+          materializeDraftLinksChunk(batch.id, cursor === undefined ? {} : { cursor }),
+        {
+          onProgress: (progress) =>
+            setProgressMessage(materializeDraftLinksProgressLabel(progress)),
+        },
+      );
+      if (!linked.ok) {
+        setError(linked.error);
+        return;
+      }
+
+      setProgressMessage(IMPORT_PROGRESS.finalizingDraft);
       const result = await importToDraft(batch.id);
       if (!result.ok) {
-        setError(result.error || IMPORT_TO_DRAFT_FAILED_MESSAGE);
+        setError(result.error || FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE);
         return;
       }
       router.push(flowHref(batch.id, "draft"));
-    } catch {
-      setError(IMPORT_TO_DRAFT_FAILED_MESSAGE);
     } finally {
       importToDraftInFlight.current = false;
       setActionLoading(false);
@@ -450,8 +461,11 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     pendingBulk === "create_new" ? createNewSelectedCount : excludeSelectedCount;
 
   const importStatus = importStatusMessage(summary, canImportToDraft);
-  const importingToDraft =
-    actionLoading && progressMessage === IMPORT_PROGRESS.importingToDraft;
+  const importToDraftInProgress =
+    actionLoading &&
+    (progressMessage?.startsWith("Creating companies") ||
+      progressMessage?.startsWith("Creating draft links") ||
+      progressMessage?.startsWith("Finalizing draft"));
 
   return (
     <div className="pb-28">
@@ -776,9 +790,9 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
             >
               {importStatus}
             </p>
-            {importingToDraft ? (
+            {importToDraftInProgress ? (
               <div className="mt-2">
-                <ImportProgressMessage message={IMPORT_PROGRESS.importingToDraft} />
+                <ImportProgressMessage message={progressMessage ?? IMPORT_PROGRESS.finalizingDraft} />
               </div>
             ) : null}
           </div>
@@ -792,7 +806,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
           <Button
             onClick={() => void handleImportToDraft()}
             disabled={!canImportToDraft || actionLoading || loading}
-            aria-busy={importingToDraft}
+            aria-busy={importToDraftInProgress}
           >
             Import to draft →
           </Button>
