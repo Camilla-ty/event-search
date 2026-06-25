@@ -29,17 +29,13 @@ export function RowDecisionDrawer({
   const [error, setError] = useState<string | null>(null);
   const [companySearch, setCompanySearch] = useState("");
   const [companyOptions, setCompanyOptions] = useState<CompanyOption[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
-
-  useEffect(() => {
-    if (!row) return;
-    setError(null);
-    setSelectedCompanyId(row.resolved_company_id ?? row.proposed_company_id ?? "");
-  }, [row]);
+  const [selectedCompany, setSelectedCompany] = useState<{
+    rowId: string;
+    companyId: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!row || companySearch.trim().length < 2) {
-      setCompanyOptions([]);
       return;
     }
 
@@ -69,6 +65,13 @@ export function RowDecisionDrawer({
 
   if (!row) return null;
 
+  const selectedCompanyId =
+    selectedCompany?.rowId === row.id
+      ? selectedCompany.companyId
+      : (row.resolved_company_id ?? row.proposed_company_id ?? "");
+  const visibleCompanyOptions =
+    companySearch.trim().length < 2 ? [] : companyOptions;
+
   async function decide(
     decision_type: "use_matched" | "create_new" | "choose_different" | "exclude",
     extra?: { resolved_company_id?: string; duplicate_resolution?: "kept" | "excluded" },
@@ -91,6 +94,11 @@ export function RowDecisionDrawer({
   }
 
   const isDuplicate = row.duplicate_role === "duplicate";
+  const duplicateClusterSize =
+    typeof row.duplicate_cluster_size === "number" && row.duplicate_cluster_size > 1
+      ? row.duplicate_cluster_size
+      : null;
+  const duplicateSiblingCount = duplicateClusterSize ? duplicateClusterSize - 1 : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
@@ -131,18 +139,19 @@ export function RowDecisionDrawer({
 
           {isDuplicate ? (
             <div className="space-y-2 rounded-md border border-slate-200 p-3">
-              <p className="font-medium text-slate-800">Duplicate row in file</p>
+              <p className="font-semibold text-slate-900">
+                Duplicate{duplicateClusterSize ? ` (${duplicateClusterSize} rows)` : ""}
+              </p>
+              <p className="font-medium text-slate-700">Choose which row to keep.</p>
+              {duplicateSiblingCount > 0 ? (
+                <p className="text-slate-600">
+                  Keeping this row excludes the other {duplicateSiblingCount}{" "}
+                  {duplicateSiblingCount === 1 ? "duplicate" : "duplicates"}.
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  disabled={loading}
-                  onClick={() => void decide("exclude", { duplicate_resolution: "excluded" })}
-                >
-                  Exclude duplicate
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
                   disabled={loading}
                   onClick={() =>
                     void decide(row.proposed_company_id ? "use_matched" : "create_new", {
@@ -193,9 +202,9 @@ export function RowDecisionDrawer({
                   value={companySearch}
                   onChange={(e) => setCompanySearch(e.target.value)}
                 />
-                {companyOptions.length > 0 ? (
+                {visibleCompanyOptions.length > 0 ? (
                   <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-slate-200">
-                    {companyOptions.map((c) => (
+                    {visibleCompanyOptions.map((c) => (
                       <li key={c.id}>
                         <button
                           type="button"
@@ -203,7 +212,9 @@ export function RowDecisionDrawer({
                             "w-full px-3 py-2 text-left hover:bg-slate-50",
                             selectedCompanyId === c.id ? "bg-brand-primary-muted" : "",
                           ].join(" ")}
-                          onClick={() => setSelectedCompanyId(c.id)}
+                          onClick={() =>
+                            setSelectedCompany({ rowId: row.id, companyId: c.id })
+                          }
                         >
                           {c.name}
                           {c.domain ? (

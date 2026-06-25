@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
-import { normalizeDomain } from "@/src/lib/domain/normalizeDomain";
 
 import type {
   ColumnMapping,
@@ -13,11 +12,9 @@ import type {
 } from "../types";
 import { appendActionLog } from "./actionLog";
 import {
-  assertBatchNotTerminal,
   assertBatchStatus,
   assertImportToDraftGuards,
   isStaleImportProcessingPhaseClaim,
-  isStaleImportToDraftClaim,
   summarizeRows,
   type BatchRow,
   type ImportRowRecord,
@@ -42,6 +39,56 @@ const BATCH_SELECT =
 
 const ROW_SELECT =
   "id, batch_id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, raw_tier_label, normalized_company_name, normalized_website, normalized_domain, proposed_slug, mapped_tier_rank, mapped_tier_label, status, validation_issues, has_blocking_validation, match_method, match_confidence, proposed_company_id, conflict_type, decision_type, decision_source, resolved_company_id, decision_by, decision_at, decision_notes, duplicate_cluster_key, duplicate_role, duplicate_of_row_id, duplicate_resolution, already_on_live_sponsor_id, already_on_live_tier_rank, intended_link_action, draft_link_id, import_error, created_at, updated_at";
+
+export type DuplicateClusterDecisionRow = {
+  id: string;
+  duplicate_cluster_key: string | null;
+};
+
+export type DuplicateClusterDecisionPatch = {
+  id: string;
+  patch: Record<string, unknown>;
+  role: "survivor" | "excluded_sibling";
+};
+
+export function buildDuplicateClusterKeepPatches(params: {
+  clusterRows: readonly DuplicateClusterDecisionRow[];
+  selectedRowId: string;
+  selectedPatch: Record<string, unknown>;
+  actorId: string;
+  now: string;
+}): DuplicateClusterDecisionPatch[] {
+  const { clusterRows, selectedRowId, selectedPatch, actorId, now } = params;
+
+  return clusterRows.map((row) => {
+    if (row.id === selectedRowId) {
+      return {
+        id: row.id,
+        role: "survivor" as const,
+        patch: {
+          ...selectedPatch,
+          duplicate_resolution: "kept",
+        },
+      };
+    }
+
+    return {
+      id: row.id,
+      role: "excluded_sibling" as const,
+      patch: {
+        status: "excluded",
+        decision_type: "exclude",
+        decision_source: "admin_manual",
+        resolved_company_id: null,
+        decision_by: actorId,
+        decision_at: now,
+        decision_notes: null,
+        duplicate_resolution: "excluded",
+        updated_at: now,
+      },
+    };
+  });
+}
 
 function parseColumnMapping(raw: unknown): ColumnMapping {
   if (!raw || typeof raw !== "object") {
@@ -79,7 +126,7 @@ async function loadImportRows(batchId: string): Promise<ImportRowRecord[]> {
   const { data, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, status, has_blocking_validation, duplicate_role, duplicate_resolution",
+      "id, status, has_blocking_validation, duplicate_cluster_key, duplicate_role, duplicate_resolution",
     )
     .eq("batch_id", batchId);
   if (error) throw new Error(error.message);
@@ -538,14 +585,6 @@ type BulkRowDecisionRow = {
   duplicate_role: string | null;
 };
 
-function resolveServerRowDomain(row: BulkRowDecisionRow): string {
-  const fromNormalized = (row.normalized_domain ?? "").trim();
-  if (fromNormalized !== "") return fromNormalized;
-  const website = (row.normalized_website ?? row.raw_website ?? "").trim();
-  if (website === "") return "";
-  return normalizeDomain(website).trim();
-}
-
 function isServerEligibleForBulkCreateNew(row: BulkRowDecisionRow): boolean {
   if (row.status === "resolved" || row.status === "excluded") return false;
   if (row.has_blocking_validation === true) return false;
@@ -697,7 +736,21 @@ export async function listBatchRows(
 
   const allRows = await loadImportRows(batchId);
   const summary: RowSummary = summarizeRows(allRows);
-  const rows = await enrichImportRowsWithProposedCompanies(data ?? []);
+  const duplicateClusterSizes = new Map<string, number>();
+  for (const row of allRows) {
+    const key = row.duplicate_cluster_key?.trim() ?? "";
+    if (key === "") continue;
+    duplicateClusterSizes.set(key, (duplicateClusterSizes.get(key) ?? 0) + 1);
+  }
+  const rowsWithClusterSizes = (data ?? []).map((row) => {
+    const key =
+      typeof row.duplicate_cluster_key === "string" ? row.duplicate_cluster_key.trim() : "";
+    return {
+      ...row,
+      duplicate_cluster_size: key === "" ? null : (duplicateClusterSizes.get(key) ?? null),
+    };
+  });
+  const rows = await enrichImportRowsWithProposedCompanies(rowsWithClusterSizes);
 
   return { rows, total: count ?? 0, page, pageSize, summary };
 }
@@ -734,7 +787,7 @@ export async function patchRowDecision(
   const supabase = createAdminClient();
   const { data: row, error: rowError } = await supabase
     .from("sponsor_import_rows")
-    .select("id, proposed_company_id, duplicate_role")
+    .select("id, proposed_company_id, duplicate_role, duplicate_cluster_key")
     .eq("batch_id", batchId)
     .eq("id", rowId)
     .maybeSingle();
@@ -775,6 +828,65 @@ export async function patchRowDecision(
   } else if (input.decision_type === "create_new") {
     patch.status = "resolved";
     patch.resolved_company_id = null;
+  }
+
+  const duplicateClusterKey =
+    typeof row.duplicate_cluster_key === "string" ? row.duplicate_cluster_key.trim() : "";
+  const resolvesDuplicateCluster =
+    duplicateClusterKey !== "" &&
+    input.duplicate_resolution === "kept" &&
+    input.decision_type !== "exclude";
+
+  if (resolvesDuplicateCluster) {
+    const { data: clusterRows, error: clusterError } = await supabase
+      .from("sponsor_import_rows")
+      .select("id, duplicate_cluster_key")
+      .eq("batch_id", batchId)
+      .eq("duplicate_cluster_key", duplicateClusterKey);
+
+    if (clusterError) throw new Error(clusterError.message);
+
+    const patches = buildDuplicateClusterKeepPatches({
+      clusterRows: ((clusterRows ?? []) as DuplicateClusterDecisionRow[]).map((clusterRow) => ({
+        id: String(clusterRow.id),
+        duplicate_cluster_key:
+          typeof clusterRow.duplicate_cluster_key === "string"
+            ? clusterRow.duplicate_cluster_key
+            : null,
+      })),
+      selectedRowId: rowId,
+      selectedPatch: patch,
+      actorId,
+      now,
+    });
+
+    let updatedSelected:
+      | (Record<string, unknown> & { proposed_company_id: string | null })
+      | null = null;
+    for (const item of patches) {
+      const query = supabase
+        .from("sponsor_import_rows")
+        .update(item.patch)
+        .eq("id", item.id);
+
+      if (item.role === "survivor") {
+        const { data: updated, error: updateError } = await query.select(ROW_SELECT).single();
+        if (updateError) throw new Error(updateError.message);
+        updatedSelected = updated as Record<string, unknown> & {
+          proposed_company_id: string | null;
+        };
+      } else {
+        const { error: updateError } = await query;
+        if (updateError) throw new Error(updateError.message);
+      }
+    }
+
+    if (!updatedSelected) {
+      throw new SponsorImportHttpError(404, "Selected duplicate row not found.");
+    }
+
+    const [enrichedRow] = await enrichImportRowsWithProposedCompanies([updatedSelected]);
+    return enrichedRow ?? updatedSelected;
   }
 
   const { data: updated, error: updateError } = await supabase
@@ -938,7 +1050,7 @@ export async function runMaterializeCompaniesChunk(
   const now = new Date().toISOString();
 
   if (batch.processing_phase !== "materializing_companies") {
-    let { data: claimed, error: claimError } = await supabase
+    const { data: initialClaim, error: claimError } = await supabase
       .from("sponsor_import_batches")
       .update({ processing_phase: "materializing_companies", updated_at: now })
       .eq("id", batchId)
@@ -948,6 +1060,7 @@ export async function runMaterializeCompaniesChunk(
       .maybeSingle();
 
     if (claimError) throw new Error(claimError.message);
+    let claimed = initialClaim;
 
     if (!claimed) {
       batch = await getBatchRow(batchId);
@@ -1034,7 +1147,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
 
   const supabase = createAdminClient();
   const now = new Date().toISOString();
-  let { data: claimed, error: claimError } = await supabase
+  const { data: initialClaim, error: claimError } = await supabase
     .from("sponsor_import_batches")
     .update({ processing_phase: "importing_to_draft", updated_at: now })
     .eq("id", batchId)
@@ -1044,6 +1157,7 @@ export async function importBatchToDraft(batchId: string, actorId: string) {
     .maybeSingle();
 
   if (claimError) throw new Error(claimError.message);
+  let claimed = initialClaim;
 
   if (!claimed) {
     batch = await getBatchRow(batchId);

@@ -66,6 +66,7 @@ export type SponsorImportRow = {
   duplicate_role: string | null;
   duplicate_of_row_id: string | null;
   duplicate_resolution: string | null;
+  duplicate_cluster_size?: number | null;
   already_on_live_sponsor_id: string | null;
   already_on_live_tier_rank: number | null;
   intended_link_action: string | null;

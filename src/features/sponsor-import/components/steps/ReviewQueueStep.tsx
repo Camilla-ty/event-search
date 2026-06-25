@@ -12,6 +12,7 @@ import {
   fetchRows,
   importToDraft,
   materializeCompaniesChunk,
+  patchRowDecision,
   runMatching,
 } from "../../client/api";
 import { flowHref } from "../../client/resumeStep";
@@ -75,6 +76,39 @@ function importStatusMessage(summary: RowSummary, canImportToDraft: boolean): st
   return "Resolve remaining rows before importing to draft.";
 }
 
+function duplicateClusterSize(row: SponsorImportRow): number | null {
+  const size = row.duplicate_cluster_size ?? null;
+  return typeof size === "number" && size > 1 ? size : null;
+}
+
+function duplicateHelperText(row: SponsorImportRow): string | null {
+  const size = duplicateClusterSize(row);
+  if (!size) return null;
+  const otherCount = size - 1;
+  const noun = otherCount === 1 ? "duplicate" : "duplicates";
+  return `Keeping this row excludes the other ${otherCount} ${noun}.`;
+}
+
+function sponsorshipLabel(row: SponsorImportRow): { primary: string; secondary: string | null } {
+  const label = row.mapped_tier_label?.trim() ?? "";
+  const tier = row.mapped_tier_rank === null ? null : `Tier ${row.mapped_tier_rank}`;
+  if (label !== "") {
+    return { primary: label, secondary: tier };
+  }
+  return { primary: tier ?? "—", secondary: null };
+}
+
+function duplicateStatusLabel(row: SponsorImportRow): { primary: string; secondary: string | null } | null {
+  if (!duplicateClusterSize(row)) return null;
+  if (row.status === "excluded") {
+    return { primary: "Excluded", secondary: "Duplicate row" };
+  }
+  if (row.duplicate_resolution === "kept" || row.status === "resolved") {
+    return { primary: "Kept", secondary: "Will import" };
+  }
+  return { primary: "Duplicate", secondary: "needs choice" };
+}
+
 export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -88,6 +122,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [pendingBulk, setPendingBulk] = useState<PendingBulkAction | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [duplicateConfirmation, setDuplicateConfirmation] = useState(false);
   const [acceptedDomainMatchCount, setAcceptedDomainMatchCount] = useState<number | null>(null);
   const [step1DetailsOpen, setStep1DetailsOpen] = useState(false);
   const skipFilterReload = useRef(true);
@@ -141,7 +176,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         return;
       }
 
-      await loadRowsForFilter(filter);
+      await loadRowsForFilter("needs_review");
       if (cancelled) return;
 
       setLoading(false);
@@ -299,6 +334,30 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
       await reload();
     } finally {
       bulkAcceptInFlight.current = false;
+      setActionLoading(false);
+      setProgressMessage(null);
+    }
+  }
+
+  async function handleKeepDuplicateRow(row: SponsorImportRow) {
+    if (actionLoading) return;
+    setActionLoading(true);
+    setProgressMessage(IMPORT_PROGRESS.applyingDecisions);
+    setError(null);
+    setDuplicateConfirmation(false);
+    try {
+      const result = await patchRowDecision(batch.id, row.id, {
+        decision_type: row.proposed_company_id ? "use_matched" : "create_new",
+        duplicate_resolution: "kept",
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setDuplicateConfirmation(true);
+      clearSelection();
+      await reload();
+    } finally {
       setActionLoading(false);
       setProgressMessage(null);
     }
@@ -539,6 +598,13 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
             <p className="mt-3 text-sm text-amber-800">{bulkCreateNewState.disabledReason}</p>
           ) : null}
 
+          {duplicateConfirmation ? (
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <p className="font-medium">✓ Duplicate resolved.</p>
+              <p>Other duplicate rows were excluded.</p>
+            </div>
+          ) : null}
+
           <div className="mt-4">
             {loading ? (
               <ImportProgressMessage message={progressMessage ?? IMPORT_PROGRESS.loadingRows} />
@@ -560,16 +626,17 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                       <th className="px-4 py-2">Company</th>
                       <th className="px-4 py-2">Match</th>
                       <th className="px-4 py-2">Domain</th>
-                      <th className="px-4 py-2">Tier</th>
-                      <th className="px-4 py-2">Label</th>
+                      <th className="px-4 py-2">Sponsorship</th>
                       <th className="px-4 py-2">Status</th>
-                      <th className="px-4 py-2" />
+                      <th className="sticky right-0 bg-slate-50 px-4 py-2 shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
+                        <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                           No rows in this filter.
                         </td>
                       </tr>
@@ -577,6 +644,9 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                       rows.map((row) => {
                         const selectable = isSelectableReviewRow(row);
                         const canCreateNew = isEligibleForBulkCreateNew(row);
+                        const duplicateSize = duplicateClusterSize(row);
+                        const duplicateStatus = duplicateStatusLabel(row);
+                        const sponsorship = sponsorshipLabel(row);
                         return (
                           <tr key={row.id} className="border-b border-slate-100">
                             <td className="px-4 py-2">
@@ -590,7 +660,20 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                               ) : null}
                             </td>
                             <td className="px-4 py-2">{row.excel_row_number}</td>
-                            <td className="px-4 py-2">{row.raw_company_name ?? "—"}</td>
+                            <td className="px-4 py-2">
+                              <div>{row.raw_company_name ?? "—"}</div>
+                              {duplicateSize ? (
+                                <div className="mt-1 max-w-xs space-y-0.5 text-xs text-slate-600">
+                                  <p className="font-semibold text-slate-800">
+                                    Duplicate ({duplicateSize} rows)
+                                  </p>
+                                  <p className="font-medium text-slate-700">
+                                    Choose which row to keep.
+                                  </p>
+                                  <p>{duplicateHelperText(row)}</p>
+                                </div>
+                              ) : null}
+                            </td>
                             <td className="max-w-xs px-4 py-2">
                               {hasImportRowMatchReason(row) || row.proposed_company_id ? (
                                 <ImportRowMatchReason
@@ -603,17 +686,44 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
                               )}
                             </td>
                             <td className="px-4 py-2">{resolveRowDomain(row) || "—"}</td>
-                            <td className="px-4 py-2">{row.mapped_tier_rank ?? "—"}</td>
-                            <td className="px-4 py-2">{row.mapped_tier_label ?? "—"}</td>
                             <td className="px-4 py-2">
-                              <span>{row.status}</span>
+                              <div className="font-semibold text-slate-900">
+                                {sponsorship.primary}
+                              </div>
+                              {sponsorship.secondary ? (
+                                <div className="text-xs text-slate-500">
+                                  {sponsorship.secondary}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-2">
+                              {duplicateStatus ? (
+                                <span>
+                                  <span>{duplicateStatus.primary}</span>
+                                  {duplicateStatus.secondary ? (
+                                    <span className="ml-2 text-xs text-slate-500">
+                                      {duplicateStatus.secondary}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              ) : (
+                                <span>{row.status}</span>
+                              )}
                               {selectable && !canCreateNew ? (
                                 <span className="ml-2 text-xs text-slate-500">(exclude only)</span>
                               ) : null}
                             </td>
-                            <td className="px-4 py-2">
-                              {row.status === "needs_review" ||
-                              row.duplicate_role === "duplicate" ? (
+                            <td className="sticky right-0 bg-white px-4 py-2 shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]">
+                              {duplicateSize && row.status !== "excluded" ? (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={actionLoading}
+                                  onClick={() => void handleKeepDuplicateRow(row)}
+                                >
+                                  Keep this row
+                                </Button>
+                              ) : row.status === "needs_review" ? (
                                 <Button
                                   size="sm"
                                   variant="secondary"

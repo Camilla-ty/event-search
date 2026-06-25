@@ -63,6 +63,7 @@ export type ImportRowRecord = {
   id: string;
   status: SponsorImportRowStatus;
   has_blocking_validation: boolean;
+  duplicate_cluster_key?: string | null;
   duplicate_role: string | null;
   duplicate_resolution: string | null;
 };
