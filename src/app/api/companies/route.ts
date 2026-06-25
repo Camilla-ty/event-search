@@ -8,6 +8,7 @@ import {
   enrichCompanyLogo,
   normalizeDomainFromWebsite,
 } from "@/src/features/companies/server/createCompanyWithLogo";
+import { isUniqueViolation, uniqueViolationUserMessage } from "@/src/features/sponsor-import/server/errors";
 import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { isCompanyLogoStorageUrl } from "@/src/lib/companies/isCompanyLogoStorageUrl";
 import { MANUAL_LOGO_IMPORT_FAILED_WARNING } from "@/src/lib/companies/manualLogoIngestMessages";
@@ -137,6 +138,16 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[api/companies] createCompany failed", { message });
+    // Keep collision behavior consistent with the bulk-import path: a duplicate
+    // name/slug/domain is a clean 409 with the shared user-facing message rather
+    // than a leaked raw 500. (Social/community URLs resolve to a null domain and
+    // never reach this path.)
+    if (isUniqueViolation(message)) {
+      return NextResponse.json(
+        { ok: false, error: uniqueViolationUserMessage(message) },
+        { status: 409 },
+      );
+    }
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

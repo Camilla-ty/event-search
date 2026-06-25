@@ -95,21 +95,67 @@ function matchesHostedPlatformPath(host: string, pathname: string): boolean {
 }
 
 /**
- * Multi-tenant community / social hosts whose URLs must NOT become a company
- * identity key. A bare host here (e.g. `discord.com`) would silently merge
- * unrelated entities, so these resolve to "no identity" (null domain) instead.
+ * Social / hosted-platform / directory / link-in-bio URLs may be stored as the
+ * company `website`, but must NOT become `companies.domain` identity keys.
+ *
+ * Multi-tenant hosts here would otherwise collapse to a shared bare-host domain
+ * (e.g. `medium.com`, `crunchbase.com`) and silently merge unrelated companies,
+ * so they resolve to "no identity" (null domain) while the full URL is preserved.
  */
+const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
+  // Community / chat
+  "discord.com",
+  "discordapp.com",
+  "discord.gg",
+  "reddit.com",
+  // Social (no path-aware identity)
+  "instagram.com",
+  "tiktok.com",
+  // Code hosts
+  "github.com",
+  "gitlab.com",
+  // Publishing / blogs (bare host is multi-tenant; *.medium.com / *.substack.com
+  // subdomains remain distinct identities)
+  "medium.com",
+  "substack.com",
+  // Startup / company directories
+  "crunchbase.com",
+  "wellfound.com",
+  "angel.co",
+  // Link-in-bio aggregators
+  "beacons.ai",
+  "bio.site",
+]);
+
+/**
+ * Hosts that DO carry a path-aware identity (e.g. `x.com/acme`) but whose BARE
+ * host (no path) must not become an identity key.
+ */
+const BARE_HOST_NON_IDENTITY_HOSTS = new Set<string>([
+  "x.com",
+  "twitter.com",
+  "facebook.com",
+  "fb.com",
+  "m.facebook.com",
+  "youtube.com",
+  "m.youtube.com",
+  "youtu.be",
+]);
+
 function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
   const path = normalizePathname(pathname);
 
+  if (ALWAYS_NON_IDENTITY_HOSTS.has(host)) {
+    return true;
+  }
+
+  if (BARE_HOST_NON_IDENTITY_HOSTS.has(host)) {
+    // A path-bearing URL (x.com/acme) keeps its path-aware identity; the bare
+    // host (x.com) does not.
+    return path === "" || path === "/";
+  }
+
   switch (host) {
-    case "discord.com":
-    case "discordapp.com":
-    case "discord.gg":
-    case "instagram.com":
-    case "tiktok.com":
-    case "github.com":
-      return true;
     case "linkedin.com":
       // Company pages keep a path-aware identity; personal profiles and the
       // bare host do not.

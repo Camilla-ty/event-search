@@ -172,6 +172,70 @@ describe("resolveCompanyWebsiteIdentity", () => {
     });
   });
 
+  it("treats multi-tenant directory / publishing / link-in-bio hosts as no_identity", () => {
+    for (const url of [
+      "https://gitlab.com/acme",
+      "https://medium.com/@acme",
+      "https://www.crunchbase.com/organization/acme",
+      "https://wellfound.com/company/acme",
+      "https://angel.co/company/acme",
+      "https://beacons.ai/acme",
+      "https://bio.site/acme",
+      "https://www.reddit.com/r/acme",
+      "https://substack.com/@acme",
+    ]) {
+      assert.deepEqual(
+        resolveCompanyWebsiteIdentity(url),
+        { status: "no_identity" },
+        `expected no_identity for ${url}`,
+      );
+    }
+  });
+
+  it("treats bare social hosts as no_identity but keeps path-aware handles", () => {
+    for (const bare of [
+      "https://x.com",
+      "https://twitter.com/",
+      "https://www.facebook.com",
+      "https://youtube.com/",
+    ]) {
+      assert.deepEqual(
+        resolveCompanyWebsiteIdentity(bare),
+        { status: "no_identity" },
+        `expected no_identity for bare ${bare}`,
+      );
+    }
+    // Path-bearing handles keep their existing path-aware identity.
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://x.com/acme"), {
+      status: "domain",
+      domain: "x.com/acme",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.youtube.com/@acme"), {
+      status: "domain",
+      domain: "youtube.com/@acme",
+    });
+  });
+
+  it("keeps publishing subdomains as distinct identities (not collapsed to the root)", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://acme.substack.com"), {
+      status: "domain",
+      domain: "acme.substack.com",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://acme.medium.com"), {
+      status: "domain",
+      domain: "acme.medium.com",
+    });
+  });
+
+  it("preserves website while producing no domain for two different directory profiles", () => {
+    // Two distinct companies on the same directory host must NOT collapse to a
+    // shared bare-host identity key.
+    const a = normalizeCompanyIdentityFromWebsite("https://www.crunchbase.com/organization/alpha");
+    const b = normalizeCompanyIdentityFromWebsite("https://www.crunchbase.com/organization/beta");
+    assert.equal(a, "");
+    assert.equal(b, "");
+  });
+
   it("treats LinkedIn personal profiles and bare host as no_identity", () => {
     assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.linkedin.com/in/jane"), {
       status: "no_identity",
@@ -240,6 +304,11 @@ describe("isCommunityPlatformWebsite", () => {
     assert.equal(isCommunityPlatformWebsite("https://discord.gg/abc"), true);
     assert.equal(isCommunityPlatformWebsite("https://instagram.com/acme"), true);
     assert.equal(isCommunityPlatformWebsite("https://github.com/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://gitlab.com/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://medium.com/@acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://beacons.ai/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://www.crunchbase.com/organization/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://x.com"), true);
     assert.equal(isCommunityPlatformWebsite("https://www.linkedin.com/in/jane"), true);
     assert.equal(isCommunityPlatformWebsite("https://t.me/+invite"), true);
   });
