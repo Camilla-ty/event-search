@@ -6,8 +6,10 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { CompanyAdminForm } from "@/src/features/companies/components/admin/CompanyAdminForm";
 import { CompanyAdminMergeActions } from "@/src/features/companies/components/admin/CompanyAdminMergeActions";
 import { CompanyAdminStatusBadge } from "@/src/features/companies/components/admin/CompanyAdminStatusBadge";
+import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
+import { listCompanyDomainsForAdmin } from "@/src/features/companies/server/companyDomainsAdmin";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import {
   getCompanyAdminById,
@@ -26,10 +28,11 @@ type PageProps = {
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { logoWarning, merged, merge_id: mergeId } = await searchParams;
-  const [company, cities, sponsorships] = await Promise.all([
+  const [company, cities, sponsorships, domains] = await Promise.all([
     getCompanyAdminById(id),
     getCityOptions(),
     listSponsorshipsForCompanyAdmin(id),
+    listCompanyDomainsForAdmin(id),
   ]);
 
   if (!company) notFound();
@@ -119,6 +122,8 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           logo_fetched_at: company.logo_fetched_at,
         }}
       />
+
+      <CompanyDomainsSection domains={domains} />
 
       <div className="mt-10">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">
