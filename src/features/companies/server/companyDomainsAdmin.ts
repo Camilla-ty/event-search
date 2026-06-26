@@ -7,13 +7,14 @@ import {
   verifiedCompanyDomainInputErrorMessage,
 } from "@/src/lib/companies/linkCompanyDomainFromImport";
 
-const COMPANY_DOMAIN_SELECT = "id, company_id, domain, is_primary, created_at";
+const COMPANY_DOMAIN_SELECT = "id, company_id, domain, is_primary, note, created_at";
 
 export type CompanyDomainAdminRow = {
   id: string;
   company_id: string;
   domain: string;
   is_primary: boolean;
+  note: string | null;
   created_at: string | null;
 };
 
@@ -23,6 +24,7 @@ function mapCompanyDomainRow(row: Record<string, unknown>): CompanyDomainAdminRo
     company_id: String(row.company_id),
     domain: String(row.domain),
     is_primary: row.is_primary === true,
+    note: typeof row.note === "string" ? row.note : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
   };
 }

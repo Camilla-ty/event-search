@@ -3,10 +3,61 @@ import { describe, it } from "node:test";
 
 import { CompanyDomainLinkError } from "@/src/lib/companies/linkCompanyDomainFromImport";
 
-import { addCompanyDomainWithClient } from "./companyDomainsAdmin";
+import {
+  addCompanyDomainWithClient,
+  sortCompanyDomainsForDisplay,
+  type CompanyDomainAdminRow,
+} from "./companyDomainsAdmin";
 
 const BITLIFI_ID = "00000000-0000-4000-8000-000000000001";
 const OTHER_ID = "00000000-0000-4000-8000-000000000002";
+
+function domainRow(
+  overrides: Partial<CompanyDomainAdminRow> & Pick<CompanyDomainAdminRow, "domain" | "is_primary">,
+): CompanyDomainAdminRow {
+  return {
+    id: overrides.id ?? "00000000-0000-4000-8000-000000000001",
+    company_id: overrides.company_id ?? "00000000-0000-4000-8000-000000000099",
+    created_at: overrides.created_at ?? null,
+    note: overrides.note ?? null,
+    domain: overrides.domain,
+    is_primary: overrides.is_primary,
+  };
+}
+
+describe("sortCompanyDomainsForDisplay", () => {
+  it("lists primary domains first, then alphabetically", () => {
+    const sorted = sortCompanyDomainsForDisplay([
+      domainRow({ id: "1", domain: "bitlifi.jp", is_primary: false }),
+      domainRow({ id: "2", domain: "bitlifi.com", is_primary: true }),
+      domainRow({ id: "3", domain: "acme.com", is_primary: false }),
+    ]);
+
+    assert.deepEqual(
+      sorted.map((item) => [item.domain, item.is_primary]),
+      [
+        ["bitlifi.com", true],
+        ["acme.com", false],
+        ["bitlifi.jp", false],
+      ],
+    );
+  });
+
+  it("ignores note when ordering domains", () => {
+    const sorted = sortCompanyDomainsForDisplay([
+      domainRow({
+        id: "1",
+        domain: "bitlifi.cz",
+        is_primary: false,
+        note: "Czech regional site",
+      }),
+      domainRow({ id: "2", domain: "bitlifi.com", is_primary: true, note: "Global site" }),
+    ]);
+
+    assert.equal(sorted[0]?.domain, "bitlifi.com");
+    assert.equal(sorted[1]?.note, "Czech regional site");
+  });
+});
 
 type MockState = {
   companies: Array<{ id: string; domain: string | null; website?: string | null }>;
