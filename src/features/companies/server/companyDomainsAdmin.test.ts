@@ -5,7 +5,10 @@ import { CompanyDomainLinkError } from "@/src/lib/companies/linkCompanyDomainFro
 
 import {
   addCompanyDomainWithClient,
+  CompanyDomainAdminError,
+  normalizeCompanyDomainNote,
   sortCompanyDomainsForDisplay,
+  updateCompanyDomainNoteWithClient,
   type CompanyDomainAdminRow,
 } from "./companyDomainsAdmin";
 
@@ -223,5 +226,165 @@ describe("addCompanyDomainWithClient", () => {
       },
     );
     assert.equal(state.companyDomains.length, 0);
+  });
+});
+
+const DOMAIN_ROW_ID = "11111111-1111-4111-8111-111111111111";
+
+type NoteMockDomainRow = CompanyDomainAdminRow;
+
+type NoteMockState = {
+  companies: Array<{ id: string; domain: string | null; website?: string | null }>;
+  companyDomains: NoteMockDomainRow[];
+};
+
+function createNoteUpdateMockSupabase(state: NoteMockState) {
+  return {
+    from(table: string) {
+      if (table !== "company_domains") {
+        throw new Error(`Unexpected table: ${table}`);
+      }
+
+      const filters: Record<string, string> = {};
+      let pendingUpdate: { note: string | null } | null = null;
+
+      const api = {
+        select() {
+          return api;
+        },
+        eq(column: string, value: string) {
+          filters[column] = value;
+          return api;
+        },
+        update(payload: { note: string | null }) {
+          pendingUpdate = payload;
+          return api;
+        },
+        async maybeSingle() {
+          const row = state.companyDomains.find(
+            (item) =>
+              (!filters.id || item.id === filters.id) &&
+              (!filters.company_id || item.company_id === filters.company_id),
+          );
+          return { data: row ?? null, error: null };
+        },
+        async single() {
+          const index = state.companyDomains.findIndex(
+            (item) => item.id === filters.id && item.company_id === filters.company_id,
+          );
+          if (index < 0 || !pendingUpdate) {
+            return { data: null, error: { message: "not found" } };
+          }
+          state.companyDomains[index] = {
+            ...state.companyDomains[index]!,
+            note: pendingUpdate.note,
+          };
+          return { data: state.companyDomains[index], error: null };
+        },
+      };
+
+      return api;
+    },
+  };
+}
+
+describe("normalizeCompanyDomainNote", () => {
+  it("stores blank notes as null", () => {
+    assert.equal(normalizeCompanyDomainNote(""), null);
+    assert.equal(normalizeCompanyDomainNote("   "), null);
+    assert.equal(normalizeCompanyDomainNote(null), null);
+  });
+
+  it("trims non-empty notes", () => {
+    assert.equal(normalizeCompanyDomainNote("  Czech regional site  "), "Czech regional site");
+  });
+});
+
+describe("updateCompanyDomainNoteWithClient", () => {
+  it("updates only the note for a company-owned domain row", async () => {
+    const state: NoteMockState = {
+      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com", website: "https://bitlifi.com" }],
+      companyDomains: [
+        domainRow({
+          id: DOMAIN_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "bitlifi.jp",
+          is_primary: false,
+          note: null,
+        }),
+      ],
+    };
+
+    const updated = await updateCompanyDomainNoteWithClient(
+      createNoteUpdateMockSupabase(state) as never,
+      {
+        companyId: BITLIFI_ID,
+        domainRowId: DOMAIN_ROW_ID,
+        note: "Czech regional site",
+      },
+    );
+
+    assert.equal(updated.note, "Czech regional site");
+    assert.equal(updated.domain, "bitlifi.jp");
+    assert.equal(updated.is_primary, false);
+    assert.equal(state.companies[0]?.domain, "bitlifi.com");
+    assert.equal(state.companies[0]?.website, "https://bitlifi.com");
+  });
+
+  it("clears a note by saving blank input as null", async () => {
+    const state: NoteMockState = {
+      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com" }],
+      companyDomains: [
+        domainRow({
+          id: DOMAIN_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "bitlifi.jp",
+          is_primary: false,
+          note: "Old URL",
+        }),
+      ],
+    };
+
+    const updated = await updateCompanyDomainNoteWithClient(
+      createNoteUpdateMockSupabase(state) as never,
+      {
+        companyId: BITLIFI_ID,
+        domainRowId: DOMAIN_ROW_ID,
+        note: "   ",
+      },
+    );
+
+    assert.equal(updated.note, null);
+    assert.equal(state.companyDomains[0]?.note, null);
+  });
+
+  it("rejects updates when the domain row does not belong to the company", async () => {
+    const state: NoteMockState = {
+      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com" }],
+      companyDomains: [
+        domainRow({
+          id: DOMAIN_ROW_ID,
+          company_id: OTHER_ID,
+          domain: "bitlifi.jp",
+          is_primary: false,
+          note: null,
+        }),
+      ],
+    };
+
+    await assert.rejects(
+      () =>
+        updateCompanyDomainNoteWithClient(createNoteUpdateMockSupabase(state) as never, {
+          companyId: BITLIFI_ID,
+          domainRowId: DOMAIN_ROW_ID,
+          note: "Should fail",
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof CompanyDomainAdminError);
+        assert.equal(error.status, 404);
+        return true;
+      },
+    );
+    assert.equal(state.companyDomains[0]?.note, null);
   });
 });

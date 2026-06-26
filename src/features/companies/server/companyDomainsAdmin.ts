@@ -108,3 +108,65 @@ export async function addCompanyDomainForAdmin(
 ): Promise<AddCompanyDomainAdminResult> {
   return addCompanyDomainWithClient(createAdminClient(), companyId, rawDomainInput);
 }
+
+export class CompanyDomainAdminError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "CompanyDomainAdminError";
+    this.status = status;
+  }
+}
+
+export function normalizeCompanyDomainNote(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
+}
+
+/** Update only company_domains.note for a row owned by the company (service-role only). */
+export async function updateCompanyDomainNoteWithClient(
+  supabase: SupabaseClient,
+  params: {
+    companyId: string;
+    domainRowId: string;
+    note: string | null | undefined;
+  },
+): Promise<CompanyDomainAdminRow> {
+  const note = normalizeCompanyDomainNote(params.note);
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("company_domains")
+    .select(COMPANY_DOMAIN_SELECT)
+    .eq("id", params.domainRowId)
+    .eq("company_id", params.companyId)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!existing) {
+    throw new CompanyDomainAdminError(404, "Domain not found for this company.");
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("company_domains")
+    .update({ note })
+    .eq("id", params.domainRowId)
+    .eq("company_id", params.companyId)
+    .select(COMPANY_DOMAIN_SELECT)
+    .single();
+
+  if (updateError) throw new Error(updateError.message);
+  return mapCompanyDomainRow(updated as Record<string, unknown>);
+}
+
+export async function updateCompanyDomainNoteForAdmin(
+  companyId: string,
+  domainRowId: string,
+  note: string | null | undefined,
+): Promise<CompanyDomainAdminRow> {
+  return updateCompanyDomainNoteWithClient(createAdminClient(), {
+    companyId,
+    domainRowId,
+    note,
+  });
+}

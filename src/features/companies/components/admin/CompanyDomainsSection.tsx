@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
@@ -23,6 +23,90 @@ type AddDomainApiResponse = {
   };
   domains?: CompanyDomainAdminRow[];
 };
+
+type UpdateNoteApiResponse = {
+  ok: boolean;
+  error?: string;
+  domain?: CompanyDomainAdminRow;
+};
+
+function CompanyDomainNoteField({
+  companyId,
+  row,
+  canEdit,
+}: {
+  companyId: string;
+  row: CompanyDomainAdminRow;
+  canEdit: boolean;
+}) {
+  const router = useRouter();
+  const [value, setValue] = useState(row.note ?? "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(row.note ?? "");
+  }, [row.note]);
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canEdit || loading) return;
+
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/admin/companies/${companyId}/domains/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: value }),
+      });
+      const data = (await response.json()) as UpdateNoteApiResponse;
+
+      if (!data.ok) {
+        setError(data.error ?? "Could not save note.");
+        return;
+      }
+
+      setNotice("Note saved.");
+      router.refresh();
+    } catch {
+      setError("Could not save note.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!canEdit) {
+    if (!row.note) return null;
+    return <p className="mt-1 text-xs text-slate-500">{row.note}</p>;
+  }
+
+  return (
+    <form onSubmit={handleSave} className="mt-2 w-full space-y-2">
+      <label className="sr-only" htmlFor={`company-domain-note-${row.id}`}>
+        Note for {row.domain}
+      </label>
+      <input
+        id={`company-domain-note-${row.id}`}
+        className={formInputClass}
+        placeholder="Optional note (e.g. Czech regional site)"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        disabled={loading}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" size="sm" variant="secondary" disabled={loading}>
+          {loading ? "Saving…" : "Save note"}
+        </Button>
+        {notice ? <span className={`${feedbackSuccessClass} text-xs`}>{notice}</span> : null}
+      </div>
+      {error ? <InlineErrorBanner message={error} /> : null}
+    </form>
+  );
+}
 
 export function CompanyDomainsSection({
   companyId,
@@ -85,9 +169,12 @@ export function CompanyDomainsSection({
       {domains.length > 0 ? (
         <ul className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
           {domains.map((row) => (
-            <li key={row.id} className="flex flex-wrap items-baseline gap-x-2 py-1.5">
-              <span className="font-medium">{row.domain}</span>
-              <span className="text-slate-500">{row.is_primary ? "Primary" : "Additional"}</span>
+            <li key={row.id} className="border-b border-slate-100 py-3 last:border-0">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium">{row.domain}</span>
+                <span className="text-slate-500">{row.is_primary ? "Primary" : "Additional"}</span>
+              </div>
+              <CompanyDomainNoteField companyId={companyId} row={row} canEdit={canAdd} />
             </li>
           ))}
         </ul>
