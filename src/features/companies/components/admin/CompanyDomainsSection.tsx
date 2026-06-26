@@ -37,10 +37,17 @@ type SetPrimaryApiResponse = {
   domains?: CompanyDomainAdminRow[];
 };
 
-const SET_PRIMARY_CONFIRMATION =
-  "Set this as the primary website? This will update the company public website and primary domain.";
+const SET_PRIMARY_CONFIRMATION = [
+  "Set this domain as the company's primary website?",
+  "",
+  "This will update:",
+  "",
+  "• Company Website",
+  "• Company Domain",
+  "• Primary Company Domain",
+].join("\n");
 
-function CompanyDomainSetPrimaryButton({
+function CompanyDomainRow({
   companyId,
   row,
   canEdit,
@@ -52,10 +59,6 @@ function CompanyDomainSetPrimaryButton({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!canEdit || row.is_primary) {
-    return null;
-  }
 
   async function handleSetPrimary() {
     if (!window.confirm(SET_PRIMARY_CONFIRMATION)) {
@@ -86,12 +89,34 @@ function CompanyDomainSetPrimaryButton({
   }
 
   return (
-    <div className="mt-2">
-      <Button type="button" size="sm" variant="secondary" disabled={loading} onClick={handleSetPrimary}>
-        {loading ? "Updating…" : "Set as primary"}
-      </Button>
-      {error ? <div className="mt-2"><InlineErrorBanner message={error} /></div> : null}
-    </div>
+    <li className="border-b border-slate-100 py-3 last:border-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-2">
+          <span className="font-medium">{row.domain}</span>
+          {row.is_primary ? (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+              Primary
+            </span>
+          ) : null}
+        </div>
+        {!row.is_primary && canEdit ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={loading}
+            onClick={handleSetPrimary}
+          >
+            {loading ? "Updating…" : "Set as Primary"}
+          </Button>
+        ) : null}
+      </div>
+      {error ? (
+        <div className="mt-2">
+          <InlineErrorBanner message={error} />
+        </div>
+      ) : null}
+    </li>
   );
 }
 
@@ -156,13 +181,7 @@ export function CompanyDomainsSection({
       {domains.length > 0 ? (
         <ul className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
           {domains.map((row) => (
-            <li key={row.id} className="border-b border-slate-100 py-3 last:border-0">
-              <div className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-medium">{row.domain}</span>
-                {row.is_primary ? <span className="text-slate-500">Primary</span> : null}
-              </div>
-              <CompanyDomainSetPrimaryButton companyId={companyId} row={row} canEdit={canAdd} />
-            </li>
+            <CompanyDomainRow key={row.id} companyId={companyId} row={row} canEdit={canAdd} />
           ))}
         </ul>
       ) : (

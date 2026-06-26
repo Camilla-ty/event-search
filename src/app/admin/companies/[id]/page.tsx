@@ -99,6 +99,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
       ) : null}
 
       <CompanyAdminForm
+        key={`${company.id}:${company.domain ?? ""}:${company.website ?? ""}`}
         mode="edit"
         companyId={company.id}
         cities={cities}
