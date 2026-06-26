@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MERGED_COMPANY_READ_ONLY_MESSAGE } from "@/src/features/companies/server/companyAdmin";
 import {
   CompanyDomainLinkError,
   ensureCompanyDomainFromImportLink,
@@ -7,14 +8,13 @@ import {
   verifiedCompanyDomainInputErrorMessage,
 } from "@/src/lib/companies/linkCompanyDomainFromImport";
 
-const COMPANY_DOMAIN_SELECT = "id, company_id, domain, is_primary, note, created_at";
+const COMPANY_DOMAIN_SELECT = "id, company_id, domain, is_primary, created_at";
 
 export type CompanyDomainAdminRow = {
   id: string;
   company_id: string;
   domain: string;
   is_primary: boolean;
-  note: string | null;
   created_at: string | null;
 };
 
@@ -24,7 +24,6 @@ function mapCompanyDomainRow(row: Record<string, unknown>): CompanyDomainAdminRo
     company_id: String(row.company_id),
     domain: String(row.domain),
     is_primary: row.is_primary === true,
-    note: typeof row.note === "string" ? row.note : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
   };
 }
@@ -119,54 +118,63 @@ export class CompanyDomainAdminError extends Error {
   }
 }
 
-export function normalizeCompanyDomainNote(raw: string | null | undefined): string | null {
-  const trimmed = raw?.trim() ?? "";
-  return trimmed === "" ? null : trimmed;
-}
+export type SetCompanyPrimaryDomainResult = {
+  status: "updated" | "already_primary";
+  company_id: string;
+  website: string | null;
+  domain: string | null;
+  primary_domain_id: string;
+};
 
-/** Update only company_domains.note for a row owned by the company (service-role only). */
-export async function updateCompanyDomainNoteWithClient(
-  supabase: SupabaseClient,
-  params: {
-    companyId: string;
-    domainRowId: string;
-    note: string | null | undefined;
-  },
-): Promise<CompanyDomainAdminRow> {
-  const note = normalizeCompanyDomainNote(params.note);
-
-  const { data: existing, error: fetchError } = await supabase
-    .from("company_domains")
-    .select(COMPANY_DOMAIN_SELECT)
-    .eq("id", params.domainRowId)
-    .eq("company_id", params.companyId)
-    .maybeSingle();
-
-  if (fetchError) throw new Error(fetchError.message);
-  if (!existing) {
-    throw new CompanyDomainAdminError(404, "Domain not found for this company.");
+function mapSetCompanyPrimaryDomainResult(raw: unknown): SetCompanyPrimaryDomainResult {
+  if (!raw || typeof raw !== "object") {
+    throw new CompanyDomainAdminError(500, "Invalid primary domain response.");
   }
-
-  const { data: updated, error: updateError } = await supabase
-    .from("company_domains")
-    .update({ note })
-    .eq("id", params.domainRowId)
-    .eq("company_id", params.companyId)
-    .select(COMPANY_DOMAIN_SELECT)
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-  return mapCompanyDomainRow(updated as Record<string, unknown>);
+  const row = raw as Record<string, unknown>;
+  const status = row.status === "already_primary" ? "already_primary" : "updated";
+  return {
+    status,
+    company_id: String(row.company_id),
+    website: typeof row.website === "string" ? row.website : null,
+    domain: typeof row.domain === "string" ? row.domain : null,
+    primary_domain_id: String(row.primary_domain_id),
+  };
 }
 
-export async function updateCompanyDomainNoteForAdmin(
+export function parseSetCompanyPrimaryDomainRpcError(message: string): CompanyDomainAdminError {
+  if (message.includes("company_not_found")) {
+    return new CompanyDomainAdminError(404, "Company not found.");
+  }
+  if (message.includes("domain_not_found")) {
+    return new CompanyDomainAdminError(404, "Domain not found for this company.");
+  }
+  if (message.includes("merged_read_only")) {
+    return new CompanyDomainAdminError(409, MERGED_COMPANY_READ_ONLY_MESSAGE);
+  }
+  return new CompanyDomainAdminError(500, message);
+}
+
+/** Atomically promote an existing company_domains row to primary (service-role RPC). */
+export async function setCompanyPrimaryDomainWithClient(
+  supabase: SupabaseClient,
   companyId: string,
   domainRowId: string,
-  note: string | null | undefined,
-): Promise<CompanyDomainAdminRow> {
-  return updateCompanyDomainNoteWithClient(createAdminClient(), {
-    companyId,
-    domainRowId,
-    note,
+): Promise<SetCompanyPrimaryDomainResult> {
+  const { data, error } = await supabase.rpc("set_company_primary_domain", {
+    p_company_id: companyId,
+    p_company_domain_id: domainRowId,
   });
+
+  if (error) {
+    throw parseSetCompanyPrimaryDomainRpcError(error.message);
+  }
+
+  return mapSetCompanyPrimaryDomainResult(data);
+}
+
+export async function setCompanyPrimaryDomainForAdmin(
+  companyId: string,
+  domainRowId: string,
+): Promise<SetCompanyPrimaryDomainResult> {
+  return setCompanyPrimaryDomainWithClient(createAdminClient(), companyId, domainRowId);
 }

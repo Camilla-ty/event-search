@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
@@ -24,13 +24,23 @@ type AddDomainApiResponse = {
   domains?: CompanyDomainAdminRow[];
 };
 
-type UpdateNoteApiResponse = {
+type SetPrimaryApiResponse = {
   ok: boolean;
   error?: string;
-  domain?: CompanyDomainAdminRow;
+  result?: {
+    status: "updated" | "already_primary";
+    company_id: string;
+    website: string | null;
+    domain: string | null;
+    primary_domain_id: string;
+  };
+  domains?: CompanyDomainAdminRow[];
 };
 
-function CompanyDomainNoteField({
+const SET_PRIMARY_CONFIRMATION =
+  "Set this as the primary website? This will update the company public website and primary domain.";
+
+function CompanyDomainSetPrimaryButton({
   companyId,
   row,
   canEdit,
@@ -40,71 +50,48 @@ function CompanyDomainNoteField({
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const [value, setValue] = useState(row.note ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    setValue(row.note ?? "");
-  }, [row.note]);
+  if (!canEdit || row.is_primary) {
+    return null;
+  }
 
-  async function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canEdit || loading) return;
+  async function handleSetPrimary() {
+    if (!window.confirm(SET_PRIMARY_CONFIRMATION)) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
-    setNotice(null);
 
     try {
-      const response = await fetch(`/api/admin/companies/${companyId}/domains/${row.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: value }),
-      });
-      const data = (await response.json()) as UpdateNoteApiResponse;
+      const response = await fetch(
+        `/api/admin/companies/${companyId}/domains/${row.id}/set-primary`,
+        { method: "POST" },
+      );
+      const data = (await response.json()) as SetPrimaryApiResponse;
 
       if (!data.ok) {
-        setError(data.error ?? "Could not save note.");
+        setError(data.error ?? "Could not set primary domain.");
         return;
       }
 
-      setNotice("Note saved.");
       router.refresh();
     } catch {
-      setError("Could not save note.");
+      setError("Could not set primary domain.");
     } finally {
       setLoading(false);
     }
   }
 
-  if (!canEdit) {
-    if (!row.note) return null;
-    return <p className="mt-1 text-xs text-slate-500">{row.note}</p>;
-  }
-
   return (
-    <form onSubmit={handleSave} className="mt-2 w-full space-y-2">
-      <label className="sr-only" htmlFor={`company-domain-note-${row.id}`}>
-        Note for {row.domain}
-      </label>
-      <input
-        id={`company-domain-note-${row.id}`}
-        className={formInputClass}
-        placeholder="Optional note (e.g. Czech regional site)"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        disabled={loading}
-      />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" size="sm" variant="secondary" disabled={loading}>
-          {loading ? "Saving…" : "Save note"}
-        </Button>
-        {notice ? <span className={`${feedbackSuccessClass} text-xs`}>{notice}</span> : null}
-      </div>
-      {error ? <InlineErrorBanner message={error} /> : null}
-    </form>
+    <div className="mt-2">
+      <Button type="button" size="sm" variant="secondary" disabled={loading} onClick={handleSetPrimary}>
+        {loading ? "Updating…" : "Set as primary"}
+      </Button>
+      {error ? <div className="mt-2"><InlineErrorBanner message={error} /></div> : null}
+    </div>
   );
 }
 
@@ -172,9 +159,9 @@ export function CompanyDomainsSection({
             <li key={row.id} className="border-b border-slate-100 py-3 last:border-0">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="font-medium">{row.domain}</span>
-                <span className="text-slate-500">{row.is_primary ? "Primary" : "Additional"}</span>
+                {row.is_primary ? <span className="text-slate-500">Primary</span> : null}
               </div>
-              <CompanyDomainNoteField companyId={companyId} row={row} canEdit={canAdd} />
+              <CompanyDomainSetPrimaryButton companyId={companyId} row={row} canEdit={canAdd} />
             </li>
           ))}
         </ul>

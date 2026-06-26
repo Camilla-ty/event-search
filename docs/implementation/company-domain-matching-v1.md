@@ -411,3 +411,13 @@ These rules come directly from ADR-001 and should not be changed casually:
 * No fuzzy matching.
 * No similarity-based automatic merge.
 * Keep v1 minimal.
+
+## Status
+
+Completed.
+
+Implemented in Phases 2–9.
+
+The company identity model is now considered the canonical architecture for EventPX.
+
+Future work should build on this model rather than replacing it.

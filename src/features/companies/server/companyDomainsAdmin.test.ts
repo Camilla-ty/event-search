@@ -6,9 +6,9 @@ import { CompanyDomainLinkError } from "@/src/lib/companies/linkCompanyDomainFro
 import {
   addCompanyDomainWithClient,
   CompanyDomainAdminError,
-  normalizeCompanyDomainNote,
+  parseSetCompanyPrimaryDomainRpcError,
+  setCompanyPrimaryDomainWithClient,
   sortCompanyDomainsForDisplay,
-  updateCompanyDomainNoteWithClient,
   type CompanyDomainAdminRow,
 } from "./companyDomainsAdmin";
 
@@ -22,7 +22,6 @@ function domainRow(
     id: overrides.id ?? "00000000-0000-4000-8000-000000000001",
     company_id: overrides.company_id ?? "00000000-0000-4000-8000-000000000099",
     created_at: overrides.created_at ?? null,
-    note: overrides.note ?? null,
     domain: overrides.domain,
     is_primary: overrides.is_primary,
   };
@@ -44,21 +43,6 @@ describe("sortCompanyDomainsForDisplay", () => {
         ["bitlifi.jp", false],
       ],
     );
-  });
-
-  it("ignores note when ordering domains", () => {
-    const sorted = sortCompanyDomainsForDisplay([
-      domainRow({
-        id: "1",
-        domain: "bitlifi.cz",
-        is_primary: false,
-        note: "Czech regional site",
-      }),
-      domainRow({ id: "2", domain: "bitlifi.com", is_primary: true, note: "Global site" }),
-    ]);
-
-    assert.equal(sorted[0]?.domain, "bitlifi.com");
-    assert.equal(sorted[1]?.note, "Czech regional site");
   });
 });
 
@@ -229,162 +213,337 @@ describe("addCompanyDomainWithClient", () => {
   });
 });
 
-const DOMAIN_ROW_ID = "11111111-1111-4111-8111-111111111111";
+const PRIMARY_ROW_ID = "22222222-2222-4222-8222-222222222222";
+const ADDITIONAL_ROW_ID = "33333333-3333-4333-8333-333333333333";
 
-type NoteMockDomainRow = CompanyDomainAdminRow;
-
-type NoteMockState = {
-  companies: Array<{ id: string; domain: string | null; website?: string | null }>;
-  companyDomains: NoteMockDomainRow[];
+type SetPrimaryMockCompany = {
+  id: string;
+  domain: string | null;
+  website: string | null;
+  status?: string;
+  merged_into_company_id?: string | null;
 };
 
-function createNoteUpdateMockSupabase(state: NoteMockState) {
-  return {
-    from(table: string) {
-      if (table !== "company_domains") {
-        throw new Error(`Unexpected table: ${table}`);
+type SetPrimaryMockDomainRow = {
+  id: string;
+  company_id: string;
+  domain: string;
+  is_primary: boolean;
+};
+
+type SetPrimaryMockState = {
+  companies: SetPrimaryMockCompany[];
+  companyDomains: SetPrimaryMockDomainRow[];
+  rpcFailAfterCompanyUpdate?: boolean;
+};
+
+function simulateSetCompanyPrimaryDomainRpc(
+  state: SetPrimaryMockState,
+  companyId: string,
+  domainRowId: string,
+) {
+  const company = state.companies.find((row) => row.id === companyId);
+  if (!company) {
+    return { data: null, error: { message: "company_not_found" } };
+  }
+
+  if (company.status === "merged" || company.merged_into_company_id) {
+    return { data: null, error: { message: "merged_read_only" } };
+  }
+
+  const domainRow = state.companyDomains.find(
+    (row) => row.id === domainRowId && row.company_id === companyId,
+  );
+  if (!domainRow) {
+    return { data: null, error: { message: "domain_not_found" } };
+  }
+
+  if (domainRow.is_primary) {
+    return {
+      data: {
+        status: "already_primary",
+        company_id: companyId,
+        website: company.website,
+        domain: company.domain,
+        primary_domain_id: domainRowId,
+      },
+      error: null,
+    };
+  }
+
+  const snapshot = structuredClone(state);
+
+  try {
+    const newDomain = domainRow.domain.trim();
+    company.website = newDomain;
+    company.domain = newDomain;
+
+    if (state.rpcFailAfterCompanyUpdate) {
+      throw new Error("simulated_domain_update_failure");
+    }
+
+    for (const row of state.companyDomains) {
+      if (row.company_id === companyId) {
+        row.is_primary = row.id === domainRowId;
       }
+    }
 
-      const filters: Record<string, string> = {};
-      let pendingUpdate: { note: string | null } | null = null;
+    return {
+      data: {
+        status: "updated",
+        company_id: companyId,
+        website: newDomain,
+        domain: newDomain,
+        primary_domain_id: domainRowId,
+      },
+      error: null,
+    };
+  } catch (error) {
+    state.companies = snapshot.companies;
+    state.companyDomains = snapshot.companyDomains;
+    const message = error instanceof Error ? error.message : "rpc_failed";
+    return { data: null, error: { message } };
+  }
+}
 
-      const api = {
-        select() {
-          return api;
-        },
-        eq(column: string, value: string) {
-          filters[column] = value;
-          return api;
-        },
-        update(payload: { note: string | null }) {
-          pendingUpdate = payload;
-          return api;
-        },
-        async maybeSingle() {
-          const row = state.companyDomains.find(
-            (item) =>
-              (!filters.id || item.id === filters.id) &&
-              (!filters.company_id || item.company_id === filters.company_id),
-          );
-          return { data: row ?? null, error: null };
-        },
-        async single() {
-          const index = state.companyDomains.findIndex(
-            (item) => item.id === filters.id && item.company_id === filters.company_id,
-          );
-          if (index < 0 || !pendingUpdate) {
-            return { data: null, error: { message: "not found" } };
-          }
-          state.companyDomains[index] = {
-            ...state.companyDomains[index]!,
-            note: pendingUpdate.note,
-          };
-          return { data: state.companyDomains[index], error: null };
-        },
-      };
-
-      return api;
+function createSetPrimaryMockSupabase(state: SetPrimaryMockState) {
+  return {
+    rpc(
+      name: string,
+      args: { p_company_id: string; p_company_domain_id: string },
+    ) {
+      if (name !== "set_company_primary_domain") {
+        throw new Error(`Unexpected rpc: ${name}`);
+      }
+      return simulateSetCompanyPrimaryDomainRpc(
+        state,
+        args.p_company_id,
+        args.p_company_domain_id,
+      );
     },
   };
 }
 
-describe("normalizeCompanyDomainNote", () => {
-  it("stores blank notes as null", () => {
-    assert.equal(normalizeCompanyDomainNote(""), null);
-    assert.equal(normalizeCompanyDomainNote("   "), null);
-    assert.equal(normalizeCompanyDomainNote(null), null);
-  });
-
-  it("trims non-empty notes", () => {
-    assert.equal(normalizeCompanyDomainNote("  Czech regional site  "), "Czech regional site");
-  });
-});
-
-describe("updateCompanyDomainNoteWithClient", () => {
-  it("updates only the note for a company-owned domain row", async () => {
-    const state: NoteMockState = {
-      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com", website: "https://bitlifi.com" }],
+describe("setCompanyPrimaryDomainWithClient", () => {
+  it("updates companies.website and companies.domain when promoting an additional domain", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: "studentsforlibertycz.cz",
+          website: "studentsforlibertycz.cz",
+        },
+      ],
       companyDomains: [
-        domainRow({
-          id: DOMAIN_ROW_ID,
+        {
+          id: PRIMARY_ROW_ID,
           company_id: BITLIFI_ID,
-          domain: "bitlifi.jp",
+          domain: "studentsforlibertycz.cz",
+          is_primary: true,
+        },
+        {
+          id: ADDITIONAL_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "studentsforliberty.org",
           is_primary: false,
-          note: null,
-        }),
+        },
       ],
     };
 
-    const updated = await updateCompanyDomainNoteWithClient(
-      createNoteUpdateMockSupabase(state) as never,
-      {
-        companyId: BITLIFI_ID,
-        domainRowId: DOMAIN_ROW_ID,
-        note: "Czech regional site",
-      },
+    const result = await setCompanyPrimaryDomainWithClient(
+      createSetPrimaryMockSupabase(state) as never,
+      BITLIFI_ID,
+      ADDITIONAL_ROW_ID,
     );
 
-    assert.equal(updated.note, "Czech regional site");
-    assert.equal(updated.domain, "bitlifi.jp");
-    assert.equal(updated.is_primary, false);
-    assert.equal(state.companies[0]?.domain, "bitlifi.com");
-    assert.equal(state.companies[0]?.website, "https://bitlifi.com");
+    assert.equal(result.status, "updated");
+    assert.equal(state.companies[0]?.website, "studentsforliberty.org");
+    assert.equal(state.companies[0]?.domain, "studentsforliberty.org");
   });
 
-  it("clears a note by saving blank input as null", async () => {
-    const state: NoteMockState = {
-      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com" }],
+  it("demotes the old primary and promotes the selected domain row", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: "studentsforlibertycz.cz",
+          website: "studentsforlibertycz.cz",
+        },
+      ],
       companyDomains: [
-        domainRow({
-          id: DOMAIN_ROW_ID,
+        {
+          id: PRIMARY_ROW_ID,
           company_id: BITLIFI_ID,
-          domain: "bitlifi.jp",
+          domain: "studentsforlibertycz.cz",
+          is_primary: true,
+        },
+        {
+          id: ADDITIONAL_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "studentsforliberty.org",
           is_primary: false,
-          note: "Old URL",
-        }),
+        },
       ],
     };
 
-    const updated = await updateCompanyDomainNoteWithClient(
-      createNoteUpdateMockSupabase(state) as never,
-      {
-        companyId: BITLIFI_ID,
-        domainRowId: DOMAIN_ROW_ID,
-        note: "   ",
-      },
+    await setCompanyPrimaryDomainWithClient(
+      createSetPrimaryMockSupabase(state) as never,
+      BITLIFI_ID,
+      ADDITIONAL_ROW_ID,
     );
 
-    assert.equal(updated.note, null);
-    assert.equal(state.companyDomains[0]?.note, null);
+    const primary = state.companyDomains.find((row) => row.is_primary);
+    const additional = state.companyDomains.find((row) => !row.is_primary);
+    assert.equal(primary?.id, ADDITIONAL_ROW_ID);
+    assert.equal(primary?.domain, "studentsforliberty.org");
+    assert.equal(additional?.id, PRIMARY_ROW_ID);
+    assert.equal(additional?.domain, "studentsforlibertycz.cz");
   });
 
-  it("rejects updates when the domain row does not belong to the company", async () => {
-    const state: NoteMockState = {
-      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com" }],
+  it("rejects domains that do not belong to the company", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [{ id: BITLIFI_ID, domain: "bitlifi.com", website: "bitlifi.com" }],
       companyDomains: [
-        domainRow({
-          id: DOMAIN_ROW_ID,
+        {
+          id: ADDITIONAL_ROW_ID,
           company_id: OTHER_ID,
           domain: "bitlifi.jp",
           is_primary: false,
-          note: null,
-        }),
+        },
       ],
     };
 
     await assert.rejects(
       () =>
-        updateCompanyDomainNoteWithClient(createNoteUpdateMockSupabase(state) as never, {
-          companyId: BITLIFI_ID,
-          domainRowId: DOMAIN_ROW_ID,
-          note: "Should fail",
-        }),
+        setCompanyPrimaryDomainWithClient(
+          createSetPrimaryMockSupabase(state) as never,
+          BITLIFI_ID,
+          ADDITIONAL_ROW_ID,
+        ),
       (error: unknown) => {
         assert.ok(error instanceof CompanyDomainAdminError);
         assert.equal(error.status, 404);
         return true;
       },
     );
-    assert.equal(state.companyDomains[0]?.note, null);
+    assert.equal(state.companies[0]?.domain, "bitlifi.com");
+    assert.equal(state.companies[0]?.website, "bitlifi.com");
+  });
+
+  it("rejects merged or read-only companies", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: "bitlifi.com",
+          website: "bitlifi.com",
+          status: "merged",
+          merged_into_company_id: OTHER_ID,
+        },
+      ],
+      companyDomains: [
+        {
+          id: PRIMARY_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "bitlifi.com",
+          is_primary: true,
+        },
+        {
+          id: ADDITIONAL_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "bitlifi.jp",
+          is_primary: false,
+        },
+      ],
+    };
+
+    await assert.rejects(
+      () =>
+        setCompanyPrimaryDomainWithClient(
+          createSetPrimaryMockSupabase(state) as never,
+          BITLIFI_ID,
+          ADDITIONAL_ROW_ID,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof CompanyDomainAdminError);
+        assert.equal(error.status, 409);
+        return true;
+      },
+    );
+    assert.equal(state.companies[0]?.domain, "bitlifi.com");
+    assert.equal(state.companyDomains.find((row) => row.is_primary)?.id, PRIMARY_ROW_ID);
+  });
+
+  it("does not leave companies fields changed when the RPC fails", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: "studentsforlibertycz.cz",
+          website: "studentsforlibertycz.cz",
+        },
+      ],
+      companyDomains: [
+        {
+          id: PRIMARY_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "studentsforlibertycz.cz",
+          is_primary: true,
+        },
+        {
+          id: ADDITIONAL_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "studentsforliberty.org",
+          is_primary: false,
+        },
+      ],
+      rpcFailAfterCompanyUpdate: true,
+    };
+
+    await assert.rejects(
+      () =>
+        setCompanyPrimaryDomainWithClient(
+          createSetPrimaryMockSupabase(state) as never,
+          BITLIFI_ID,
+          ADDITIONAL_ROW_ID,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof CompanyDomainAdminError);
+        assert.equal(error.status, 500);
+        return true;
+      },
+    );
+
+    // Real Postgres RPC rolls back both writes; mock restores snapshot on failure.
+    assert.equal(state.companies[0]?.domain, "studentsforlibertycz.cz");
+    assert.equal(state.companies[0]?.website, "studentsforlibertycz.cz");
+    assert.equal(state.companyDomains.find((row) => row.is_primary)?.id, PRIMARY_ROW_ID);
+  });
+});
+
+describe("parseSetCompanyPrimaryDomainRpcError", () => {
+  it("maps RPC failure codes to admin errors", () => {
+    assert.equal(
+      parseSetCompanyPrimaryDomainRpcError("company_not_found").message,
+      "Company not found.",
+    );
+    assert.equal(
+      parseSetCompanyPrimaryDomainRpcError("domain_not_found").message,
+      "Domain not found for this company.",
+    );
+    assert.match(parseSetCompanyPrimaryDomainRpcError("merged_read_only").message, /read-only/i);
+  });
+});
+
+describe("phase 9 scope isolation", () => {
+  it("keeps import matching and public page modules out of company domain admin server code", async () => {
+    const moduleUrl = new URL("./companyDomainsAdmin.ts", import.meta.url);
+    const source = await import("node:fs/promises").then((fs) => fs.readFile(moduleUrl, "utf8"));
+
+    assert.ok(!source.includes("companyImportMatching"));
+    assert.ok(!source.includes("matchRows"));
+    assert.ok(!source.includes("sponsorImportAdmin"));
+    assert.ok(!source.includes("formatPublicCompanyWebsite"));
+    assert.ok(!source.includes("event_sponsors"));
   });
 });
