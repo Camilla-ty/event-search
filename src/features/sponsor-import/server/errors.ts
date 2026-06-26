@@ -46,5 +46,9 @@ export function uniqueViolationUserMessage(message: string): string {
     return "A company with this website domain already exists.";
   }
 
+  if (message.includes("company_domains_domain_uidx")) {
+    return "This domain is already linked to another company.";
+  }
+
   return "A uniqueness constraint was violated. If an action is still running, wait for it to finish before retrying.";
 }

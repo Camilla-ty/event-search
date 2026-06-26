@@ -21,6 +21,10 @@ import {
   type ImportRowRecord,
 } from "./batchGuards";
 import { SponsorImportHttpError } from "./errors";
+import {
+  CompanyDomainLinkError,
+  ensureCompanyDomainFromImportLink,
+} from "@/src/lib/companies/linkCompanyDomainFromImport";
 import { loadMatchContext, matchRow, AUTO_READY_MATCH_METHODS } from "./matchRows";
 import { materializeCompaniesChunk } from "./materializeCompanies";
 import { materializeDraftLinksChunk } from "./materializeDraft";
@@ -777,6 +781,36 @@ export async function getBatchRowById(batchId: string, rowId: string) {
   return row ?? data;
 }
 
+async function maybeLinkReviewedImportDomain(
+  supabase: ReturnType<typeof createAdminClient>,
+  input: {
+    decision_type: SponsorImportDecisionType;
+    resolved_company_id?: string | null;
+    proposed_company_id: string | null;
+    normalized_domain: string | null;
+  },
+): Promise<void> {
+  let companyId: string | null = null;
+  if (input.decision_type === "use_matched") {
+    companyId = input.resolved_company_id ?? input.proposed_company_id;
+  } else if (input.decision_type === "choose_different") {
+    companyId = input.resolved_company_id ?? null;
+  }
+  if (!companyId) return;
+
+  try {
+    await ensureCompanyDomainFromImportLink(supabase, {
+      companyId,
+      normalizedImportDomain: input.normalized_domain,
+    });
+  } catch (error) {
+    if (error instanceof CompanyDomainLinkError) {
+      throw new SponsorImportHttpError(error.status, error.message);
+    }
+    throw error;
+  }
+}
+
 export async function patchRowDecision(
   batchId: string,
   rowId: string,
@@ -794,7 +828,7 @@ export async function patchRowDecision(
   const supabase = createAdminClient();
   const { data: row, error: rowError } = await supabase
     .from("sponsor_import_rows")
-    .select("id, proposed_company_id, duplicate_role, duplicate_cluster_key")
+    .select("id, proposed_company_id, duplicate_role, duplicate_cluster_key, normalized_domain")
     .eq("batch_id", batchId)
     .eq("id", rowId)
     .maybeSingle();
@@ -836,6 +870,15 @@ export async function patchRowDecision(
     patch.status = "resolved";
     patch.resolved_company_id = null;
   }
+
+  await maybeLinkReviewedImportDomain(supabase, {
+    decision_type: input.decision_type,
+    resolved_company_id: input.resolved_company_id,
+    proposed_company_id:
+      typeof row.proposed_company_id === "string" ? row.proposed_company_id : null,
+    normalized_domain:
+      typeof row.normalized_domain === "string" ? row.normalized_domain : null,
+  });
 
   const duplicateClusterKey =
     typeof row.duplicate_cluster_key === "string" ? row.duplicate_cluster_key.trim() : "";
