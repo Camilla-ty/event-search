@@ -2,6 +2,12 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { getActiveBatchForEdition, listBatchesAdmin } from "./sponsorImportAdmin";
 
+const ACTIVE_IMPORT_BATCH_STATUSES = new Set(["uploaded", "review", "draft"]);
+
+function isActiveImportBatch(batch: Record<string, unknown>): boolean {
+  return ACTIVE_IMPORT_BATCH_STATUSES.has(String(batch.status));
+}
+
 export type EditionImportContext = {
   editionId: string;
   editionName: string;
@@ -9,7 +15,6 @@ export type EditionImportContext = {
   liveSponsorCount: number;
   activeBatch: Record<string, unknown> | null;
   batches: Array<Record<string, unknown> & { edition_name: string; edition_year: number; series_name: string | null }>;
-  lastPublished: Record<string, unknown> | null;
 };
 
 async function hydrateBatches(
@@ -75,10 +80,9 @@ export async function getEditionImportsData(
     listBatchesAdmin({ editionId, limit: 50 }),
   ]);
 
-  const batches = await hydrateBatches((listResult.batches ?? []) as Array<Record<string, unknown>>);
-
-  const lastPublished =
-    batches.find((b) => String(b.status) === "published") ?? null;
+  const batches = await hydrateBatches(
+    ((listResult.batches ?? []) as Array<Record<string, unknown>>).filter(isActiveImportBatch),
+  );
 
   return {
     editionId,
@@ -87,14 +91,15 @@ export async function getEditionImportsData(
     liveSponsorCount,
     activeBatch: activeBatch as Record<string, unknown> | null,
     batches,
-    lastPublished,
   };
 }
 
 export async function getImportHistoryData(limit = 100) {
   const { batches, total } = await listBatchesAdmin({ limit });
-  const hydrated = await hydrateBatches(batches as Array<Record<string, unknown>>);
-  return { batches: hydrated, total };
+  const hydrated = await hydrateBatches(
+    (batches as Array<Record<string, unknown>>).filter(isActiveImportBatch),
+  );
+  return { batches: hydrated, total: hydrated.length };
 }
 
 export async function getDashboardImportsInProgress() {

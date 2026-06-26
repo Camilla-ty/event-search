@@ -1635,6 +1635,11 @@ export async function publishBatch(batchId: string, actorId: string): Promise<Pu
     throw new SponsorImportHttpError(422, "Review must be acknowledged before publish.");
   }
 
+  const storagePath =
+    typeof batch.source_file_storage_path === "string"
+      ? batch.source_file_storage_path
+      : null;
+
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("sponsor_import_publish_batch", {
     p_batch_id: batchId,
@@ -1659,38 +1664,34 @@ export async function publishBatch(batchId: string, actorId: string): Promise<Pu
     unchanged_count: raw?.unchanged_count ?? 0,
     excluded_count: raw?.excluded_count ?? 0,
   };
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "publish",
-    payload: result,
-    affectedCount:
-      (result.new_count ?? 0) +
-      (result.tier_updated_count ?? 0) +
-      (result.unchanged_count ?? 0),
-  });
+
+  try {
+    await deleteImportBatchData({ batchId, storagePath });
+  } catch (cleanupError) {
+    console.error(
+      `[sponsor-import] publish cleanup failed for batch ${batchId}:`,
+      cleanupError,
+    );
+  }
 
   return result;
 }
 
-export type DiscardBatchResult = {
-  event_edition_id: string;
+type DeleteImportBatchDataInput = {
+  batchId: string;
+  storagePath?: string | null;
 };
 
-/** Permanently remove an active import batch and all temporary import data. */
-export async function discardBatch(batchId: string): Promise<DiscardBatchResult> {
-  const batch = await getBatchRow(batchId);
-  assertBatchStatus(batch, ["uploaded", "review", "draft"]);
-
+/** Permanently remove temporary import data for a batch (rows, draft links, logs, storage file). */
+async function deleteImportBatchData({
+  batchId,
+  storagePath,
+}: DeleteImportBatchDataInput): Promise<void> {
   const supabase = createAdminClient();
-  const storagePath =
-    typeof batch.source_file_storage_path === "string"
-      ? batch.source_file_storage_path.trim()
-      : "";
-  const eventEditionId = String(batch.event_edition_id);
+  const normalizedStoragePath = storagePath?.trim() ?? "";
 
-  if (storagePath) {
-    await deleteSourceFile(storagePath);
+  if (normalizedStoragePath) {
+    await deleteSourceFile(normalizedStoragePath);
   }
 
   const { error: draftLinksError } = await supabase
@@ -1710,6 +1711,25 @@ export async function discardBatch(batchId: string): Promise<DiscardBatchResult>
     .delete()
     .eq("id", batchId);
   if (deleteBatchError) throw new Error(deleteBatchError.message);
+}
+
+export type DiscardBatchResult = {
+  event_edition_id: string;
+};
+
+/** Permanently remove an active import batch and all temporary import data. */
+export async function discardBatch(batchId: string): Promise<DiscardBatchResult> {
+  const batch = await getBatchRow(batchId);
+  assertBatchStatus(batch, ["uploaded", "review", "draft"]);
+
+  const eventEditionId = String(batch.event_edition_id);
+  await deleteImportBatchData({
+    batchId,
+    storagePath:
+      typeof batch.source_file_storage_path === "string"
+        ? batch.source_file_storage_path
+        : null,
+  });
 
   return { event_edition_id: eventEditionId };
 }

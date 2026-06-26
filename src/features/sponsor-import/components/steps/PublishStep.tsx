@@ -61,7 +61,6 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
       return;
     }
     setResult(pub.result);
-    router.refresh();
   }
 
   if (result) {
@@ -83,12 +82,6 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
           <Link href="/admin/sponsor-imports" className="text-sm text-brand-primary hover:underline">
             Sponsor imports hub
           </Link>
-          <a
-            href={`/api/admin/sponsor-imports/batches/${batch.id}/report`}
-            className="text-sm text-slate-600 hover:underline"
-          >
-            Download CSV report
-          </a>
         </div>
       </div>
     );

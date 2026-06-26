@@ -17,18 +17,6 @@ type EditionImportsPanelProps = {
   data: EditionImportContext;
 };
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-}
-
 export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
   const router = useRouter();
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -90,16 +78,7 @@ export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {data.lastPublished ? (
-              <p className="text-sm text-slate-600">
-                Last published: {formatDate(String(data.lastPublished.created_at))}
-                {typeof data.lastPublished.source_row_count === "number"
-                  ? ` · ${data.lastPublished.source_row_count} rows`
-                  : ""}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-600">No import in progress.</p>
-            )}
+            <p className="text-sm text-slate-600">No import in progress.</p>
             <Link
               href={`/admin/sponsor-imports/new?editionId=${data.editionId}`}
               className={`${primaryCtaClass} h-10`}

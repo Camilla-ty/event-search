@@ -33,7 +33,7 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
   if (batches.length === 0) {
     return (
       <p className="px-4 py-8 text-center text-sm text-slate-500">
-        No sponsor imports yet. Start by creating an event edition, then upload an Excel file.
+        No active sponsor imports. Start by creating an event edition, then upload an Excel file.
       </p>
     );
   }
@@ -53,9 +53,8 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
         </thead>
         <tbody>
           {batches.map((batch) => {
-            const isActive = ["uploaded", "review", "draft"].includes(batch.status);
             const resumeStep = defaultStepForBatchStatus(
-              batch.status as "uploaded" | "review" | "draft" | "published" | "discarded",
+              batch.status as "uploaded" | "review" | "draft",
             );
             return (
               <tr key={batch.id} className="border-b border-slate-100 last:border-0">
@@ -72,31 +71,12 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
                 <td className="px-4 py-3">{batch.source_row_count}</td>
                 <td className="px-4 py-3 text-slate-600">{formatDate(batch.created_at)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    {isActive ? (
-                      <Link
-                        href={flowHref(batch.id, resumeStep)}
-                        className="text-brand-primary hover:underline"
-                      >
-                        Resume
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/admin/sponsor-imports/${batch.id}`}
-                        className="text-brand-primary hover:underline"
-                      >
-                        View
-                      </Link>
-                    )}
-                    {batch.status === "published" ? (
-                      <a
-                        href={`/api/admin/sponsor-imports/batches/${batch.id}/report`}
-                        className="text-slate-600 hover:underline"
-                      >
-                        CSV
-                      </a>
-                    ) : null}
-                  </div>
+                  <Link
+                    href={flowHref(batch.id, resumeStep)}
+                    className="text-brand-primary hover:underline"
+                  >
+                    Resume
+                  </Link>
                 </td>
               </tr>
             );
