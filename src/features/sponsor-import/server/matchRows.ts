@@ -103,12 +103,17 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
 }> {
   const supabase = createAdminClient();
 
-  const { data: companies, error: companyError } = await supabase
-    .from("companies")
-    .select("id, name, domain, aliases");
+  const [{ data: companies, error: companyError }, { data: companyDomains, error: domainsError }] =
+    await Promise.all([
+      supabase.from("companies").select("id, name, domain, aliases"),
+      supabase.from("company_domains").select("company_id, domain"),
+    ]);
 
   if (companyError) {
     throw new Error(companyError.message);
+  }
+  if (domainsError) {
+    throw new Error(domainsError.message);
   }
 
   const importCompanies: ImportMatchCompany[] = (companies ?? []).map((row) => ({
@@ -118,7 +123,14 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
     aliases: parseCompanyAliasesFromRow(row.aliases),
   }));
 
-  const matchContext = buildImportMatchContext(importCompanies);
+  const importCompanyDomains = (companyDomains ?? [])
+    .map((row) => ({
+      company_id: String(row.company_id),
+      domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : "",
+    }))
+    .filter((entry) => entry.domain !== "");
+
+  const matchContext = buildImportMatchContext(importCompanies, importCompanyDomains);
 
   const { data: liveLinks, error: liveError } = await supabase
     .from("event_sponsors")

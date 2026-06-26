@@ -7,6 +7,12 @@ export type ImportMatchCompany = {
   aliases: readonly string[];
 };
 
+/** Verified domain row from company_domains (internal identity only). */
+export type ImportMatchCompanyDomain = {
+  company_id: string;
+  domain: string;
+};
+
 export type ImportMatchContext = {
   companiesByDomain: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByExactName: ReadonlyMap<string, readonly ImportMatchCompany[]>;
@@ -210,7 +216,24 @@ export function matchImportRowIdentity(
   return needsReview({});
 }
 
-export function buildImportMatchContext(companies: readonly ImportMatchCompany[]): ImportMatchContext {
+function addDomainCandidate(
+  companiesByDomain: Map<string, ImportMatchCompany[]>,
+  domain: string,
+  company: ImportMatchCompany,
+): void {
+  const domainList = companiesByDomain.get(domain) ?? [];
+  if (domainList.some((candidate) => candidate.id === company.id)) {
+    return;
+  }
+  domainList.push(company);
+  companiesByDomain.set(domain, domainList);
+}
+
+export function buildImportMatchContext(
+  companies: readonly ImportMatchCompany[],
+  companyDomains: readonly ImportMatchCompanyDomain[] = [],
+): ImportMatchContext {
+  const companiesById = new Map(companies.map((company) => [company.id, company]));
   const companiesByDomain = new Map<string, ImportMatchCompany[]>();
   const companiesByExactName = new Map<string, ImportMatchCompany[]>();
   const companiesByExactAlias = new Map<string, ImportMatchCompany[]>();
@@ -218,9 +241,7 @@ export function buildImportMatchContext(companies: readonly ImportMatchCompany[]
   for (const company of companies) {
     const domain = company.domain?.trim().toLowerCase() ?? "";
     if (domain !== "") {
-      const domainList = companiesByDomain.get(domain) ?? [];
-      domainList.push(company);
-      companiesByDomain.set(domain, domainList);
+      addDomainCandidate(companiesByDomain, domain, company);
     }
 
     const nameKey = normalizeImportName(company.name);
@@ -237,6 +258,16 @@ export function buildImportMatchContext(companies: readonly ImportMatchCompany[]
       aliasList.push(company);
       companiesByExactAlias.set(aliasKey, aliasList);
     }
+  }
+
+  for (const entry of companyDomains) {
+    const domain = entry.domain.trim().toLowerCase();
+    if (domain === "") continue;
+
+    const company = companiesById.get(entry.company_id);
+    if (!company) continue;
+
+    addDomainCandidate(companiesByDomain, domain, company);
   }
 
   return {
