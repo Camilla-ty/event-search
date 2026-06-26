@@ -225,11 +225,11 @@ export async function publishBatch(batchId: string) {
   return parseJson<ApiOk<{ result: PublishResult }>>(res);
 }
 
-export async function discardBatch(batchId: string, discard_reason?: string) {
+export async function discardBatch(batchId: string) {
   const res = await fetch(`/api/admin/sponsor-imports/batches/${batchId}/discard`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ discard_reason: discard_reason ?? null }),
+    body: JSON.stringify({}),
   });
-  return parseJson<ApiOk<{ batch: SponsorImportBatch }>>(res);
+  return parseJson<ApiOk<{ event_edition_id: string }>>(res);
 }

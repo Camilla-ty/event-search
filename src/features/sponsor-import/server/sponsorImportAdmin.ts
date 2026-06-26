@@ -35,7 +35,7 @@ import {
   readSpreadsheetHeaders,
 } from "./parseSpreadsheet";
 import { SPONSOR_IMPORT_BUCKET, SPONSOR_IMPORT_MAX_ROWS } from "../types";
-import { uploadSourceFile } from "./storage";
+import { deleteSourceFile, uploadSourceFile } from "./storage";
 import { enrichImportRowsWithProposedCompanies } from "./enrichImportRows";
 import { assignDuplicateClusters, validateRow } from "./validateRows";
 import {
@@ -1673,46 +1673,45 @@ export async function publishBatch(batchId: string, actorId: string): Promise<Pu
   return result;
 }
 
-export async function discardBatch(
-  batchId: string,
-  actorId: string,
-  discardReason?: string | null,
-) {
+export type DiscardBatchResult = {
+  event_edition_id: string;
+};
+
+/** Permanently remove an active import batch and all temporary import data. */
+export async function discardBatch(batchId: string): Promise<DiscardBatchResult> {
   const batch = await getBatchRow(batchId);
   assertBatchStatus(batch, ["uploaded", "review", "draft"]);
 
   const supabase = createAdminClient();
-  const now = new Date().toISOString();
+  const storagePath =
+    typeof batch.source_file_storage_path === "string"
+      ? batch.source_file_storage_path.trim()
+      : "";
+  const eventEditionId = String(batch.event_edition_id);
 
-  await supabase
+  if (storagePath) {
+    await deleteSourceFile(storagePath);
+  }
+
+  const { error: draftLinksError } = await supabase
     .from("sponsor_import_draft_links")
     .delete()
     .eq("batch_id", batchId);
+  if (draftLinksError) throw new Error(draftLinksError.message);
 
-  const { data, error } = await supabase
+  const { error: duplicateClearError } = await supabase
+    .from("sponsor_import_rows")
+    .update({ duplicate_of_row_id: null })
+    .eq("batch_id", batchId);
+  if (duplicateClearError) throw new Error(duplicateClearError.message);
+
+  const { error: deleteBatchError } = await supabase
     .from("sponsor_import_batches")
-    .update({
-      status: "discarded",
-      discarded_by: actorId,
-      discarded_at: now,
-      discard_reason: discardReason ?? null,
-      processing_phase: null,
-      updated_at: now,
-    })
-    .eq("id", batchId)
-    .select(BATCH_SELECT)
-    .single();
+    .delete()
+    .eq("id", batchId);
+  if (deleteBatchError) throw new Error(deleteBatchError.message);
 
-  if (error) throw new Error(error.message);
-
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "discard",
-    payload: discardReason ? { reason: discardReason } : null,
-  });
-
-  return data;
+  return { event_edition_id: eventEditionId };
 }
 
 export async function listActionLogs(batchId: string) {

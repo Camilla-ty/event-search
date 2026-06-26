@@ -54,3 +54,15 @@ export async function uploadSourceFile(
 
   return path;
 }
+
+/** Remove uploaded source file from the private sponsor-imports bucket. */
+export async function deleteSourceFile(storagePath: string): Promise<void> {
+  const path = storagePath.trim();
+  if (!path) return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage.from(SPONSOR_IMPORT_BUCKET).remove([path]);
+  if (error) {
+    throw new Error(`Storage delete failed: ${error.message}`);
+  }
+}

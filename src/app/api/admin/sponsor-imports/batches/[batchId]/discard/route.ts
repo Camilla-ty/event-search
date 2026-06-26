@@ -12,17 +12,9 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { batchId } = await context.params;
 
-  let discardReason: string | null = null;
   try {
-    const body = (await request.json()) as { discard_reason?: string };
-    discardReason = typeof body.discard_reason === "string" ? body.discard_reason : null;
-  } catch {
-    discardReason = null;
-  }
-
-  try {
-    const batch = await discardBatch(batchId, auth.context.userId, discardReason);
-    return NextResponse.json({ ok: true, batch });
+    const result = await discardBatch(batchId);
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return sponsorImportErrorResponse(error);
   }
