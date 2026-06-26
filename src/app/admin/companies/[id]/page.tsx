@@ -123,7 +123,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         }}
       />
 
-      <CompanyDomainsSection domains={domains} />
+      <CompanyDomainsSection companyId={company.id} domains={domains} canAdd={isEditable} />
 
       <div className="mt-10">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">

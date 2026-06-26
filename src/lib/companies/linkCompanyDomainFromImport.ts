@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveCompanyWebsiteIdentity } from "@/src/lib/domain/hostedPlatformWebsite";
+
 export class CompanyDomainLinkError extends Error {
   readonly status: number;
 
@@ -19,6 +21,43 @@ export type CompanyDomainLinkPlan =
 export function normalizeLinkDomain(value: string | null | undefined): string | null {
   const normalized = value?.trim().toLowerCase() ?? "";
   return normalized === "" ? null : normalized;
+}
+
+export type NormalizeVerifiedCompanyDomainResult =
+  | { ok: true; domain: string }
+  | { ok: false; reason: "blank" | "unparseable" | "no_identity" };
+
+/** Normalize admin/import domain input using company website identity rules. */
+export function normalizeVerifiedCompanyDomainInput(
+  raw: string,
+): NormalizeVerifiedCompanyDomainResult {
+  const trimmed = raw.trim();
+  if (trimmed === "") {
+    return { ok: false, reason: "blank" };
+  }
+
+  const identity = resolveCompanyWebsiteIdentity(trimmed);
+  if (identity.status === "unparseable") {
+    return { ok: false, reason: "unparseable" };
+  }
+  if (identity.status === "no_identity") {
+    return { ok: false, reason: "no_identity" };
+  }
+
+  return { ok: true, domain: identity.domain };
+}
+
+export function verifiedCompanyDomainInputErrorMessage(
+  reason: Exclude<NormalizeVerifiedCompanyDomainResult, { ok: true }>["reason"],
+): string {
+  switch (reason) {
+    case "blank":
+      return "Domain is required.";
+    case "unparseable":
+      return "Enter a valid website URL or domain.";
+    case "no_identity":
+      return "Community and social URLs cannot be stored as company domains.";
+  }
 }
 
 export function planCompanyDomainLink(input: {

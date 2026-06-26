@@ -4,11 +4,39 @@ import { describe, it } from "node:test";
 import {
   CompanyDomainLinkError,
   ensureCompanyDomainFromImportLink,
+  normalizeVerifiedCompanyDomainInput,
   planCompanyDomainLink,
+  verifiedCompanyDomainInputErrorMessage,
 } from "./linkCompanyDomainFromImport";
 
 const BITLIFI_ID = "00000000-0000-4000-8000-000000000001";
 const OTHER_ID = "00000000-0000-4000-8000-000000000002";
+
+describe("normalizeVerifiedCompanyDomainInput", () => {
+  it("normalizes a bare hostname", () => {
+    const result = normalizeVerifiedCompanyDomainInput("bitlifi.jp");
+    assert.deepEqual(result, { ok: true, domain: "bitlifi.jp" });
+  });
+
+  it("normalizes a full website URL", () => {
+    const result = normalizeVerifiedCompanyDomainInput("https://www.bitlifi.jp/about");
+    assert.deepEqual(result, { ok: true, domain: "bitlifi.jp" });
+  });
+
+  it("rejects community and social URLs", () => {
+    const result = normalizeVerifiedCompanyDomainInput("https://instagram.com/brandb");
+    assert.deepEqual(result, { ok: false, reason: "no_identity" });
+    assert.equal(
+      verifiedCompanyDomainInputErrorMessage("no_identity"),
+      "Community and social URLs cannot be stored as company domains.",
+    );
+  });
+
+  it("rejects blank input", () => {
+    assert.deepEqual(normalizeVerifiedCompanyDomainInput(""), { ok: false, reason: "blank" });
+    assert.deepEqual(normalizeVerifiedCompanyDomainInput("   "), { ok: false, reason: "blank" });
+  });
+});
 
 describe("planCompanyDomainLink", () => {
   it("inserts a non-primary domain when import domain differs from companies.domain", () => {
