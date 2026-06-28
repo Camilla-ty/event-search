@@ -1,0 +1,71 @@
+name: Backup database
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-database
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Database backup to Google Drive
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      BACKUP_OUTPUT_ROOT: ${{ runner.temp }}/backups/db
+      BACKUP_RETENTION_DAYS: "30"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install rclone
+        run: |
+          sudo apt-get install -y rclone
+          rclone version
+
+      - name: Run database backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          chmod +x scripts/backup/database.sh
+          ./scripts/backup/database.sh
+          BACKUP_DIR="$(find "${BACKUP_OUTPUT_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+          if [[ -z "${BACKUP_DIR}" ]]; then
+            echo "error: backup directory not found under ${BACKUP_OUTPUT_ROOT}" >&2
+            exit 1
+          fi
+          echo "BACKUP_DIR=${BACKUP_DIR}" >> "${GITHUB_ENV}"
+
+      - name: Upload backup to Google Drive
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          chmod +x scripts/backup/upload-to-drive.sh
+          ./scripts/backup/upload-to-drive.sh "${BACKUP_DIR}"
+
+      - name: Prune backups older than 30 days
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          chmod +x scripts/backup/prune-drive.sh
+          ./scripts/backup/prune-drive.sh

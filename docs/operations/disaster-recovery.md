@@ -1,0 +1,242 @@
+# Disaster recovery
+
+Restore EventPixels into a **brand-new Supabase project** after total loss of the production database, storage, or both.
+
+**Phase A/B** covers database restore from `pg_dump` backups (local or downloaded from Google Drive). Storage restore is documented as manual steps until Phase C automation exists.
+
+## Overview
+
+```mermaid
+flowchart TD
+  A[Create new Supabase project] --> B[Apply migrations: supabase db push]
+  B --> C[Create Storage buckets + policies]
+  C --> D[Restore database from backup]
+  D --> E[Restore company-logos objects]
+  E --> F[Update app env vars + OAuth]
+  F --> G[Run verification SQL + smoke tests]
+```
+
+**Principle:** schema from Git (`supabase/migrations/`), row data from backup, files from storage archive (when available).
+
+## Prerequisites
+
+- Access to this Git repository
+- A backup directory with `eventpixels-db.dump.gz` and `manifest.json`:
+  - **Local:** `supabase/dumps/backups/db/<timestamp>/`
+  - **Google Drive:** `db/<timestamp>/` under the backup folder (download via rclone — see [backup-github-drive-setup.md](./backup-github-drive-setup.md))
+- `pg_restore` and `psql` (PostgreSQL client tools)
+- Supabase CLI (`supabase`) linked to the **new** project
+- New project credentials: URL, anon key, service role key, database password
+
+## Step 1 — Create a new Supabase project
+
+1. Supabase Dashboard → **New project** (prefer the same region as production).
+2. Record:
+   - Project URL (`NEXT_PUBLIC_SUPABASE_URL`)
+   - Anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+   - Service role key (`SUPABASE_SERVICE_ROLE_KEY`)
+   - Database password and **direct** connection string (`SUPABASE_DB_URL`)
+
+## Step 2 — Apply schema (migrations)
+
+From the repository root, link and push all migrations:
+
+```bash
+supabase link --project-ref <new-project-ref>
+supabase db push
+```
+
+This creates tables, views, RPCs, RLS policies, and triggers (including `on_auth_user_created` on `auth.users`). There are **33** incremental migrations in `supabase/migrations/`; the base catalog tables predate the earliest migration and must already exist on a fresh Supabase project created for this app (they are referenced by migrations but not created in-repo).
+
+If `db push` fails on a completely empty `public` schema, you need a one-time baseline schema export from production (not in this repo) before applying incremental migrations. Contact the team owner for the baseline `schema_dump.sql` if applicable.
+
+## Step 3 — Storage buckets
+
+Bucket creation is **not** in SQL migrations. Recreate manually in the new project.
+
+### `company-logos` (required)
+
+| Setting | Value |
+|---------|-------|
+| Name | `company-logos` |
+| Public | **Yes** |
+| Purpose | Company logos (`companies/{companyId}/logo.*`), event-series logos (`event-series/{seriesId}/logo.*`) |
+
+Export policies from the old project (Dashboard → Storage → `company-logos` → Policies) and recreate equivalent rules. Public read access is required for logo URLs embedded in the database.
+
+### `sponsor-imports` (optional)
+
+| Setting | Value |
+|---------|-------|
+| Name | `sponsor-imports` |
+| Public | **No** |
+| File size limit | 20 MB |
+
+The app creates this bucket at runtime if missing (`ensureSponsorImportBucket`). Only needed if you plan to run sponsor imports immediately after restore.
+
+## Step 4 — Restore database
+
+Use the **data-only** backup produced by `scripts/backup/database.sh` (default mode).
+
+### 4a. Decompress the dump
+
+```bash
+BACKUP_DIR="supabase/dumps/backups/db/2026-06-24T030000Z"
+gunzip -c "${BACKUP_DIR}/eventpixels-db.dump.gz" > /tmp/eventpixels-db.dump
+```
+
+### 4b. Restore with `pg_restore`
+
+Target the **new** project's direct connection string:
+
+```bash
+export TARGET_SUPABASE_DB_URL='postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:5432/postgres?sslmode=require'
+
+pg_restore \
+  --dbname="${TARGET_SUPABASE_DB_URL}" \
+  --data-only \
+  --disable-triggers \
+  --no-owner \
+  --no-acl \
+  --verbose \
+  /tmp/eventpixels-db.dump
+```
+
+`--disable-triggers` defers FK and trigger checks during load. The `on_auth_user_created` trigger may attempt to insert duplicate profiles if users already exist — for a fresh empty project this is usually fine. Review `pg_restore` warnings; duplicate-key errors on `profiles` may be safe to ignore if profiles were loaded by the dump.
+
+### 4c. If restore fails on FK order
+
+Restore in two passes:
+
+```bash
+# Auth first
+pg_restore --dbname="${TARGET_SUPABASE_DB_URL}" --data-only --disable-triggers \
+  --no-owner --no-acl --schema=auth /tmp/eventpixels-db.dump
+
+# Then public
+pg_restore --dbname="${TARGET_SUPABASE_DB_URL}" --data-only --disable-triggers \
+  --no-owner --no-acl --schema=public /tmp/eventpixels-db.dump
+```
+
+### 4d. Full-mode backup (`--full`)
+
+If the backup was taken with `--full`, omit `--data-only`:
+
+```bash
+pg_restore --dbname="${TARGET_SUPABASE_DB_URL}" --disable-triggers \
+  --no-owner --no-acl /tmp/eventpixels-db.dump
+```
+
+Prefer data-only backups for new-project restore when migrations are applied first.
+
+### 4e. Re-enable triggers
+
+```bash
+psql "${TARGET_SUPABASE_DB_URL}" -c "SET session_replication_role = DEFAULT;"
+```
+
+## Step 5 — Restore Storage (`company-logos`)
+
+**Not automated in Phase A.** Options:
+
+1. **Supabase Dashboard** — upload objects preserving paths (`companies/...`, `event-series/...`).
+2. **Supabase CLI** — `supabase storage cp` from a local mirror (after Phase C produces `tar.gz` archives).
+3. **Service-role script** — reuse patterns from `scripts/audit/listStoragePrefix.ts` to upload from a local directory tree.
+
+Logo URLs in the database look like:
+
+```
+https://<project-ref>.supabase.co/storage/v1/object/public/company-logos/companies/<id>/logo.png
+```
+
+After restore to a new project, URLs must use the **new** project host. If paths are unchanged, updating `NEXT_PUBLIC_SUPABASE_URL` may be enough for newly generated URLs; existing `logo_url` column values may still reference the old host. Run a URL rewrite if needed:
+
+```sql
+-- Example: replace old project ref in logo_url columns (adjust host)
+UPDATE companies
+SET logo_url = replace(logo_url, 'oldref.supabase.co', 'newref.supabase.co')
+WHERE logo_url LIKE '%oldref.supabase.co%';
+
+UPDATE event_series
+SET logo_url = replace(logo_url, 'oldref.supabase.co', 'newref.supabase.co')
+WHERE logo_url LIKE '%oldref.supabase.co%';
+```
+
+## Step 6 — Application configuration
+
+Update deployment environment (e.g. Vercel):
+
+| Variable | Action |
+|----------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | New project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | New anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | New service role key |
+
+Redeploy the Next.js app.
+
+### Auth / OAuth
+
+In the new Supabase project → **Authentication** → **Providers**:
+
+- Reconfigure Google (or other) OAuth client IDs and secrets
+- Add redirect URLs for the app (`/auth/callback`, local dev URLs)
+
+Restored `auth.users` rows retain emails; users may need to sign in again depending on provider token state.
+
+### Admin access
+
+Confirm at least one restored `profiles` row has `role = 'admin'` for your operator account:
+
+```sql
+SELECT id, role FROM profiles WHERE role = 'admin';
+```
+
+## Step 7 — Verification
+
+### Row counts (smoke check)
+
+```sql
+SELECT 'companies' AS tbl, count(*) FROM companies
+UNION ALL SELECT 'event_editions', count(*) FROM event_editions
+UNION ALL SELECT 'event_sponsors', count(*) FROM event_sponsors
+UNION ALL SELECT 'profiles', count(*) FROM profiles
+UNION ALL SELECT 'company_domains', count(*) FROM company_domains;
+```
+
+Compare counts to `manifest.json` notes or a pre-disaster export if available.
+
+### Repository verification scripts
+
+Run against the new database (via `psql` or Supabase SQL editor):
+
+- `supabase/verify/rls_tier_access.sql`
+- `supabase/verify/keyword_public_read.sql`
+- `supabase/verify/sponsor_discovery_rpc.sql`
+- `supabase/verify/event_editions_unique_constraints.sql`
+
+### Application smoke tests
+
+1. `GET /api/health/supabase` — healthy response
+2. Public site — event detail page loads with tier-1 sponsors
+3. Admin — sign in, open an edition roster, verify logos render
+4. Admin — sponsor import upload (confirms `sponsor-imports` bucket)
+
+## Recovery time objectives (guidance)
+
+| Scenario | RTO estimate | Notes |
+|----------|--------------|-------|
+| DB only, backup on hand | 1–3 hours | Migrations + `pg_restore` + env update |
+| DB + storage | 4–8+ hours | Depends on `company-logos` object count and upload bandwidth |
+| No backup | Undefined | Rebuild from exports; may be partial |
+
+## Known limitations
+
+- **Baseline schema** — earliest migrations assume core tables exist; a blank Supabase project may need a baseline dump not stored in this repo.
+- **Storage policies** — must be recreated manually; missing policies cause broken or blocked logo URLs.
+- **Ephemeral imports** — in-progress sponsor import batches are optional to restore; published data lives in `event_sponsors`.
+- **Supabase platform backups** — if on Pro/Team, Dashboard/PITR backups are a complementary recovery path alongside these operator-controlled dumps.
+
+## Related documentation
+
+- [backup-policy.md](./backup-policy.md) — what is backed up and retention
+- [scripts/backup/README.md](../../scripts/backup/README.md) — running local backups
