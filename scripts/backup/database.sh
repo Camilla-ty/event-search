@@ -126,7 +126,6 @@ python3 - \
 import json
 import os
 import sys
-from urllib.parse import urlparse
 
 manifest_path = sys.argv[1]
 timestamp = sys.argv[2]
@@ -138,9 +137,23 @@ migration_count = int(sys.argv[7]) if sys.argv[7].isdigit() else 0
 pg_dump_version = sys.argv[8] if len(sys.argv) > 8 else ""
 
 db_url = os.environ.get("SUPABASE_DB_URL") or os.environ.get("DATABASE_URL") or ""
-parsed = urlparse(db_url)
-connection_host = parsed.hostname or ""
-connection_port = parsed.port or 5432
+
+# Generic urlparse() treats # and ? in passwords as URL delimiters; use Postgres-safe parsing.
+def pg_connection_host_port(url: str) -> tuple[str | None, int | None]:
+    if not url or "://" not in url:
+        return None, None
+    authority = url.split("://", 1)[1].split("/", 1)[0]
+    host_part = authority.rsplit("@", 1)[-1] if "@" in authority else authority
+    if ":" not in host_part:
+        return host_part or None, None
+    host, _, port_text = host_part.rpartition(":")
+    try:
+        return host or None, int(port_text)
+    except ValueError:
+        return host or None, None
+
+connection_host, parsed_port = pg_connection_host_port(db_url)
+connection_port = parsed_port if parsed_port is not None else 5432
 
 manifest = {
     "backup_type": "database",
