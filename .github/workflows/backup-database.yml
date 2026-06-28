@@ -20,12 +20,14 @@ jobs:
     timeout-minutes: 60
 
     env:
-      BACKUP_OUTPUT_ROOT: ${{ runner.temp }}/backups/db
       BACKUP_RETENTION_DAYS: "30"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set backup output path
+        run: echo "BACKUP_OUTPUT_ROOT=${RUNNER_TEMP}/backups/db" >> "$GITHUB_ENV"
 
       - name: Install PostgreSQL client
         run: |
