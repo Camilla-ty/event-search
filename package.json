@@ -17,7 +17,8 @@
     "audit:event-logo-storage": "tsx --env-file=.env.local scripts/audit-event-logo-storage.ts",
     "cleanup:event-logo-storage": "tsx --env-file=.env.local scripts/cleanup-event-logo-storage.ts",
     "audit:event-editions-logo-url": "tsx --env-file=.env.local scripts/audit-event-editions-logo-url.ts",
-    "cleanup:event-editions-logo-url": "tsx --env-file=.env.local scripts/cleanup-event-editions-logo-url.ts"
+    "cleanup:event-editions-logo-url": "tsx --env-file=.env.local scripts/cleanup-event-editions-logo-url.ts",
+    "migrate:logo-urls-to-relative-paths": "tsx --env-file=.env.local scripts/migrate-logo-urls-to-relative-paths.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,5 +1,12 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { validateCompanyLogoUpload } from "@/src/lib/companies/companyLogoUploadValidation";
 import { slugify } from "@/src/lib/slugify";
+
+import {
+  scheduleEventSeriesLogoCleanupAfterPersist,
+  uploadEventSeriesLogoBytes,
+  verifyEventSeriesLogoStorageObject,
+} from "./eventSeriesLogoStorage";
 
 export type EventSeriesRow = {
   id: string;
@@ -137,4 +144,70 @@ export async function updateEventSeries(
 
 export function defaultSeriesSlug(name: string): string {
   return slugify(name);
+}
+
+export type UploadEventSeriesLogoFileInput = {
+  bytes: Uint8Array;
+  mimeType: string;
+};
+
+export type UploadEventSeriesLogoFileAdminResult =
+  | { ok: true; series: EventSeriesRow }
+  | { ok: false; status: 400 | 404 | 500; error: string };
+
+export async function uploadEventSeriesLogoFileAdmin(
+  seriesId: string,
+  input: UploadEventSeriesLogoFileInput,
+): Promise<UploadEventSeriesLogoFileAdminResult> {
+  const existing = await getEventSeriesAdminById(seriesId);
+  if (!existing) {
+    return { ok: false, status: 404, error: "Series not found." };
+  }
+
+  const validation = validateCompanyLogoUpload({
+    bytes: input.bytes,
+    mimeType: input.mimeType,
+  });
+  if (!validation.ok) {
+    return { ok: false, status: 400, error: validation.message };
+  }
+
+  const upload = await uploadEventSeriesLogoBytes({
+    seriesId,
+    bytes: input.bytes,
+    contentType: validation.contentType,
+  });
+  if (!upload.ok) {
+    const message =
+      upload.error === "file_too_large"
+        ? "Logo must be 2 MB or smaller."
+        : upload.error === "empty_file"
+          ? "Logo file is empty."
+          : "Logo upload failed.";
+    return { ok: false, status: 500, error: message };
+  }
+
+  const verified = await verifyEventSeriesLogoStorageObject(upload.storagePath);
+  if (!verified.ok) {
+    return { ok: false, status: 500, error: "Uploaded logo could not be verified." };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("event_series")
+    .update({ logo_url: upload.publicUrl })
+    .eq("id", seriesId)
+    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .single();
+
+  if (error) {
+    return { ok: false, status: 500, error: error.message };
+  }
+
+  scheduleEventSeriesLogoCleanupAfterPersist({
+    seriesId,
+    publicUrl: upload.publicUrl,
+  });
+
+  return { ok: true, series: data as EventSeriesRow };
 }

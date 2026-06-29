@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
@@ -9,7 +9,16 @@ import type { KeywordRow } from "@/src/features/events/types/keywords";
 import { formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
 
+import { EventSeriesLogoPreview } from "./EventSeriesLogoPreview";
 import { SeriesKeywordMultiSelect } from "./SeriesKeywordMultiSelect";
+
+const MAX_LOGO_UPLOAD_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_UPLOAD_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+] as const;
 
 type SeriesFormValues = {
   name: string;
@@ -34,6 +43,39 @@ type ApiResponse = {
   series?: { id: string; logo_url?: string | null };
 };
 
+type UploadLogoResponse = {
+  ok: boolean;
+  error?: string;
+  series?: { logo_url?: string | null };
+};
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function validateLogoUploadFile(file: File): string | null {
+  if (file.size === 0) {
+    return "Logo file is empty.";
+  }
+
+  if (file.size > MAX_LOGO_UPLOAD_BYTES) {
+    return "Logo must be 2 MB or smaller.";
+  }
+
+  const mimeType = file.type.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (
+    !ALLOWED_LOGO_UPLOAD_MIME_TYPES.includes(
+      mimeType as (typeof ALLOWED_LOGO_UPLOAD_MIME_TYPES)[number],
+    )
+  ) {
+    return "Please upload a PNG, JPG, or WebP image.";
+  }
+
+  return null;
+}
+
 export function EventSeriesForm({
   mode,
   seriesId,
@@ -52,10 +94,22 @@ export function EventSeriesForm({
     variant?: "success" | "warning" | "error";
   } | null>(null);
   const [slugModalOpen, setSlugModalOpen] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoFileInputKey, setLogoFileInputKey] = useState(0);
+  const [logoPreviewCacheKey, setLogoPreviewCacheKey] = useState<string | null>(null);
+  const [logoUploadResult, setLogoUploadResult] = useState<{
+    ok: boolean;
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   const autoSlug = useMemo(() => slugify(values.name), [values.name]);
   const effectiveSlug = slugTouched ? values.slug : autoSlug;
   const slugChanged = mode === "edit" && effectiveSlug !== initial.slug;
+  const fieldsDisabled = isSubmitting || isUploadingLogo;
+  const logoUploadDisabled = selectedLogoFile === null || fieldsDisabled;
 
   function updateField<K extends keyof SeriesFormValues>(key: K, value: SeriesFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -170,6 +224,69 @@ export function EventSeriesForm({
     }
   }
 
+  async function handleLogoUpload() {
+    if (!seriesId || !selectedLogoFile) {
+      return;
+    }
+
+    const validationError = validateLogoUploadFile(selectedLogoFile);
+    if (validationError) {
+      setLogoUploadResult({
+        ok: false,
+        message: validationError,
+        variant: "error",
+      });
+      return;
+    }
+
+    setLogoUploadResult(null);
+    setIsUploadingLogo(true);
+
+    try {
+      const form = new FormData();
+      form.append("file", selectedLogoFile);
+
+      const response = await fetch(`/api/admin/event-series/${seriesId}/logo`, {
+        method: "POST",
+        body: form,
+      });
+      const data = (await response.json()) as UploadLogoResponse;
+
+      if (!response.ok || !data.ok || !data.series) {
+        setLogoUploadResult({
+          ok: false,
+          message: data.error ?? "Logo upload failed.",
+          variant: "error",
+        });
+        return;
+      }
+
+      const nextLogoUrl = data.series.logo_url ?? "";
+      const cacheKey = new Date().toISOString();
+      setValues((prev) => ({ ...prev, logo_url: nextLogoUrl }));
+      setLogoPreviewCacheKey(cacheKey);
+      setSelectedLogoFile(null);
+      setLogoFileInputKey((current) => current + 1);
+      if (logoFileInputRef.current) {
+        logoFileInputRef.current.value = "";
+      }
+      setLogoUploadResult({
+        ok: true,
+        message: "Logo uploaded.",
+        variant: "success",
+      });
+      router.refresh();
+    } catch {
+      setLogoUploadResult({
+        ok: false,
+        message: "Logo upload failed.",
+        variant: "error",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
+
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
@@ -180,7 +297,7 @@ export function EventSeriesForm({
             required
             value={values.name}
             onChange={(e) => updateField("name", e.target.value)}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
           />
         </label>
@@ -195,7 +312,7 @@ export function EventSeriesForm({
               setSlugTouched(true);
               updateField("slug", e.target.value);
             }}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
           />
         </label>
@@ -205,7 +322,7 @@ export function EventSeriesForm({
           <textarea
             value={values.description}
             onChange={(e) => updateField("description", e.target.value)}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             rows={3}
             className={formInputClass}
           />
@@ -217,28 +334,77 @@ export function EventSeriesForm({
             type="text"
             value={values.website_url}
             onChange={(e) => updateField("website_url", e.target.value)}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
             className={formInputClass}
             placeholder="https://example.com"
           />
         </label>
 
         {mode === "edit" ? (
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Logo URL</span>
-            <input
-              type="text"
-              value={values.logo_url}
-              onChange={(e) => updateField("logo_url", e.target.value)}
-              disabled={isSubmitting}
-              className={formInputClass}
-              placeholder="https://…"
+          <>
+            <EventSeriesLogoPreview
+              logoUrl={values.logo_url}
+              previewCacheKey={logoPreviewCacheKey}
             />
-            <p className="text-xs text-slate-500">
-              Event logos are manual-only. Paste an image URL to download and store in Supabase.
-              Clear this field and save to remove the logo.
-            </p>
-          </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Logo URL</span>
+              <input
+                type="text"
+                value={values.logo_url}
+                onChange={(e) => updateField("logo_url", e.target.value)}
+                disabled={fieldsDisabled}
+                className={formInputClass}
+                placeholder="https://…"
+              />
+              <p className="text-xs text-slate-500">
+                Event logos are manual-only. Paste an image URL to download and store in Supabase.
+                Clear this field and save to remove the logo.
+              </p>
+            </label>
+
+            <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+              <h3 className="text-sm font-medium text-slate-900">Upload logo file</h3>
+              <input
+                key={logoFileInputKey}
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                disabled={fieldsDisabled}
+                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-200 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-50"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  setSelectedLogoFile(file);
+                  if (file) {
+                    setLogoUploadResult(null);
+                  }
+                }}
+              />
+              {selectedLogoFile ? (
+                <p className="text-sm text-slate-600">
+                  Selected: {selectedLogoFile.name} ({formatFileSize(selectedLogoFile.size)})
+                </p>
+              ) : null}
+              <p className="text-xs text-slate-500">
+                Choose a PNG, JPG, or WebP image up to 2 MB, then click Upload logo.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={logoUploadDisabled}
+                onClick={() => void handleLogoUpload()}
+              >
+                {isUploadingLogo ? "Uploading…" : "Upload logo"}
+              </Button>
+              {logoUploadResult ? (
+                <InlineErrorBanner
+                  message={logoUploadResult.message}
+                  variant={logoUploadResult.variant}
+                />
+              ) : null}
+            </section>
+          </>
         ) : null}
 
         <div className="space-y-2">
@@ -247,11 +413,11 @@ export function EventSeriesForm({
             keywords={allKeywords}
             selectedIds={keywordIds}
             onChange={setKeywordIds}
-            disabled={isSubmitting}
+            disabled={fieldsDisabled}
           />
         </div>
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={fieldsDisabled}>
           {isSubmitting ? "Saving…" : mode === "create" ? "Create series" : "Save changes"}
         </Button>
       </form>
