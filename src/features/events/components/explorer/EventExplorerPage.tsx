@@ -21,7 +21,10 @@ import {
   DEFAULT_EVENT_EXPLORER_FILTERS,
   parseEventExplorerFiltersFromSearchParams,
 } from "@/src/features/events/lib/eventExplorerQuery";
-import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
+import {
+  sortEventExplorerResults,
+  type EventExplorerSortMode,
+} from "@/src/features/events/lib/eventExplorerOrdering";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   explorerFilterStickyClass,
@@ -39,11 +42,10 @@ import { EventViewToggle } from "./EventViewToggle";
 import { FilterPanel } from "./FilterPanel";
 import type { EventFilters, EventRecord, ExplorerView } from "./types";
 
-type SortValue = "date" | "name";
-
-const EVENT_SORT_OPTIONS = [
-  { value: "date" as const, label: "Event Date" },
-  { value: "name" as const, label: "Event Name" },
+const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
+  { value: "recommended", label: "Recommended" },
+  { value: "date", label: "Event Date" },
+  { value: "name", label: "Event Name" },
 ];
 
 type EventExplorerPageProps = {
@@ -68,7 +70,7 @@ export function EventExplorerPage({
   );
   const [draftFilters, setDraftFilters] = useState<EventFilters>(appliedFilters);
   const skipUrlSyncRef = useRef(false);
-  const [sort, setSort] = useState<SortValue>("date");
+  const [sort, setSort] = useState<EventExplorerSortMode>("recommended");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const explorerView = parseEventExplorerView(searchParams.get("view"));
@@ -117,18 +119,11 @@ export function EventExplorerPage({
   }, [events]);
 
   const sortedEvents = useMemo(() => {
-    return [...events].sort((a, b) => {
-      if (sort === "name") {
-        return (a.name ?? "").localeCompare(b.name ?? "");
-      }
-      const aValue = readEventIsoDate(a.start_date);
-      const bValue = readEventIsoDate(b.start_date);
-      if (aValue === "" && bValue === "") return 0;
-      if (aValue === "") return 1;
-      if (bValue === "") return -1;
-      return aValue.localeCompare(bValue);
+    return sortEventExplorerResults(events, {
+      query: appliedFilters.query,
+      sortMode: sort,
     });
-  }, [events, sort]);
+  }, [appliedFilters.query, events, sort]);
 
   const calendarToolbarCounts = useMemo(() => {
     if (explorerView !== "calendar") return null;
