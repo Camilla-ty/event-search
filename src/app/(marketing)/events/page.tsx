@@ -90,13 +90,13 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
       events={events}
       initialFilters={{
         query: data.filters.query ?? "",
-        industry: data.filters.industry ?? "all",
+        series: data.filters.series ?? "all",
         region: data.filters.region ?? "all",
-        type: data.filters.type ?? "all",
         startDate: data.filters.startDate ?? "",
         endDate: data.filters.endDate ?? "",
         topic: data.filters.topic ?? "",
       }}
+      filterFacets={data.filterFacets}
       activeTopic={data.activeTopic}
       topicUnknown={data.topicUnknown}
     />

@@ -11,6 +11,7 @@ import {
   matchesEventExplorerFilters,
   normalizeEventExplorerFilters,
   parseEventExplorerFiltersFromSearchParams,
+  resolveEventExplorerSeriesFilter,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
 
@@ -46,9 +47,8 @@ describe("normalizeEventExplorerFilters", () => {
       }),
       {
         query: " bitcoin ",
-        industry: "FinTech",
+        series: "FinTech",
         region: "all",
-        type: "all",
         startDate: "2026-06-01",
         endDate: "2026-06-30",
         topic: "crypto",
@@ -61,18 +61,72 @@ describe("normalizeEventExplorerFilters", () => {
   });
 });
 
+describe("resolveEventExplorerSeriesFilter", () => {
+  it("prefers series, then industry, then deprecated type", () => {
+    assert.equal(
+      resolveEventExplorerSeriesFilter({
+        series: "Series A",
+        industry: "Industry B",
+        type: "Type C",
+      }),
+      "Series A",
+    );
+    assert.equal(
+      resolveEventExplorerSeriesFilter({
+        industry: "Industry B",
+        type: "Type C",
+      }),
+      "Industry B",
+    );
+    assert.equal(
+      resolveEventExplorerSeriesFilter({
+        type: "Type C",
+      }),
+      "Type C",
+    );
+    assert.equal(resolveEventExplorerSeriesFilter({}), "all");
+  });
+});
+
 describe("parseEventExplorerFiltersFromSearchParams", () => {
   it("reads URLSearchParams", () => {
     const params = new URLSearchParams("q=token&region=Singapore&start=2026-07-01");
     assert.deepEqual(parseEventExplorerFiltersFromSearchParams(params), {
       query: "token",
-      industry: "all",
+      series: "all",
       region: "Singapore",
-      type: "all",
       startDate: "2026-07-01",
       endDate: "",
       topic: "",
     });
+  });
+
+  it("maps legacy industry and type params into series", () => {
+    assert.deepEqual(
+      parseEventExplorerFiltersFromSearchParams(
+        new URLSearchParams("industry=TOKEN2049"),
+      ),
+      {
+        ...defaultFilters,
+        series: "TOKEN2049",
+      },
+    );
+    assert.deepEqual(
+      parseEventExplorerFiltersFromSearchParams(new URLSearchParams("type=TOKEN2049")),
+      {
+        ...defaultFilters,
+        series: "TOKEN2049",
+      },
+    );
+    assert.deepEqual(
+      parseEventExplorerFiltersFromSearchParams(
+        new URLSearchParams("series=EthCC&industry=TOKEN2049"),
+      ),
+      {
+        ...defaultFilters,
+        series: "EthCC",
+      },
+    );
   });
 });
 
@@ -96,6 +150,16 @@ describe("buildEventExplorerSearchParams", () => {
     assert.equal(params.get("view"), "calendar");
     assert.equal(params.get("month"), "2026-06");
     assert.equal(params.get("industry"), null);
+  });
+
+  it("writes legacy industry param for canonical series until URL migration", () => {
+    const params = buildEventExplorerSearchParams({
+      ...defaultFilters,
+      series: "TOKEN2049",
+    });
+    assert.equal(params.get("industry"), "TOKEN2049");
+    assert.equal(params.get("series"), null);
+    assert.equal(params.get("type"), null);
   });
 });
 
@@ -151,6 +215,15 @@ describe("applyEventExplorerFilters", () => {
         { ...defaultFilters, query: "uniqueseriesname" },
       ).map((event) => event.id),
       ["3"],
+    );
+  });
+
+  it("filters by event series once using canonical series filter", () => {
+    assert.deepEqual(
+      applyEventExplorerFilters(events, { ...defaultFilters, series: "TOKEN2049" }).map(
+        (event) => event.id,
+      ),
+      ["1"],
     );
   });
 
@@ -274,9 +347,8 @@ describe("parse and build round-trip", () => {
     const original = {
       ...defaultFilters,
       query: "eth",
-      industry: "DeFi",
+      series: "DeFi",
       region: "United States",
-      type: "DeFi",
       startDate: "2026-01-01",
       endDate: "2026-12-31",
       topic: "defi",

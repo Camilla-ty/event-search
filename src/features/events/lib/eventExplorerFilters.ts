@@ -11,9 +11,8 @@ export function filterEventRecords(
   filters: EventFilters,
 ): EventRecord[] {
   const query = normalize(filters.query);
-  const industry = normalize(filters.industry);
+  const series = normalize(filters.series);
   const region = normalize(filters.region);
-  const type = normalize(filters.type);
   const startDate = filters.startDate.trim();
   const endDate = filters.endDate.trim();
 
@@ -30,15 +29,14 @@ export function filterEventRecords(
       cityName.includes(query) ||
       countryName.includes(query) ||
       seriesName.includes(query);
-    const industryMatch = industry === "" || industry === "all" || seriesName === industry;
+    const seriesMatch = series === "" || series === "all" || seriesName === series;
     const regionMatch = region === "" || region === "all" || regionName === region;
-    const typeMatch = type === "" || type === "all" || seriesName === type;
 
     const startValue = readEventIsoDate(event.start_date);
     const endValue = readEventIsoDate(event.end_date ?? event.start_date);
     const afterStart = startDate === "" || endValue === "" || endValue >= startDate;
     const beforeEnd = endDate === "" || startValue === "" || startValue <= endDate;
 
-    return queryMatch && industryMatch && regionMatch && typeMatch && afterStart && beforeEnd;
+    return queryMatch && seriesMatch && regionMatch && afterStart && beforeEnd;
   });
 }

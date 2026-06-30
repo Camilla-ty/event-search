@@ -3,6 +3,11 @@ import {
   normalizeEventExplorerFilters,
   readExplorerSeriesId,
 } from "@/src/features/events/lib/eventExplorerQuery";
+import {
+  buildEventExplorerFilterFacets,
+  getEventExplorerFacetEditions,
+  type EventExplorerFilterFacets,
+} from "@/src/features/events/lib/eventExplorerFilterFacets";
 import { getPublicKeywordsForSeriesIds } from "@/src/features/events/server/seriesKeywordsPublic";
 import {
   getPublicKeywordBySlug,
@@ -12,8 +17,11 @@ import { getEventEditions } from "@/src/lib/queries/events";
 
 type EventExplorerFilters = {
   query?: string;
+  series?: string;
+  /** @deprecated Resolved into `series` via normalizeEventExplorerFilters. */
   industry?: string;
   region?: string;
+  /** @deprecated Resolved into `series` via normalizeEventExplorerFilters. */
   type?: string;
   startDate?: string;
   endDate?: string;
@@ -30,15 +38,20 @@ export type EventExplorerData = {
   total: number;
   filters: {
     query: string;
-    industry: string;
+    series: string;
     region: string;
-    type: string;
     startDate: string;
     endDate: string;
     topic: string;
   };
+  filterFacets: EventExplorerFilterFacets;
   activeTopic: EventExplorerActiveTopic | null;
   topicUnknown: boolean;
+};
+
+const EMPTY_EVENT_EXPLORER_FILTER_FACETS: EventExplorerFilterFacets = {
+  series: [],
+  countries: [],
 };
 
 export {
@@ -62,6 +75,7 @@ export async function getEventExplorerData(
         editions: [],
         total: 0,
         filters: normalizeEventExplorerFilters({ ...filters, topic: topicSlug }),
+        filterFacets: EMPTY_EVENT_EXPLORER_FILTER_FACETS,
         activeTopic: null,
         topicUnknown: true,
       };
@@ -85,6 +99,8 @@ export async function getEventExplorerData(
     };
   });
   const normalizedFilters = normalizeEventExplorerFilters({ ...filters, topic: topicSlug });
+  const facetEditions = getEventExplorerFacetEditions(editionsWithKeywords, topicSeriesIds);
+  const filterFacets = buildEventExplorerFilterFacets(facetEditions);
   const filtered = applyEventExplorerFilters(editionsWithKeywords, normalizedFilters, {
     topicSeriesIds,
   });
@@ -93,6 +109,7 @@ export async function getEventExplorerData(
     editions: filtered,
     total: filtered.length,
     filters: normalizedFilters,
+    filterFacets,
     activeTopic,
     topicUnknown,
   };

@@ -12,9 +12,8 @@ import type { EventFilters } from "./types";
 
 type FilterPanelProps = {
   filters: EventFilters;
-  industries: string[];
-  regions: string[];
-  types: string[];
+  seriesOptions: string[];
+  countryOptions: string[];
   onChange: (next: EventFilters) => void;
   onReset: () => void;
   className?: string;
@@ -22,9 +21,8 @@ type FilterPanelProps = {
 
 export function FilterPanel({
   filters,
-  industries,
-  regions,
-  types,
+  seriesOptions,
+  countryOptions,
   onChange,
   onReset,
   className,
@@ -41,46 +39,31 @@ export function FilterPanel({
         />
       </FilterField>
 
-      <FilterField label="Industry">
+      <FilterField label="Event series">
         <select
-          value={filters.industry}
-          onChange={(event) => onChange({ ...filters, industry: event.target.value })}
+          value={filters.series}
+          onChange={(event) => onChange({ ...filters, series: event.target.value })}
           className={filterInputClass}
         >
-          <option value="all">All industries</option>
-          {industries.map((industry) => (
-            <option key={industry} value={industry}>
-              {industry}
+          <option value="all">All series</option>
+          {seriesOptions.map((series) => (
+            <option key={series} value={series}>
+              {series}
             </option>
           ))}
         </select>
       </FilterField>
 
-      <FilterField label="Region">
+      <FilterField label="Country">
         <select
           value={filters.region}
           onChange={(event) => onChange({ ...filters, region: event.target.value })}
           className={filterInputClass}
         >
-          <option value="all">All regions</option>
-          {regions.map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
-          ))}
-        </select>
-      </FilterField>
-
-      <FilterField label="Type">
-        <select
-          value={filters.type}
-          onChange={(event) => onChange({ ...filters, type: event.target.value })}
-          className={filterInputClass}
-        >
-          <option value="all">All types</option>
-          {types.map((type) => (
-            <option key={type} value={type}>
-              {type}
+          <option value="all">All countries</option>
+          {countryOptions.map((country) => (
+            <option key={country} value={country}>
+              {country}
             </option>
           ))}
         </select>

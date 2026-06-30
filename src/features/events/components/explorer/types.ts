@@ -30,9 +30,8 @@ export type ExplorerView = "list" | "calendar";
 
 export type EventFilters = {
   query: string;
-  industry: string;
+  series: string;
   region: string;
-  type: string;
   startDate: string;
   endDate: string;
   topic: string;

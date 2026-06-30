@@ -9,6 +9,7 @@ import {
   MobileFilterDrawer,
   PageHeader,
 } from "@/src/components/common/explorer";
+import type { EventExplorerFilterFacets } from "@/src/features/events/lib/eventExplorerFilterFacets";
 import type { EventExplorerActiveTopic } from "@/src/features/events/server/getEventExplorerData";
 import {
   eventsIntersectMonth,
@@ -51,6 +52,7 @@ const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
 type EventExplorerPageProps = {
   events: EventRecord[];
   initialFilters?: EventFilters;
+  filterFacets: EventExplorerFilterFacets;
   activeTopic?: EventExplorerActiveTopic | null;
   topicUnknown?: boolean;
 };
@@ -58,6 +60,7 @@ type EventExplorerPageProps = {
 export function EventExplorerPage({
   events,
   initialFilters,
+  filterFacets,
   activeTopic = null,
   topicUnknown = false,
 }: EventExplorerPageProps) {
@@ -96,27 +99,6 @@ export function EventExplorerPage({
   }, [pathname, searchParams]);
   const topicHubHref =
     activeTopic !== null ? buildTopicHubPath(activeTopic.slug) : null;
-
-  const industries = useMemo(() => {
-    const values = events
-      .map((event) => event.event_series?.name)
-      .filter((name): name is string => Boolean(name?.trim()));
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
-  }, [events]);
-
-  const regions = useMemo(() => {
-    const values = events
-      .map((event) => event.cities?.countries?.name)
-      .filter((name): name is string => Boolean(name?.trim()));
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
-  }, [events]);
-
-  const types = useMemo(() => {
-    const values = events
-      .map((event) => event.event_series?.name)
-      .filter((name): name is string => Boolean(name?.trim()));
-    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
-  }, [events]);
 
   const sortedEvents = useMemo(() => {
     return sortEventExplorerResults(events, {
@@ -220,9 +202,8 @@ export function EventExplorerPage({
         <div className="hidden md:block">
           <FilterPanel
             filters={draftFilters}
-            industries={industries}
-            regions={regions}
-            types={types}
+            seriesOptions={filterFacets.series}
+            countryOptions={filterFacets.countries}
             onChange={setDraftFilters}
             onReset={handleReset}
             className={explorerFilterStickyClass}
@@ -292,9 +273,8 @@ export function EventExplorerPage({
       >
         <FilterPanel
           filters={draftFilters}
-          industries={industries}
-          regions={regions}
-          types={types}
+          seriesOptions={filterFacets.series}
+          countryOptions={filterFacets.countries}
           onChange={setDraftFilters}
           onReset={handleReset}
         />

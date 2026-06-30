@@ -6,9 +6,8 @@ import { filterEventRecords } from "@/src/features/events/lib/eventExplorerFilte
 
 const defaultFilters: EventFilters = {
   query: "",
-  industry: "all",
+  series: "all",
   region: "all",
-  type: "all",
   startDate: "",
   endDate: "",
   topic: "",
@@ -78,6 +77,15 @@ describe("filterEventRecords", () => {
         { ...defaultFilters, query: "uniqueseriesname" },
       ).map((event) => event.id),
       ["3"],
+    );
+  });
+
+  it("filters by event series", () => {
+    assert.deepEqual(
+      filterEventRecords(events, { ...defaultFilters, series: "TOKEN2049" }).map(
+        (event) => event.id,
+      ),
+      ["1"],
     );
   });
 

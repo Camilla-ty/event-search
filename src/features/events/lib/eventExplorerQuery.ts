@@ -29,9 +29,8 @@ export type EventExplorerFilterState = EventFilters;
 
 export const DEFAULT_EVENT_EXPLORER_FILTERS: EventExplorerFilterState = {
   query: "",
-  industry: "all",
+  series: "all",
   region: "all",
-  type: "all",
   startDate: "",
   endDate: "",
   topic: "",
@@ -39,8 +38,11 @@ export const DEFAULT_EVENT_EXPLORER_FILTERS: EventExplorerFilterState = {
 
 export type EventExplorerSearchParamsInput = {
   q?: string | null;
+  series?: string | null;
+  /** @deprecated Use `series`. Read for URL backward compatibility. */
   industry?: string | null;
   region?: string | null;
+  /** @deprecated Use `series`. Read for URL backward compatibility. */
   type?: string | null;
   start?: string | null;
   end?: string | null;
@@ -137,11 +139,43 @@ function normalizeFilterDate(value: string | null | undefined): string {
   return (value ?? "").trim();
 }
 
+function readLegacySeriesParam(
+  value: string | null | undefined,
+): string {
+  const trimmed = (value ?? "").trim();
+  return trimmed !== "" ? trimmed : "all";
+}
+
+/** Resolve canonical series from series + legacy industry/type URL fields. */
+export function resolveEventExplorerSeriesFilter(
+  input: Pick<
+    EventExplorerSearchParamsInput,
+    "series" | "industry" | "type"
+  > &
+    Partial<{ series: string | null; industry: string | null; type: string | null }>,
+): string {
+  const explicitSeries = input.series;
+  if (explicitSeries !== undefined && explicitSeries !== null) {
+    const trimmed = String(explicitSeries).trim();
+    if (trimmed !== "") return trimmed;
+    return "all";
+  }
+
+  const industry = readLegacySeriesParam(input.industry);
+  if (industry !== "all") return industry;
+
+  const type = readLegacySeriesParam(input.type);
+  if (type !== "all") return type;
+
+  return "all";
+}
+
 /** Coerce partial / URL / server inputs into canonical filter state. */
 export function normalizeEventExplorerFilters(
   input: EventExplorerSearchParamsInput &
     Partial<{
       query: string | null;
+      series: string | null;
       industry: string | null;
       region: string | null;
       type: string | null;
@@ -159,9 +193,8 @@ export function normalizeEventExplorerFilters(
 
   return {
     query,
-    industry: normalizeFilterSelect(input.industry),
+    series: resolveEventExplorerSeriesFilter(input),
     region: normalizeFilterSelect(input.region),
-    type: normalizeFilterSelect(input.type),
     startDate:
       input.startDate !== undefined
         ? normalizeFilterDate(input.startDate)
@@ -180,6 +213,7 @@ export function parseEventExplorerFiltersFromSearchParams(
   if (params instanceof URLSearchParams) {
     return normalizeEventExplorerFilters({
       q: params.get("q") ?? undefined,
+      series: params.get("series") ?? undefined,
       industry: params.get("industry") ?? undefined,
       region: params.get("region") ?? undefined,
       type: params.get("type") ?? undefined,
@@ -203,16 +237,13 @@ export function buildEventExplorerSearchParams(
     next.set("q", normalized.query.trim());
   }
 
-  if (normalized.industry !== "all") {
-    next.set("industry", normalized.industry);
+  if (normalized.series !== "all") {
+    // Legacy URL param until F5 canonical `series` migration.
+    next.set("industry", normalized.series);
   }
 
   if (normalized.region !== "all") {
     next.set("region", normalized.region);
-  }
-
-  if (normalized.type !== "all") {
-    next.set("type", normalized.type);
   }
 
   if (normalized.startDate !== "") {
@@ -263,9 +294,8 @@ export function matchesEventExplorerFilters(
   const normalized = normalizeEventExplorerFilters(filters);
 
   const query = normalizeExplorerText(normalized.query);
-  const industry = normalizeExplorerText(normalized.industry);
+  const series = normalizeExplorerText(normalized.series);
   const region = normalizeExplorerText(normalized.region);
-  const type = normalizeExplorerText(normalized.type);
 
   const eventName = normalizeExplorerText(item.name);
   const cityName = normalizeExplorerText(item.cities?.name);
@@ -280,9 +310,8 @@ export function matchesEventExplorerFilters(
     seriesName.includes(query) ||
     seriesKeywordsMatchQuery(item, query, "includes");
 
-  const industryMatch = industry === "" || industry === "all" || seriesName === industry;
+  const seriesMatch = series === "" || series === "all" || seriesName === series;
   const regionMatch = region === "" || region === "all" || countryName === region;
-  const typeMatch = type === "" || type === "all" || seriesName === type;
 
   const topicSeriesIds =
     options.topicSeriesIds === undefined ? null : options.topicSeriesIds;
@@ -290,7 +319,7 @@ export function matchesEventExplorerFilters(
 
   const dateMatch = eventOverlapsDateRange(item, normalized.startDate, normalized.endDate);
 
-  return queryMatch && industryMatch && regionMatch && typeMatch && topicMatch && dateMatch;
+  return queryMatch && seriesMatch && regionMatch && topicMatch && dateMatch;
 }
 
 export function applyEventExplorerFilters<T extends EventExplorerMatchable>(
