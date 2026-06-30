@@ -12,19 +12,10 @@ import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySe
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
 import { formInputClass } from "@/src/lib/design/classes";
 import { EditionSiblingWarnings } from "@/src/features/events/components/admin/EditionSiblingWarnings";
+import type { EditionFormValues } from "@/src/features/events/components/admin/editionFormValues";
+import { CURRENT_YEAR } from "@/src/features/events/components/admin/editionFormValues";
 import type { EditionSiblingSummary } from "@/src/features/events/server/eventEditionAdmin";
 import { buildEditionSlug, slugify } from "@/src/lib/slugify";
-
-type EditionFormValues = {
-  series_id: string;
-  year: string;
-  name: string;
-  slug: string;
-  website_url: string;
-  start_date: string;
-  end_date: string;
-  city_id: string;
-};
 
 type EventEditionFormProps = {
   mode: "create" | "edit";
@@ -43,8 +34,6 @@ type ApiResponse = {
   warnings?: string[];
   edition?: { id: string };
 };
-
-const CURRENT_YEAR = new Date().getFullYear();
 
 function editionWarnings(values: EditionFormValues): string[] {
   const messages: string[] = [];
@@ -158,6 +147,8 @@ export function EventEditionForm({
       start_date: values.start_date.trim() || null,
       end_date: values.end_date.trim() || null,
       city_id: values.city_id.trim() || null,
+      last_reviewed_at: values.last_reviewed_at.trim() || null,
+      primary_source_url: values.primary_source_url.trim() || null,
     };
     if (mode === "create") {
       return { ...payload, series_id: values.series_id, year: yearNumber };
@@ -396,6 +387,33 @@ export function EventEditionForm({
             disabled={isSubmitting}
           />
 
+          <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Research information
+          </h2>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Last reviewed</span>
+            <input
+              type="date"
+              value={values.last_reviewed_at}
+              onChange={(e) => updateField("last_reviewed_at", e.target.value)}
+              disabled={isSubmitting}
+              className={formInputClass}
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Primary source URL</span>
+            <input
+              type="text"
+              value={values.primary_source_url}
+              onChange={(e) => updateField("primary_source_url", e.target.value)}
+              disabled={isSubmitting}
+              className={formInputClass}
+              placeholder="https://…"
+            />
+          </label>
+
           <div className="flex flex-col gap-2 pt-2 sm:flex-row">
             {mode === "create" ? (
               <>
@@ -454,4 +472,4 @@ export function EventEditionForm({
   );
 }
 
-export { CURRENT_YEAR };
+export { CURRENT_YEAR } from "@/src/features/events/components/admin/editionFormValues";

@@ -73,6 +73,8 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
           description: series.description ?? "",
           website_url: series.website_url ?? "",
           logo_url: series.logo_url ?? "",
+          lifecycle_status: series.lifecycle_status ?? "",
+          lifecycle_note: series.lifecycle_note ?? "",
         }}
       />
 

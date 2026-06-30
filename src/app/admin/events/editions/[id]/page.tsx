@@ -16,6 +16,7 @@ import {
   type ActiveImportInfo,
 } from "@/src/features/events/components/admin/EditionSponsorsPanel";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
+import { buildEditionFormInitialValues } from "@/src/features/events/components/admin/editionFormValues";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
 import {
@@ -174,16 +175,18 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                 readOnlySeriesName={edition.event_series?.name}
                 readOnlySeriesId={edition.event_series?.id ?? edition.series_id ?? undefined}
                 readOnlyYear={edition.year}
-                initial={{
+                initial={buildEditionFormInitialValues({
                   series_id: edition.series_id ?? "",
-                  year: String(edition.year),
+                  year: edition.year,
                   name: edition.name,
                   slug: edition.slug,
-                  website_url: edition.website_url ?? "",
-                  start_date: edition.start_date ?? "",
-                  end_date: edition.end_date ?? "",
-                  city_id: edition.city_id ?? "",
-                }}
+                  website_url: edition.website_url,
+                  start_date: edition.start_date,
+                  end_date: edition.end_date,
+                  city_id: edition.city_id,
+                  last_reviewed_at: edition.last_reviewed_at,
+                  primary_source_url: edition.primary_source_url,
+                })}
               />
             </div>
           }

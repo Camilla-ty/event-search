@@ -15,6 +15,8 @@ export type EventSeriesRow = {
   description: string | null;
   website_url: string | null;
   logo_url: string | null;
+  lifecycle_status: string | null;
+  lifecycle_note: string | null;
   created_at: string;
 };
 
@@ -24,6 +26,8 @@ export type CreateEventSeriesInput = {
   description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
+  lifecycle_status?: string | null;
+  lifecycle_note?: string | null;
 };
 
 export type UpdateEventSeriesInput = {
@@ -32,6 +36,8 @@ export type UpdateEventSeriesInput = {
   description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
+  lifecycle_status?: string | null;
+  lifecycle_note?: string | null;
 };
 
 export type EventSeriesListItem = EventSeriesRow & {
@@ -42,7 +48,7 @@ export async function listEventSeriesAdmin(search?: string): Promise<EventSeries
   const supabase = createAdminClient();
   let query = supabase
     .from("event_series")
-    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
     .order("name", { ascending: true });
 
   const term = search?.trim() ?? "";
@@ -82,7 +88,7 @@ export async function getEventSeriesAdminById(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("event_series")
-    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -100,12 +106,14 @@ export async function createEventSeries(
     description: input.description?.trim() || null,
     website_url: input.website_url?.trim() || null,
     logo_url: input.logo_url?.trim() || null,
+    lifecycle_status: input.lifecycle_status?.trim() || null,
+    lifecycle_note: input.lifecycle_note?.trim() || null,
   };
 
   const { data, error } = await supabase
     .from("event_series")
     .insert(payload)
-    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
     .single();
 
   if (error) throw new Error(error.message);
@@ -130,12 +138,18 @@ export async function updateEventSeries(
   if (input.logo_url !== undefined) {
     patch.logo_url = input.logo_url?.trim() || null;
   }
+  if (input.lifecycle_status !== undefined) {
+    patch.lifecycle_status = input.lifecycle_status?.trim() || null;
+  }
+  if (input.lifecycle_note !== undefined) {
+    patch.lifecycle_note = input.lifecycle_note?.trim() || null;
+  }
 
   const { data, error } = await supabase
     .from("event_series")
     .update(patch)
     .eq("id", id)
-    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
     .single();
 
   if (error) throw new Error(error.message);
@@ -197,7 +211,7 @@ export async function uploadEventSeriesLogoFileAdmin(
     .from("event_series")
     .update({ logo_url: upload.publicUrl })
     .eq("id", seriesId)
-    .select("id, name, slug, description, website_url, logo_url, created_at")
+    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
     .single();
 
   if (error) {

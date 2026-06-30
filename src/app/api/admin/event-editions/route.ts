@@ -62,6 +62,8 @@ export async function POST(request: Request) {
     end_date: body.end_date as string | null | undefined,
     website_url: body.website_url as string | null | undefined,
     city_id: body.city_id as string | null | undefined,
+    last_reviewed_at: body.last_reviewed_at as string | null | undefined,
+    primary_source_url: body.primary_source_url as string | null | undefined,
   });
 
   if (!validated.ok) {

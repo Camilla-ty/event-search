@@ -5,6 +5,8 @@ export type PublicEventSeriesSummary = {
   description: string | null;
   website_url: string | null;
   logo_url: string | null;
+  lifecycle_status: string | null;
+  lifecycle_note: string | null;
 };
 
 export type PublicEditionSummary = {

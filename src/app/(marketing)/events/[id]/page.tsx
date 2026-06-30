@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
+import { EventHistorySection } from "@/src/features/events/components/detail/EventHistorySection";
+import { ResearchInformationSection } from "@/src/features/events/components/detail/ResearchInformationSection";
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
@@ -112,6 +114,12 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   );
 
   const seriesBrandLabel = series?.name ?? null;
+  const lastReviewedAt =
+    typeof edition.last_reviewed_at === "string" ? edition.last_reviewed_at : null;
+  const primarySourceUrl =
+    typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
+  const lifecycleStatus = series?.lifecycle_status ?? null;
+  const lifecycleNote = series?.lifecycle_note ?? null;
 
   return (
     <section className="space-y-6">
@@ -192,13 +200,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Description</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          {edition.event_series?.description ??
-            "Detailed event description will be expanded as the content model evolves."}
-        </p>
-      </section>
+      <EventHistorySection
+        lifecycleStatus={lifecycleStatus}
+        lifecycleNote={lifecycleNote}
+      />
+
+      <ResearchInformationSection
+        lastReviewedAt={lastReviewedAt}
+        primarySourceUrl={primarySourceUrl}
+      />
 
       {seriesBrandLabel && seriesHubHref ? (
         <RelatedEditionsSection

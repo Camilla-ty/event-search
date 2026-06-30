@@ -3,7 +3,8 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
-import { CURRENT_YEAR } from "@/src/features/events/components/admin/EventEditionForm";
+import { buildEditionFormInitialValues } from "@/src/features/events/components/admin/editionFormValues";
+import { CURRENT_YEAR } from "@/src/features/events/components/admin/editionFormValues";
 import { getSeriesOptions } from "@/src/features/events/server/getSeriesOptions";
 
 export const dynamic = "force-dynamic";
@@ -35,16 +36,10 @@ export default async function AdminCreateEventEditionPage({ searchParams }: Page
         mode="create"
         series={series}
         cities={cities}
-        initial={{
+        initial={buildEditionFormInitialValues({
           series_id: params.seriesId ?? "",
-          year: String(CURRENT_YEAR),
-          name: "",
-          slug: "",
-          website_url: "",
-          start_date: "",
-          end_date: "",
-          city_id: "",
-        }}
+          year: CURRENT_YEAR,
+        })}
       />
     </section>
   );

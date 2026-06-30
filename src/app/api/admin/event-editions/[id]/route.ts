@@ -51,6 +51,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     website_url: body.website_url as string | null | undefined,
     logo_url: body.logo_url as string | null | undefined,
     city_id: body.city_id as string | null | undefined,
+    last_reviewed_at: body.last_reviewed_at as string | null | undefined,
+    primary_source_url: body.primary_source_url as string | null | undefined,
     series_id: typeof body.series_id === "string" ? body.series_id : undefined,
     year: body.year as number | string | undefined,
   });
@@ -74,6 +76,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       end_date: validated.patch.end_date as string | null | undefined,
       website_url: validated.patch.website_url as string | null | undefined,
       city_id: validated.patch.city_id as string | null | undefined,
+      last_reviewed_at: validated.patch.last_reviewed_at as string | null | undefined,
+      primary_source_url: validated.patch.primary_source_url as string | null | undefined,
     });
     return NextResponse.json({ ok: true, edition });
   } catch (error) {

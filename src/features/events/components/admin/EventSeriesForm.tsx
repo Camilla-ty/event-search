@@ -7,6 +7,7 @@ import { Button, InlineErrorBanner } from "@/src/components/common";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
 import type { KeywordRow } from "@/src/features/events/types/keywords";
 import { formInputClass } from "@/src/lib/design/classes";
+import { EVENT_LIFECYCLE_STATUS_OPTIONS } from "@/src/lib/validation/eventLifecycleStatus";
 import { slugify } from "@/src/lib/slugify";
 
 import { EventSeriesLogoPreview } from "./EventSeriesLogoPreview";
@@ -26,6 +27,8 @@ type SeriesFormValues = {
   description: string;
   website_url: string;
   logo_url: string;
+  lifecycle_status: string;
+  lifecycle_note: string;
 };
 
 type EventSeriesFormProps = {
@@ -121,6 +124,8 @@ export function EventSeriesForm({
       slug: effectiveSlug,
       description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
+      lifecycle_status: values.lifecycle_status.trim() || null,
+      lifecycle_note: values.lifecycle_note.trim() || null,
       keyword_ids: keywordIds,
     };
 
@@ -337,6 +342,37 @@ export function EventSeriesForm({
             disabled={fieldsDisabled}
             className={formInputClass}
             placeholder="https://example.com"
+          />
+        </label>
+
+        <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Event history
+        </h2>
+
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-slate-700">Lifecycle status</span>
+          <select
+            value={values.lifecycle_status}
+            onChange={(e) => updateField("lifecycle_status", e.target.value)}
+            disabled={fieldsDisabled}
+            className={formInputClass}
+          >
+            {EVENT_LIFECYCLE_STATUS_OPTIONS.map((option) => (
+              <option key={option.label} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-slate-700">Lifecycle note</span>
+          <textarea
+            value={values.lifecycle_note}
+            onChange={(e) => updateField("lifecycle_note", e.target.value)}
+            disabled={fieldsDisabled}
+            rows={3}
+            className={formInputClass}
           />
         </label>
 

@@ -15,6 +15,8 @@ export type EventEditionAdminRow = {
   website_url: string | null;
   logo_url: string | null;
   city_id: string | null;
+  last_reviewed_at: string | null;
+  primary_source_url: string | null;
   created_at: string | null;
   event_series?: {
     id: string;
@@ -34,6 +36,8 @@ export type CreateEventEditionAdminInput = {
   end_date?: string | null;
   website_url?: string | null;
   city_id?: string | null;
+  last_reviewed_at?: string | null;
+  primary_source_url?: string | null;
 };
 
 export type UpdateEventEditionAdminInput = {
@@ -43,6 +47,8 @@ export type UpdateEventEditionAdminInput = {
   end_date?: string | null;
   website_url?: string | null;
   city_id?: string | null;
+  last_reviewed_at?: string | null;
+  primary_source_url?: string | null;
 };
 
 export type EventEditionListFilters = {

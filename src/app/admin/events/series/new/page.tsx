@@ -33,6 +33,8 @@ export default async function AdminCreateEventSeriesPage() {
           description: "",
           website_url: "",
           logo_url: "",
+          lifecycle_status: "",
+          lifecycle_note: "",
         }}
       />
     </section>

@@ -27,6 +27,17 @@ export function parseOptionalUuid(raw: unknown): string | null {
   return UUID_REGEX.test(value) ? value : null;
 }
 
+function parseOptionalReviewedAt(raw: unknown): string | null {
+  const date = parseOptionalDate(raw);
+  if (date !== null) {
+    return `${date}T00:00:00.000Z`;
+  }
+  if (raw === null || raw === undefined) return null;
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (value === "") return null;
+  return null;
+}
+
 export type EditionCreatePayload = {
   series_id: string;
   year: number;
@@ -36,6 +47,8 @@ export type EditionCreatePayload = {
   end_date: string | null;
   website_url: string | null;
   city_id: string | null;
+  last_reviewed_at: string | null;
+  primary_source_url: string | null;
 };
 
 export function validateEditionCreateBody(body: {
@@ -47,6 +60,8 @@ export function validateEditionCreateBody(body: {
   end_date?: string | null;
   website_url?: string | null;
   city_id?: string | null;
+  last_reviewed_at?: string | null;
+  primary_source_url?: string | null;
 }): { ok: true; data: EditionCreatePayload } | { ok: false; errors: string[] } {
   const seriesId = body.series_id?.trim() ?? "";
   const name = body.name?.trim() ?? "";
@@ -87,6 +102,31 @@ export function validateEditionCreateBody(body: {
     errors.push("website_url must be a valid URL");
   }
 
+  let lastReviewedAt: string | null = null;
+  if (body.last_reviewed_at !== undefined) {
+    const parsed = parseOptionalReviewedAt(body.last_reviewed_at);
+    if (
+      body.last_reviewed_at !== null &&
+      body.last_reviewed_at !== "" &&
+      parsed === null
+    ) {
+      errors.push("last_reviewed_at must be YYYY-MM-DD");
+    } else {
+      lastReviewedAt = parsed;
+    }
+  }
+
+  let primarySourceUrl: string | null = null;
+  if (body.primary_source_url !== undefined) {
+    primarySourceUrl =
+      body.primary_source_url === null || body.primary_source_url === ""
+        ? null
+        : body.primary_source_url.trim();
+    if (primarySourceUrl && !isValidHttpUrl(primarySourceUrl)) {
+      errors.push("primary_source_url must be a valid URL");
+    }
+  }
+
   if (errors.length > 0 || year === null) {
     return { ok: false, errors };
   }
@@ -102,6 +142,8 @@ export function validateEditionCreateBody(body: {
       end_date: endDate,
       website_url: websiteUrl,
       city_id: cityId,
+      last_reviewed_at: lastReviewedAt,
+      primary_source_url: primarySourceUrl,
     },
   };
 }
@@ -114,6 +156,8 @@ export function validateEditionUpdateBody(body: {
   website_url?: string | null;
   logo_url?: string | null;
   city_id?: string | null;
+  last_reviewed_at?: string | null;
+  primary_source_url?: string | null;
   series_id?: string;
   year?: number | string;
 }): { ok: true; patch: Record<string, unknown> } | { ok: false; errors: string[] } {
@@ -174,6 +218,29 @@ export function validateEditionUpdateBody(body: {
       errors.push("city_id must be a valid UUID");
     } else {
       patch.city_id = cityId;
+    }
+  }
+  if (body.last_reviewed_at !== undefined) {
+    const reviewedAt = parseOptionalReviewedAt(body.last_reviewed_at);
+    if (
+      body.last_reviewed_at !== null &&
+      body.last_reviewed_at !== "" &&
+      reviewedAt === null
+    ) {
+      errors.push("last_reviewed_at must be YYYY-MM-DD");
+    } else {
+      patch.last_reviewed_at = reviewedAt;
+    }
+  }
+  if (body.primary_source_url !== undefined) {
+    const primarySourceUrl =
+      body.primary_source_url === null || body.primary_source_url === ""
+        ? null
+        : body.primary_source_url.trim();
+    if (primarySourceUrl && !isValidHttpUrl(primarySourceUrl)) {
+      errors.push("primary_source_url must be a valid URL");
+    } else {
+      patch.primary_source_url = primarySourceUrl;
     }
   }
 

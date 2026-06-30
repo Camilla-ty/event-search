@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
+import {
+  isEventLifecycleStatus,
+  parseOptionalLifecycleStatus,
+} from "@/src/lib/validation/eventLifecycleStatus";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
@@ -42,6 +46,8 @@ type PatchSeriesBody = {
   website_url?: string | null;
   logo_url?: string | null;
   keyword_ids?: string[];
+  lifecycle_status?: string | null;
+  lifecycle_note?: string | null;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -77,6 +83,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     const website = body.website_url?.trim() || null;
     if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");
     else patch.website_url = website;
+  }
+  if (body.lifecycle_status !== undefined) {
+    const lifecycleStatus = parseOptionalLifecycleStatus(body.lifecycle_status);
+    if (lifecycleStatus !== null && lifecycleStatus !== undefined && !isEventLifecycleStatus(lifecycleStatus)) {
+      errors.push("lifecycle_status must be active, discontinued, rebranded, or merged");
+    } else {
+      patch.lifecycle_status = lifecycleStatus ?? null;
+    }
+  }
+  if (body.lifecycle_note !== undefined) {
+    patch.lifecycle_note = body.lifecycle_note?.trim() || null;
   }
 
   if (body.logo_url !== undefined) {
