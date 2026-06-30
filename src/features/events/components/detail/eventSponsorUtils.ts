@@ -61,3 +61,40 @@ export function isDisplayableSponsor(sponsor: EventSponsorRow): boolean {
 export function filterDisplayableSponsors(sponsors: EventSponsorRow[]): EventSponsorRow[] {
   return sponsors.filter(isDisplayableSponsor);
 }
+
+function hostnameFromWebsite(website: string): string | null {
+  const trimmed = website.trim();
+  if (trimmed === "") return null;
+
+  try {
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(withProtocol);
+    const hostname = parsed.hostname.trim().replace(/^www\./i, "").toLowerCase();
+    return hostname !== "" ? hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+type EventSponsorWebsiteFields = {
+  website?: string | null;
+  domain?: string | null;
+};
+
+/**
+ * Public event-detail sponsor subtitle: website hostname, else domain, else hidden.
+ */
+export function formatEventSponsorWebsiteSubtitle(
+  company: EventSponsorWebsiteFields | null | undefined,
+): string | null {
+  if (!company) return null;
+
+  const website = company.website?.trim() ?? "";
+  if (website !== "") {
+    const hostname = hostnameFromWebsite(website);
+    if (hostname) return hostname;
+  }
+
+  const domain = company.domain?.trim().toLowerCase() ?? "";
+  return domain !== "" ? domain : null;
+}

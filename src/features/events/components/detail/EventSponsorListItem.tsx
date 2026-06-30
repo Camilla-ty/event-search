@@ -4,6 +4,7 @@ import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
+import { formatEventSponsorWebsiteSubtitle } from "./eventSponsorUtils";
 import type { EventSponsorRow } from "./types";
 
 type EventSponsorListItemProps = {
@@ -17,7 +18,7 @@ export function EventSponsorListItem({
 }: EventSponsorListItemProps) {
   const company = sponsor.companies;
   const heading = company?.name?.trim() || "Unknown sponsor";
-  const shortRaw = company?.short_description?.trim();
+  const subtitle = formatEventSponsorWebsiteSubtitle(company);
   const profileHref = company
     ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
     : null;
@@ -27,6 +28,7 @@ export function EventSponsorListItem({
     return (
       <li className={grouped ? "px-4 py-3" : "rounded-lg border border-slate-200 p-3"}>
         <p className="font-semibold text-slate-900">{heading}</p>
+        {subtitle ? <p className="truncate text-sm text-slate-600">{subtitle}</p> : null}
       </li>
     );
   }
@@ -49,8 +51,8 @@ export function EventSponsorListItem({
           />
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-slate-900">{heading}</p>
-            {shortRaw ? (
-              <p className="line-clamp-2 text-sm text-slate-600">{shortRaw}</p>
+            {subtitle ? (
+              <p className="truncate text-sm text-slate-600">{subtitle}</p>
             ) : null}
           </div>
         </div>
