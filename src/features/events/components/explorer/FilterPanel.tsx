@@ -8,12 +8,16 @@ import {
   filterInputClass,
 } from "@/src/components/common/explorer";
 
+import type { EventExplorerTopicFacet } from "@/src/features/events/lib/eventExplorerFilterFacets";
+
 import type { EventFilters } from "./types";
 
 type FilterPanelProps = {
   filters: EventFilters;
   seriesOptions: string[];
   countryOptions: string[];
+  topicOptions: EventExplorerTopicFacet[];
+  topicUnknown?: boolean;
   onChange: (next: EventFilters) => void;
   onReset: () => void;
   className?: string;
@@ -23,20 +27,35 @@ export function FilterPanel({
   filters,
   seriesOptions,
   countryOptions,
+  topicOptions,
+  topicUnknown = false,
   onChange,
   onReset,
   className,
 }: FilterPanelProps) {
+  const activeTopicSlug = filters.topic.trim();
+  const topicOptionsWithActive =
+    activeTopicSlug !== "" &&
+    topicUnknown &&
+    !topicOptions.some((topic) => topic.slug === activeTopicSlug)
+      ? [{ slug: activeTopicSlug, name: `${activeTopicSlug} (not found)` }, ...topicOptions]
+      : topicOptions;
+
   return (
     <FilterPanelShell onReset={onReset} className={className}>
-      <FilterField label="Search">
-        <input
-          type="search"
-          value={filters.query}
-          onChange={(event) => onChange({ ...filters, query: event.target.value })}
-          placeholder="Search event name or domain"
+      <FilterField label="Topic">
+        <select
+          value={activeTopicSlug}
+          onChange={(event) => onChange({ ...filters, topic: event.target.value })}
           className={filterInputClass}
-        />
+        >
+          <option value="">All topics</option>
+          {topicOptionsWithActive.map((topic) => (
+            <option key={topic.slug} value={topic.slug}>
+              {topic.name}
+            </option>
+          ))}
+        </select>
       </FilterField>
 
       <FilterField label="Event series">

@@ -183,10 +183,7 @@ export function EventExplorerPage({
   }
 
   function handleReset() {
-    setDraftFilters({
-      ...DEFAULT_EVENT_EXPLORER_FILTERS,
-      topic: topicSlug,
-    });
+    setDraftFilters({ ...DEFAULT_EVENT_EXPLORER_FILTERS });
     setSort("date");
     setPage(1);
   }
@@ -204,6 +201,8 @@ export function EventExplorerPage({
             filters={draftFilters}
             seriesOptions={filterFacets.series}
             countryOptions={filterFacets.countries}
+            topicOptions={filterFacets.topics}
+            topicUnknown={topicUnknown}
             onChange={setDraftFilters}
             onReset={handleReset}
             className={explorerFilterStickyClass}
@@ -275,6 +274,8 @@ export function EventExplorerPage({
           filters={draftFilters}
           seriesOptions={filterFacets.series}
           countryOptions={filterFacets.countries}
+          topicOptions={filterFacets.topics}
+          topicUnknown={topicUnknown}
           onChange={setDraftFilters}
           onReset={handleReset}
         />

@@ -4,7 +4,7 @@ import {
   readExplorerSeriesId,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import {
-  buildEventExplorerFilterFacets,
+  buildEventExplorerFilterFacetsFromEditions,
   getEventExplorerFacetEditions,
   type EventExplorerFilterFacets,
 } from "@/src/features/events/lib/eventExplorerFilterFacets";
@@ -52,6 +52,7 @@ export type EventExplorerData = {
 const EMPTY_EVENT_EXPLORER_FILTER_FACETS: EventExplorerFilterFacets = {
   series: [],
   countries: [],
+  topics: [],
 };
 
 export {
@@ -59,32 +60,42 @@ export {
   readExplorerSeriesId as readEditionSeriesId,
 } from "@/src/features/events/lib/eventExplorerQuery";
 
+function resolveTopicSeriesIds(
+  topicSlug: string,
+): Promise<{
+  activeTopic: EventExplorerActiveTopic | null;
+  topicUnknown: boolean;
+  topicSeriesIds: Set<string> | null;
+}> {
+  if (topicSlug === "") {
+    return Promise.resolve({
+      activeTopic: null,
+      topicUnknown: false,
+      topicSeriesIds: null,
+    });
+  }
+
+  return getPublicKeywordBySlug(topicSlug).then(async (keyword) => {
+    if (!keyword) {
+      return {
+        activeTopic: null,
+        topicUnknown: true,
+        topicSeriesIds: new Set<string>(),
+      };
+    }
+
+    return {
+      activeTopic: { slug: keyword.slug, name: keyword.name },
+      topicUnknown: false,
+      topicSeriesIds: new Set(await getSeriesIdsForKeywordId(keyword.id)),
+    };
+  });
+}
+
 export async function getEventExplorerData(
   filters: EventExplorerFilters = {},
 ): Promise<EventExplorerData> {
   const topicSlug = (filters.topic ?? "").trim();
-  let activeTopic: EventExplorerActiveTopic | null = null;
-  let topicUnknown = false;
-  let topicSeriesIds: Set<string> | null = null;
-
-  if (topicSlug !== "") {
-    const keyword = await getPublicKeywordBySlug(topicSlug);
-    if (!keyword) {
-      topicUnknown = true;
-      return {
-        editions: [],
-        total: 0,
-        filters: normalizeEventExplorerFilters({ ...filters, topic: topicSlug }),
-        filterFacets: EMPTY_EVENT_EXPLORER_FILTER_FACETS,
-        activeTopic: null,
-        topicUnknown: true,
-      };
-    }
-
-    activeTopic = { slug: keyword.slug, name: keyword.name };
-    topicSeriesIds = new Set(await getSeriesIdsForKeywordId(keyword.id));
-  }
-
   const editions = (await getEventEditions()) ?? [];
   const seriesIds = editions
     .map((edition) => readExplorerSeriesId(edition))
@@ -98,9 +109,19 @@ export async function getEventExplorerData(
         seriesId !== "" ? (keywordsBySeriesId.get(seriesId) ?? []) : [],
     };
   });
+
+  const { activeTopic, topicUnknown, topicSeriesIds } =
+    await resolveTopicSeriesIds(topicSlug);
+
   const normalizedFilters = normalizeEventExplorerFilters({ ...filters, topic: topicSlug });
   const facetEditions = getEventExplorerFacetEditions(editionsWithKeywords, topicSeriesIds);
-  const filterFacets = buildEventExplorerFilterFacets(facetEditions);
+  const filterFacets =
+    editionsWithKeywords.length === 0
+      ? EMPTY_EVENT_EXPLORER_FILTER_FACETS
+      : buildEventExplorerFilterFacetsFromEditions(
+          facetEditions,
+          editionsWithKeywords,
+        );
   const filtered = applyEventExplorerFilters(editionsWithKeywords, normalizedFilters, {
     topicSeriesIds,
   });

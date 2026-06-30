@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import type { EventExplorerMatchable } from "@/src/features/events/lib/eventExplorerQuery";
 import {
   buildEventExplorerFilterFacets,
+  buildEventExplorerFilterFacetsFromEditions,
+  buildEventExplorerTopicFacets,
   getEventExplorerFacetEditions,
 } from "@/src/features/events/lib/eventExplorerFilterFacets";
 
@@ -61,6 +63,7 @@ describe("buildEventExplorerFilterFacets", () => {
       "United Arab Emirates",
       "United Kingdom",
     ]);
+    assert.deepEqual(facets.topics, []);
   });
 
   it("ignores blank series and country names", () => {
@@ -77,5 +80,60 @@ describe("buildEventExplorerFilterFacets", () => {
 
     assert.deepEqual(facets.series, ["EthCC"]);
     assert.deepEqual(facets.countries, ["France"]);
+    assert.deepEqual(facets.topics, []);
+  });
+});
+
+describe("buildEventExplorerTopicFacets", () => {
+  it("collects unique sorted topic labels from series keywords", () => {
+    const topics = buildEventExplorerTopicFacets([
+      {
+        series_keywords: [
+          { name: "DeFi", slug: "defi" },
+          { name: "Web3", slug: "web3" },
+        ],
+      },
+      {
+        series_keywords: [
+          { name: "DeFi", slug: "defi" },
+          { name: "NFTs", slug: "nfts" },
+        ],
+      },
+    ]);
+
+    assert.deepEqual(topics, [
+      { slug: "defi", name: "DeFi" },
+      { slug: "nfts", name: "NFTs" },
+      { slug: "web3", name: "Web3" },
+    ]);
+  });
+});
+
+describe("buildEventExplorerFilterFacetsFromEditions", () => {
+  it("builds series, country, and topic facets together", () => {
+    const facets = buildEventExplorerFilterFacetsFromEditions(
+      [
+        makeEdition({
+          event_series: { name: "EthCC" },
+          cities: { name: "Paris", countries: { name: "France" } },
+          series_keywords: [{ name: "DeFi", slug: "defi" }],
+        }),
+      ],
+      [
+        {
+          series_keywords: [
+            { name: "DeFi", slug: "defi" },
+            { name: "Web3", slug: "web3" },
+          ],
+        },
+      ],
+    );
+
+    assert.deepEqual(facets.series, ["EthCC"]);
+    assert.deepEqual(facets.countries, ["France"]);
+    assert.deepEqual(facets.topics, [
+      { slug: "defi", name: "DeFi" },
+      { slug: "web3", name: "Web3" },
+    ]);
   });
 });
