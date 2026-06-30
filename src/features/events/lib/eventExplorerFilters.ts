@@ -1,5 +1,6 @@
 import type { EventFilters, EventRecord } from "@/src/features/events/components/explorer/types";
 
+import { eventExplorerDomainMatchesQuery } from "@/src/features/events/lib/eventExplorerDomain";
 import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
 
 function normalize(value: string | null | undefined): string {
@@ -18,17 +19,14 @@ export function filterEventRecords(
 
   return events.filter((event) => {
     const eventName = normalize(event.name);
-    const cityName = normalize(event.cities?.name);
-    const countryName = normalize(event.cities?.countries?.name);
     const seriesName = normalize(event.event_series?.name);
     const regionName = normalize(event.cities?.countries?.name);
 
     const queryMatch =
       query === "" ||
       eventName.includes(query) ||
-      cityName.includes(query) ||
-      countryName.includes(query) ||
-      seriesName.includes(query);
+      seriesName.includes(query) ||
+      eventExplorerDomainMatchesQuery(event, filters.query, "includes");
     const seriesMatch = series === "" || series === "all" || seriesName === series;
     const regionMatch = region === "" || region === "all" || regionName === region;
 

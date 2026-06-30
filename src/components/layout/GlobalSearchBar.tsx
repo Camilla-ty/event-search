@@ -87,8 +87,8 @@ export function GlobalSearchBar({ className }: { className?: string }) {
         />
       ) : (
         <SearchBar
-          ariaLabel="Search events by name, series, or location"
-          placeholder="Search events by name, series, or location…"
+          ariaLabel="Search event name or domain"
+          placeholder="Search event name or domain"
           onSearch={handleEventSearch}
           className="min-w-0 w-full"
           submitVariant="secondary"

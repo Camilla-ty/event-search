@@ -34,7 +34,7 @@ export function FilterPanel({
           type="search"
           value={filters.query}
           onChange={(event) => onChange({ ...filters, query: event.target.value })}
-          placeholder="Search event..."
+          placeholder="Search event name or domain"
           className={filterInputClass}
         />
       </FilterField>

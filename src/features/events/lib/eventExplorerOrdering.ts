@@ -1,9 +1,10 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
-  normalizeExplorerText,
-  seriesKeywordsMatchQuery,
-  type EventExplorerMatchable,
-} from "@/src/features/events/lib/eventExplorerQuery";
+  eventExplorerDomainMatchesQuery,
+  normalizeEventExplorerWebsiteHost,
+  readEventExplorerWebsiteHosts,
+} from "@/src/features/events/lib/eventExplorerDomain";
+import { normalizeExplorerText } from "@/src/features/events/lib/eventExplorerQuery";
 import {
   readEventDateRange,
   readEventIsoDate,
@@ -20,10 +21,7 @@ export type EventTemporalBucket =
   | "older_ended"
   | "dateless";
 
-export type EventExplorerOrderable = EventExplorerMatchable & {
-  id: string;
-  name?: string | null;
-};
+export type EventExplorerOrderable = EventRecord;
 
 const TEMPORAL_BUCKET_PRIORITY: Record<EventTemporalBucket, number> = {
   recently_ended: 0,
@@ -33,20 +31,12 @@ const TEMPORAL_BUCKET_PRIORITY: Record<EventTemporalBucket, number> = {
   dateless: 4,
 };
 
-function readNormalizedEventName(event: EventExplorerMatchable): string {
+function readNormalizedEventName(event: EventExplorerOrderable): string {
   return normalizeExplorerText(event.name);
 }
 
-function readNormalizedSeriesName(event: EventExplorerMatchable): string {
+function readNormalizedSeriesName(event: EventExplorerOrderable): string {
   return normalizeExplorerText(event.event_series?.name);
-}
-
-function readNormalizedCityName(event: EventExplorerMatchable): string {
-  return normalizeExplorerText(event.cities?.name);
-}
-
-function readNormalizedCountryName(event: EventExplorerMatchable): string {
-  return normalizeExplorerText(event.cities?.countries?.name);
 }
 
 function subtractDaysIso(isoDate: string, days: number): string {
@@ -62,7 +52,7 @@ function subtractDaysIso(isoDate: string, days: number): string {
 }
 
 export function classifyEventTemporalBucket(
-  event: Pick<EventExplorerMatchable, "start_date" | "end_date">,
+  event: Pick<EventExplorerOrderable, "start_date" | "end_date">,
   today: string,
 ): EventTemporalBucket {
   const range = readEventDateRange(event);
@@ -89,39 +79,40 @@ export function classifyEventTemporalBucket(
  * Returns 99 when nothing matches (should not occur post-filter).
  */
 export function scoreEventSearchRelevanceTier(
-  event: EventExplorerMatchable,
+  event: EventExplorerOrderable,
   query: string,
 ): number {
-  const normalizedQuery = normalizeExplorerText(query);
-  if (normalizedQuery === "") return 99;
+  const textQuery = normalizeExplorerText(query);
+  if (textQuery === "") return 99;
 
   const eventName = readNormalizedEventName(event);
   const seriesName = readNormalizedSeriesName(event);
-  const cityName = readNormalizedCityName(event);
-  const countryName = readNormalizedCountryName(event);
+  const domainQuery = normalizeEventExplorerWebsiteHost(query);
+  const hosts = readEventExplorerWebsiteHosts(event);
 
-  if (eventName === normalizedQuery) return 1;
-  if (seriesName === normalizedQuery || seriesKeywordsMatchQuery(event, query, "exact")) {
-    return 2;
-  }
+  if (eventName === textQuery) return 1;
+  if (seriesName === textQuery) return 2;
 
   if (
-    eventName.startsWith(normalizedQuery) ||
-    seriesName.startsWith(normalizedQuery) ||
-    seriesKeywordsMatchQuery(event, query, "prefix")
+    domainQuery !== "" &&
+    (hosts.edition === domainQuery || hosts.series === domainQuery)
   ) {
     return 3;
   }
 
   if (
-    eventName.includes(normalizedQuery) ||
-    seriesName.includes(normalizedQuery) ||
-    seriesKeywordsMatchQuery(event, query, "includes")
+    eventName.startsWith(textQuery) ||
+    seriesName.startsWith(textQuery) ||
+    eventExplorerDomainMatchesQuery(event, query, "prefix")
   ) {
     return 4;
   }
 
-  if (cityName.includes(normalizedQuery) || countryName.includes(normalizedQuery)) {
+  if (
+    eventName.includes(textQuery) ||
+    seriesName.includes(textQuery) ||
+    eventExplorerDomainMatchesQuery(event, query, "includes")
+  ) {
     return 5;
   }
 

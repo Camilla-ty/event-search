@@ -44,12 +44,14 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
       id: String(edition.id),
       slug: edition.slug ?? null,
       name: edition.name ?? null,
+      website_url: edition.website_url ?? null,
       start_date: edition.start_date ?? null,
       end_date: edition.end_date ?? null,
       event_series: edition.event_series
         ? {
             name: edition.event_series.name ?? null,
             logo_url: edition.event_series.logo_url ?? null,
+            website_url: edition.event_series.website_url ?? null,
           }
         : null,
       series_keywords: Array.isArray(

@@ -18,6 +18,7 @@ function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): E
     id: overrides.id,
     slug: overrides.slug ?? null,
     name: overrides.name ?? "Sample Event",
+    website_url: overrides.website_url ?? null,
     start_date: overrides.start_date ?? "2026-06-15",
     end_date: overrides.end_date ?? "2026-06-15",
     event_series: overrides.event_series ?? { name: "Sample Series", logo_url: null },
@@ -50,7 +51,7 @@ describe("filterEventRecords", () => {
     }),
   ];
 
-  it("matches search against event, city, country, and series names", () => {
+  it("matches search against event and series names only", () => {
     assert.deepEqual(
       filterEventRecords(events, { ...defaultFilters, query: "token" }).map((event) => event.id),
       ["1"],
@@ -63,7 +64,7 @@ describe("filterEventRecords", () => {
     );
     assert.deepEqual(
       filterEventRecords(events, { ...defaultFilters, query: "london" }).map((event) => event.id),
-      ["2"],
+      [],
     );
     assert.deepEqual(
       filterEventRecords(
@@ -86,6 +87,23 @@ describe("filterEventRecords", () => {
         (event) => event.id,
       ),
       ["1"],
+    );
+  });
+
+  it("matches website domains in q search", () => {
+    assert.deepEqual(
+      filterEventRecords(
+        [
+          makeEvent({
+            id: "bw",
+            name: "Permissionless",
+            website_url: "https://blockworks.com/events",
+            event_series: { name: "Blockworks", logo_url: null },
+          }),
+        ],
+        { ...defaultFilters, query: "https://www.blockworks.com/" },
+      ).map((event) => event.id),
+      ["bw"],
     );
   });
 

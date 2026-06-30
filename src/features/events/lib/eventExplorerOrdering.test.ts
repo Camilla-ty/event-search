@@ -61,8 +61,54 @@ describe("scoreEventSearchRelevanceTier", () => {
       name: "Asia Korea Expo",
       event_series: { name: "Expo Series", logo_url: null },
     });
-    const cityOnly = makeEvent({
+    const seriesPrefix = makeEvent({
       id: "3",
+      name: "Regional Show",
+      event_series: { name: "Korea Expo", logo_url: null },
+    });
+
+    assert.equal(scoreEventSearchRelevanceTier(prefix, "korea"), 4);
+    assert.equal(scoreEventSearchRelevanceTier(partial, "korea"), 5);
+    assert.equal(scoreEventSearchRelevanceTier(seriesPrefix, "korea"), 4);
+  });
+
+  it("ranks exact domain matches at tier 3", () => {
+    const domainMatch = makeEvent({
+      id: "bw",
+      name: "Permissionless",
+      website_url: "https://www.blockworks.com/events",
+      event_series: { name: "Blockworks", logo_url: null, website_url: null },
+    });
+    const seriesDomainMatch = makeEvent({
+      id: "t",
+      name: "Singapore",
+      website_url: null,
+      event_series: {
+        name: "TOKEN2049",
+        logo_url: null,
+        website_url: "https://token2049.com",
+      },
+    });
+
+    assert.equal(scoreEventSearchRelevanceTier(domainMatch, "blockworks.com"), 3);
+    assert.equal(scoreEventSearchRelevanceTier(domainMatch, "https://blockworks.com/"), 3);
+    assert.equal(scoreEventSearchRelevanceTier(seriesDomainMatch, "token2049.com"), 3);
+    assert.ok(
+      scoreEventSearchRelevanceTier(
+        makeEvent({
+          id: "name",
+          name: "blockworks.com",
+          event_series: { name: "Other", logo_url: null },
+        }),
+        "blockworks.com",
+      ) <
+        scoreEventSearchRelevanceTier(domainMatch, "blockworks.com"),
+    );
+  });
+
+  it("does not rank city, country, or keyword-only matches", () => {
+    const locationOnly = makeEvent({
+      id: "city",
       name: "Regional Show",
       event_series: { name: "Expo Series", logo_url: null },
       cities: {
@@ -71,30 +117,16 @@ describe("scoreEventSearchRelevanceTier", () => {
         countries: { name: "South Korea" },
       },
     });
-
-    assert.equal(scoreEventSearchRelevanceTier(prefix, "korea"), 3);
-    assert.equal(scoreEventSearchRelevanceTier(partial, "korea"), 4);
-    assert.equal(scoreEventSearchRelevanceTier(cityOnly, "korea"), 5);
-  });
-
-  it("ranks exact keyword matches at tier 2", () => {
-    const keywordTagged = makeEvent({
+    const keywordOnly = makeEvent({
       id: "ethcc",
       name: "EthCC Paris",
       event_series: { name: "EthCC", logo_url: null },
       series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
     });
-    const partialName = makeEvent({
-      id: "defi-week",
-      name: "DeFi Week Paris",
-      event_series: { name: "Conference Series", logo_url: null },
-    });
 
-    assert.equal(scoreEventSearchRelevanceTier(keywordTagged, "defi"), 2);
-    assert.equal(scoreEventSearchRelevanceTier(partialName, "defi"), 3);
-    assert.ok(
-      compareEventSearchOrder(keywordTagged, partialName, "defi", TODAY) < 0,
-    );
+    assert.equal(scoreEventSearchRelevanceTier(locationOnly, "korea"), 99);
+    assert.equal(scoreEventSearchRelevanceTier(locationOnly, "seoul"), 99);
+    assert.equal(scoreEventSearchRelevanceTier(keywordOnly, "defi"), 99);
   });
 });
 
@@ -202,14 +234,9 @@ describe("sortEventExplorerResults", () => {
   it("uses relevance order for recommended sort when query is present", () => {
     const events = [
       makeEvent({
-        id: "city",
-        name: "Regional Expo",
+        id: "partial",
+        name: "Asia Korea Expo",
         event_series: { name: "Expo", logo_url: null },
-        cities: {
-          name: "Seoul",
-          states: null,
-          countries: { name: "Korea" },
-        },
       }),
       makeEvent({
         id: "exact",
@@ -226,7 +253,7 @@ describe("sortEventExplorerResults", () => {
 
     assert.deepEqual(
       sorted.map((event) => event.id),
-      ["exact", "city"],
+      ["exact", "partial"],
     );
   });
 

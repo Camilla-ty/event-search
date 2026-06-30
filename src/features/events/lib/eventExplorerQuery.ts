@@ -1,5 +1,8 @@
 import type { EventFilters } from "@/src/features/events/components/explorer/types";
 
+import {
+  eventExplorerDomainMatchesQuery,
+} from "@/src/features/events/lib/eventExplorerDomain";
 import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
 
 export type EventExplorerSeriesKeyword = {
@@ -10,11 +13,13 @@ export type EventExplorerSeriesKeyword = {
 /** Minimal fields required for explorer text/date/region filtering. */
 export type EventExplorerMatchable = {
   name?: string | null;
+  website_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   series_id?: string | null;
   event_series?: {
     name?: string | null;
+    website_url?: string | null;
   } | null;
   series_keywords?: readonly EventExplorerSeriesKeyword[] | null;
   cities?: {
@@ -298,17 +303,14 @@ export function matchesEventExplorerFilters(
   const region = normalizeExplorerText(normalized.region);
 
   const eventName = normalizeExplorerText(item.name);
-  const cityName = normalizeExplorerText(item.cities?.name);
   const countryName = normalizeExplorerText(item.cities?.countries?.name);
   const seriesName = normalizeExplorerText(item.event_series?.name);
 
   const queryMatch =
     query === "" ||
     eventName.includes(query) ||
-    cityName.includes(query) ||
-    countryName.includes(query) ||
     seriesName.includes(query) ||
-    seriesKeywordsMatchQuery(item, query, "includes");
+    eventExplorerDomainMatchesQuery(item, query, "includes");
 
   const seriesMatch = series === "" || series === "all" || seriesName === series;
   const regionMatch = region === "" || region === "all" || countryName === region;

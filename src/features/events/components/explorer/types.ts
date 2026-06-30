@@ -8,11 +8,13 @@ export type EventRecord = {
   id: string;
   slug?: string | null;
   name?: string | null;
+  website_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   event_series?: {
     name?: string | null;
     logo_url?: string | null;
+    website_url?: string | null;
   } | null;
   series_keywords?: readonly EventSeriesKeywordSummary[];
   cities?: {

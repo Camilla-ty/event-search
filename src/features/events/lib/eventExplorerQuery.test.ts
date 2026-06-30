@@ -184,7 +184,7 @@ describe("applyEventExplorerFilters", () => {
     }),
   ];
 
-  it("matches search against event, city, country, and series names", () => {
+  it("matches search against event and series names only", () => {
     assert.deepEqual(
       applyEventExplorerFilters(events, { ...defaultFilters, query: "token" }).map(
         (event) => event.id,
@@ -201,7 +201,7 @@ describe("applyEventExplorerFilters", () => {
       applyEventExplorerFilters(events, { ...defaultFilters, query: "london" }).map(
         (event) => event.id,
       ),
-      ["2"],
+      [],
     );
     assert.deepEqual(
       applyEventExplorerFilters(
@@ -215,6 +215,97 @@ describe("applyEventExplorerFilters", () => {
         { ...defaultFilters, query: "uniqueseriesname" },
       ).map((event) => event.id),
       ["3"],
+    );
+  });
+
+  it("does not match city, country, or series keywords in q search", () => {
+    const keywordTagged = makeEvent({
+      id: "ethcc",
+      name: "EthCC Paris",
+      event_series: { name: "EthCC", logo_url: null },
+      series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
+      cities: {
+        name: "Paris",
+        states: null,
+        countries: { name: "France" },
+      },
+    });
+
+    assert.deepEqual(
+      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "defi" }).map(
+        (event) => event.id,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "france" }).map(
+        (event) => event.id,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      applyEventExplorerFilters(
+        [
+          makeEvent({
+            id: "local",
+            name: "Regional Conference",
+            event_series: { name: "Summit Series", logo_url: null },
+            cities: {
+              name: "Paris",
+              states: null,
+              countries: { name: "France" },
+            },
+          }),
+        ],
+        { ...defaultFilters, query: "paris" },
+      ).map((event) => event.id),
+      [],
+    );
+    assert.deepEqual(
+      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "ethcc" }).map(
+        (event) => event.id,
+      ),
+      ["ethcc"],
+    );
+  });
+
+  it("matches edition and series website domains in q search", () => {
+    const blockworks = makeEvent({
+      id: "bw",
+      name: "Permissionless",
+      website_url: "https://www.blockworks.com/events",
+      event_series: { name: "Blockworks", logo_url: null },
+    });
+    const tokenSeries = makeEvent({
+      id: "token",
+      name: "Singapore Edition",
+      event_series: {
+        name: "TOKEN2049",
+        logo_url: null,
+        website_url: "https://token2049.com",
+      },
+    });
+
+    for (const query of [
+      "blockworks.com",
+      "www.blockworks.com",
+      "https://blockworks.com/",
+      "https://blockworks.com/events",
+    ]) {
+      assert.deepEqual(
+        applyEventExplorerFilters([blockworks], { ...defaultFilters, query }).map(
+          (event) => event.id,
+        ),
+        ["bw"],
+        `expected blockworks match for ${query}`,
+      );
+    }
+
+    assert.deepEqual(
+      applyEventExplorerFilters([tokenSeries], { ...defaultFilters, query: "token2049.com" }).map(
+        (event) => event.id,
+      ),
+      ["token"],
     );
   });
 
@@ -258,40 +349,6 @@ describe("applyEventExplorerFilters", () => {
         topicSeriesIds: new Set(["series-a"]),
       }).map((event) => event.id),
       ["1"],
-    );
-  });
-
-  it("matches search against series keywords by name or slug", () => {
-    const keywordTagged = makeEvent({
-      id: "ethcc",
-      name: "EthCC Paris",
-      event_series: { name: "EthCC", logo_url: null },
-      series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
-    });
-
-    assert.deepEqual(
-      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "defi" }).map(
-        (event) => event.id,
-      ),
-      ["ethcc"],
-    );
-    assert.deepEqual(
-      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "web3" }).map(
-        (event) => event.id,
-      ),
-      [],
-    );
-    assert.deepEqual(
-      applyEventExplorerFilters(
-        [
-          {
-            ...keywordTagged,
-            series_keywords: [{ id: "kw-2", name: "Web3", slug: "web3" }],
-          },
-        ],
-        { ...defaultFilters, query: "web3" },
-      ).map((event) => event.id),
-      ["ethcc"],
     );
   });
 });
