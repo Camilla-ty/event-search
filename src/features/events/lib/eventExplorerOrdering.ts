@@ -1,6 +1,7 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
   normalizeExplorerText,
+  seriesKeywordsMatchQuery,
   type EventExplorerMatchable,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import {
@@ -100,18 +101,22 @@ export function scoreEventSearchRelevanceTier(
   const countryName = readNormalizedCountryName(event);
 
   if (eventName === normalizedQuery) return 1;
-  if (seriesName === normalizedQuery) return 2;
+  if (seriesName === normalizedQuery || seriesKeywordsMatchQuery(event, query, "exact")) {
+    return 2;
+  }
 
   if (
     eventName.startsWith(normalizedQuery) ||
-    seriesName.startsWith(normalizedQuery)
+    seriesName.startsWith(normalizedQuery) ||
+    seriesKeywordsMatchQuery(event, query, "prefix")
   ) {
     return 3;
   }
 
   if (
     eventName.includes(normalizedQuery) ||
-    seriesName.includes(normalizedQuery)
+    seriesName.includes(normalizedQuery) ||
+    seriesKeywordsMatchQuery(event, query, "includes")
   ) {
     return 4;
   }

@@ -1,7 +1,9 @@
 import {
   applyEventExplorerFilters,
   normalizeEventExplorerFilters,
+  readExplorerSeriesId,
 } from "@/src/features/events/lib/eventExplorerQuery";
+import { getPublicKeywordsForSeriesIds } from "@/src/features/events/server/seriesKeywordsPublic";
 import {
   getPublicKeywordBySlug,
   getSeriesIdsForKeywordId,
@@ -70,8 +72,20 @@ export async function getEventExplorerData(
   }
 
   const editions = (await getEventEditions()) ?? [];
+  const seriesIds = editions
+    .map((edition) => readExplorerSeriesId(edition))
+    .filter((seriesId) => seriesId !== "");
+  const keywordsBySeriesId = await getPublicKeywordsForSeriesIds(seriesIds);
+  const editionsWithKeywords = editions.map((edition) => {
+    const seriesId = readExplorerSeriesId(edition);
+    return {
+      ...edition,
+      series_keywords:
+        seriesId !== "" ? (keywordsBySeriesId.get(seriesId) ?? []) : [],
+    };
+  });
   const normalizedFilters = normalizeEventExplorerFilters({ ...filters, topic: topicSlug });
-  const filtered = applyEventExplorerFilters(editions, normalizedFilters, {
+  const filtered = applyEventExplorerFilters(editionsWithKeywords, normalizedFilters, {
     topicSeriesIds,
   });
 

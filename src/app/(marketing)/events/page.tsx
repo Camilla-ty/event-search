@@ -52,6 +52,18 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
             logo_url: edition.event_series.logo_url ?? null,
           }
         : null,
+      series_keywords: Array.isArray(
+        (edition as { series_keywords?: unknown }).series_keywords,
+      )
+        ? (
+            (edition as { series_keywords: { id: string; name: string; slug: string }[] })
+              .series_keywords
+          ).map((keyword) => ({
+            id: keyword.id,
+            name: keyword.name,
+            slug: keyword.slug,
+          }))
+        : [],
       cities: edition.cities
         ? {
             name: edition.cities.name ?? null,

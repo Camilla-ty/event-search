@@ -76,6 +76,26 @@ describe("scoreEventSearchRelevanceTier", () => {
     assert.equal(scoreEventSearchRelevanceTier(partial, "korea"), 4);
     assert.equal(scoreEventSearchRelevanceTier(cityOnly, "korea"), 5);
   });
+
+  it("ranks exact keyword matches at tier 2", () => {
+    const keywordTagged = makeEvent({
+      id: "ethcc",
+      name: "EthCC Paris",
+      event_series: { name: "EthCC", logo_url: null },
+      series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
+    });
+    const partialName = makeEvent({
+      id: "defi-week",
+      name: "DeFi Week Paris",
+      event_series: { name: "Conference Series", logo_url: null },
+    });
+
+    assert.equal(scoreEventSearchRelevanceTier(keywordTagged, "defi"), 2);
+    assert.equal(scoreEventSearchRelevanceTier(partialName, "defi"), 3);
+    assert.ok(
+      compareEventSearchOrder(keywordTagged, partialName, "defi", TODAY) < 0,
+    );
+  });
 });
 
 describe("classifyEventTemporalBucket", () => {

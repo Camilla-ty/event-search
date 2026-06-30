@@ -187,6 +187,40 @@ describe("applyEventExplorerFilters", () => {
       ["1"],
     );
   });
+
+  it("matches search against series keywords by name or slug", () => {
+    const keywordTagged = makeEvent({
+      id: "ethcc",
+      name: "EthCC Paris",
+      event_series: { name: "EthCC", logo_url: null },
+      series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
+    });
+
+    assert.deepEqual(
+      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "defi" }).map(
+        (event) => event.id,
+      ),
+      ["ethcc"],
+    );
+    assert.deepEqual(
+      applyEventExplorerFilters([keywordTagged], { ...defaultFilters, query: "web3" }).map(
+        (event) => event.id,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      applyEventExplorerFilters(
+        [
+          {
+            ...keywordTagged,
+            series_keywords: [{ id: "kw-2", name: "Web3", slug: "web3" }],
+          },
+        ],
+        { ...defaultFilters, query: "web3" },
+      ).map((event) => event.id),
+      ["ethcc"],
+    );
+  });
 });
 
 describe("editionMatchesTopicSeriesIds", () => {

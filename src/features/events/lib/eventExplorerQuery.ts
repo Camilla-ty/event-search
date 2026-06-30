@@ -2,6 +2,11 @@ import type { EventFilters } from "@/src/features/events/components/explorer/typ
 
 import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
 
+export type EventExplorerSeriesKeyword = {
+  name?: string | null;
+  slug?: string | null;
+};
+
 /** Minimal fields required for explorer text/date/region filtering. */
 export type EventExplorerMatchable = {
   name?: string | null;
@@ -11,6 +16,7 @@ export type EventExplorerMatchable = {
   event_series?: {
     name?: string | null;
   } | null;
+  series_keywords?: readonly EventExplorerSeriesKeyword[] | null;
   cities?: {
     name?: string | null;
     countries?: {
@@ -53,6 +59,58 @@ export type BuildEventExplorerSearchParamsOptions = {
 
 export function normalizeExplorerText(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
+}
+
+export type SeriesKeywordQueryMatchMode = "includes" | "exact" | "prefix";
+
+function readNormalizedSeriesKeywords(
+  item: EventExplorerMatchable,
+): { name: string; slug: string }[] {
+  const keywords = item.series_keywords ?? [];
+  const normalized: { name: string; slug: string }[] = [];
+
+  for (const keyword of keywords) {
+    const name = normalizeExplorerText(keyword.name);
+    const slug = normalizeExplorerText(keyword.slug);
+    if (name === "" && slug === "") continue;
+    normalized.push({ name, slug });
+  }
+
+  return normalized;
+}
+
+export function seriesKeywordsMatchQuery(
+  item: EventExplorerMatchable,
+  query: string,
+  match: SeriesKeywordQueryMatchMode,
+): boolean {
+  const normalizedQuery = normalizeExplorerText(query);
+  if (normalizedQuery === "") return false;
+
+  for (const keyword of readNormalizedSeriesKeywords(item)) {
+    if (match === "exact") {
+      if (keyword.name === normalizedQuery || keyword.slug === normalizedQuery) {
+        return true;
+      }
+      continue;
+    }
+
+    if (match === "prefix") {
+      if (
+        keyword.name.startsWith(normalizedQuery) ||
+        keyword.slug.startsWith(normalizedQuery)
+      ) {
+        return true;
+      }
+      continue;
+    }
+
+    if (keyword.name.includes(normalizedQuery) || keyword.slug.includes(normalizedQuery)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function readExplorerSeriesId(item: { series_id?: unknown }): string {
@@ -219,7 +277,8 @@ export function matchesEventExplorerFilters(
     eventName.includes(query) ||
     cityName.includes(query) ||
     countryName.includes(query) ||
-    seriesName.includes(query);
+    seriesName.includes(query) ||
+    seriesKeywordsMatchQuery(item, query, "includes");
 
   const industryMatch = industry === "" || industry === "all" || seriesName === industry;
   const regionMatch = region === "" || region === "all" || countryName === region;
