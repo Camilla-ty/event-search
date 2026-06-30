@@ -6,24 +6,26 @@ import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { EventSponsorRow } from "./types";
 
-function publicTierLabel(raw: string | null | undefined): string | null {
-  if (typeof raw !== "string") return null;
-  const trimmed = raw.trim();
-  return trimmed !== "" ? trimmed : null;
-}
+type EventSponsorListItemProps = {
+  sponsor: EventSponsorRow;
+  variant?: "default" | "grouped";
+};
 
-export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) {
+export function EventSponsorListItem({
+  sponsor,
+  variant = "default",
+}: EventSponsorListItemProps) {
   const company = sponsor.companies;
-  const tierLabel = publicTierLabel(sponsor.tier_label);
   const heading = company?.name?.trim() || "Unknown sponsor";
   const shortRaw = company?.short_description?.trim();
   const profileHref = company
     ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
     : null;
+  const grouped = variant === "grouped";
 
   if (!profileHref) {
     return (
-      <li className="rounded-lg border border-slate-200 p-3">
+      <li className={grouped ? "px-4 py-3" : "rounded-lg border border-slate-200 p-3"}>
         <p className="font-semibold text-slate-900">{heading}</p>
       </li>
     );
@@ -33,7 +35,11 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
     <li>
       <Link
         href={profileHref}
-        className="block rounded-lg border border-slate-200 p-3 transition hover:border-brand-primary/40 hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
+        className={
+          grouped
+            ? "block px-4 py-3 transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-inset"
+            : "block rounded-lg border border-slate-200 p-3 transition hover:border-brand-primary/40 hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
+        }
       >
         <div className="flex gap-3">
           <CompanyLogo
@@ -42,12 +48,7 @@ export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) 
             monogramClassName="text-lg font-semibold text-slate-400"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-slate-900">{heading}</p>
-              {tierLabel ? (
-                <span className="shrink-0 text-xs font-medium text-slate-500">{tierLabel}</span>
-              ) : null}
-            </div>
+            <p className="font-semibold text-slate-900">{heading}</p>
             {shortRaw ? (
               <p className="line-clamp-2 text-sm text-slate-600">{shortRaw}</p>
             ) : null}
