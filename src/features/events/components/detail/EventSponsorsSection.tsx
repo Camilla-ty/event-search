@@ -45,7 +45,7 @@ export function EventSponsorsSection({
       {sponsors.length === 0 ? (
         <p className="text-sm text-slate-500">No sponsors linked to this event yet.</p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {tierGroups.map((group) => (
             <SponsorGroupCard
               key={group.tierRank === null ? "tier-unranked" : `tier-${group.tierRank}`}
