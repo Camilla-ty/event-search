@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
 import { Badge } from "@/src/components/common";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
-import { secondaryCtaClass } from "@/src/lib/design/classes";
+import { buildEventCardKeywordPreview } from "@/src/features/events/lib/eventCardKeywordPreview";
 
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
 
@@ -28,6 +26,7 @@ export function EventCard({ event }: { event: EventRecord }) {
     state: event.cities?.states?.name,
     country: event.cities?.countries?.name,
   });
+  const keywordPreview = buildEventCardKeywordPreview(event.series_keywords);
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -45,6 +44,27 @@ export function EventCard({ event }: { event: EventRecord }) {
           <p className="text-sm text-slate-600">
             {formatSponsorCount(event.sponsor_count ?? 0)}
           </p>
+          {keywordPreview ? (
+            <div className="flex flex-wrap gap-1.5">
+              {keywordPreview.visibleKeywords.map((keyword) => (
+                <Badge
+                  key={keyword.key}
+                  variant="neutral"
+                  className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                >
+                  {keyword.label}
+                </Badge>
+              ))}
+              {keywordPreview.overflowCount > 0 ? (
+                <Badge
+                  variant="neutral"
+                  className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                >
+                  +{keywordPreview.overflowCount}
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
           <p className="text-xs text-slate-500">
             {formatDateRange(event.start_date, event.end_date)}
           </p>
@@ -52,19 +72,6 @@ export function EventCard({ event }: { event: EventRecord }) {
             {location || "Location not set"}
           </p>
         </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Badge variant="neutral">{event.event_series?.name ?? "Event Series"}</Badge>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <Link
-          href={`/events/${event.slug ?? event.id}`}
-          className={`${secondaryCtaClass} h-9 w-full`}
-        >
-          View Event
-        </Link>
       </div>
     </article>
   );
