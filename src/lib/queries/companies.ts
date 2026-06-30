@@ -210,14 +210,70 @@ export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id
  */
 export async function getTotalSponsorCount(eventEditionId: string): Promise<number> {
   const editionKey = normalizeEditionIdForQuery(eventEditionId);
-  const supabase = createAdminClient();
-  const { count, error } = await supabase
-    .from("event_sponsors")
-    .select("id", { count: "exact", head: true })
-    .eq("event_editions_id", editionKey);
+  const counts = await getSponsorCountsByEditionIds([editionKey]);
+  return counts.get(editionKey) ?? 0;
+}
 
-  if (error) return 0;
-  return count ?? 0;
+/** Aggregate sponsor link rows into per-edition totals (normalized edition id keys). */
+export function buildSponsorCountByEditionId(
+  links: readonly { event_editions_id?: unknown }[],
+): Map<string, number> {
+  const countByEdition = new Map<string, number>();
+
+  for (const link of links) {
+    const editionId = link.event_editions_id;
+    if (typeof editionId !== "string") continue;
+
+    const editionKey = normalizeEditionIdForQuery(editionId);
+    if (editionKey === "") continue;
+
+    countByEdition.set(editionKey, (countByEdition.get(editionKey) ?? 0) + 1);
+  }
+
+  return countByEdition;
+}
+
+/**
+ * Total sponsor counts for many editions in one query (all tiers, auth-independent).
+ * Uses the admin client — server-only. Returns 0 for editions with no links.
+ */
+export async function getSponsorCountsByEditionIds(
+  editionIds: readonly string[],
+): Promise<Map<string, number>> {
+  const uniqueEditionIds = [
+    ...new Set(
+      editionIds
+        .map((editionId) => normalizeEditionIdForQuery(editionId))
+        .filter((editionId) => editionId !== ""),
+    ),
+  ];
+
+  if (uniqueEditionIds.length === 0) {
+    return new Map();
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("event_sponsors")
+      .select("event_editions_id")
+      .in("event_editions_id", uniqueEditionIds);
+
+    if (error) {
+      return new Map();
+    }
+
+    return buildSponsorCountByEditionId(data ?? []);
+  } catch {
+    return new Map();
+  }
+}
+
+export function readSponsorCountForEdition(
+  counts: ReadonlyMap<string, number>,
+  editionId: string,
+): number {
+  return counts.get(normalizeEditionIdForQuery(editionId)) ?? 0;
 }
 
 /**

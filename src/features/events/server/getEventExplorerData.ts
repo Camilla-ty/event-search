@@ -14,6 +14,10 @@ import {
   getSeriesIdsForKeywordId,
 } from "@/src/features/events/server/topicHubPublic";
 import { getEventEditions } from "@/src/lib/queries/events";
+import {
+  getSponsorCountsByEditionIds,
+  readSponsorCountForEdition,
+} from "@/src/lib/queries/companies";
 
 type EventExplorerFilters = {
   query?: string;
@@ -125,9 +129,16 @@ export async function getEventExplorerData(
   const filtered = applyEventExplorerFilters(editionsWithKeywords, normalizedFilters, {
     topicSeriesIds,
   });
+  const sponsorCountsByEditionId = await getSponsorCountsByEditionIds(
+    filtered.map((edition) => String(edition.id)),
+  );
+  const editionsWithSponsorCounts = filtered.map((edition) => ({
+    ...edition,
+    sponsor_count: readSponsorCountForEdition(sponsorCountsByEditionId, String(edition.id)),
+  }));
 
   return {
-    editions: filtered,
+    editions: editionsWithSponsorCounts,
     total: filtered.length,
     filters: normalizedFilters,
     filterFacets,

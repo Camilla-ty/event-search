@@ -17,6 +17,11 @@ function formatDateRange(start?: string | null, end?: string | null) {
   return `${start} - ${end}`;
 }
 
+function formatSponsorCount(count: number): string {
+  if (count === 1) return "1 Sponsor";
+  return `${count} Sponsors`;
+}
+
 export function EventCard({ event }: { event: EventRecord }) {
   const location = formatLocationLabel({
     city: event.cities?.name,
@@ -37,6 +42,9 @@ export function EventCard({ event }: { event: EventRecord }) {
           <h3 className="line-clamp-1 text-base font-semibold text-slate-900">
             {event.name ?? "Untitled Event"}
           </h3>
+          <p className="text-sm text-slate-600">
+            {formatSponsorCount(event.sponsor_count ?? 0)}
+          </p>
           <p className="text-xs text-slate-500">
             {formatDateRange(event.start_date, event.end_date)}
           </p>
