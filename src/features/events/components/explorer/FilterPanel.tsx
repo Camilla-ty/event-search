@@ -9,6 +9,10 @@ import {
 } from "@/src/components/common/explorer";
 
 import type { EventExplorerTopicFacet } from "@/src/features/events/lib/eventExplorerFilterFacets";
+import {
+  buildTopicCheckboxOptions,
+  toggleTopicSelection,
+} from "@/src/features/events/lib/filterPanelTopics";
 
 import type { EventFilters } from "./types";
 
@@ -17,6 +21,7 @@ type FilterPanelProps = {
   seriesOptions: string[];
   countryOptions: string[];
   topicOptions: EventExplorerTopicFacet[];
+  /** @deprecated Unknown topics are derived from selected slugs not in `topicOptions`. */
   topicUnknown?: boolean;
   onChange: (next: EventFilters) => void;
   onReset: () => void;
@@ -28,34 +33,61 @@ export function FilterPanel({
   seriesOptions,
   countryOptions,
   topicOptions,
-  topicUnknown = false,
   onChange,
   onReset,
   className,
 }: FilterPanelProps) {
-  const activeTopicSlug = filters.topic.trim();
-  const topicOptionsWithActive =
-    activeTopicSlug !== "" &&
-    topicUnknown &&
-    !topicOptions.some((topic) => topic.slug === activeTopicSlug)
-      ? [{ slug: activeTopicSlug, name: `${activeTopicSlug} (not found)` }, ...topicOptions]
-      : topicOptions;
+  const topicCheckboxOptions = buildTopicCheckboxOptions(topicOptions, filters.topics);
+  const selectedTopicCount = filters.topics.length;
 
   return (
     <FilterPanelShell onReset={onReset} className={className}>
-      <FilterField label="Topic">
-        <select
-          value={activeTopicSlug}
-          onChange={(event) => onChange({ ...filters, topic: event.target.value })}
-          className={filterInputClass}
-        >
-          <option value="">All topics</option>
-          {topicOptionsWithActive.map((topic) => (
-            <option key={topic.slug} value={topic.slug}>
-              {topic.name}
-            </option>
-          ))}
-        </select>
+      <FilterField
+        label={
+          selectedTopicCount > 0 ? `Topic (${selectedTopicCount} selected)` : "Topic"
+        }
+      >
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+          {topicCheckboxOptions.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-slate-500">No topics available</p>
+          ) : (
+            topicCheckboxOptions.map((topic) => {
+              const checked = filters.topics.includes(topic.slug);
+
+              return (
+                <label
+                  key={topic.slug}
+                  className="flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-sm transition hover:bg-slate-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) =>
+                      onChange({
+                        ...filters,
+                        topics: toggleTopicSelection(
+                          filters.topics,
+                          topic.slug,
+                          event.target.checked,
+                        ),
+                      })
+                    }
+                    className="size-4 shrink-0 rounded border-slate-300 text-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+                  />
+                  <span
+                    className={[
+                      "min-w-0 truncate",
+                      checked ? "font-medium text-brand-primary" : "text-slate-700",
+                    ].join(" ")}
+                    title={topic.name}
+                  >
+                    {topic.name}
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
       </FilterField>
 
       <FilterField label="Event series">

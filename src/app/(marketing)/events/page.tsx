@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import { sortEventExplorerResults } from "@/src/features/events/lib/eventExplorerOrdering";
+import { parseEventExplorerFiltersFromSearchParams } from "@/src/features/events/lib/eventExplorerQuery";
 import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 
@@ -22,22 +23,51 @@ type EventsPageProps = {
     type?: string;
     start?: string;
     end?: string;
-    topic?: string;
+    topic?: string | string[];
     view?: string;
     month?: string;
   }>;
 };
 
+function toEventExplorerSearchParams(
+  raw: Awaited<EventsPageProps["searchParams"]>,
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  const entries: Array<[string, string | string[] | undefined]> = [
+    ["q", raw.q],
+    ["industry", raw.industry],
+    ["region", raw.region],
+    ["type", raw.type],
+    ["start", raw.start],
+    ["end", raw.end],
+    ["view", raw.view],
+    ["month", raw.month],
+  ];
+
+  for (const [key, value] of entries) {
+    if (typeof value !== "string" || value === "") continue;
+    params.set(key, value);
+  }
+
+  const topicValues = raw.topic === undefined ? [] : Array.isArray(raw.topic) ? raw.topic : [raw.topic];
+  for (const topic of topicValues) {
+    params.append("topic", topic);
+  }
+
+  return params;
+}
+
 export default async function EventsPageRoute({ searchParams }: EventsPageProps) {
-  const { q, industry, region, type, start, end, topic } = await searchParams;
+  const raw = await searchParams;
+  const filters = parseEventExplorerFiltersFromSearchParams(toEventExplorerSearchParams(raw));
   const data = await getEventExplorerData({
-    query: q,
-    industry,
-    region,
-    type,
-    startDate: start,
-    endDate: end,
-    topic,
+    query: filters.query,
+    series: filters.series,
+    region: filters.region,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    topics: filters.topics,
   });
   const events: EventRecord[] = sortEventExplorerResults(
     (data.editions ?? []).map((edition) => ({
@@ -104,11 +134,9 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
         region: data.filters.region ?? "all",
         startDate: data.filters.startDate ?? "",
         endDate: data.filters.endDate ?? "",
-        topic: data.filters.topic ?? "",
+        topics: data.filters.topics ?? [],
       }}
       filterFacets={data.filterFacets}
-      activeTopic={data.activeTopic}
-      topicUnknown={data.topicUnknown}
     />
   );
 }

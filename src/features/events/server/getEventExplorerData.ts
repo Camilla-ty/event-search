@@ -29,7 +29,9 @@ type EventExplorerFilters = {
   type?: string;
   startDate?: string;
   endDate?: string;
+  /** @deprecated Use `topics`. */
   topic?: string;
+  topics?: readonly string[];
 };
 
 export type EventExplorerActiveTopic = {
@@ -46,7 +48,7 @@ export type EventExplorerData = {
     region: string;
     startDate: string;
     endDate: string;
-    topic: string;
+    topics: string[];
   };
   filterFacets: EventExplorerFilterFacets;
   activeTopic: EventExplorerActiveTopic | null;
@@ -64,42 +66,80 @@ export {
   readExplorerSeriesId as readEditionSeriesId,
 } from "@/src/features/events/lib/eventExplorerQuery";
 
-function resolveTopicSeriesIds(
-  topicSlug: string,
-): Promise<{
+export type TopicSeriesResolution = {
+  slug: string;
+  keyword: EventExplorerActiveTopic | null;
+  seriesIds: readonly string[];
+};
+
+export function mergeTopicSeriesResolutions(
+  resolutions: readonly TopicSeriesResolution[],
+): {
+  activeTopic: EventExplorerActiveTopic | null;
+  topicUnknown: boolean;
+  topicSeriesIds: Set<string> | null;
+} {
+  if (resolutions.length === 0) {
+    return {
+      activeTopic: null,
+      topicUnknown: false,
+      topicSeriesIds: null,
+    };
+  }
+
+  const topicSeriesIds = new Set<string>();
+  for (const resolution of resolutions) {
+    for (const seriesId of resolution.seriesIds) {
+      const trimmed = seriesId.trim();
+      if (trimmed !== "") {
+        topicSeriesIds.add(trimmed);
+      }
+    }
+  }
+
+  const primary = resolutions[0];
+  return {
+    activeTopic: primary.keyword,
+    topicUnknown: primary.keyword === null,
+    topicSeriesIds,
+  };
+}
+
+async function resolveTopicFilters(topicSlugs: readonly string[]): Promise<{
   activeTopic: EventExplorerActiveTopic | null;
   topicUnknown: boolean;
   topicSeriesIds: Set<string> | null;
 }> {
-  if (topicSlug === "") {
-    return Promise.resolve({
+  if (topicSlugs.length === 0) {
+    return {
       activeTopic: null,
       topicUnknown: false,
       topicSeriesIds: null,
-    });
+    };
   }
 
-  return getPublicKeywordBySlug(topicSlug).then(async (keyword) => {
-    if (!keyword) {
-      return {
-        activeTopic: null,
-        topicUnknown: true,
-        topicSeriesIds: new Set<string>(),
-      };
-    }
+  const resolutions = await Promise.all(
+    topicSlugs.map(async (slug): Promise<TopicSeriesResolution> => {
+      const keyword = await getPublicKeywordBySlug(slug);
+      if (!keyword) {
+        return { slug, keyword: null, seriesIds: [] };
+      }
 
-    return {
-      activeTopic: { slug: keyword.slug, name: keyword.name },
-      topicUnknown: false,
-      topicSeriesIds: new Set(await getSeriesIdsForKeywordId(keyword.id)),
-    };
-  });
+      return {
+        slug,
+        keyword: { slug: keyword.slug, name: keyword.name },
+        seriesIds: await getSeriesIdsForKeywordId(keyword.id),
+      };
+    }),
+  );
+
+  return mergeTopicSeriesResolutions(resolutions);
 }
 
 export async function getEventExplorerData(
   filters: EventExplorerFilters = {},
 ): Promise<EventExplorerData> {
-  const topicSlug = (filters.topic ?? "").trim();
+  const normalizedFilters = normalizeEventExplorerFilters(filters);
   const editions = (await getEventEditions()) ?? [];
   const seriesIds = editions
     .map((edition) => readExplorerSeriesId(edition))
@@ -115,9 +155,8 @@ export async function getEventExplorerData(
   });
 
   const { activeTopic, topicUnknown, topicSeriesIds } =
-    await resolveTopicSeriesIds(topicSlug);
+    await resolveTopicFilters(normalizedFilters.topics);
 
-  const normalizedFilters = normalizeEventExplorerFilters({ ...filters, topic: topicSlug });
   const facetEditions = getEventExplorerFacetEditions(editionsWithKeywords, topicSeriesIds);
   const filterFacets =
     editionsWithKeywords.length === 0

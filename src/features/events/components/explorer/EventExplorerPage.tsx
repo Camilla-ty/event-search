@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -10,7 +9,7 @@ import {
   PageHeader,
 } from "@/src/components/common/explorer";
 import type { EventExplorerFilterFacets } from "@/src/features/events/lib/eventExplorerFilterFacets";
-import type { EventExplorerActiveTopic } from "@/src/features/events/server/getEventExplorerData";
+import { toggleTopicSelection } from "@/src/features/events/lib/filterPanelTopics";
 import {
   eventsIntersectMonth,
   formatCalendarMonthLabel,
@@ -26,17 +25,16 @@ import {
   sortEventExplorerResults,
   type EventExplorerSortMode,
 } from "@/src/features/events/lib/eventExplorerOrdering";
-import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
 import {
-  buildTopicHubPath,
   parseEventExplorerMonth,
   parseEventExplorerView,
 } from "@/src/lib/routes/explorerUrls";
 
+import { ActiveTopicFilters } from "./ActiveTopicFilters";
 import { EventCalendar } from "./EventCalendar";
 import { EventGrid } from "./EventGrid";
 import { EventViewToggle } from "./EventViewToggle";
@@ -53,16 +51,12 @@ type EventExplorerPageProps = {
   events: EventRecord[];
   initialFilters?: EventFilters;
   filterFacets: EventExplorerFilterFacets;
-  activeTopic?: EventExplorerActiveTopic | null;
-  topicUnknown?: boolean;
 };
 
 export function EventExplorerPage({
   events,
   initialFilters,
   filterFacets,
-  activeTopic = null,
-  topicUnknown = false,
 }: EventExplorerPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -86,19 +80,10 @@ export function EventExplorerPage({
     return getCurrentMonthKey();
   }, [appliedFilters.startDate]);
   const visibleCalendarMonth = calendarMonth ?? defaultCalendarMonth;
-  const topicSlug = appliedFilters.topic.trim();
   const appliedFilterKey = useMemo(
     () => buildEventExplorerSearchParams(appliedFilters).toString(),
     [appliedFilters],
   );
-  const clearTopicHref = useMemo(() => {
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete("topic");
-    const value = next.toString();
-    return value ? `${pathname}?${value}` : pathname;
-  }, [pathname, searchParams]);
-  const topicHubHref =
-    activeTopic !== null ? buildTopicHubPath(activeTopic.slug) : null;
 
   const sortedEvents = useMemo(() => {
     return sortEventExplorerResults(events, {
@@ -188,6 +173,20 @@ export function EventExplorerPage({
     setPage(1);
   }
 
+  function handleClearTopics() {
+    setDraftFilters({
+      ...draftFilters,
+      topics: [],
+    });
+  }
+
+  function handleRemoveTopic(slug: string) {
+    setDraftFilters({
+      ...draftFilters,
+      topics: toggleTopicSelection(draftFilters.topics, slug, false),
+    });
+  }
+
   return (
     <section className="space-y-4">
       <PageHeader
@@ -202,7 +201,6 @@ export function EventExplorerPage({
             seriesOptions={filterFacets.series}
             countryOptions={filterFacets.countries}
             topicOptions={filterFacets.topics}
-            topicUnknown={topicUnknown}
             onChange={setDraftFilters}
             onReset={handleReset}
             className={explorerFilterStickyClass}
@@ -210,29 +208,12 @@ export function EventExplorerPage({
         </div>
 
         <div className="space-y-4">
-          {topicSlug !== "" ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-primary/20 bg-brand-primary-muted px-4 py-3 text-sm text-slate-700">
-              <span className="font-medium text-slate-900">
-                Topic:{" "}
-                {activeTopic ? (
-                  topicHubHref ? (
-                    <Link href={topicHubHref} className={brandLinkClass}>
-                      {activeTopic.name}
-                    </Link>
-                  ) : (
-                    activeTopic.name
-                  )
-                ) : topicUnknown ? (
-                  `${topicSlug} (not found)`
-                ) : (
-                  topicSlug
-                )}
-              </span>
-              <Link href={clearTopicHref} className={`${brandLinkClass} ml-auto`}>
-                Clear topic
-              </Link>
-            </div>
-          ) : null}
+          <ActiveTopicFilters
+            topics={draftFilters.topics}
+            topicOptions={filterFacets.topics}
+            onRemoveTopic={handleRemoveTopic}
+            onClearAll={handleClearTopics}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <EventViewToggle view={explorerView} onViewChange={handleViewChange} />
             <div className="min-w-0 flex-1">
@@ -275,7 +256,6 @@ export function EventExplorerPage({
           seriesOptions={filterFacets.series}
           countryOptions={filterFacets.countries}
           topicOptions={filterFacets.topics}
-          topicUnknown={topicUnknown}
           onChange={setDraftFilters}
           onReset={handleReset}
         />

@@ -10,7 +10,7 @@ const defaultFilters: EventFilters = {
   region: "all",
   startDate: "",
   endDate: "",
-  topic: "",
+  topics: [],
 };
 
 function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): EventRecord {

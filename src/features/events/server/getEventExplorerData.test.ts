@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   editionMatchesTopicSeriesIds,
+  mergeTopicSeriesResolutions,
   readEditionSeriesId,
 } from "@/src/features/events/server/getEventExplorerData";
 
@@ -37,5 +38,112 @@ describe("editionMatchesTopicSeriesIds", () => {
       editionMatchesTopicSeriesIds({ series_id: "series-a" }, new Set()),
       false,
     );
+  });
+});
+
+describe("mergeTopicSeriesResolutions", () => {
+  it("returns null topicSeriesIds for an empty topics array", () => {
+    const result = mergeTopicSeriesResolutions([]);
+    assert.equal(result.activeTopic, null);
+    assert.equal(result.topicUnknown, false);
+    assert.equal(result.topicSeriesIds, null);
+  });
+
+  it("resolves a single known topic", () => {
+    const result = mergeTopicSeriesResolutions([
+      {
+        slug: "bitcoin",
+        keyword: { slug: "bitcoin", name: "Bitcoin" },
+        seriesIds: ["series-a"],
+      },
+    ]);
+
+    assert.deepEqual(result.activeTopic, { slug: "bitcoin", name: "Bitcoin" });
+    assert.equal(result.topicUnknown, false);
+    assert.deepEqual(result.topicSeriesIds, new Set(["series-a"]));
+  });
+
+  it("unions series IDs across multiple topics with OR semantics", () => {
+    const result = mergeTopicSeriesResolutions([
+      {
+        slug: "bitcoin",
+        keyword: { slug: "bitcoin", name: "Bitcoin" },
+        seriesIds: ["series-a", "series-b"],
+      },
+      {
+        slug: "ai",
+        keyword: { slug: "ai", name: "AI" },
+        seriesIds: ["series-c"],
+      },
+    ]);
+
+    assert.equal(result.topicUnknown, false);
+    assert.deepEqual(
+      result.topicSeriesIds,
+      new Set(["series-a", "series-b", "series-c"]),
+    );
+  });
+
+  it("deduplicates overlapping series IDs across topics", () => {
+    const result = mergeTopicSeriesResolutions([
+      {
+        slug: "bitcoin",
+        keyword: { slug: "bitcoin", name: "Bitcoin" },
+        seriesIds: ["series-a", "series-shared"],
+      },
+      {
+        slug: "ai",
+        keyword: { slug: "ai", name: "AI" },
+        seriesIds: ["series-shared", "series-b"],
+      },
+    ]);
+
+    assert.deepEqual(
+      result.topicSeriesIds,
+      new Set(["series-a", "series-shared", "series-b"]),
+    );
+  });
+
+  it("ignores unknown topic slugs without throwing", () => {
+    const result = mergeTopicSeriesResolutions([
+      {
+        slug: "missing",
+        keyword: null,
+        seriesIds: [],
+      },
+    ]);
+
+    assert.equal(result.activeTopic, null);
+    assert.equal(result.topicUnknown, true);
+    assert.deepEqual(result.topicSeriesIds, new Set());
+  });
+
+  it("unions known topics while skipping unknown slugs", () => {
+    const result = mergeTopicSeriesResolutions([
+      {
+        slug: "missing",
+        keyword: null,
+        seriesIds: [],
+      },
+      {
+        slug: "ai",
+        keyword: { slug: "ai", name: "AI" },
+        seriesIds: ["series-b"],
+      },
+    ]);
+
+    assert.equal(result.activeTopic, null);
+    assert.equal(result.topicUnknown, true);
+    assert.deepEqual(result.topicSeriesIds, new Set(["series-b"]));
+  });
+
+  it("returns an empty set when every topic slug is unknown", () => {
+    const result = mergeTopicSeriesResolutions([
+      { slug: "missing-a", keyword: null, seriesIds: [] },
+      { slug: "missing-b", keyword: null, seriesIds: [] },
+    ]);
+
+    assert.equal(result.topicUnknown, true);
+    assert.deepEqual(result.topicSeriesIds, new Set());
   });
 });

@@ -38,5 +38,5 @@ export type EventFilters = {
   region: string;
   startDate: string;
   endDate: string;
-  topic: string;
+  topics: string[];
 };

@@ -38,7 +38,7 @@ export const DEFAULT_EVENT_EXPLORER_FILTERS: EventExplorerFilterState = {
   region: "all",
   startDate: "",
   endDate: "",
-  topic: "",
+  topics: [],
 };
 
 export type EventExplorerSearchParamsInput = {
@@ -51,7 +51,9 @@ export type EventExplorerSearchParamsInput = {
   type?: string | null;
   start?: string | null;
   end?: string | null;
+  /** @deprecated Use repeated `topic` URL params / `topics` array. */
   topic?: string | null;
+  topics?: readonly string[] | null;
 };
 
 export type EventExplorerFilterOptions = {
@@ -175,6 +177,33 @@ export function resolveEventExplorerSeriesFilter(
   return "all";
 }
 
+/** Normalize topic slugs from URL arrays or legacy single `topic` input. */
+export function normalizeEventExplorerTopics(
+  input: {
+    topics?: readonly string[] | null;
+    topic?: string | null;
+  } = {},
+): string[] {
+  const raw =
+    input.topics !== undefined && input.topics !== null
+      ? input.topics
+      : input.topic !== undefined && input.topic !== null
+        ? [input.topic]
+        : [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const value of raw) {
+    const trimmed = String(value).trim();
+    if (trimmed === "" || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+
+  return normalized;
+}
+
 /** Coerce partial / URL / server inputs into canonical filter state. */
 export function normalizeEventExplorerFilters(
   input: EventExplorerSearchParamsInput &
@@ -187,6 +216,7 @@ export function normalizeEventExplorerFilters(
       startDate: string | null;
       endDate: string | null;
       topic: string | null;
+      topics: readonly string[] | null;
     }> = {},
 ): EventExplorerFilterState {
   const query =
@@ -208,7 +238,7 @@ export function normalizeEventExplorerFilters(
       input.endDate !== undefined
         ? normalizeFilterDate(input.endDate)
         : normalizeFilterDate(input.end),
-    topic: (input.topic ?? "").trim(),
+    topics: normalizeEventExplorerTopics(input),
   };
 }
 
@@ -224,11 +254,21 @@ export function parseEventExplorerFiltersFromSearchParams(
       type: params.get("type") ?? undefined,
       start: params.get("start") ?? undefined,
       end: params.get("end") ?? undefined,
-      topic: params.get("topic") ?? undefined,
+      topics: params.getAll("topic"),
     });
   }
 
-  return normalizeEventExplorerFilters(params);
+  const topicValues: string[] =
+    params.topics !== undefined && params.topics !== null
+      ? [...params.topics]
+      : params.topic !== undefined && params.topic !== null
+        ? [params.topic]
+        : [];
+
+  return normalizeEventExplorerFilters({
+    ...params,
+    topics: topicValues,
+  });
 }
 
 export function buildEventExplorerSearchParams(
@@ -259,8 +299,8 @@ export function buildEventExplorerSearchParams(
     next.set("end", normalized.endDate);
   }
 
-  if (normalized.topic !== "") {
-    next.set("topic", normalized.topic);
+  for (const topic of normalized.topics) {
+    next.append("topic", topic);
   }
 
   if (options.view === "calendar") {
