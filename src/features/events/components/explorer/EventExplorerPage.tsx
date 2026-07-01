@@ -16,9 +16,12 @@ import {
   getCurrentMonthKey,
 } from "@/src/features/events/lib/eventCalendarGrouping";
 import { buildCalendarToolbarCounts } from "@/src/features/events/lib/eventExplorerCounts";
+import { applyOptimisticTopicDisplayFilter, isTopicOptimisticDisplaySufficient } from "@/src/features/events/lib/eventOptimisticTopicFilter";
 import {
+  buildEventExplorerFilterKey,
   buildEventExplorerSearchParams,
   DEFAULT_EVENT_EXPLORER_FILTERS,
+  eventExplorerClientUrlMatchesDraft,
   isEventExplorerFiltersApplying,
   parseEventExplorerFiltersFromSearchParams,
 } from "@/src/features/events/lib/eventExplorerQuery";
@@ -84,7 +87,7 @@ export function EventExplorerPage({
   }, [appliedFilters.startDate]);
   const visibleCalendarMonth = calendarMonth ?? defaultCalendarMonth;
   const appliedFilterKey = useMemo(
-    () => buildEventExplorerSearchParams(appliedFilters).toString(),
+    () => buildEventExplorerFilterKey(appliedFilters),
     [appliedFilters],
   );
   const serverFilters = initialFilters ?? appliedFilters;
@@ -98,13 +101,32 @@ export function EventExplorerPage({
       }),
     [appliedFilters, draftFilters, isPending, serverFilters],
   );
+  const showResultsApplyingState = useMemo(
+    () =>
+      isFiltersApplying &&
+      !isTopicOptimisticDisplaySufficient(draftFilters.topics, serverFilters.topics),
+    [draftFilters.topics, isFiltersApplying, serverFilters.topics],
+  );
 
   const sortedEvents = useMemo(() => {
-    return sortEventExplorerResults(events, {
+    const displayEvents = applyOptimisticTopicDisplayFilter(events, {
+      draftTopics: draftFilters.topics,
+      serverTopics: serverFilters.topics,
+      isFiltersApplying,
+    });
+
+    return sortEventExplorerResults(displayEvents, {
       query: appliedFilters.query,
       sortMode: sort,
     });
-  }, [appliedFilters.query, events, sort]);
+  }, [
+    appliedFilters.query,
+    draftFilters.topics,
+    events,
+    isFiltersApplying,
+    serverFilters.topics,
+    sort,
+  ]);
 
   const calendarToolbarCounts = useMemo(() => {
     if (explorerView !== "calendar") return null;
@@ -138,13 +160,19 @@ export function EventExplorerPage({
       view: explorerView === "calendar" ? "calendar" : undefined,
       month: visibleCalendarMonth,
     });
-    const current = searchParams.toString();
-    const nextValue = next.toString();
-    if (current !== nextValue) {
-      startTransition(() => {
-        router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
-      });
+    if (
+      eventExplorerClientUrlMatchesDraft(searchParams, draftFilters, {
+        view: explorerView,
+        month: visibleCalendarMonth,
+      })
+    ) {
+      return;
     }
+
+    const nextValue = next.toString();
+    startTransition(() => {
+      router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+    });
   }, [
     draftFilters,
     explorerView,
@@ -247,10 +275,10 @@ export function EventExplorerPage({
               />
             </div>
           </div>
-          <FilterApplyingIndicator visible={isFiltersApplying} />
+          <FilterApplyingIndicator visible={showResultsApplyingState} />
           <div
             className={
-              isFiltersApplying
+              showResultsApplyingState
                 ? "opacity-60 transition-opacity duration-200"
                 : "transition-opacity duration-200"
             }

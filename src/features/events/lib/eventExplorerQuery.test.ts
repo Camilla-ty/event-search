@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildEventExplorerFilterKey,
   buildEventExplorerSearchParams,
+  eventExplorerClientUrlMatchesDraft,
   isEventExplorerFiltersApplying,
   normalizeEventExplorerFilters,
   parseEventExplorerFiltersFromSearchParams,
@@ -80,6 +82,71 @@ describe("normalizeEventExplorerFilters topics", () => {
   });
 });
 
+describe("buildEventExplorerFilterKey topics", () => {
+  const baseFilters = {
+    query: "",
+    series: "all",
+    region: "all",
+    startDate: "",
+    endDate: "",
+    topics: [] as string[],
+  };
+
+  it("treats topic param order as equivalent", () => {
+    const bitcoinAi = buildEventExplorerFilterKey({
+      ...baseFilters,
+      topics: ["bitcoin", "ai"],
+    });
+    const aiBitcoin = buildEventExplorerFilterKey({
+      ...baseFilters,
+      topics: ["ai", "bitcoin"],
+    });
+
+    assert.equal(bitcoinAi, aiBitcoin);
+    assert.equal(bitcoinAi, "topic=ai&topic=bitcoin");
+  });
+
+  it("deduplicates repeated topic slugs in the comparison key", () => {
+    const key = buildEventExplorerFilterKey({
+      ...baseFilters,
+      topics: ["bitcoin", "bitcoin", "ai"],
+    });
+
+    assert.equal(key, "topic=ai&topic=bitcoin");
+  });
+
+  it("parses repeated URL topic params into the same key regardless of order", () => {
+    const fromUrl = buildEventExplorerFilterKey(
+      parseEventExplorerFiltersFromSearchParams(
+        new URLSearchParams("topic=ai&topic=bitcoin&topic=ai"),
+      ),
+    );
+
+    assert.equal(fromUrl, "topic=ai&topic=bitcoin");
+  });
+});
+
+describe("eventExplorerClientUrlMatchesDraft", () => {
+  const baseFilters = {
+    query: "",
+    series: "all",
+    region: "all",
+    startDate: "",
+    endDate: "",
+    topics: ["bitcoin", "ai"],
+  };
+
+  it("matches when only topic param order differs", () => {
+    const params = new URLSearchParams("topic=ai&topic=bitcoin");
+    assert.equal(eventExplorerClientUrlMatchesDraft(params, baseFilters), true);
+  });
+
+  it("does not match when topic selection differs", () => {
+    const params = new URLSearchParams("topic=bitcoin");
+    assert.equal(eventExplorerClientUrlMatchesDraft(params, baseFilters), false);
+  });
+});
+
 const stableFilters = {
   query: "",
   series: "all",
@@ -143,6 +210,28 @@ describe("isEventExplorerFiltersApplying", () => {
         draftFilters: topicFilters,
         appliedFilters: topicFilters,
         serverFilters: topicFilters,
+      }),
+      false,
+    );
+  });
+
+  it("returns false when only topic order differs between draft and applied", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: { ...stableFilters, topics: ["bitcoin", "ai"] },
+        appliedFilters: { ...stableFilters, topics: ["ai", "bitcoin"] },
+        serverFilters: { ...stableFilters, topics: ["ai", "bitcoin"] },
+      }),
+      false,
+    );
+  });
+
+  it("returns false when server topics match applied but in different order", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: { ...stableFilters, topics: ["bitcoin", "ai"] },
+        appliedFilters: { ...stableFilters, topics: ["bitcoin", "ai"] },
+        serverFilters: { ...stableFilters, topics: ["ai", "bitcoin"] },
       }),
       false,
     );

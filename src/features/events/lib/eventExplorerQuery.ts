@@ -204,6 +204,23 @@ export function normalizeEventExplorerTopics(
   return normalized;
 }
 
+/** Topic slugs sorted for stable, order-insensitive filter comparison keys. */
+export function sortTopicSlugsForComparison(topics: readonly string[]): string[] {
+  return normalizeEventExplorerTopics({ topics }).sort((a, b) => a.localeCompare(b));
+}
+
+export function areEventExplorerTopicSlugsEqual(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  const normalizedLeft = sortTopicSlugsForComparison(left);
+  const normalizedRight = sortTopicSlugsForComparison(right);
+
+  if (normalizedLeft.length !== normalizedRight.length) return false;
+
+  return normalizedLeft.every((slug, index) => slug === normalizedRight[index]);
+}
+
 /** Coerce partial / URL / server inputs into canonical filter state. */
 export function normalizeEventExplorerFilters(
   input: EventExplorerSearchParamsInput &
@@ -315,7 +332,40 @@ export function buildEventExplorerSearchParams(
 
 /** Canonical filter-only URL key (excludes view/month). Used to compare filter state. */
 export function buildEventExplorerFilterKey(filters: EventExplorerFilterState): string {
-  return buildEventExplorerSearchParams(filters).toString();
+  const normalized = normalizeEventExplorerFilters(filters);
+  return buildEventExplorerSearchParams({
+    ...normalized,
+    topics: sortTopicSlugsForComparison(normalized.topics),
+  }).toString();
+}
+
+export type EventExplorerClientUrlOptions = {
+  view?: "list" | "calendar";
+  month?: string;
+};
+
+/** True when URL params already match draft filters (topic order ignored) and view/month. */
+export function eventExplorerClientUrlMatchesDraft(
+  searchParams: URLSearchParams,
+  draftFilters: EventExplorerFilterState,
+  options: EventExplorerClientUrlOptions = {},
+): boolean {
+  const applied = parseEventExplorerFiltersFromSearchParams(searchParams);
+  if (buildEventExplorerFilterKey(applied) !== buildEventExplorerFilterKey(draftFilters)) {
+    return false;
+  }
+
+  const nextView = options.view === "calendar" ? "calendar" : null;
+  const currentView = searchParams.get("view");
+  if ((currentView ?? null) !== nextView) return false;
+
+  if (nextView === "calendar") {
+    const currentMonth = searchParams.get("month") ?? "";
+    const nextMonth = options.month?.trim() ?? "";
+    if (currentMonth !== nextMonth) return false;
+  }
+
+  return true;
 }
 
 export function isEventExplorerFiltersApplying(input: {
