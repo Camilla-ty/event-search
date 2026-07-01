@@ -6,8 +6,7 @@ import { usePathname } from "next/navigation";
 import { buildSignupEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 
-import { groupEventSponsorsByTier } from "./eventSponsorGrouping";
-import { SponsorGroupCard } from "./SponsorGroupCard";
+import { EventSponsorListItem } from "./EventSponsorListItem";
 import type { EventSponsorRow } from "./types";
 
 type EventSponsorsSectionProps = {
@@ -29,7 +28,6 @@ export function EventSponsorsSection({
     eventSlug.trim() !== ""
       ? `/sponsors?event=${encodeURIComponent(eventSlug.trim())}`
       : "/sponsors";
-  const tierGroups = groupEventSponsorsByTier(sponsors);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -45,14 +43,11 @@ export function EventSponsorsSection({
       {sponsors.length === 0 ? (
         <p className="text-sm text-slate-500">No sponsors linked to this event yet.</p>
       ) : (
-        <div className="space-y-5">
-          {tierGroups.map((group) => (
-            <SponsorGroupCard
-              key={group.tierRank === null ? "tier-unranked" : `tier-${group.tierRank}`}
-              group={group}
-            />
+        <ul className="space-y-2">
+          {sponsors.map((sponsor) => (
+            <EventSponsorListItem key={String(sponsor.id)} sponsor={sponsor} />
           ))}
-        </div>
+        </ul>
       )}
 
       {!isAuthenticated ? (

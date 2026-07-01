@@ -133,6 +133,27 @@ function compareIsoAsc(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
+function hasLastReviewed(event: EventExplorerOrderable): boolean {
+  const value = event.last_reviewed_at;
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function compareReviewedPriority(
+  a: EventExplorerOrderable,
+  b: EventExplorerOrderable,
+): number {
+  const reviewedA = hasLastReviewed(a) ? 0 : 1;
+  const reviewedB = hasLastReviewed(b) ? 0 : 1;
+  return reviewedA - reviewedB;
+}
+
+function compareSponsorCountDesc(
+  a: EventExplorerOrderable,
+  b: EventExplorerOrderable,
+): number {
+  return (b.sponsor_count ?? 0) - (a.sponsor_count ?? 0);
+}
+
 function compareWithinTemporalBucket(
   a: EventExplorerOrderable,
   b: EventExplorerOrderable,
@@ -170,6 +191,33 @@ function compareWithinTemporalBucket(
     default:
       return 0;
   }
+}
+
+export function compareEventBrowseRecommendedOrder(
+  a: EventExplorerOrderable,
+  b: EventExplorerOrderable,
+  today: string,
+): number {
+  const reviewedDiff = compareReviewedPriority(a, b);
+  if (reviewedDiff !== 0) return reviewedDiff;
+
+  const bucketA = classifyEventTemporalBucket(a, today);
+  const bucketB = classifyEventTemporalBucket(b, today);
+  const bucketDiff = TEMPORAL_BUCKET_PRIORITY[bucketA] - TEMPORAL_BUCKET_PRIORITY[bucketB];
+  if (bucketDiff !== 0) return bucketDiff;
+
+  const sponsorDiff = compareSponsorCountDesc(a, b);
+  if (sponsorDiff !== 0) return sponsorDiff;
+
+  const withinBucket = compareWithinTemporalBucket(a, b, bucketA);
+  if (withinBucket !== 0) return withinBucket;
+
+  const byName = (a.name ?? "").localeCompare(b.name ?? "", undefined, {
+    sensitivity: "base",
+  });
+  if (byName !== 0) return byName;
+
+  return a.id.localeCompare(b.id);
 }
 
 export function compareEventSearchOrder(
@@ -234,8 +282,12 @@ export function sortEventExplorerResults<T extends EventRecord>(
     return [...events].sort(compareNameOrder);
   }
 
-  if (options.sortMode === "date" || query === "") {
+  if (options.sortMode === "date") {
     return [...events].sort(compareChronologicalOrder);
+  }
+
+  if (query === "") {
+    return [...events].sort((a, b) => compareEventBrowseRecommendedOrder(a, b, today));
   }
 
   return [...events].sort((a, b) => compareEventSearchOrder(a, b, query, today));

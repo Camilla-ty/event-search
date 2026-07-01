@@ -4,64 +4,52 @@ import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
-import { formatEventSponsorWebsiteSubtitle } from "./eventSponsorUtils";
 import type { EventSponsorRow } from "./types";
 
-type EventSponsorListItemProps = {
-  sponsor: EventSponsorRow;
-  variant?: "default" | "grouped";
-};
+function publicTierLabel(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed !== "" ? trimmed : null;
+}
 
-export function EventSponsorListItem({
-  sponsor,
-  variant = "default",
-}: EventSponsorListItemProps) {
+export function EventSponsorListItem({ sponsor }: { sponsor: EventSponsorRow }) {
   const company = sponsor.companies;
+  const tierLabel = publicTierLabel(sponsor.tier_label);
   const heading = company?.name?.trim() || "Unknown sponsor";
-  const subtitle = formatEventSponsorWebsiteSubtitle(company);
+  const shortRaw = company?.short_description?.trim();
   const profileHref = company
     ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
     : null;
-  const grouped = variant === "grouped";
-
-  const groupedItemClass =
-    "flex min-h-[5.5rem] gap-4 rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2";
 
   if (!profileHref) {
     return (
-      <li className="min-w-0">
-        <div className={grouped ? groupedItemClass : "rounded-lg border border-slate-200 p-3"}>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold leading-snug text-slate-900">{heading}</p>
-            {subtitle ? (
-              <p className="mt-1 truncate text-sm text-slate-500">{subtitle}</p>
-            ) : null}
-          </div>
-        </div>
+      <li className="rounded-lg border border-slate-200 p-3">
+        <p className="font-semibold text-slate-900">{heading}</p>
       </li>
     );
   }
 
   return (
-    <li className="min-w-0">
+    <li>
       <Link
         href={profileHref}
-        className={
-          grouped
-            ? groupedItemClass
-            : "block rounded-lg border border-slate-200 p-3 transition hover:border-brand-primary/40 hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
-        }
+        className="block rounded-lg border border-slate-200 p-3 transition hover:border-brand-primary/40 hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
       >
-        <div className="flex min-w-0 flex-1 gap-4">
+        <div className="flex gap-3">
           <CompanyLogo
             company={companyLogoFieldsFromRow(company)}
-            className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white sm:h-14 sm:w-14"
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
             monogramClassName="text-lg font-semibold text-slate-400"
           />
-          <div className="min-w-0 flex-1 self-center">
-            <p className="font-semibold leading-snug text-slate-900">{heading}</p>
-            {subtitle ? (
-              <p className="mt-1 truncate text-sm text-slate-500">{subtitle}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-slate-900">{heading}</p>
+              {tierLabel ? (
+                <span className="shrink-0 text-xs font-medium text-slate-500">{tierLabel}</span>
+              ) : null}
+            </div>
+            {shortRaw ? (
+              <p className="line-clamp-2 text-sm text-slate-600">{shortRaw}</p>
             ) : null}
           </div>
         </div>

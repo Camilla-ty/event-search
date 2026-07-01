@@ -49,6 +49,10 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
         typeof (edition as { sponsor_count?: unknown }).sponsor_count === "number"
           ? (edition as { sponsor_count: number }).sponsor_count
           : 0,
+      last_reviewed_at:
+        typeof (edition as { last_reviewed_at?: unknown }).last_reviewed_at === "string"
+          ? (edition as { last_reviewed_at: string }).last_reviewed_at
+          : null,
       start_date: edition.start_date ?? null,
       end_date: edition.end_date ?? null,
       event_series: edition.event_series

@@ -27,6 +27,7 @@ export type EventRecord = {
     } | null;
   } | null;
   sponsor_count?: number;
+  last_reviewed_at?: string | null;
 };
 
 export type ExplorerView = "list" | "calendar";

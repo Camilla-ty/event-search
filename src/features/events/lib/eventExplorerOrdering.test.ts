@@ -3,264 +3,127 @@ import { describe, it } from "node:test";
 
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
-  classifyEventTemporalBucket,
-  compareEventSearchOrder,
-  RECENTLY_ENDED_DAYS,
-  scoreEventSearchRelevanceTier,
+  compareEventBrowseRecommendedOrder,
   sortEventExplorerResults,
 } from "@/src/features/events/lib/eventExplorerOrdering";
 
-const TODAY = "2026-06-11";
+const TODAY = "2026-06-25";
 
-function makeEvent(
-  overrides: Partial<EventRecord> & Pick<EventRecord, "id">,
-): EventRecord {
+function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): EventRecord {
   return {
-    slug: null,
+    id: overrides.id,
+    slug: overrides.slug ?? null,
     name: overrides.name ?? "Sample Event",
+    website_url: overrides.website_url ?? null,
     start_date: overrides.start_date ?? "2026-06-15",
     end_date: overrides.end_date ?? "2026-06-15",
+    last_reviewed_at: overrides.last_reviewed_at ?? null,
+    sponsor_count: overrides.sponsor_count ?? 0,
     event_series: overrides.event_series ?? { name: "Sample Series", logo_url: null },
-    cities: overrides.cities ?? {
-      name: "Singapore",
-      states: null,
-      countries: { name: "Singapore" },
-    },
-    ...overrides,
+    cities: overrides.cities ?? null,
   };
 }
 
-describe("scoreEventSearchRelevanceTier", () => {
-  it("ranks exact event name above exact series name", () => {
-    const exactEvent = makeEvent({
-      id: "1",
-      name: "Korea",
-      event_series: { name: "Other Series", logo_url: null },
+describe("compareEventBrowseRecommendedOrder", () => {
+  it("prioritizes reviewed editions before unreviewed", () => {
+    const reviewed = makeEvent({
+      id: "reviewed",
+      name: "Reviewed Old",
+      start_date: "2022-01-01",
+      end_date: "2022-01-03",
+      last_reviewed_at: "2026-06-01",
+      sponsor_count: 1,
     });
-    const exactSeries = makeEvent({
-      id: "2",
-      name: "Seoul Edition",
-      event_series: { name: "Korea", logo_url: null },
+    const unreviewed = makeEvent({
+      id: "unreviewed",
+      name: "Unreviewed Recent",
+      start_date: "2026-06-20",
+      end_date: "2026-06-22",
+      sponsor_count: 100,
     });
 
-    assert.equal(scoreEventSearchRelevanceTier(exactEvent, "korea"), 1);
-    assert.equal(scoreEventSearchRelevanceTier(exactSeries, "korea"), 2);
-    assert.ok(
-      compareEventSearchOrder(exactEvent, exactSeries, "korea", TODAY) < 0,
-    );
+    assert.ok(compareEventBrowseRecommendedOrder(reviewed, unreviewed, TODAY) < 0);
   });
 
-  it("ranks prefix and partial matches below exact matches", () => {
-    const prefix = makeEvent({
-      id: "1",
-      name: "Korea Summit 2026",
-      event_series: { name: "Summit Series", logo_url: null },
-    });
-    const partial = makeEvent({
-      id: "2",
-      name: "Asia Korea Expo",
-      event_series: { name: "Expo Series", logo_url: null },
-    });
-    const seriesPrefix = makeEvent({
-      id: "3",
-      name: "Regional Show",
-      event_series: { name: "Korea Expo", logo_url: null },
-    });
-
-    assert.equal(scoreEventSearchRelevanceTier(prefix, "korea"), 4);
-    assert.equal(scoreEventSearchRelevanceTier(partial, "korea"), 5);
-    assert.equal(scoreEventSearchRelevanceTier(seriesPrefix, "korea"), 4);
-  });
-
-  it("ranks exact domain matches at tier 3", () => {
-    const domainMatch = makeEvent({
-      id: "bw",
-      name: "Permissionless",
-      website_url: "https://www.blockworks.com/events",
-      event_series: { name: "Blockworks", logo_url: null, website_url: null },
-    });
-    const seriesDomainMatch = makeEvent({
-      id: "t",
-      name: "Singapore",
-      website_url: null,
-      event_series: {
-        name: "TOKEN2049",
-        logo_url: null,
-        website_url: "https://token2049.com",
-      },
-    });
-
-    assert.equal(scoreEventSearchRelevanceTier(domainMatch, "blockworks.com"), 3);
-    assert.equal(scoreEventSearchRelevanceTier(domainMatch, "https://blockworks.com/"), 3);
-    assert.equal(scoreEventSearchRelevanceTier(seriesDomainMatch, "token2049.com"), 3);
-    assert.ok(
-      scoreEventSearchRelevanceTier(
-        makeEvent({
-          id: "name",
-          name: "blockworks.com",
-          event_series: { name: "Other", logo_url: null },
-        }),
-        "blockworks.com",
-      ) <
-        scoreEventSearchRelevanceTier(domainMatch, "blockworks.com"),
-    );
-  });
-
-  it("does not rank city, country, or keyword-only matches", () => {
-    const locationOnly = makeEvent({
-      id: "city",
-      name: "Regional Show",
-      event_series: { name: "Expo Series", logo_url: null },
-      cities: {
-        name: "Seoul",
-        states: null,
-        countries: { name: "South Korea" },
-      },
-    });
-    const keywordOnly = makeEvent({
-      id: "ethcc",
-      name: "EthCC Paris",
-      event_series: { name: "EthCC", logo_url: null },
-      series_keywords: [{ id: "kw-1", name: "DeFi", slug: "defi" }],
-    });
-
-    assert.equal(scoreEventSearchRelevanceTier(locationOnly, "korea"), 99);
-    assert.equal(scoreEventSearchRelevanceTier(locationOnly, "seoul"), 99);
-    assert.equal(scoreEventSearchRelevanceTier(keywordOnly, "defi"), 99);
-  });
-});
-
-describe("classifyEventTemporalBucket", () => {
-  it("classifies ongoing, upcoming, recently ended, older ended, and dateless", () => {
-    assert.equal(
-      classifyEventTemporalBucket(
-        { start_date: "2026-06-01", end_date: "2026-06-20" },
-        TODAY,
-      ),
-      "ongoing",
-    );
-    assert.equal(
-      classifyEventTemporalBucket(
-        { start_date: "2026-07-01", end_date: "2026-07-03" },
-        TODAY,
-      ),
-      "upcoming",
-    );
-
-    const recentEnd = subtractDays(TODAY, 30);
-    assert.equal(
-      classifyEventTemporalBucket(
-        { start_date: subtractDays(TODAY, 40), end_date: recentEnd },
-        TODAY,
-      ),
-      "recently_ended",
-    );
-
-    const oldEnd = subtractDays(TODAY, RECENTLY_ENDED_DAYS + 1);
-    assert.equal(
-      classifyEventTemporalBucket(
-        { start_date: subtractDays(TODAY, RECENTLY_ENDED_DAYS + 30), end_date: oldEnd },
-        TODAY,
-      ),
-      "older_ended",
-    );
-
-    assert.equal(classifyEventTemporalBucket({ start_date: null, end_date: null }, TODAY), "dateless");
-  });
-});
-
-describe("compareEventSearchOrder temporal tie-break", () => {
-  it("orders recently ended before ongoing before upcoming before older ended", () => {
+  it("orders temporal buckets within the same review group", () => {
     const recentlyEnded = makeEvent({
       id: "recent",
-      name: "Recent Match",
-      start_date: subtractDays(TODAY, 20),
-      end_date: subtractDays(TODAY, 5),
-      event_series: { name: "Korea Series", logo_url: null },
-    });
-    const ongoing = makeEvent({
-      id: "ongoing",
-      name: "Ongoing Match",
-      start_date: subtractDays(TODAY, 2),
-      end_date: subtractDays(TODAY, -2),
-      event_series: { name: "Korea Series", logo_url: null },
+      name: "Recently Ended",
+      start_date: "2026-06-10",
+      end_date: "2026-06-12",
+      last_reviewed_at: "2026-06-20",
     });
     const upcoming = makeEvent({
       id: "upcoming",
-      name: "Upcoming Match",
-      start_date: subtractDays(TODAY, -10),
-      end_date: subtractDays(TODAY, -12),
-      event_series: { name: "Korea Series", logo_url: null },
-    });
-    const olderEnded = makeEvent({
-      id: "old",
-      name: "Older Match",
-      start_date: subtractDays(TODAY, 400),
-      end_date: subtractDays(TODAY, RECENTLY_ENDED_DAYS + 10),
-      event_series: { name: "Korea Series", logo_url: null },
+      name: "Upcoming",
+      start_date: "2026-07-01",
+      end_date: "2026-07-03",
+      last_reviewed_at: "2026-06-20",
     });
 
-    const ordered = [olderEnded, upcoming, ongoing, recentlyEnded].sort((a, b) =>
-      compareEventSearchOrder(a, b, "korea", TODAY),
-    );
-
-    assert.deepEqual(
-      ordered.map((event) => event.id),
-      ["recent", "ongoing", "upcoming", "old"],
-    );
+    assert.ok(compareEventBrowseRecommendedOrder(recentlyEnded, upcoming, TODAY) < 0);
   });
 
-  it("sorts recently ended editions by most recent end date first", () => {
-    const newer = makeEvent({
-      id: "newer",
-      name: "Korea A",
-      start_date: "2026-03-01",
-      end_date: "2026-05-01",
-      event_series: { name: "Korea", logo_url: null },
+  it("orders by sponsor count within the same bucket", () => {
+    const moreSponsors = makeEvent({
+      id: "more",
+      name: "More Sponsors",
+      start_date: "2026-06-10",
+      end_date: "2026-06-12",
+      last_reviewed_at: "2026-06-20",
+      sponsor_count: 50,
     });
-    const older = makeEvent({
-      id: "older",
-      name: "Korea B",
-      start_date: "2026-01-01",
-      end_date: "2026-02-01",
-      event_series: { name: "Korea", logo_url: null },
+    const fewerSponsors = makeEvent({
+      id: "fewer",
+      name: "Fewer Sponsors",
+      start_date: "2026-06-08",
+      end_date: "2026-06-09",
+      last_reviewed_at: "2026-06-20",
+      sponsor_count: 10,
     });
 
-    assert.ok(compareEventSearchOrder(newer, older, "korea", TODAY) < 0);
+    assert.ok(compareEventBrowseRecommendedOrder(moreSponsors, fewerSponsors, TODAY) < 0);
+  });
+
+  it("uses end_date DESC for recently ended tie-breaks", () => {
+    const laterEnd = makeEvent({
+      id: "later",
+      name: "Later End",
+      start_date: "2026-06-01",
+      end_date: "2026-06-20",
+      last_reviewed_at: "2026-06-20",
+      sponsor_count: 5,
+    });
+    const earlierEnd = makeEvent({
+      id: "earlier",
+      name: "Earlier End",
+      start_date: "2026-06-01",
+      end_date: "2026-06-10",
+      last_reviewed_at: "2026-06-20",
+      sponsor_count: 5,
+    });
+
+    assert.ok(compareEventBrowseRecommendedOrder(laterEnd, earlierEnd, TODAY) < 0);
   });
 });
 
 describe("sortEventExplorerResults", () => {
-  it("uses relevance order for recommended sort when query is present", () => {
+  it("uses browse recommended order for empty query and recommended sort", () => {
     const events = [
       makeEvent({
-        id: "partial",
-        name: "Asia Korea Expo",
-        event_series: { name: "Expo", logo_url: null },
+        id: "old-unreviewed",
+        name: "Old Unreviewed",
+        start_date: "2022-01-01",
+        end_date: "2022-01-03",
       }),
       makeEvent({
-        id: "exact",
-        name: "Korea",
-        event_series: { name: "Summit", logo_url: null },
+        id: "recent-reviewed",
+        name: "Recent Reviewed",
+        start_date: "2026-06-10",
+        end_date: "2026-06-12",
+        last_reviewed_at: "2026-06-20",
+        sponsor_count: 20,
       }),
-    ];
-
-    const sorted = sortEventExplorerResults(events, {
-      query: "korea",
-      sortMode: "recommended",
-      today: TODAY,
-    });
-
-    assert.deepEqual(
-      sorted.map((event) => event.id),
-      ["exact", "partial"],
-    );
-  });
-
-  it("uses chronological order for recommended sort without query", () => {
-    const events = [
-      makeEvent({ id: "later", name: "Later", start_date: "2026-08-01", end_date: "2026-08-02" }),
-      makeEvent({ id: "earlier", name: "Earlier", start_date: "2026-05-01", end_date: "2026-05-02" }),
     ];
 
     const sorted = sortEventExplorerResults(events, {
@@ -271,44 +134,65 @@ describe("sortEventExplorerResults", () => {
 
     assert.deepEqual(
       sorted.map((event) => event.id),
-      ["earlier", "later"],
+      ["recent-reviewed", "old-unreviewed"],
     );
   });
 
-  it("honors date and name overrides", () => {
+  it("keeps strict chronological order for event date sort", () => {
     const events = [
-      makeEvent({ id: "b", name: "Bravo", start_date: "2026-08-01" }),
-      makeEvent({ id: "a", name: "Alpha", start_date: "2026-05-01" }),
+      makeEvent({
+        id: "recent-reviewed",
+        name: "Recent Reviewed",
+        start_date: "2026-06-10",
+        end_date: "2026-06-12",
+        last_reviewed_at: "2026-06-20",
+        sponsor_count: 20,
+      }),
+      makeEvent({
+        id: "old-unreviewed",
+        name: "Old Unreviewed",
+        start_date: "2022-01-01",
+        end_date: "2022-01-03",
+      }),
     ];
 
-    assert.deepEqual(
-      sortEventExplorerResults(events, {
-        query: "alpha",
-        sortMode: "date",
-        today: TODAY,
-      }).map((event) => event.id),
-      ["a", "b"],
-    );
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "date",
+      today: TODAY,
+    });
 
     assert.deepEqual(
-      sortEventExplorerResults(events, {
-        query: "alpha",
-        sortMode: "name",
-        today: TODAY,
-      }).map((event) => event.id),
-      ["a", "b"],
+      sorted.map((event) => event.id),
+      ["old-unreviewed", "recent-reviewed"],
     );
   });
-});
 
-function subtractDays(isoDate: string, days: number): string {
-  const year = Number(isoDate.slice(0, 4));
-  const month = Number(isoDate.slice(5, 7));
-  const day = Number(isoDate.slice(8, 10));
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() - days);
-  const nextYear = date.getUTCFullYear();
-  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const nextDay = String(date.getUTCDate()).padStart(2, "0");
-  return `${nextYear}-${nextMonth}-${nextDay}`;
-}
+  it("keeps search relevance first when query is present", () => {
+    const events = [
+      makeEvent({
+        id: "partial",
+        name: "Blockchain Week",
+        start_date: "2022-01-01",
+        end_date: "2022-01-03",
+        last_reviewed_at: "2026-06-20",
+        sponsor_count: 100,
+      }),
+      makeEvent({
+        id: "exact",
+        name: "KBW",
+        event_series: { name: "Korea Blockchain Week", logo_url: null },
+        start_date: "2026-06-10",
+        end_date: "2026-06-12",
+      }),
+    ];
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "Korea Blockchain Week",
+      sortMode: "recommended",
+      today: TODAY,
+    });
+
+    assert.equal(sorted[0]?.id, "exact");
+  });
+});
