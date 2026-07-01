@@ -11,7 +11,7 @@ export type LayoutTokens = {
 const tokens: Record<LayoutMode, LayoutTokens> = {
   marketing: {
     shell: "min-h-screen bg-surface-page",
-    contentColumn: "ml-0 lg:ml-[15rem]",
+    contentColumn: "ml-0 lg:ml-[280px]",
     main: "px-4 py-6 sm:px-6 sm:py-8 lg:px-8",
     page: "w-full max-w-[1400px]",
     searchHeader:
@@ -19,7 +19,7 @@ const tokens: Record<LayoutMode, LayoutTokens> = {
   },
   app: {
     shell: "min-h-screen bg-surface-page",
-    contentColumn: "ml-0 lg:ml-[15rem]",
+    contentColumn: "ml-0 lg:ml-[280px]",
     main: "px-4 py-6 sm:px-6 sm:py-8 lg:px-8",
     page: "w-full max-w-[1400px]",
     searchHeader:

@@ -1,13 +1,23 @@
+export type SidebarNavIconKey =
+  | "compass"
+  | "calendar-days"
+  | "building-2"
+  | "layout-dashboard"
+  | "calendar-range"
+  | "upload-cloud"
+  | "building";
+
 export type NavItem = {
   href: string;
   label: string;
+  icon?: SidebarNavIconKey;
 };
 
 /** Apollo-style primary sidebar navigation. */
 export const primaryNavItems: NavItem[] = [
-  { href: "/", label: "Discover" },
-  { href: "/events", label: "Events" },
-  { href: "/sponsors", label: "Sponsors" },
+  { href: "/", label: "Discover", icon: "compass" },
+  { href: "/events", label: "Events", icon: "calendar-days" },
+  { href: "/sponsors", label: "Sponsors", icon: "building-2" },
 ];
 
 /** @deprecated Use primaryNavItems — kept for imports during migration. */
@@ -15,10 +25,10 @@ export const publicNavItems = primaryNavItems;
 
 /** Admin workspace primary sidebar. */
 export const adminPrimaryNavItems: NavItem[] = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/events", label: "Events" },
-  { href: "/admin/sponsor-imports", label: "Sponsor imports" },
-  { href: "/admin/companies", label: "Companies" },
+  { href: "/admin", label: "Dashboard", icon: "layout-dashboard" },
+  { href: "/admin/events", label: "Events", icon: "calendar-range" },
+  { href: "/admin/sponsor-imports", label: "Sponsor imports", icon: "upload-cloud" },
+  { href: "/admin/companies", label: "Companies", icon: "building" },
 ];
 
 /** Events section secondary nav (shown under Events routes). */

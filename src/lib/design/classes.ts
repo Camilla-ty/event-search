@@ -12,6 +12,16 @@ export const navItemActiveClass =
 export const navItemInactiveClass =
   "border-l-2 border-transparent pl-3 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900";
 
+/** Desktop sidebar nav item (NavigationShell, AdminShell). */
+export const sidebarNavItemBaseClass =
+  "flex h-12 min-w-0 items-center gap-3 whitespace-nowrap rounded-lg border-l-2 px-4 text-sm transition";
+
+export const sidebarNavItemActiveClass =
+  "border-brand-primary bg-brand-primary-muted font-medium text-brand-primary";
+
+export const sidebarNavItemInactiveClass =
+  "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+
 export const mobileNavItemActiveClass =
   "bg-brand-primary-muted font-medium text-brand-primary";
 

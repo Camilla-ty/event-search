@@ -15,7 +15,7 @@ export function BrowseMobileHeader({
   return (
     <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
       <BrandWordmark compact />
-      <SessionControls mode={mode} session={session} />
+      <SessionControls mode={mode} session={session} variant="mobile" />
     </div>
   );
 }
