@@ -32,6 +32,72 @@ export type MatchResult = {
 
 export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain"];
 
+/** Supabase PostgREST defaults to 1,000 rows per request. */
+export const IMPORT_MATCH_CONTEXT_PAGE_SIZE = 1000;
+
+type SupabasePageResult<TRow> = {
+  data: TRow[] | null;
+  error: { message: string } | null;
+};
+
+/** Fetch every row from a ranged Supabase select (avoids the 1,000-row default cap). */
+export async function fetchAllPaginatedSupabaseRows<TRow>(
+  runPage: (range: { from: number; to: number }) => Promise<SupabasePageResult<TRow>>,
+  pageSize = IMPORT_MATCH_CONTEXT_PAGE_SIZE,
+): Promise<TRow[]> {
+  const rows: TRow[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + pageSize - 1;
+    const { data, error } = await runPage({ from, to });
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return rows;
+}
+
+type CompanyDirectoryRow = {
+  id: unknown;
+  name: unknown;
+  domain: unknown;
+  aliases: unknown;
+};
+
+type CompanyDomainDirectoryRow = {
+  company_id: unknown;
+  domain: unknown;
+};
+
+/** Build import match context from full company + company_domains directory rows. */
+export function buildImportMatchContextFromDirectory(
+  companies: readonly CompanyDirectoryRow[],
+  companyDomains: readonly CompanyDomainDirectoryRow[],
+): ImportMatchContext {
+  const importCompanies: ImportMatchCompany[] = companies.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : null,
+    aliases: parseCompanyAliasesFromRow(row.aliases),
+  }));
+
+  const importCompanyDomains = companyDomains
+    .map((row) => ({
+      company_id: String(row.company_id),
+      domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : "",
+    }))
+    .filter((entry) => entry.domain !== "");
+
+  return buildImportMatchContext(importCompanies, importCompanyDomains);
+}
+
 function attachLiveEditionFlags(
   row: MatchableRow,
   decision: ReturnType<typeof matchImportRowIdentity>,
@@ -103,34 +169,16 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
 }> {
   const supabase = createAdminClient();
 
-  const [{ data: companies, error: companyError }, { data: companyDomains, error: domainsError }] =
-    await Promise.all([
-      supabase.from("companies").select("id, name, domain, aliases"),
-      supabase.from("company_domains").select("company_id, domain"),
-    ]);
+  const [companies, companyDomains] = await Promise.all([
+    fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(({ from, to }) =>
+      supabase.from("companies").select("id, name, domain, aliases").range(from, to),
+    ),
+    fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(({ from, to }) =>
+      supabase.from("company_domains").select("company_id, domain").range(from, to),
+    ),
+  ]);
 
-  if (companyError) {
-    throw new Error(companyError.message);
-  }
-  if (domainsError) {
-    throw new Error(domainsError.message);
-  }
-
-  const importCompanies: ImportMatchCompany[] = (companies ?? []).map((row) => ({
-    id: String(row.id),
-    name: String(row.name),
-    domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : null,
-    aliases: parseCompanyAliasesFromRow(row.aliases),
-  }));
-
-  const importCompanyDomains = (companyDomains ?? [])
-    .map((row) => ({
-      company_id: String(row.company_id),
-      domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : "",
-    }))
-    .filter((entry) => entry.domain !== "");
-
-  const matchContext = buildImportMatchContext(importCompanies, importCompanyDomains);
+  const matchContext = buildImportMatchContextFromDirectory(companies, companyDomains);
 
   const { data: liveLinks, error: liveError } = await supabase
     .from("event_sponsors")
