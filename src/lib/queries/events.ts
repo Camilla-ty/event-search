@@ -24,6 +24,14 @@ const EVENT_EDITION_DETAIL_SELECT = `
       regions (*)
     )
   ),
+  venues (
+    id,
+    name,
+    website_url,
+    address_text,
+    logo_url,
+    archived_at
+  ),
   event_organizers (
     *,
     organizers (*)

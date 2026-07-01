@@ -51,6 +51,17 @@
 
 ---
 
+## Venue (v1)
+
+| Document | Description |
+|----------|-------------|
+| [Venue Design](./venue-design.md) | **Approved** reusable venue entity, edition link, admin IA, public Edition Venue tab |
+| [Phase — Venue v1 Scope](./phase-venue-scope.md) | **Approved** implementation scope: database, admin, edition integration, public tabs, QA |
+
+**Locked highlights:** `venues` + nullable `event_editions.venue_id`; city retained; archive-only (no delete); public edition tabs **Overview / Sponsors / Venue** only; no standalone `/venues/...` pages; migration design doc required before Supabase work.
+
+---
+
 ## Sponsor import (v1)
 
 | Document | Description |

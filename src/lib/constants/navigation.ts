@@ -5,7 +5,8 @@ export type SidebarNavIconKey =
   | "layout-dashboard"
   | "calendar-range"
   | "upload-cloud"
-  | "building";
+  | "building"
+  | "map-pin";
 
 export type NavItem = {
   href: string;
@@ -29,6 +30,7 @@ export const adminPrimaryNavItems: NavItem[] = [
   { href: "/admin/events", label: "Events", icon: "calendar-range" },
   { href: "/admin/sponsor-imports", label: "Sponsor imports", icon: "upload-cloud" },
   { href: "/admin/companies", label: "Companies", icon: "building" },
+  { href: "/admin/venues", label: "Venues", icon: "map-pin" },
 ];
 
 /** Events section secondary nav (shown under Events routes). */

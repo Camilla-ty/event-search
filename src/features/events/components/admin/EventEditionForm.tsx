@@ -9,6 +9,7 @@ import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
+import { AdminVenueSelect } from "@/src/features/venues/components/admin/AdminVenueSelect";
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
 import { formInputClass } from "@/src/lib/design/classes";
 import { EditionSiblingWarnings } from "@/src/features/events/components/admin/EditionSiblingWarnings";
@@ -26,6 +27,7 @@ type EventEditionFormProps = {
   readOnlySeriesName?: string;
   readOnlySeriesId?: string;
   readOnlyYear?: number;
+  linkedVenue?: { id: string; name: string; archived: boolean } | null;
 };
 
 type ApiResponse = {
@@ -58,6 +60,7 @@ export function EventEditionForm({
   readOnlySeriesName,
   readOnlySeriesId,
   readOnlyYear,
+  linkedVenue,
 }: EventEditionFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<EditionFormValues>(initial);
@@ -147,6 +150,7 @@ export function EventEditionForm({
       start_date: values.start_date.trim() || null,
       end_date: values.end_date.trim() || null,
       city_id: values.city_id.trim() || null,
+      venue_id: values.venue_id.trim() || null,
       last_reviewed_at: values.last_reviewed_at.trim() || null,
       primary_source_url: values.primary_source_url.trim() || null,
     };
@@ -376,7 +380,13 @@ export function EventEditionForm({
 
           <AdminCitySelect
             value={values.city_id}
-            onChange={(cityId) => updateField("city_id", cityId)}
+            onChange={(cityId) => {
+              setValues((prev) => ({
+                ...prev,
+                city_id: cityId,
+                venue_id: cityId !== prev.city_id ? "" : prev.venue_id,
+              }));
+            }}
             initialCities={cities}
             onCityCreated={(city) => {
               setInlineCities((prev) => {
@@ -384,6 +394,15 @@ export function EventEditionForm({
                 return [...prev, city];
               });
             }}
+            disabled={isSubmitting}
+          />
+
+          <AdminVenueSelect
+            value={values.venue_id}
+            onChange={(venueId) => updateField("venue_id", venueId)}
+            cityId={values.city_id}
+            cityLabel={selectedCity?.label}
+            linkedVenue={linkedVenue}
             disabled={isSubmitting}
           />
 

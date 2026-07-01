@@ -7,6 +7,7 @@ import {
 } from "@/src/features/events/server/eventEditionAdmin";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { formatEditionWriteError } from "@/src/lib/errors/editionWriteError";
+import { validateEditionVenueAttachment } from "@/src/lib/validation/editionVenue";
 import { validateEditionUpdateBody } from "@/src/lib/validation/eventEdition";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -51,6 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     website_url: body.website_url as string | null | undefined,
     logo_url: body.logo_url as string | null | undefined,
     city_id: body.city_id as string | null | undefined,
+    venue_id: body.venue_id as string | null | undefined,
     last_reviewed_at: body.last_reviewed_at as string | null | undefined,
     primary_source_url: body.primary_source_url as string | null | undefined,
     series_id: typeof body.series_id === "string" ? body.series_id : undefined,
@@ -69,6 +71,32 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
+    const existing = await getEventEditionAdminById(id);
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+    }
+
+    const finalCityId =
+      validated.patch.city_id !== undefined
+        ? (validated.patch.city_id as string | null)
+        : existing.city_id;
+    const finalVenueId =
+      validated.patch.venue_id !== undefined
+        ? (validated.patch.venue_id as string | null)
+        : existing.venue_id ?? null;
+
+    const venueErrors = await validateEditionVenueAttachment({
+      venueId: finalVenueId,
+      cityId: finalCityId,
+      previousVenueId: existing.venue_id,
+    });
+    if (venueErrors.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: venueErrors.join("; ") },
+        { status: 400 },
+      );
+    }
+
     const edition = await updateEventEdition(id, {
       name: validated.patch.name as string | undefined,
       slug: validated.patch.slug as string | undefined,
@@ -76,6 +104,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       end_date: validated.patch.end_date as string | null | undefined,
       website_url: validated.patch.website_url as string | null | undefined,
       city_id: validated.patch.city_id as string | null | undefined,
+      venue_id: validated.patch.venue_id as string | null | undefined,
       last_reviewed_at: validated.patch.last_reviewed_at as string | null | undefined,
       primary_source_url: validated.patch.primary_source_url as string | null | undefined,
     });

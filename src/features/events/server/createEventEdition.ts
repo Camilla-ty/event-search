@@ -9,6 +9,7 @@ export type CreateEventEditionInput = {
   end_date?: string | null;
   website_url?: string | null;
   city_id?: string | null;
+  venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
 };
@@ -24,6 +25,7 @@ export type EventEditionRow = {
   website_url: string | null;
   logo_url: string | null;
   city_id: string | null;
+  venue_id: string | null;
   last_reviewed_at: string | null;
   primary_source_url: string | null;
   created_at?: string | null;
@@ -46,6 +48,7 @@ export async function createEventEdition(
     end_date: input.end_date ?? null,
     website_url: input.website_url?.trim() || null,
     city_id: input.city_id ?? null,
+    venue_id: input.venue_id ?? null,
     last_reviewed_at: input.last_reviewed_at ?? null,
     primary_source_url: input.primary_source_url?.trim() || null,
   };
@@ -55,7 +58,7 @@ export async function createEventEdition(
     .from("event_editions")
     .insert(insertPayload)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, last_reviewed_at, primary_source_url, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, venue_id, last_reviewed_at, primary_source_url, created_at",
     )
     .single();
 
@@ -75,6 +78,7 @@ export async function updateEventEdition(
     end_date?: string | null;
     website_url?: string | null;
     city_id?: string | null;
+    venue_id?: string | null;
     last_reviewed_at?: string | null;
     primary_source_url?: string | null;
   },
@@ -90,6 +94,7 @@ export async function updateEventEdition(
     patch.website_url = input.website_url?.trim() || null;
   }
   if (input.city_id !== undefined) patch.city_id = input.city_id;
+  if (input.venue_id !== undefined) patch.venue_id = input.venue_id;
   if (input.last_reviewed_at !== undefined) patch.last_reviewed_at = input.last_reviewed_at;
   if (input.primary_source_url !== undefined) {
     patch.primary_source_url = input.primary_source_url?.trim() || null;
@@ -100,7 +105,7 @@ export async function updateEventEdition(
     .update(patch)
     .eq("id", id)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, last_reviewed_at, primary_source_url, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, created_at",
     )
     .single();
 

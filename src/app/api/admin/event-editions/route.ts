@@ -5,6 +5,7 @@ import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditio
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { formatEditionWriteError } from "@/src/lib/errors/editionWriteError";
 import { buildEditionSlug } from "@/src/lib/slugify";
+import { validateEditionVenueAttachment } from "@/src/lib/validation/editionVenue";
 import { validateEditionCreateBody } from "@/src/lib/validation/eventEdition";
 
 export async function GET(request: Request) {
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     end_date: body.end_date as string | null | undefined,
     website_url: body.website_url as string | null | undefined,
     city_id: body.city_id as string | null | undefined,
+    venue_id: body.venue_id as string | null | undefined,
     last_reviewed_at: body.last_reviewed_at as string | null | undefined,
     primary_source_url: body.primary_source_url as string | null | undefined,
   });
@@ -74,6 +76,17 @@ export async function POST(request: Request) {
   }
 
   try {
+    const venueErrors = await validateEditionVenueAttachment({
+      venueId: validated.data.venue_id,
+      cityId: validated.data.city_id,
+    });
+    if (venueErrors.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: venueErrors.join("; ") },
+        { status: 400 },
+      );
+    }
+
     const edition = await createEventEdition(validated.data);
     return NextResponse.json({ ok: true, edition }, { status: 201 });
   } catch (error) {

@@ -7,6 +7,7 @@ import {
   CalendarRange,
   Compass,
   LayoutDashboard,
+  MapPin,
   UploadCloud,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ const sidebarNavIcons: Record<SidebarNavIconKey, LucideIcon> = {
   "calendar-range": CalendarRange,
   "upload-cloud": UploadCloud,
   building: Building,
+  "map-pin": MapPin,
 };
 
 type SidebarNavItemProps = {

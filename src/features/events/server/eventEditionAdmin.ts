@@ -15,6 +15,7 @@ export type EventEditionAdminRow = {
   website_url: string | null;
   logo_url: string | null;
   city_id: string | null;
+  venue_id: string | null;
   last_reviewed_at: string | null;
   primary_source_url: string | null;
   created_at: string | null;
@@ -25,6 +26,7 @@ export type EventEditionAdminRow = {
     logo_url?: string | null;
   } | null;
   cities?: { id: string; name: string } | null;
+  venues?: { id: string; name: string; archived_at: string | null } | null;
 };
 
 export type CreateEventEditionAdminInput = {
@@ -139,7 +141,7 @@ export async function getEventEditionAdminById(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("event_editions")
-    .select(EVENT_EDITION_LIST_SELECT)
+    .select(`${EVENT_EDITION_LIST_SELECT}, venues ( id, name, archived_at )`)
     .eq("id", id)
     .maybeSingle();
 

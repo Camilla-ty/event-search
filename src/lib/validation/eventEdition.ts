@@ -47,6 +47,7 @@ export type EditionCreatePayload = {
   end_date: string | null;
   website_url: string | null;
   city_id: string | null;
+  venue_id: string | null;
   last_reviewed_at: string | null;
   primary_source_url: string | null;
 };
@@ -60,6 +61,7 @@ export function validateEditionCreateBody(body: {
   end_date?: string | null;
   website_url?: string | null;
   city_id?: string | null;
+  venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
 }): { ok: true; data: EditionCreatePayload } | { ok: false; errors: string[] } {
@@ -70,6 +72,7 @@ export function validateEditionCreateBody(body: {
   const startDate = parseOptionalDate(body.start_date);
   const endDate = parseOptionalDate(body.end_date);
   const cityId = parseOptionalUuid(body.city_id);
+  const venueId = parseOptionalUuid(body.venue_id);
   const websiteRaw = body.website_url;
   const websiteUrl =
     websiteRaw === null || websiteRaw === undefined
@@ -97,6 +100,12 @@ export function validateEditionCreateBody(body: {
   }
   if (body.city_id !== undefined && body.city_id !== null && body.city_id !== "") {
     if (cityId === null) errors.push("city_id must be a valid UUID");
+  }
+  if (body.venue_id !== undefined && body.venue_id !== null && body.venue_id !== "") {
+    if (venueId === null) errors.push("venue_id must be a valid UUID");
+  }
+  if (venueId && !cityId) {
+    errors.push("city_id is required when venue_id is set");
   }
   if (websiteUrl && !isValidHttpUrl(websiteUrl)) {
     errors.push("website_url must be a valid URL");
@@ -142,6 +151,7 @@ export function validateEditionCreateBody(body: {
       end_date: endDate,
       website_url: websiteUrl,
       city_id: cityId,
+      venue_id: venueId,
       last_reviewed_at: lastReviewedAt,
       primary_source_url: primarySourceUrl,
     },
@@ -156,6 +166,7 @@ export function validateEditionUpdateBody(body: {
   website_url?: string | null;
   logo_url?: string | null;
   city_id?: string | null;
+  venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
   series_id?: string;
@@ -218,6 +229,14 @@ export function validateEditionUpdateBody(body: {
       errors.push("city_id must be a valid UUID");
     } else {
       patch.city_id = cityId;
+    }
+  }
+  if (body.venue_id !== undefined) {
+    const venueId = parseOptionalUuid(body.venue_id);
+    if (body.venue_id !== null && body.venue_id !== "" && venueId === null) {
+      errors.push("venue_id must be a valid UUID");
+    } else {
+      patch.venue_id = venueId;
     }
   }
   if (body.last_reviewed_at !== undefined) {

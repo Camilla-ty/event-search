@@ -149,6 +149,15 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
 
       <div className="mb-4 flex flex-wrap gap-3 text-sm text-slate-600">
         {editionLocationLabel ? <span>Location: {editionLocationLabel}</span> : null}
+        {edition.venues?.name ? (
+          <span>
+            Venue:{" "}
+            <Link href={`/admin/venues/${edition.venues.id}`} className="text-brand-primary hover:underline">
+              {edition.venues.name}
+              {edition.venues.archived_at ? " (archived)" : ""}
+            </Link>
+          </span>
+        ) : null}
         <span>
           Slug:{" "}
           <Link href={`/events/${edition.slug}`} className="font-mono text-brand-primary hover:underline">
@@ -184,9 +193,25 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                   start_date: edition.start_date,
                   end_date: edition.end_date,
                   city_id: edition.city_id,
+                  venue_id: edition.venue_id,
                   last_reviewed_at: edition.last_reviewed_at,
                   primary_source_url: edition.primary_source_url,
                 })}
+                linkedVenue={
+                  edition.venues
+                    ? {
+                        id: edition.venues.id,
+                        name: edition.venues.name,
+                        archived: edition.venues.archived_at !== null,
+                      }
+                    : edition.venue_id
+                      ? {
+                          id: edition.venue_id,
+                          name: "Linked venue",
+                          archived: false,
+                        }
+                      : null
+                }
               />
             </div>
           }
