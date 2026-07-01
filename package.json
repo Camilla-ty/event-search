@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "backfill:companies-logos": "tsx --env-file=.env.local scripts/backfill-companies-logos.ts",
+    "backfill:venue-logos-from-url": "tsx --env-file=.env.local scripts/backfill-venue-logos-from-url.ts",
     "migrate:company-logos": "tsx --env-file=.env.local scripts/migrate-company-logos-to-company-id.ts",
     "cleanup:legacy-company-logos": "tsx --env-file=.env.local scripts/cleanup-legacy-company-logo-paths.ts",
     "cleanup:hosted-platform-identity": "tsx --env-file=.env.local scripts/cleanup-hosted-platform-identity-pr3a.ts",

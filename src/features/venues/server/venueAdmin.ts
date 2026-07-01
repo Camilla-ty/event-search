@@ -14,6 +14,7 @@ import {
   parseUpdateVenueFields,
   VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE,
 } from "./venueAdminValidation";
+import { resolveVenueManualLogoUrl } from "./resolveVenueManualLogoUrl";
 import {
   scheduleVenueLogoCleanupAfterPersist,
   uploadVenueLogoBytes,
@@ -297,6 +298,7 @@ export async function createVenueAdmin(
 
   await assertCityExists(fields.city_id);
 
+  const logoInput = fields.logo_url ?? null;
   const slug = await resolveUniqueVenueSlug(fields.slug);
   const now = new Date().toISOString();
 
@@ -309,7 +311,7 @@ export async function createVenueAdmin(
       city_id: fields.city_id,
       website_url: fields.website_url ?? null,
       address_text: fields.address_text ?? null,
-      logo_url: fields.logo_url ?? null,
+      logo_url: null,
       updated_at: now,
     })
     .select(VENUE_SELECT)
@@ -317,7 +319,43 @@ export async function createVenueAdmin(
 
   if (error) throw new Error(error.message);
 
-  const venue = mapVenueRow(data as Record<string, unknown>);
+  let venue = mapVenueRow(data as Record<string, unknown>);
+  const warnings: string[] = [];
+  let persistedLogoUrl: string | null | undefined;
+
+  if (logoInput) {
+    const resolved = await resolveVenueManualLogoUrl({
+      incomingLogoUrl: logoInput,
+      existingLogoUrl: null,
+      venueId: venue.id,
+    });
+
+    if (resolved.ok && resolved.applyPatch) {
+      const { data: logoData, error: logoError } = await supabase
+        .from("venues")
+        .update({ logo_url: resolved.logo_url, updated_at: new Date().toISOString() })
+        .eq("id", venue.id)
+        .select(VENUE_SELECT)
+        .single();
+
+      if (logoError) throw new Error(logoError.message);
+
+      venue = mapVenueRow(logoData as Record<string, unknown>);
+      if (resolved.persistedLogoUrl !== undefined) {
+        persistedLogoUrl = resolved.persistedLogoUrl;
+      }
+    } else if (!resolved.ok) {
+      warnings.push(resolved.warning);
+    }
+  }
+
+  if (persistedLogoUrl !== undefined) {
+    scheduleVenueLogoCleanupAfterPersist({
+      venueId: venue.id,
+      publicUrl: persistedLogoUrl,
+    });
+  }
+
   const [cityLabels, duplicateNames] = await Promise.all([
     loadCityLabelsById([venue.city_id]),
     findDuplicateVenueNamesInCity({
@@ -327,7 +365,6 @@ export async function createVenueAdmin(
     }),
   ]);
 
-  const warnings: string[] = [];
   const duplicateWarning = duplicateVenueNameWarning(venue.name, duplicateNames);
   if (duplicateWarning) warnings.push(duplicateWarning);
 
@@ -383,7 +420,37 @@ export async function updateVenueAdmin(
   if (fields.city_id !== undefined) patch.city_id = fields.city_id;
   if (fields.website_url !== undefined) patch.website_url = fields.website_url;
   if (fields.address_text !== undefined) patch.address_text = fields.address_text;
-  if (fields.logo_url !== undefined) patch.logo_url = fields.logo_url;
+
+  const warnings: string[] = [];
+  let persistedLogoUrl: string | null | undefined;
+
+  if (fields.logo_url !== undefined) {
+    const resolved = await resolveVenueManualLogoUrl({
+      incomingLogoUrl: fields.logo_url,
+      existingLogoUrl: existing.logo_url,
+      venueId: id,
+    });
+
+    if (!resolved.ok) {
+      warnings.push(resolved.warning);
+    } else if (resolved.applyPatch) {
+      patch.logo_url = resolved.logo_url;
+      if (resolved.persistedLogoUrl !== undefined) {
+        persistedLogoUrl = resolved.persistedLogoUrl;
+      }
+    }
+  }
+
+  if (Object.keys(patch).length === 1 && warnings.length > 0) {
+    return {
+      venue: existing,
+      warnings,
+    };
+  }
+
+  if (Object.keys(patch).length === 1) {
+    throw new VenueAdminError("No fields to update.", 400);
+  }
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -394,6 +461,13 @@ export async function updateVenueAdmin(
     .single();
 
   if (error) throw new Error(error.message);
+
+  if (persistedLogoUrl !== undefined) {
+    scheduleVenueLogoCleanupAfterPersist({
+      venueId: id,
+      publicUrl: persistedLogoUrl,
+    });
+  }
 
   const venue = mapVenueRow(data as Record<string, unknown>);
   const [cityLabels, linkedEditionCount, duplicateNames] = await Promise.all([
@@ -406,7 +480,6 @@ export async function updateVenueAdmin(
     }),
   ]);
 
-  const warnings: string[] = [];
   const duplicateWarning = duplicateVenueNameWarning(venue.name, duplicateNames);
   if (duplicateWarning) warnings.push(duplicateWarning);
 

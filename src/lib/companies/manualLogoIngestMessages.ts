@@ -6,3 +6,6 @@ export const MANUAL_LOGO_IMPORT_FAILED_EDIT_WARNING =
 
 export const EVENT_LOGO_IMPORT_FAILED_WARNING =
   "Logo was not updated because the image could not be imported from that URL.";
+
+export const VENUE_LOGO_IMPORT_FAILED_WARNING =
+  "Logo was not updated because the image could not be imported from that URL.";
