@@ -51,14 +51,15 @@
 
 ---
 
-## Venue (v1)
+## Venue (v1 — complete)
 
 | Document | Description |
 |----------|-------------|
 | [Venue Design](./venue-design.md) | **Approved** reusable venue entity, edition link, admin IA, public Edition Venue tab |
-| [Phase — Venue v1 Scope](./phase-venue-scope.md) | **Approved** implementation scope: database, admin, edition integration, public tabs, QA |
+| [Phase — Venue v1 Scope](./phase-venue-scope.md) | **Implemented** — database, admin, edition integration, public tabs, QA |
+| [Venue Migration Design](./venue-migration-design.md) | **Approved and applied** — `20260704120000_venues_v1.sql` |
 
-**Locked highlights:** `venues` + nullable `event_editions.venue_id`; city retained; archive-only (no delete); public edition tabs **Overview / Sponsors / Venue** only; no standalone `/venues/...` pages; migration design doc required before Supabase work.
+**Locked highlights:** `venues` + nullable `event_editions.venue_id`; city retained; archive-only (no delete); public edition tabs **Overview / Sponsors / Venue** only; no standalone `/venues/...` pages. Logo: HTTP URL paste (stored as-is) or file upload to `COMPANY_LOGO_BUCKET` on venue edit. External URL ingest into Storage deferred to a future enhancement.
 
 ---
 

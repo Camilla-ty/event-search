@@ -1,6 +1,6 @@
 # Phase — Venue v1: Implementation Scope
 
-**Status:** Approved  
+**Status:** Implemented  
 **Version:** v1  
 **Last updated:** 2026-06-25  
 
@@ -19,7 +19,7 @@ Implementation scope for **Venue v1** per the approved [Venue Design](./venue-de
 | Database | `venues` table + nullable `event_editions.venue_id` |
 | Admin | Top-level **Venues** section: list, create, edit, archive, unarchive |
 | Edition admin | Optional venue picker on create/edit; city–venue consistency enforced |
-| Logo | `logo_url` + manual URL ingest + file upload (Event Series pattern) |
+| Logo | `logo_url` — HTTP URL paste (stored as-is) + file upload on edit (`venues/{id}/logo.{ext}`) |
 | Public | Event Edition tabs: **Overview**, **Sponsors**, **Venue** (no Exhibitors) |
 | Lifecycle | Archive via `archived_at` only — **no delete** |
 
@@ -27,9 +27,7 @@ Implementation scope for **Venue v1** per the approved [Venue Design](./venue-de
 
 ## 2. Database scope
 
-A separate **venue migration design document** is **required** before any Supabase migration work begins. This scope doc defines *what* the migration must deliver; the migration design doc will specify SQL, ordering, constraints, and rollout.
-
-Do not apply migrations until that document is approved.
+Migration delivered in [venue-migration-design.md](./venue-migration-design.md) and applied as `supabase/migrations/20260704120000_venues_v1.sql`. Post-migration verification: `supabase/verify/venues_v1_post_migration.sql`.
 
 ### 2.1 New table — `venues`
 
@@ -129,7 +127,7 @@ Add **Venues** to admin primary sidebar per [venue-design.md §11.1](./venue-des
 
 Events sub-nav order (unchanged except confirm): Overview → Series → Editions.
 
-Update `src/lib/constants/navigation.ts` (`adminPrimaryNavItems`) and revise [admin-information-architecture.md](./admin-information-architecture.md) §2.1 when implementing.
+Update `src/lib/constants/navigation.ts` (`adminPrimaryNavItems`) and [admin-information-architecture.md](./admin-information-architecture.md) §2.1 — **done**.
 
 ### 3.2 Screens to build
 
@@ -192,7 +190,7 @@ Same fields as create, plus:
 | Action | API | UI |
 |--------|-----|-----|
 | Archive | `POST /api/admin/venues/[id]/archive` | Confirm modal; venue hidden from default list and pickers |
-| Unarchive | `POST /api/admin/venues/[id]/unarchive` | From venue detail or list with **Show archived** enabled |
+| Unarchive | `POST /api/admin/venues/[id]/unarchive` | From venue detail (list shows archived rows when **Show archived** is on) |
 
 `PATCH` must **not** accept `archived_at` directly — lifecycle changes go through dedicated routes only.
 
@@ -205,7 +203,7 @@ No delete button. No `DELETE` route.
 | No linked editions | Editable |
 | ≥1 linked edition | **Read-only** with helper text: “Create a new venue to record a relocation.” |
 
-Server must **reject** `city_id` changes when linked editions exist (400), even if UI is bypassed.
+Server must **reject** `city_id` changes when linked editions exist (409 in implementation), even if UI is bypassed.
 
 ### 3.8 Explicitly not in admin v1
 
@@ -221,20 +219,22 @@ Server must **reject** `city_id` changes when linked editions exist (400), even 
 
 ## 4. Venue logo scope
 
-Follow **Event Series logo** mechanics ([`eventSeriesAdmin.ts`](../src/features/events/server/eventSeriesAdmin.ts), [`EventSeriesForm`](../src/features/events/components/admin/EventSeriesForm.tsx)):
+Venue logos use `venues.logo_url` with two v1 paths:
 
-| Aspect | v1 requirement |
-|--------|----------------|
+| Aspect | v1 (implemented) |
+|--------|------------------|
 | Column | `venues.logo_url` |
-| URL paste | On create (via POST body) and edit (PATCH); ingest external URL into Supabase Storage when not already owned |
+| URL paste | On create (POST body) and edit (PATCH). Valid HTTP(S) URL stored **as-is** — no automatic download into Storage |
 | File upload | `POST /api/admin/venues/[id]/logo` — multipart `file` field; **edit mode only** (requires venue `id`) |
 | Allowed types | PNG, JPG, WebP |
 | Max size | 2 MB (reuse `validateCompanyLogoUpload` / `MAX_COMPANY_LOGO_SIZE_BYTES`) |
 | Storage bucket | Reuse `COMPANY_LOGO_BUCKET` |
 | Object path (locked) | `venues/{venueId}/logo.{ext}` — e.g. `venues/abc-123/logo.png` |
 | Auto-fetch | **None** — no Logo.dev or third-party discovery |
-| Clear logo | Empty `logo_url` on PATCH clears stored logo (same cleanup pattern as series) |
+| Clear logo | Empty `logo_url` on PATCH clears the column (display reference removed) |
 | Public display | Edition Venue tab + venue admin detail when set |
+
+**Deferred (future enhancement):** ingest pasted external URLs into Supabase Storage (Event Series `resolveEventManualLogoUrl` pattern), owned-storage URL validation on PATCH, and automatic Storage object cleanup when `logo_url` is cleared after a file upload.
 
 **Not in v1:** logo required at create; automatic logo from website domain.
 
@@ -389,7 +389,7 @@ All routes under `/api/admin/venues/*` require `requireAdminApi()`. Writes use `
 | `city_id` valid UUID | Error |
 | `city_id` change when editions linked | Error |
 | `website_url` valid URL | Error when provided |
-| `logo_url` valid URL or owned storage URL | Error when provided |
+| `logo_url` valid HTTP(S) URL when provided | Error when provided |
 | Duplicate `name` + `city_id` | Warning |
 | `slug` change on edit | Warning modal |
 | `archived_at` via PATCH | **Reject** — use archive/unarchive routes |
@@ -400,7 +400,7 @@ See §5.4.
 
 ---
 
-## 9. Suggested modules (implementation reference)
+## 9. Implemented modules (reference)
 
 ```
 src/features/venues/
@@ -409,13 +409,17 @@ src/features/venues/
     VenueLinkedEditionsTable.tsx
     AdminVenueSelect.tsx
     AddVenueModal.tsx
+    AdminVenuesListTable.tsx
+    AdminVenuesSearchForm.tsx
+    AdminVenuesIncludeArchivedToggle.tsx
+    VenueLifecycleSection.tsx
   server/
     venueAdmin.ts
+    venueAdminValidation.ts
     venueLogoStorage.ts
-    venueLogoIngest.ts
-    getVenueAdminList.ts
     getVenueOptions.ts
-    buildVenueMapsUrl.ts
+  lib/
+    buildGoogleMapsUrl.ts
 
 src/app/admin/venues/
   page.tsx
@@ -431,11 +435,11 @@ src/app/api/admin/venues/
   options/route.ts
 
 src/features/events/components/detail/
-  EventEditionTabs.tsx          (or equivalent)
+  PublicEventEditionTabs.tsx
   EventVenueSection.tsx
 ```
 
-Paths are indicative — adjust to match repo conventions during implementation.
+**Not implemented (deferred):** `venueLogoIngest.ts` — external URL ingest into Storage (see §4).
 
 ---
 
@@ -458,6 +462,8 @@ Paths are indicative — adjust to match repo conventions during implementation.
 | Countries / states / cities admin | Unchanged from Phase 1.1 |
 | Exhibitors tab (public or admin) | Not part of venue v1 |
 | “Recently used venues” picker shortcuts | Deferred |
+| External logo URL ingest into Storage | Deferred — paste stores URL as-is; see §4 |
+| Storage cleanup on logo clear after file upload | Deferred — see §4 |
 
 ---
 
@@ -471,7 +477,8 @@ Paths are indicative — adjust to match repo conventions during implementation.
 | 4 | Logo storage path | `venues/{venueId}/logo.{ext}` in `COMPANY_LOGO_BUCKET` |
 | 5 | Archived venues browsing | **Show archived** toggle on venue list |
 | 6 | Attach archived venue | Block new attachments only; preserve existing historical links |
-| 7 | Migration prerequisite | Separate **venue migration design** document required and approved before any Supabase migration work |
+| 7 | Migration prerequisite | [venue-migration-design.md](./venue-migration-design.md) approved and applied (`20260704120000_venues_v1.sql`) |
+| 8 | Logo URL ingest | **Deferred** — v1 uses HTTP URL paste + file upload only (§4) |
 
 No open scope decisions remain for v1 implementation.
 
@@ -485,32 +492,31 @@ No open scope decisions remain for v1 implementation.
 | [phase-1.1-location-scope.md](./phase-1.1-location-scope.md) | Implemented | `AdminCitySelect`, Add City, location formatter |
 | [phase-1-events-admin-scope.md](./phase-1-events-admin-scope.md) | Implemented | Edition form, admin nav patterns |
 | `cities` hierarchy | Live | `venues.city_id` FK |
-| Event Series logo pipeline | Implemented | Template for venue logo upload/ingest |
-| Supabase Storage (`COMPANY_LOGO_BUCKET`) | Live | Reuse for venue logos |
-| Public edition detail page | Live | Extend with Venue tab |
-| Migration design doc (`venue-migration-design.md` or equivalent) | **Required — not started** | **Must be approved before** `supabase db push` or any migration SQL |
-| [admin-information-architecture.md](./admin-information-architecture.md) | Stale nav | Update §2.1 when Venues ships |
+| Event Series logo pipeline | Implemented | File upload pattern reused; URL ingest not ported to venues |
+| Supabase Storage (`COMPANY_LOGO_BUCKET`) | Live | Reuse for venue file uploads |
+| Public edition detail page | Live | Extended with Venue tab |
+| [venue-migration-design.md](./venue-migration-design.md) | **Applied** | `20260704120000_venues_v1.sql` |
+| [admin-information-architecture.md](./admin-information-architecture.md) | Updated | Venues in §2.1 |
 
-**Deploy order:** migration design (approve) → migration apply → API/server → admin UI → edition form → public Venue tab → doc updates ([project-state.md](./project-state.md), README).
+**Deploy order (completed):** migration apply → API/server → admin UI → edition form → public Venue tab → doc updates ([project-state.md](./project-state.md), README, admin IA).
 
 ---
 
-## 13. Implementation order
+## 13. Implementation order (completed)
 
 ```mermaid
 flowchart TD
-  MD[0. Venue migration design doc — approve]
   M[1. Apply migration]
   S[2. Venue server modules + validation]
   A[3. Admin venue API routes]
   L[4. Admin venue UI: list / create / edit / archive]
-  G[5. Venue logo upload + URL ingest]
+  G[5. Venue logo file upload + URL paste]
   N[6. Admin nav: Venues item]
   E[7. Edition form: venue picker + Add venue + API]
   P[8. Public: embed venue on edition fetch]
   T[9. Public: three tabs + Venue content]
-  Q[10. QA + project-state update]
-  MD --> M --> S --> A --> L
+  Q[10. QA + documentation reconciliation]
+  M --> S --> A --> L
   L --> G
   A --> E
   L --> N
@@ -519,19 +525,18 @@ flowchart TD
   T --> Q
 ```
 
-| Step | Deliverable | Exit signal |
-|------|-------------|---------------|
-| 0 | Venue migration design document | Reviewed and approved; SQL ready |
-| 1 | Migration: `venues` + `event_editions.venue_id` + RLS + constraints | `supabase db push` succeeds |
-| 2 | `venueAdmin.ts`, validation helpers, types | Unit tests or manual API smoke |
-| 3 | `/api/admin/venues/*` CRUD + archive | Postman/curl create → archive → unarchive |
-| 4 | Admin pages V-A01–V-A03 | End-to-end venue CRUD in browser |
-| 5 | Logo upload + URL ingest | PNG upload + external URL paste both persist |
-| 6 | `adminPrimaryNavItems` + Venues routes | Sidebar shows Venues after Companies |
-| 7 | `EventEditionForm` + options API + inline Add venue | Attach/detach venue; city mismatch blocked |
-| 8 | `getEventDetailData` venue embed | Edition with venue returns nested venue |
-| 9 | Public edition tabs (Overview / Sponsors / Venue) + Venue content | Three tabs only; map link, logo, empty state verified |
-| 10 | QA checklist (§14); update project-state | `npm run build` passes |
+| Step | Deliverable | Status |
+|------|-------------|--------|
+| 1 | Migration: `venues` + `event_editions.venue_id` + RLS + constraints | Done |
+| 2 | `venueAdmin.ts`, validation helpers, types | Done |
+| 3 | `/api/admin/venues/*` CRUD + archive | Done |
+| 4 | Admin pages V-A01–V-A03 | Done |
+| 5 | Logo file upload + HTTP URL paste | Done (ingest deferred — §4) |
+| 6 | `adminPrimaryNavItems` + Venues routes | Done |
+| 7 | `EventEditionForm` + options API + inline Add venue | Done |
+| 8 | Edition detail venue embed | Done |
+| 9 | Public edition tabs (Overview / Sponsors / Venue) + Venue content | Done |
+| 10 | QA checklist (§14); doc updates | Docs reconciled; QA manual |
 
 ---
 
@@ -561,9 +566,9 @@ flowchart TD
 
 ### Admin — logo
 
-- [ ] Paste external logo URL on edit → stored in Supabase
-- [ ] Upload PNG/JPG/WebP ≤ 2 MB → `logo_url` updated
-- [ ] Clear logo URL removes logo
+- [ ] Paste external logo URL on create/edit → `logo_url` column stores URL as-is (no Storage ingest)
+- [ ] Upload PNG/JPG/WebP ≤ 2 MB on venue detail → `logo_url` set to Storage public URL
+- [ ] Clear logo URL on save → `logo_url` null; display removed
 - [ ] Invalid file type / oversized file shows error
 
 ### Admin — edition
@@ -594,11 +599,13 @@ flowchart TD
 
 ## 15. Exit criteria
 
-- [ ] All §14 QA items pass (or documented exceptions)
-- [ ] Scope matches [venue-design.md](./venue-design.md) resolved decisions §13
-- [ ] No excluded items in §10 shipped accidentally
-- [ ] [project-state.md](./project-state.md) updated: Venues row marked implemented; §7 priority cleared or reordered
-- [ ] This document status set to **Implemented** when complete
+- [x] Scope matches [venue-design.md](./venue-design.md) resolved decisions (logo ingest explicitly deferred — §4)
+- [x] No excluded items in §10 shipped accidentally
+- [x] [project-state.md](./project-state.md) updated: Venues implemented
+- [x] [admin-information-architecture.md](./admin-information-architecture.md) §2.1 updated
+- [x] [README.md](./README.md) venue section updated
+- [x] This document status set to **Implemented**
+- [ ] All §14 QA items pass manual verification (checklist retained for release QA)
 
 ---
 
@@ -607,7 +614,7 @@ flowchart TD
 | Document | Path |
 |----------|------|
 | Venue design (approved) | [venue-design.md](./venue-design.md) |
-| Venue migration design | **Required before migration** — not yet created |
+| Venue migration design | [venue-migration-design.md](./venue-migration-design.md) — applied |
 | Project state | [project-state.md](./project-state.md) |
 | Phase 1.1 location | [phase-1.1-location-scope.md](./phase-1.1-location-scope.md) |
 | Phase 1 events admin | [phase-1-events-admin-scope.md](./phase-1-events-admin-scope.md) |
@@ -617,4 +624,4 @@ flowchart TD
 
 ---
 
-**End of venue v1 implementation scope (approved).**
+**End of venue v1 implementation scope (implemented).**

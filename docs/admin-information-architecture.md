@@ -1,12 +1,12 @@
 # EventPixels — Admin Information Architecture
 
-**Status:** Approved for review before implementation  
+**Status:** Approved — reflects shipped v1 including Venues  
 **Version:** v1  
-**Last updated:** 2026-06-03  
+**Last updated:** 2026-06-25  
 
-Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, and approved database/migration design.
+Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), and approved database/migration design.
 
-No implementation code.
+Describes navigation and screens; implementation lives in `src/app/admin/` and related feature modules.
 
 ---
 
@@ -33,7 +33,8 @@ No implementation code.
 | 2 | **Events** | `/admin/events` | Series + editions hub |
 | 3 | **Sponsor imports** | `/admin/sponsor-imports` | Import list + new import |
 | 4 | **Companies** | `/admin/companies` | Global company directory |
-| 5 | **View site** | `/` (new tab) | Marketing site; external link icon |
+| 5 | **Venues** | `/admin/venues` | Reusable event locations; archive-only lifecycle |
+| 6 | **View site** | `/` (new tab) | Marketing site; external link icon |
 
 **v1.1+ (placeholder, not in nav yet):** Users, Settings, Audit log
 
@@ -52,7 +53,7 @@ When viewing `/admin/events/editions/[id]`:
 
 | Tab | Content |
 |-----|---------|
-| **Profile** | Edition fields |
+| **Profile** | Edition fields (including optional venue picker) |
 | **Live sponsors** | `event_sponsors` read-only |
 | **Imports** | Batches for this edition |
 
@@ -82,6 +83,7 @@ flowchart TB
     E[Events]
     SI[Sponsor imports]
     C[Companies]
+    V[Venues]
   end
 
   subgraph events [Events section]
@@ -106,6 +108,8 @@ flowchart TB
   ED --> IN
   SI --> IL
   SI --> IN
+  V --> VL[Venues list]
+  VL --> VD[Venue detail]
 ```
 
 ---
@@ -164,7 +168,15 @@ flowchart TB
 | C-03 | Company detail / edit | `/admin/companies/[id]` |
 | C-04 | Merge duplicates | v1.1 placeholder |
 
-### 3.6 Cross-cutting (3)
+### 3.6 Venues (3)
+
+| ID | Screen | Route |
+|----|--------|-------|
+| V-A01 | Venues list | `/admin/venues` |
+| V-A02 | Create venue | `/admin/venues/new` |
+| V-A03 | Venue detail / edit | `/admin/venues/[id]` |
+
+### 3.7 Cross-cutting (3)
 
 | ID | Screen | Type |
 |----|--------|------|
@@ -172,7 +184,7 @@ flowchart TB
 | X-02 | Unauthorized | Redirect |
 | X-03 | Empty / error states | Inline |
 
-**Total v1 screens: 30** (24 full pages + 4 modals/overlays + 2 cross-cutting)
+**Total v1 screens: 33** (27 full pages + 4 modals/overlays + 2 cross-cutting)
 
 ---
 
@@ -202,6 +214,10 @@ flowchart TB
 │   ├── List (C-01)
 │   ├── /new (C-02)
 │   └── /[id] (C-03)
+├── /venues
+│   ├── List (V-A01)
+│   ├── /new (V-A02)
+│   └── /[id] (V-A03)
 └── /search (X-01)
 ```
 
@@ -305,7 +321,19 @@ flowchart LR
 
 ---
 
-### Journey 7 — Discard bad import
+### Journey 7 — Venue maintenance
+
+**Actor:** Admin
+
+1. Venues list → search or filter (Show archived when needed)
+2. Create venue — city required (`AdminCitySelect` + Add City); optional website, address, logo URL
+3. Edit venue — slug warning on change; file logo upload on detail; map preview from address + city
+4. Link venue from edition Profile tab (optional picker, city-filtered) or inline Add venue
+5. Archive when retired — linked editions keep historical `venue_id`; unarchive from venue detail
+
+---
+
+### Journey 8 — Discard bad import
 
 **Actor:** Admin · **Entry:** Any in-progress import screen
 
@@ -315,7 +343,7 @@ flowchart LR
 
 ---
 
-### Journey 8 — Morning check-in (daily ops)
+### Journey 9 — Morning check-in (daily ops)
 
 **Actor:** Admin · **Duration:** 2–5 min
 
@@ -482,7 +510,24 @@ Export · merge duplicates
 
 ---
 
-### 7.7 Live sponsors tab (edition detail)
+### 7.7 Venues list (V-A01)
+
+**Filters**
+
+| Filter | Options |
+|--------|---------|
+| Search | Name, slug, city name |
+| Status | Active (default) · Show archived toggle |
+
+**Row actions**
+
+View · Edit (detail page)
+
+**Bulk actions:** None v1
+
+---
+
+### 7.8 Live sponsors tab (edition detail)
 
 **Filters:** Tier · search company name
 
@@ -570,6 +615,7 @@ All authenticated admin users can perform every v1 operation:
 | Event editions | ✓ | ✓ | ✓ | — | — |
 | Sponsor imports | ✓ | ✓ | ✓ | Discard batch | Publish sponsors |
 | Companies | ✓ | ✓ | ✓ | — | — |
+| Venues | ✓ | ✓ | ✓ | Archive only | — |
 | Live sponsors | ✓ | — | via import | — | via import |
 | Admin search | ✓ | — | — | — | — |
 
@@ -602,7 +648,7 @@ All write actions record the acting admin’s `profiles.id`:
 | **Research lead** | Excel prep (offline) | Per event |
 | **Import operator** | Create edition, import flow, review | Weekly |
 | **Publisher** | Draft review, pre-publish, publish | After each import |
-| **Curator** | Edition profile, companies list, search | Ongoing |
+| **Curator** | Edition profile, companies list, venues list, search | Ongoing |
 
 In v1 a single **admin account** may perform all personas; there is no separate Editor login.
 
@@ -626,7 +672,8 @@ In v1 a single **admin account** may perform all personas; there is no separate 
 | No series admin | `/admin/events/series/*` |
 | No import UI | `/admin/sponsor-imports/*` |
 | `/admin/companies/new` only | `/admin/companies` list + new + detail |
-| 3 flat nav items | 5 primary nav + Events sub-nav |
+| No venues admin | `/admin/venues` list + new + detail |
+| 3 flat nav items | 6 primary nav + Events sub-nav |
 
 ---
 
@@ -667,6 +714,7 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 |------|--------|
 | 2026-06-03 | Initial admin IA from approved workflows |
 | 2026-06-03 | v1 permissions simplified: admin-only; roadmap alignment |
+| 2026-06-25 | Venues nav (§2.1), screen inventory (§3.6), hierarchy, permissions, venue journey |
 
 ---
 
@@ -676,5 +724,7 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 |----------|------|
 | Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
+| Venue design | [venue-design.md](./venue-design.md) |
+| Venue v1 scope | [phase-venue-scope.md](./phase-venue-scope.md) |
 | Sponsor import DB design | [sponsor-import-database-design.md](./sponsor-import-database-design.md) |
 | Sponsor import migrations | [sponsor-import-migration-design.md](./sponsor-import-migration-design.md) |

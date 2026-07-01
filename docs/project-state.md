@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-06-25
+> Last updated: 2026-06-25 (Venue v1 documentation reconciliation)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -20,12 +20,12 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 | Entity | Table | Notes |
 |---|---|---|
 | **Event Series** | `event_series` | Recurring event brand (name, slug, description, website, logo). |
-| **Event Editions** | `event_editions` | Series occurrence (year, dates, city, website, globally unique slug). Multiple editions per series + year allowed. Optional `venue_id` when implemented (design approved). |
-| **Venues** | `venues` | Reusable named location (name, slug, city, address, website, logo). Linked to editions via nullable `event_editions.venue_id`; `city_id` retained on editions. Archive-only lifecycle (`archived_at`). **Design and scope approved** — see [venue-design.md](./venue-design.md) and [phase-venue-scope.md](./phase-venue-scope.md); **not yet implemented**. |
+| **Event Editions** | `event_editions` | Series occurrence (year, dates, city, website, globally unique slug). Multiple editions per series + year allowed. Optional `venue_id` → `venues`. |
+| **Venues** | `venues` | Reusable named location (name, slug, city, address, website, logo). Linked to editions via nullable `event_editions.venue_id`; `city_id` retained on editions. Archive-only lifecycle (`archived_at`). See [venue-design.md](./venue-design.md) and [phase-venue-scope.md](./phase-venue-scope.md). |
 | **Companies** | `companies` | Canonical company entity. No separate sponsors table — "sponsor" = company linked to an edition. |
 | **Event Sponsors** | `event_sponsors` | Edition-scoped join: `tier_rank`, `tier_label`, `display_order` (dense 1..n within edition + tier). `UNIQUE (event_editions_id, company_id)`. |
 | **Keywords** | `keyword`, `event_series_keyword` | Attach to series; editions inherit (read-only chips on edition profile). |
-| **Logos** | columns on `companies`; `event_series.logo_url` | Companies: Logo.dev ingest + metadata. Event series: manual-only (`logo_url` pasted on edit). Event logos are manual-only. |
+| **Logos** | columns on `companies`; `event_series.logo_url`; `venues.logo_url` | Companies: Logo.dev ingest + metadata. Event series and venues: manual HTTP URL and/or file upload to `COMPANY_LOGO_BUCKET` (`venues/{id}/logo.{ext}`). Event edition logos are manual-only. |
 | **Imports** | `sponsor_import_*` (4 tables) | Excel pipeline → validate/match → draft links → publish RPC. One active batch per edition. |
 
 ### Access rules (RLS)
@@ -55,15 +55,18 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 
 **Admin — sponsor imports** — Full Excel pipeline through atomic publish and history. Spreadsheet columns: Sponsor Tier (`tier_rank`), Sponsor Label (`tier_label`), Name, Website. Publish writes both rank and label from draft links; blank spreadsheet labels publish as NULL.
 
+**Admin — venues** — List, create, edit, archive/unarchive at `/admin/venues`. Optional venue picker on edition create/edit (city-filtered; inline Add venue). Logo via HTTP URL paste or file upload on edit. Duplicate names in same city warn only. `city_id` immutable when editions linked.
+
+**Public — venue** — Event edition detail tabs: Overview (default), Sponsors (`?tab=sponsors`), Venue (`?tab=venue`). No public `/venues/...` routes; Explorer cards unchanged (city only).
+
 ## 4. In Progress
 
 Nothing is mid-flight.
 
-**Approved design and scope, not started:** [Venue](./venue-design.md) — design in [venue-design.md](./venue-design.md); implementation scope in [phase-venue-scope.md](./phase-venue-scope.md). Requires venue migration design doc before Supabase work. No code or migrations yet.
-
 **Known limitations**
 - Import publish can overwrite manual `tier_rank` and re-add removed sponsors for companies in the batch (warning banner only).
-- No pagination/search on admin lists (editions, companies, edition roster).
+- No pagination/search on admin lists (editions, companies, venues, edition roster).
+- Venue logo URL paste stores the URL as-is (no automatic ingest into Storage); file upload writes to `COMPANY_LOGO_BUCKET`. External URL ingest deferred to a future enhancement.
 - No company dedupe/merge tooling.
 - Concurrent admin edits are last-write-wins.
 
@@ -82,7 +85,7 @@ Nothing is mid-flight.
 | Companies = entity; sponsor = company-on-an-edition | Reduces navigation ambiguity. |
 | API routes + service role; manual validation; hand-rolled UI | Existing codebase conventions; build is the gate. |
 
-**Other sources:** schema in `supabase/migrations/` (applied through `20260618120000`); phase design docs in `docs/` for detail beyond this file.
+**Other sources:** schema in `supabase/migrations/` (applied through `20260704120000_venues_v1`); phase design docs in `docs/` for detail beyond this file.
 
 ## 6. Operations
 
@@ -97,7 +100,7 @@ Nothing is mid-flight.
 3. Import publish hardening (preserve manual rank edits when unchanged in batch).
 4. Company dedupe/merge tooling.
 5. Cleanups: remove dead stubs (`EditionImportsStub.tsx`, `/admin/events/new` redirect); consolidate duplicated tier-label helpers.
-6. Venue implementation — per approved [phase-venue-scope.md](./phase-venue-scope.md) (migration design doc first, then admin CRUD, edition picker, public Overview/Sponsors/Venue tabs).
+6. Venue logo URL ingest into Storage (mirror Event Series `resolveEventManualLogoUrl` pattern) and storage cleanup on logo clear.
 
 ---
 
