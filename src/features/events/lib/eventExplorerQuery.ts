@@ -313,6 +313,26 @@ export function buildEventExplorerSearchParams(
   return next;
 }
 
+/** Canonical filter-only URL key (excludes view/month). Used to compare filter state. */
+export function buildEventExplorerFilterKey(filters: EventExplorerFilterState): string {
+  return buildEventExplorerSearchParams(filters).toString();
+}
+
+export function isEventExplorerFiltersApplying(input: {
+  draftFilters: EventExplorerFilterState;
+  appliedFilters: EventExplorerFilterState;
+  serverFilters: EventExplorerFilterState;
+  isTransitionPending?: boolean;
+}): boolean {
+  if (input.isTransitionPending) return true;
+
+  const draftKey = buildEventExplorerFilterKey(input.draftFilters);
+  const appliedKey = buildEventExplorerFilterKey(input.appliedFilters);
+  const serverKey = buildEventExplorerFilterKey(input.serverFilters);
+
+  return draftKey !== appliedKey || appliedKey !== serverKey;
+}
+
 /** True when the event's date range overlaps [filterStart, filterEnd] (inclusive). */
 export function eventOverlapsDateRange(
   event: Pick<EventExplorerMatchable, "start_date" | "end_date">,

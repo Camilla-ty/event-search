@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -19,6 +19,7 @@ import { buildCalendarToolbarCounts } from "@/src/features/events/lib/eventExplo
 import {
   buildEventExplorerSearchParams,
   DEFAULT_EVENT_EXPLORER_FILTERS,
+  isEventExplorerFiltersApplying,
   parseEventExplorerFiltersFromSearchParams,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import {
@@ -38,6 +39,7 @@ import { ActiveTopicFilters } from "./ActiveTopicFilters";
 import { EventCalendar } from "./EventCalendar";
 import { EventGrid } from "./EventGrid";
 import { EventViewToggle } from "./EventViewToggle";
+import { FilterApplyingIndicator } from "./FilterApplyingIndicator";
 import { FilterPanel } from "./FilterPanel";
 import type { EventFilters, EventRecord, ExplorerView } from "./types";
 
@@ -61,6 +63,7 @@ export function EventExplorerPage({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   const appliedFilters = useMemo(
     () => parseEventExplorerFiltersFromSearchParams(searchParams),
     [searchParams],
@@ -83,6 +86,17 @@ export function EventExplorerPage({
   const appliedFilterKey = useMemo(
     () => buildEventExplorerSearchParams(appliedFilters).toString(),
     [appliedFilters],
+  );
+  const serverFilters = initialFilters ?? appliedFilters;
+  const isFiltersApplying = useMemo(
+    () =>
+      isEventExplorerFiltersApplying({
+        draftFilters,
+        appliedFilters,
+        serverFilters,
+        isTransitionPending: isPending,
+      }),
+    [appliedFilters, draftFilters, isPending, serverFilters],
   );
 
   const sortedEvents = useMemo(() => {
@@ -127,7 +141,9 @@ export function EventExplorerPage({
     const current = searchParams.toString();
     const nextValue = next.toString();
     if (current !== nextValue) {
-      router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+      startTransition(() => {
+        router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+      });
     }
   }, [
     draftFilters,
@@ -149,7 +165,9 @@ export function EventExplorerPage({
   function replaceExplorerUrl(options?: { view?: ExplorerView; month?: string }) {
     const next = buildExplorerSearchParams(options);
     const nextValue = next.toString();
-    router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+    startTransition(() => {
+      router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
+    });
   }
 
   function handleViewChange(nextView: ExplorerView) {
@@ -229,21 +247,30 @@ export function EventExplorerPage({
               />
             </div>
           </div>
-          {explorerView === "list" ? (
-            <EventGrid
-              events={sortedEvents}
-              loading={false}
-              page={page}
-              onPageChange={setPage}
-              onReset={handleReset}
-            />
-          ) : (
-            <EventCalendar
-              events={sortedEvents}
-              month={visibleCalendarMonth}
-              onMonthChange={handleCalendarMonthChange}
-            />
-          )}
+          <FilterApplyingIndicator visible={isFiltersApplying} />
+          <div
+            className={
+              isFiltersApplying
+                ? "opacity-60 transition-opacity duration-200"
+                : "transition-opacity duration-200"
+            }
+          >
+            {explorerView === "list" ? (
+              <EventGrid
+                events={sortedEvents}
+                loading={false}
+                page={page}
+                onPageChange={setPage}
+                onReset={handleReset}
+              />
+            ) : (
+              <EventCalendar
+                events={sortedEvents}
+                month={visibleCalendarMonth}
+                onMonthChange={handleCalendarMonthChange}
+              />
+            )}
+          </div>
         </div>
       </div>
 

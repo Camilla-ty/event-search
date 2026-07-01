@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   buildEventExplorerSearchParams,
+  isEventExplorerFiltersApplying,
   normalizeEventExplorerFilters,
   parseEventExplorerFiltersFromSearchParams,
 } from "@/src/features/events/lib/eventExplorerQuery";
@@ -76,5 +77,74 @@ describe("normalizeEventExplorerFilters topics", () => {
     });
 
     assert.deepEqual(filters.topics, ["bitcoin"]);
+  });
+});
+
+const stableFilters = {
+  query: "",
+  series: "all",
+  region: "all",
+  startDate: "",
+  endDate: "",
+  topics: [] as string[],
+};
+
+describe("isEventExplorerFiltersApplying", () => {
+  it("returns false when draft, applied, and server filters match", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: stableFilters,
+        appliedFilters: stableFilters,
+        serverFilters: stableFilters,
+      }),
+      false,
+    );
+  });
+
+  it("returns true when draft filters differ from applied filters", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: { ...stableFilters, topics: ["bitcoin"] },
+        appliedFilters: stableFilters,
+        serverFilters: stableFilters,
+      }),
+      true,
+    );
+  });
+
+  it("returns true when URL filters differ from server results filters", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: { ...stableFilters, topics: ["bitcoin"] },
+        appliedFilters: { ...stableFilters, topics: ["bitcoin"] },
+        serverFilters: stableFilters,
+      }),
+      true,
+    );
+  });
+
+  it("returns true when a router transition is pending", () => {
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: stableFilters,
+        appliedFilters: stableFilters,
+        serverFilters: stableFilters,
+        isTransitionPending: true,
+      }),
+      true,
+    );
+  });
+
+  it("returns false once server filters catch up to applied filters", () => {
+    const topicFilters = { ...stableFilters, topics: ["bitcoin", "ai"] };
+
+    assert.equal(
+      isEventExplorerFiltersApplying({
+        draftFilters: topicFilters,
+        appliedFilters: topicFilters,
+        serverFilters: topicFilters,
+      }),
+      false,
+    );
   });
 });
