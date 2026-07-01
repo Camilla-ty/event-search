@@ -43,6 +43,22 @@ function isHostedPlatformSlug(segment: string): boolean {
   return HOSTED_PLATFORM_SLUG_PATTERN.test(segment);
 }
 
+/** ADR-002 Tier 2: social / directory reference pages with a stable path (selection tier). */
+function matchesTier2SocialReferencePath(host: string, pathname: string): boolean {
+  const path = normalizePathname(pathname);
+  if (path === "" || path === "/") return false;
+
+  switch (host) {
+    case "linkedin.com":
+      return path.startsWith("/company/");
+    case "linktr.ee":
+    case "linktree.com":
+      return true;
+    default:
+      return false;
+  }
+}
+
 /** Tier 1 social / link-aggregator paths (unchanged from pre-hosted refactor). */
 function matchesSocialPlatformPath(host: string, pathname: string): boolean {
   const path = normalizePathname(pathname);
@@ -87,11 +103,35 @@ function matchesMarketplacePlatformPath(host: string, pathname: string): boolean
   }
 }
 
+function matchesMirrorPlatformPath(host: string, pathname: string): boolean {
+  if (host !== "mirror.xyz") return false;
+  const path = normalizePathname(pathname);
+  return path !== "" && path !== "/";
+}
+
+function isGitHubPagesHost(host: string): boolean {
+  return host === "github.io" || host.endsWith(".github.io");
+}
+
+function isPublishingSubdomainHost(host: string): boolean {
+  return host.endsWith(".substack.com") || host.endsWith(".medium.com");
+}
+
 function matchesHostedPlatformPath(host: string, pathname: string): boolean {
   return (
     matchesSocialPlatformPath(host, pathname) ||
-    matchesMarketplacePlatformPath(host, pathname)
+    matchesMarketplacePlatformPath(host, pathname) ||
+    matchesMirrorPlatformPath(host, pathname)
   );
+}
+
+/** ADR-002 Tier 3: hosted platform home (project lives on platform host). */
+function matchesTier3HostedPlatformWebsite(host: string, pathname: string): boolean {
+  if (matchesTier2SocialReferencePath(host, pathname)) return false;
+  if (matchesHostedPlatformPath(host, pathname)) return true;
+  if (isGitHubPagesHost(host)) return true;
+  if (isPublishingSubdomainHost(host)) return true;
+  return false;
 }
 
 /**
@@ -122,6 +162,9 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
   "crunchbase.com",
   "wellfound.com",
   "angel.co",
+  "coinmarketcap.com",
+  "coingecko.com",
+  "games.gg",
   // Link-in-bio aggregators
   "beacons.ai",
   "bio.site",
@@ -165,6 +208,8 @@ function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
       // B1: only invite/group links are non-identity; t.me/{handle} keeps its
       // existing path-aware identity.
       return path.startsWith("/+") || path.startsWith("/joinchat/");
+    case "mirror.xyz":
+      return path === "" || path === "/";
     default:
       return false;
   }
@@ -179,13 +224,13 @@ export function isSocialPlatformWebsite(website: string): boolean {
   return matchesSocialPlatformPath(host, parsed.pathname);
 }
 
-/** True when the website URL uses a hosted-platform identity (social or Tier 1 marketplace). */
+/** True when the website URL uses a hosted-platform identity (ADR-002 Tier 3). */
 export function isHostedPlatformWebsite(website: string): boolean {
   const parsed = parseWebsiteUrl(website);
   if (!parsed) return false;
 
   const host = normalizeHost(parsed.hostname);
-  return matchesHostedPlatformPath(host, parsed.pathname);
+  return matchesTier3HostedPlatformWebsite(host, parsed.pathname);
 }
 
 /** True when a stored company identity key uses a hosted-platform host+path. */
@@ -196,7 +241,11 @@ export function isHostedPlatformIdentityKey(identity: string): boolean {
 
   const host = trimmed.slice(0, slashIndex);
   const pathname = trimmed.slice(slashIndex);
-  return matchesHostedPlatformPath(host, pathname);
+  return (
+    matchesHostedPlatformPath(host, pathname) ||
+    isGitHubPagesHost(host) ||
+    isPublishingSubdomainHost(host)
+  );
 }
 
 /**
@@ -222,6 +271,10 @@ export function resolveCompanyWebsiteIdentity(website: string): CompanyWebsiteId
 
     if (matchesNonIdentityPlatform(host, parsed.pathname)) {
       return { status: "no_identity" };
+    }
+
+    if (isGitHubPagesHost(host)) {
+      return { status: "domain", domain: host };
     }
 
     if (matchesHostedPlatformPath(host, parsed.pathname)) {
@@ -265,9 +318,87 @@ export function companyMissingLogo(company: { logo_url?: string | null }): boole
   return !(company.logo_url?.trim());
 }
 
-/** Hosted-platform website whose logo has not been manually curated by a researcher. */
+/**
+ * ADR-002 website selection tier (1 = official, 2 = social/directory/reference, 3 = hosted).
+ * Lower number = higher priority when choosing a canonical website.
+ */
+export type CompanyWebsiteTier = 1 | 2 | 3;
+
+export function classifyCompanyWebsiteTier(website: string): CompanyWebsiteTier | null {
+  const trimmed = website.trim();
+  if (trimmed === "") return null;
+
+  const identity = resolveCompanyWebsiteIdentity(trimmed);
+  if (identity.status === "unparseable") return null;
+
+  const parsed = parseWebsiteUrl(trimmed);
+  if (!parsed) return null;
+
+  const host = normalizeHost(parsed.hostname);
+  if (!host) return null;
+
+  if (identity.status === "no_identity") {
+    return 2;
+  }
+
+  if (matchesTier2SocialReferencePath(host, parsed.pathname)) {
+    return 2;
+  }
+
+  if (matchesTier3HostedPlatformWebsite(host, parsed.pathname)) {
+    return 3;
+  }
+
+  return 1;
+}
+
+/**
+ * Within Tier 2, prefer path-stable social references over bare directory listings.
+ * Returns 0 (higher priority) or 1 (lower priority).
+ */
+function tier2SubRank(website: string): number {
+  const identity = resolveCompanyWebsiteIdentity(website);
+  return identity.status === "domain" ? 0 : 1;
+}
+
+/**
+ * Pick the canonical website from multiple candidates per ADR-002 tier priority:
+ * official (1) > social/directory/reference (2) > hosted platform (3).
+ */
+export function selectCanonicalCompanyWebsite(urls: readonly string[]): string | null {
+  let best: { url: string; tier: CompanyWebsiteTier; tier2Sub: number; index: number } | null =
+    null;
+
+  for (let index = 0; index < urls.length; index++) {
+    const url = urls[index]?.trim() ?? "";
+    if (url === "") continue;
+
+    const tier = classifyCompanyWebsiteTier(url);
+    if (tier === null) continue;
+
+    const tier2Sub = tier === 2 ? tier2SubRank(url) : 0;
+
+    if (
+      best === null ||
+      tier < best.tier ||
+      (tier === best.tier &&
+        (tier2Sub < best.tier2Sub ||
+          (tier2Sub === best.tier2Sub && index < best.index)))
+    ) {
+      best = { url, tier, tier2Sub, index };
+    }
+  }
+
+  return best?.url ?? null;
+}
+
+/** Non-official websites (Tier 2/3) need manual logo curation until a researcher sets one. */
 export function companyNeedsLogoReview(company: CompanyLogoReviewFields): boolean {
   const website = company.website?.trim() ?? "";
-  if (!isHostedPlatformWebsite(website)) return false;
+  if (website === "") return false;
+
+  const tier = classifyCompanyWebsiteTier(website);
+  if (tier === null || tier === 1) return false;
+
   return company.logo_source?.trim().toLowerCase() !== "manual";
 }

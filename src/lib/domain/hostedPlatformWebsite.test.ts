@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  classifyCompanyWebsiteTier,
   companyNeedsLogoReview,
   isCommunityPlatformWebsite,
   isHostedPlatformIdentityKey,
@@ -9,6 +10,7 @@ import {
   isSocialPlatformWebsite,
   normalizeCompanyIdentityFromWebsite,
   resolveCompanyWebsiteIdentity,
+  selectCanonicalCompanyWebsite,
 } from "./hostedPlatformWebsite";
 
 describe("isHostedPlatformWebsite", () => {
@@ -44,13 +46,24 @@ describe("isHostedPlatformWebsite", () => {
   });
 
   it("detects existing social platform URLs", () => {
-    assert.equal(
-      isHostedPlatformWebsite("https://www.linkedin.com/company/atlantic-hpc/"),
-      true,
-    );
     assert.equal(isHostedPlatformWebsite("https://www.youtube.com/@somechannel"), true);
     assert.equal(isHostedPlatformWebsite("https://x.com/somecompany"), true);
-    assert.equal(isHostedPlatformWebsite("https://linktr.ee/somebrand"), true);
+  });
+
+  it("treats LinkedIn company pages as Tier 2 reference, not Tier 3 hosted", () => {
+    assert.equal(
+      isHostedPlatformWebsite("https://www.linkedin.com/company/atlantic-hpc/"),
+      false,
+    );
+    assert.equal(isHostedPlatformWebsite("https://linktr.ee/somebrand"), false);
+  });
+
+  it("detects Mirror.xyz and GitHub Pages as Tier 3 hosted", () => {
+    assert.equal(
+      isHostedPlatformWebsite("https://mirror.xyz/eth/0xabc123"),
+      true,
+    );
+    assert.equal(isHostedPlatformWebsite("https://acme.github.io"), true);
   });
 
   it("rejects corporate websites", () => {
@@ -183,6 +196,10 @@ describe("resolveCompanyWebsiteIdentity", () => {
       "https://bio.site/acme",
       "https://www.reddit.com/r/acme",
       "https://substack.com/@acme",
+      "https://coinmarketcap.com/currencies/example-token/",
+      "https://www.coingecko.com/en/coins/example-token",
+      "https://games.gg/sorare",
+      "https://mirror.xyz",
     ]) {
       assert.deepEqual(
         resolveCompanyWebsiteIdentity(url),
@@ -284,6 +301,21 @@ describe("resolveCompanyWebsiteIdentity", () => {
     );
   });
 
+  it("resolves Mirror.xyz publication paths and GitHub Pages", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://mirror.xyz/eth/0xabc123"), {
+      status: "domain",
+      domain: "mirror.xyz/eth/0xabc123",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://acme.github.io"), {
+      status: "domain",
+      domain: "acme.github.io",
+    });
+    assert.equal(
+      normalizeCompanyIdentityFromWebsite("https://coinmarketcap.com/currencies/example-token/"),
+      "",
+    );
+  });
+
   it("treats empty input as unparseable", () => {
     assert.deepEqual(resolveCompanyWebsiteIdentity(""), { status: "unparseable" });
     assert.deepEqual(resolveCompanyWebsiteIdentity("   "), { status: "unparseable" });
@@ -344,10 +376,18 @@ describe("isHostedPlatformIdentityKey", () => {
 });
 
 describe("companyNeedsLogoReview", () => {
-  it("flags hosted-platform companies without a manual logo", () => {
+  it("flags non-official websites without a manual logo", () => {
     assert.equal(
       companyNeedsLogoReview({
         website: "https://www.linkedin.com/company/atlantic-hpc/",
+        logo_url: null,
+        logo_source: "none",
+      }),
+      true,
+    );
+    assert.equal(
+      companyNeedsLogoReview({
+        website: "https://coinmarketcap.com/currencies/example-token/",
         logo_url: null,
         logo_source: "none",
       }),
@@ -391,5 +431,73 @@ describe("companyNeedsLogoReview", () => {
       }),
       false,
     );
+  });
+});
+
+describe("classifyCompanyWebsiteTier", () => {
+  it("classifies official, reference, and hosted URLs", () => {
+    assert.equal(classifyCompanyWebsiteTier("https://sorare.com"), 1);
+    assert.equal(classifyCompanyWebsiteTier("https://symbiogenesis.app"), 1);
+    assert.equal(
+      classifyCompanyWebsiteTier("https://www.linkedin.com/company/acme-startup/"),
+      2,
+    );
+    assert.equal(
+      classifyCompanyWebsiteTier("https://coinmarketcap.com/currencies/example-token/"),
+      2,
+    );
+    assert.equal(classifyCompanyWebsiteTier("https://games.gg/sorare"), 2);
+    assert.equal(classifyCompanyWebsiteTier("https://mirror.xyz/eth/0xabc123"), 3);
+    assert.equal(classifyCompanyWebsiteTier("https://acme.github.io"), 3);
+    assert.equal(classifyCompanyWebsiteTier("https://x.com/sorare"), 3);
+  });
+});
+
+describe("selectCanonicalCompanyWebsite", () => {
+  it("prefers sorare.com over games.gg", () => {
+    assert.equal(
+      selectCanonicalCompanyWebsite([
+        "https://games.gg/sorare",
+        "https://www.sorare.com",
+      ]),
+      "https://www.sorare.com",
+    );
+  });
+
+  it("prefers symbiogenesis.app over games.gg", () => {
+    assert.equal(
+      selectCanonicalCompanyWebsite([
+        "https://games.gg/symbiogenesis",
+        "https://symbiogenesis.app",
+      ]),
+      "https://symbiogenesis.app",
+    );
+  });
+
+  it("accepts CoinMarketCap-only when it is the only candidate", () => {
+    const cmc = "https://coinmarketcap.com/currencies/example-token/";
+    assert.equal(selectCanonicalCompanyWebsite([cmc]), cmc);
+  });
+
+  it("accepts Mirror.xyz-only when it is the only candidate", () => {
+    const mirror = "https://mirror.xyz/eth/0xabc123";
+    assert.equal(selectCanonicalCompanyWebsite([mirror]), mirror);
+  });
+
+  it("always prefers higher-tier candidates over lower-tier fallbacks", () => {
+    const official = "https://sorare.com";
+    const directory = "https://games.gg/sorare";
+    const mirror = "https://mirror.xyz/eth/0xabc123";
+    const linkedin = "https://www.linkedin.com/company/sorare/";
+
+    assert.equal(
+      selectCanonicalCompanyWebsite([directory, linkedin, mirror, official]),
+      official,
+    );
+    assert.equal(
+      selectCanonicalCompanyWebsite([mirror, directory, linkedin]),
+      linkedin,
+    );
+    assert.equal(selectCanonicalCompanyWebsite([mirror, directory]), directory);
   });
 });

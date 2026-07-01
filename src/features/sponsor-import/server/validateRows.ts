@@ -2,6 +2,10 @@ import { resolveCompanyWebsiteIdentity } from "@/src/lib/domain/hostedPlatformWe
 import { slugify } from "@/src/lib/slugify";
 
 import type { ValidationIssue } from "../types";
+import {
+  duplicateClusterKey,
+  finalizeImportRowWebsites,
+} from "./importWebsiteSelection";
 
 const TIER_LABEL_MAX_LENGTH = 80;
 
@@ -139,16 +143,16 @@ export type ValidatedImportRow = RowValidationOutput & {
   status: string;
 };
 
-/** Assign duplicate-in-file clusters by normalized_domain (fallback: company name). */
+/**
+ * Assign duplicate-in-file clusters by identity domain, else normalized website
+ * (for no_identity fallbacks), else company name.
+ */
 export function assignDuplicateClusters(rows: ValidatedImportRow[]): ValidatedImportRow[] {
   const eligible = rows.filter((r) => !r.has_blocking_validation && r.status !== "excluded");
   const clusterMap = new Map<string, string[]>();
 
   for (const row of eligible) {
-    const key =
-      row.normalized_domain?.toLowerCase() ??
-      row.normalized_company_name?.toLowerCase() ??
-      `row-${row.excel_row_number}`;
+    const key = duplicateClusterKey(row);
     const list = clusterMap.get(key) ?? [];
     list.push(row.id);
     clusterMap.set(key, list);
@@ -172,12 +176,12 @@ export function assignDuplicateClusters(rows: ValidatedImportRow[]): ValidatedIm
     }
   }
 
-  return rows.map((row) => {
+  const clustered = rows.map((row) => {
     const cluster = canonicalByRow.get(row.id);
     if (!cluster) {
       return {
         ...row,
-        duplicate_cluster_key: row.normalized_domain ?? null,
+        duplicate_cluster_key: duplicateClusterKey(row),
         duplicate_role: null,
         duplicate_of_row_id: null,
         duplicate_resolution: null,
@@ -188,9 +192,11 @@ export function assignDuplicateClusters(rows: ValidatedImportRow[]): ValidatedIm
     return {
       ...row,
       duplicate_cluster_key: cluster.clusterKey,
-      duplicate_role: isCanonical ? "canonical" : "duplicate",
+      duplicate_role: isCanonical ? ("canonical" as const) : ("duplicate" as const),
       duplicate_of_row_id: isCanonical ? null : cluster.canonicalId,
-      duplicate_resolution: isCanonical ? "kept" : "excluded",
+      duplicate_resolution: isCanonical ? ("kept" as const) : ("excluded" as const),
     };
   });
+
+  return finalizeImportRowWebsites(clustered);
 }
