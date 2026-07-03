@@ -8,6 +8,7 @@ import {
   PageHeader,
 } from "@/src/components/common/explorer";
 import type { SponsorDiscoveryParams } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
+import { SPONSOR_DISCOVERY_DEFAULT_SORT } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
 
 import type { SponsorDiscoveryRow, SponsorDiscoverySort } from "./discoveryTypes";
 import { SponsorDiscoveryList } from "./SponsorDiscoveryList";
@@ -15,9 +16,9 @@ import { SponsorEventContextBanner } from "./SponsorEventContextBanner";
 import type { SponsorEventContext } from "./types";
 
 const GLOBAL_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
+  { value: "count", label: "Most events sponsored" },
   { value: "activity", label: "Latest activity" },
   { value: "name", label: "Name" },
-  { value: "count", label: "Sponsorship count" },
 ];
 
 const EVENT_SORT_OPTIONS: { value: SponsorDiscoverySort; label: string }[] = [
@@ -79,7 +80,7 @@ export function SponsorSearchPage({
       next.delete("event");
     }
 
-    if (sort !== "activity") {
+    if (sort !== SPONSOR_DISCOVERY_DEFAULT_SORT) {
       next.set("sort", sort);
     } else {
       next.delete("sort");
@@ -111,7 +112,7 @@ export function SponsorSearchPage({
     setEventSlug(null);
     setPage(1);
     if (sort === "tier") {
-      setSort("activity");
+      setSort(SPONSOR_DISCOVERY_DEFAULT_SORT);
     }
   }
 

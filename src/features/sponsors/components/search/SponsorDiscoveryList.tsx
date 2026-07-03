@@ -4,7 +4,7 @@ import { Button } from "@/src/components/common";
 import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common/states";
 
 import type { SponsorDiscoveryRow } from "./discoveryTypes";
-import { SponsorDiscoveryCard } from "./SponsorDiscoveryCard";
+import { SponsorDiscoveryTable } from "./SponsorDiscoveryTable";
 
 type SponsorDiscoveryListProps = {
   rows: SponsorDiscoveryRow[];
@@ -57,15 +57,7 @@ export function SponsorDiscoveryList({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <SponsorDiscoveryCard
-            key={row.id}
-            row={row}
-            showEventTier={showEventTier}
-          />
-        ))}
-      </div>
+      <SponsorDiscoveryTable rows={rows} showEventTier={showEventTier} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
         <p className="text-slate-600">

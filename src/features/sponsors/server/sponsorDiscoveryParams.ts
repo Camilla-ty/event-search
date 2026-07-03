@@ -10,6 +10,7 @@ export const SPONSOR_DISCOVERY_MAX_PAGE_SIZE = 100;
 export const SPONSOR_DISCOVERY_MIN_PAGE = 1;
 export const SPONSOR_DISCOVERY_MAX_PAGE = 9999;
 export const SPONSOR_DISCOVERY_MAX_QUERY_LENGTH = 200;
+export const SPONSOR_DISCOVERY_DEFAULT_SORT: SponsorDiscoverySort = "count";
 
 const VALID_SORTS = new Set<SponsorDiscoverySort>(["activity", "name", "count", "tier"]);
 
@@ -40,12 +41,12 @@ export function parseSponsorDiscoverySort(
 ): SponsorDiscoverySort {
   const normalized = (raw ?? "").trim().toLowerCase();
   if (normalized === "tier") {
-    return hasEventFilter ? "tier" : "activity";
+    return hasEventFilter ? "tier" : SPONSOR_DISCOVERY_DEFAULT_SORT;
   }
   if (VALID_SORTS.has(normalized as SponsorDiscoverySort)) {
     return normalized as SponsorDiscoverySort;
   }
-  return "activity";
+  return SPONSOR_DISCOVERY_DEFAULT_SORT;
 }
 
 export function parseSponsorDiscoveryPage(raw: string | number | null | undefined): number {
@@ -127,7 +128,7 @@ export function buildSponsorDiscoveryPath(params: SponsorDiscoveryParams): strin
     search.set("event", params.eventSlug.trim());
   }
 
-  if (params.sort !== "activity") {
+  if (params.sort !== SPONSOR_DISCOVERY_DEFAULT_SORT) {
     search.set("sort", params.sort);
   }
 

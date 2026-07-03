@@ -10,6 +10,7 @@ import {
   parseSponsorDiscoveryParams,
   parseSponsorDiscoveryQuery,
   parseSponsorDiscoverySort,
+  SPONSOR_DISCOVERY_DEFAULT_SORT,
   SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE,
   SPONSOR_DISCOVERY_MAX_QUERY_LENGTH,
   sponsorDiscoveryTotalPages,
@@ -39,13 +40,13 @@ describe("parseSponsorDiscoveryEventSlug", () => {
 });
 
 describe("parseSponsorDiscoverySort", () => {
-  it("defaults to activity", () => {
-    assert.equal(parseSponsorDiscoverySort(undefined, false), "activity");
-    assert.equal(parseSponsorDiscoverySort("invalid", false), "activity");
+  it("defaults to count", () => {
+    assert.equal(parseSponsorDiscoverySort(undefined, false), SPONSOR_DISCOVERY_DEFAULT_SORT);
+    assert.equal(parseSponsorDiscoverySort("invalid", false), SPONSOR_DISCOVERY_DEFAULT_SORT);
   });
 
-  it("coerces tier to activity without event filter", () => {
-    assert.equal(parseSponsorDiscoverySort("tier", false), "activity");
+  it("coerces tier to count without event filter", () => {
+    assert.equal(parseSponsorDiscoverySort("tier", false), SPONSOR_DISCOVERY_DEFAULT_SORT);
   });
 
   it("allows tier with event filter", () => {
@@ -136,7 +137,7 @@ describe("buildSponsorDiscoveryPath", () => {
       buildSponsorDiscoveryPath({
         query: "",
         eventSlug: null,
-        sort: "activity",
+        sort: SPONSOR_DISCOVERY_DEFAULT_SORT,
         page: 1,
         pageSize: 20,
       }),
