@@ -64,6 +64,19 @@
 
 ---
 
+## Organizer (v1 — complete; UX amendment O5 approved)
+
+| Document | Description |
+|----------|-------------|
+| [Organizer Design](./organizer-design.md) | **Approved** — edition↔company organizer join; admin Profile embed; public Organizers tab |
+| [Phase — Organizer v1 Scope](./phase-organizer-scope.md) | **Implemented** (O1–O4) — database, admin API, merge extension |
+| [Phase — Organizer UX Amendment](./phase-organizer-ux-amendment-scope.md) | **Implemented** (O5) — Profile embed + public Organizers tab |
+| [Organizer Migration Design](./organizer-migration-design.md) | **Approved and applied** — `20260708120000_organizers_v1.sql`, `20260709120000_company_merge_organizers.sql` |
+
+**Locked highlights:** `event_edition_organizers` join table (companies-only; no legacy `organizers` / `event_organizers` tables); admin **Organizers section on edition Profile** (metadata alongside venue); public tabs **Overview / Sponsors / Venue / Organizers** — Organizers tab always visible with in-tab empty state when none; company merge repoints organizer links; `last_reviewed_at` auto-touch on add/remove/role edit (not reorder).
+
+---
+
 ## Sponsor import (v1)
 
 | Document | Description |

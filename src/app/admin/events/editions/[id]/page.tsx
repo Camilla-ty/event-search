@@ -7,6 +7,8 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
+import { EditionOrganizersPanel } from "@/src/features/organizers/components/admin/EditionOrganizersPanel";
+import { getOrganizersForEditionAdmin } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
@@ -72,12 +74,13 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
 
   const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
 
-  const [cities, series, liveSponsorCount, sponsors, importsData, inheritedKeywords] =
+  const [cities, series, liveSponsorCount, sponsors, organizers, importsData, inheritedKeywords] =
     await Promise.all([
       getCityOptions(),
       getSeriesOptions(),
       countLiveSponsorsForEdition(id),
       getLiveSponsorsForEditionAdmin(id),
+      getOrganizersForEditionAdmin(id),
       getEditionImportsData(
         id,
         edition.name,
@@ -213,6 +216,18 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                       : null
                 }
               />
+              <div className="border-t border-slate-200 pt-8">
+                <h2 className="mb-3 text-lg font-semibold text-slate-900">Organizers</h2>
+                <p className="mb-4 text-sm text-slate-500">
+                  Edition metadata — link companies that organize or host this occurrence.
+                </p>
+                <EditionOrganizersPanel
+                  editionId={edition.id}
+                  editionName={edition.name}
+                  editionYear={edition.year}
+                  organizers={organizers}
+                />
+              </div>
             </div>
           }
           sponsorsPanel={

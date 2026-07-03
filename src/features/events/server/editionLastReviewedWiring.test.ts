@@ -60,6 +60,29 @@ describe("edition last reviewed server wiring", () => {
     assert.doesNotMatch(reorderBody, /touchEditionLastReviewed/);
     assert.doesNotMatch(moveBody, /touchEditionLastReviewed/);
   });
+
+  it("organizer add, remove, and role update call touchEditionLastReviewed", () => {
+    const source = readFileSync(
+      join(eventsServerDir, "../../organizers/server/eventOrganizerAdmin.ts"),
+      "utf8",
+    );
+    const createBody = extractFunctionBody(source, "createEventOrganizerLinkAdmin");
+    const deleteBody = extractFunctionBody(source, "deleteEventOrganizerLinkAdmin");
+    const updateBody = extractFunctionBody(source, "updateEventOrganizerLinkAdmin");
+
+    assert.match(createBody, /touchEditionLastReviewed\(editionId\)/);
+    assert.match(deleteBody, /touchEditionLastReviewed\(editionId\)/);
+    assert.match(updateBody, /touchEditionLastReviewed\(editionId\)/);
+  });
+
+  it("organizer reorder does not call touchEditionLastReviewed", () => {
+    const source = readFileSync(
+      join(eventsServerDir, "../../organizers/server/eventOrganizerAdmin.ts"),
+      "utf8",
+    );
+    const body = extractFunctionBody(source, "reorderEventOrganizerLinkAdmin");
+    assert.doesNotMatch(body, /touchEditionLastReviewed/);
+  });
 });
 
 describe("publishBatch last reviewed wiring", () => {

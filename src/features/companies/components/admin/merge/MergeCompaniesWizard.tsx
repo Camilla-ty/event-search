@@ -10,6 +10,7 @@ import { MergeCompanyPicker } from "@/src/features/companies/components/admin/me
 import { MergeDraftLinkConflictsTable } from "@/src/features/companies/components/admin/merge/MergeDraftLinkConflictsTable";
 import { MergeFieldResolutionForm } from "@/src/features/companies/components/admin/merge/MergeFieldResolutionForm";
 import { MergeImpactPreview } from "@/src/features/companies/components/admin/merge/MergeImpactPreview";
+import { MergeOrganizerConflictsTable } from "@/src/features/companies/components/admin/merge/MergeOrganizerConflictsTable";
 import { MergeSponsorshipConflictsTable } from "@/src/features/companies/components/admin/merge/MergeSponsorshipConflictsTable";
 import type {
   MergeCompanyPickerOption,
@@ -26,6 +27,7 @@ import {
   buildInitialResolutionsFromPreview,
   executeMergeCompanies,
   updateDraftLinkStrategy,
+  updateOrganizerStrategy,
   updateSponsorshipStrategy,
 } from "@/src/features/companies/components/admin/merge/mergeWizardResolutions";
 import type {
@@ -33,6 +35,7 @@ import type {
   CompanyMergePreviewSnapshot,
   CompanyMergeResolutions,
   DraftLinkConflictStrategy,
+  OrganizerConflictStrategy,
   SponsorshipConflictStrategy,
 } from "@/src/features/companies/server/companyMerge";
 import { primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
@@ -183,6 +186,16 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
     setResolutions((current) => {
       if (!current) return current;
       return updateSponsorshipStrategy(current, eventEditionId, strategy);
+    });
+  }
+
+  function handleOrganizerStrategyChange(
+    eventEditionId: string,
+    strategy: OrganizerConflictStrategy,
+  ) {
+    setResolutions((current) => {
+      if (!current) return current;
+      return updateOrganizerStrategy(current, eventEditionId, strategy);
     });
   }
 
@@ -382,6 +395,14 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             canonicalName={canonicalName}
             duplicateName={duplicateName}
             onStrategyChange={handleSponsorshipStrategyChange}
+          />
+
+          <MergeOrganizerConflictsTable
+            conflicts={preview.organizer_conflicts}
+            resolutions={resolutions}
+            canonicalName={canonicalName}
+            duplicateName={duplicateName}
+            onStrategyChange={handleOrganizerStrategyChange}
           />
 
           <MergeDraftLinkConflictsTable

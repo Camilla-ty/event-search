@@ -62,7 +62,7 @@ Complete scope for Phase 1 per [implementation-roadmap.md](./implementation-road
 | Dashboard work-queue widgets (import data) | 5 |
 | Delete series / edition / company | v1.1 |
 | Series keywords UI | v1.1 (optional fields in API only if easy) |
-| Organizers on edition form | v1.1 |
+| Organizers on edition Profile | Approved — [Organizer UX amendment](./phase-organizer-ux-amendment-scope.md) (O5; implementation pending) |
 | Editor/staff roles | v1.1 |
 
 ---

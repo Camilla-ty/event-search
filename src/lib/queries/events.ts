@@ -1,3 +1,4 @@
+import { COMPANY_PUBLIC_COLUMNS } from "@/src/lib/queries/companies";
 import { createClient } from "@/src/lib/supabase/server";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 
@@ -45,9 +46,13 @@ const EVENT_EDITION_DETAIL_SELECT = `
     logo_url,
     archived_at
   ),
-  event_organizers (
-    *,
-    organizers (*)
+  event_edition_organizers (
+    id,
+    role_label,
+    display_order,
+    companies (
+      ${COMPANY_PUBLIC_COLUMNS}
+    )
   )
 `;
 

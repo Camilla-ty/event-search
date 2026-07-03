@@ -8,6 +8,7 @@ import { CompanyAdminMergeActions } from "@/src/features/companies/components/ad
 import { CompanyAdminStatusBadge } from "@/src/features/companies/components/admin/CompanyAdminStatusBadge";
 import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
+import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { listCompanyDomainsForAdmin } from "@/src/features/companies/server/companyDomainsAdmin";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
@@ -15,6 +16,7 @@ import {
   getCompanyAdminById,
   isCompanyAdminEditable,
 } from "@/src/features/companies/server/companyAdmin";
+import { listOrganizerRolesForCompanyAdmin } from "@/src/features/organizers/server/companyOrganizerAdmin";
 import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
 import { feedbackWarningClass } from "@/src/lib/design/classes";
 
@@ -28,10 +30,11 @@ type PageProps = {
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { logoWarning, merged, merge_id: mergeId } = await searchParams;
-  const [company, cities, sponsorships, domains] = await Promise.all([
+  const [company, cities, sponsorships, organizerRoles, domains] = await Promise.all([
     getCompanyAdminById(id),
     getCityOptions(),
     listSponsorshipsForCompanyAdmin(id),
+    listOrganizerRolesForCompanyAdmin(id),
     listCompanyDomainsForAdmin(id),
   ]);
 
@@ -135,6 +138,17 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           tab.
         </p>
         <CompanySponsorshipsTable sponsorships={sponsorships} />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
+          Organizer roles ({organizerRoles.length})
+        </h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Read-only. Organizer links are added and edited on each edition&apos;s Organizers
+          tab.
+        </p>
+        <CompanyOrganizerRolesTable organizerRoles={organizerRoles} />
       </div>
     </section>
   );

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { Badge } from "@/src/components/common";
+import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
 import { EventHistorySection } from "@/src/features/events/components/detail/EventHistorySection";
 import { ResearchInformationSection } from "@/src/features/events/components/detail/ResearchInformationSection";
@@ -24,6 +25,7 @@ import {
   editionHasVenueId,
   mapPublicVenueFromEditionRow,
 } from "@/src/features/events/server/mapPublicVenue";
+import { mapPublicOrganizersFromEditionRow } from "@/src/features/events/server/mapPublicOrganizers";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
@@ -115,6 +117,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const eventSlug = typeof edition.slug === "string" ? edition.slug : "";
   const cityLabel = formatLocationFromCityEmbed(edition.cities) || "";
   const venue = mapPublicVenueFromEditionRow(editionRecord);
+  const organizers = mapPublicOrganizersFromEditionRow(editionRecord);
   const hasVenueId = editionHasVenueId(editionRecord);
   const seriesLogoUrl = resolveSeriesDisplayLogo(
     edition.event_series && typeof edition.event_series === "object"
@@ -276,6 +279,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <EventVenueEmptyState cityLabel={cityLabel} />
             )
           }
+          organizersPanel={<EventOrganizersSection organizers={organizers} />}
         />
       </Suspense>
     </section>

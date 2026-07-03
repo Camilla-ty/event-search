@@ -1,10 +1,10 @@
 # EventPixels — Admin Information Architecture
 
-**Status:** Approved — reflects shipped v1 including Venues  
+**Status:** Approved — reflects shipped v1 including Venues and Organizers  
 **Version:** v1  
-**Last updated:** 2026-06-25  
+**Last updated:** 2026-07-04 (Organizer UX amendment — Profile embed)  
 
-Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), and approved database/migration design.
+Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), organizer admin ([phase-organizer-scope.md](./phase-organizer-scope.md)), and approved database/migration design.
 
 Describes navigation and screens; implementation lives in `src/app/admin/` and related feature modules.
 
@@ -53,9 +53,11 @@ When viewing `/admin/events/editions/[id]`:
 
 | Tab | Content |
 |-----|---------|
-| **Profile** | Edition fields (including optional venue picker) |
-| **Live sponsors** | `event_sponsors` read-only |
+| **Profile** | Edition fields (optional venue picker, **Organizers** section, research metadata) |
+| **Live sponsors** | `event_sponsors` roster + edit drawer |
 | **Imports** | Batches for this edition |
+
+Organizers are **edition metadata** on Profile (like venue and website), not a separate operational tab. See [phase-organizer-ux-amendment-scope.md](./phase-organizer-ux-amendment-scope.md).
 
 ### 2.4 Sponsor import sub-nav (in-flow stepper)
 
@@ -203,7 +205,7 @@ flowchart TB
 │       ├── List (E-E01)
 │       ├── /new (E-E02) ──primary──► Sponsor import (pre-filled)
 │       └── /[id] (E-E03)
-│           ├── Tab: Profile
+│           ├── Tab: Profile (includes Organizers section)
 │           ├── Tab: Live sponsors
 │           └── Tab: Imports
 ├── /sponsor-imports
@@ -316,12 +318,23 @@ flowchart LR
 **Actor:** Admin
 
 1. Companies list → search duplicate
-2. Company detail → edit website, logo, description
+2. Company detail → edit website, logo, description; read-only **Sponsorships** and **Organizer roles** sections
 3. Or Create company (rare — import usually creates companies)
 
 ---
 
-### Journey 7 — Venue maintenance
+### Journey 7 — Edition organizer curation
+
+**Actor:** Admin
+
+1. Edition detail → **Profile** tab → **Organizers** section
+2. Add organizer via company search (default role **Organizer**); edit role label; Move Up/Down
+3. Remove organizer when needed (confirm modal — company not deleted)
+4. Same company may appear on **Live sponsors** and **Organizers** independently
+
+---
+
+### Journey 8 — Venue maintenance
 
 **Actor:** Admin
 
@@ -333,7 +346,7 @@ flowchart LR
 
 ---
 
-### Journey 8 — Discard bad import
+### Journey 9 — Discard bad import
 
 **Actor:** Admin · **Entry:** Any in-progress import screen
 
@@ -343,7 +356,7 @@ flowchart LR
 
 ---
 
-### Journey 9 — Morning check-in (daily ops)
+### Journey 10 — Morning check-in (daily ops)
 
 **Actor:** Admin · **Duration:** 2–5 min
 
@@ -366,7 +379,7 @@ Single admin search bar queries:
 | **Companies** | name, slug, domain | Company detail |
 | **Sponsor imports** | filename, edition name | Import batch detail |
 
-**v1.1:** Organizers, keywords
+**v1.1:** Keywords (global admin search for organizer links remains out of v1)
 
 ### 6.2 Behavior
 
@@ -527,7 +540,30 @@ View · Edit (detail page)
 
 ---
 
-### 7.8 Live sponsors tab (edition detail)
+### 7.8 Profile — Organizers section (edition detail)
+
+**Location:** Profile tab — not a separate edition tab.
+
+**Filters:** Search company name (in add drawer)
+
+**Row actions**
+
+Edit role · Move Up · Move Down · Remove
+
+**Bulk actions (v1)**
+
+None — server-managed `display_order`.
+
+**Notes**
+
+- Company search picker reuses Add sponsor search family; companies already linked as organizers on this edition are disabled.
+- Add/remove/role edit auto-updates edition **Last reviewed**; reorder-only does not.
+- Escape hatch link to Create company when search misses.
+- Parallels **venue picker** on Profile — metadata on Profile, public consumption on dedicated event tab.
+
+---
+
+### 7.9 Live sponsors tab (edition detail)
 
 **Filters:** Tier · search company name
 
@@ -616,6 +652,7 @@ All authenticated admin users can perform every v1 operation:
 | Sponsor imports | ✓ | ✓ | ✓ | Discard batch | Publish sponsors |
 | Companies | ✓ | ✓ | ✓ | — | — |
 | Venues | ✓ | ✓ | ✓ | Archive only | — |
+| Edition organizers | ✓ | ✓ | ✓ | Remove link only | — |
 | Live sponsors | ✓ | — | via import | — | via import |
 | Admin search | ✓ | — | — | — | — |
 
@@ -715,6 +752,8 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 | 2026-06-03 | Initial admin IA from approved workflows |
 | 2026-06-03 | v1 permissions simplified: admin-only; roadmap alignment |
 | 2026-06-25 | Venues nav (§2.1), screen inventory (§3.6), hierarchy, permissions, venue journey |
+| 2026-07-04 | Organizers edition tab (§2.3), journey §7, filters §7.8, permissions matrix |
+| 2026-07-04 | Organizer UX amendment: Profile embed; remove Organizers tab (§2.3, §7.8, journey §7) |
 
 ---
 
@@ -726,5 +765,8 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
 | Venue design | [venue-design.md](./venue-design.md) |
 | Venue v1 scope | [phase-venue-scope.md](./phase-venue-scope.md) |
+| Organizer design | [organizer-design.md](./organizer-design.md) |
+| Organizer v1 scope | [phase-organizer-scope.md](./phase-organizer-scope.md) |
+| Organizer UX amendment | [phase-organizer-ux-amendment-scope.md](./phase-organizer-ux-amendment-scope.md) |
 | Sponsor import DB design | [sponsor-import-database-design.md](./sponsor-import-database-design.md) |
 | Sponsor import migrations | [sponsor-import-migration-design.md](./sponsor-import-migration-design.md) |

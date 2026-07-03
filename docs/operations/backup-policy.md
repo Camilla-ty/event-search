@@ -31,7 +31,9 @@ Setup: [backup-github-drive-setup.md](./backup-github-drive-setup.md)
 
 Production catalog and admin working data:
 
-- **Catalog:** `companies`, `company_domains`, `event_series`, `event_editions`, `event_sponsors`, `event_organizers`, `keyword`, `event_series_keyword`, location tables (`countries`, `states`, `cities`)
+- **Catalog:** `companies`, `company_domains`, `event_series`, `event_editions`, `event_sponsors`, `event_edition_organizers`, `venues`, `keyword`, `event_series_keyword`, location tables (`countries`, `states`, `cities`)
+
+**Note:** Legacy `event_organizers` / standalone `organizers` tables were rejected in design and never existed in repository migrations; organizer data lives in `event_edition_organizers` (companies-only join).
 - **Admin:** `profiles`, `company_merges`, `company_slug_redirects`
 - **Imports (ephemeral):** `sponsor_import_*` — batches are deleted on publish/discard; backups only matter while an import is in progress
 

@@ -2,7 +2,7 @@
 
 **Status:** Approved  
 **Version:** v1  
-**Last updated:** 2026-06-03  
+**Last updated:** 2026-07-04 (Organizer UX amendment)  
 
 Admin workflow for creating and managing **Event Series** and **Event Editions** before sponsor import. Complements [Sponsor Import — Database Design](./sponsor-import-database-design.md).
 
@@ -219,6 +219,26 @@ Edition detail with prominent **Import sponsors** CTA.
 
 **Route concept:** `/admin/events/editions/[id]`
 
+#### Edition detail tabs
+
+| Tab | Purpose |
+|-----|---------|
+| **Profile** | Edition fields, venue picker, **Organizers** section (edition metadata), research metadata |
+| **Live sponsors** | Live roster (`event_sponsors`) — add, edit tier, reorder, remove |
+| **Imports** | Sponsor import batches for this edition |
+
+Organizer curation lives on **Profile** — same metadata class as venue, website, city, and dates. Company detail shows read-only **Organizer roles** (links to edition Profile). See [Phase — Organizer v1 Scope](./phase-organizer-scope.md) and [Organizer UX Amendment](./phase-organizer-ux-amendment-scope.md).
+
+#### Profile — Organizers section
+
+| Affordance | Behavior |
+|------------|----------|
+| List | Companies linked as organizers with `role_label` and order |
+| Add | Company search picker; default role **Organizer** |
+| Edit role | Drawer; max 80 chars |
+| Reorder | Move Up / Down (no last-reviewed bump) |
+| Remove | Confirm modal — company not deleted |
+
 #### Immutable fields (read-only UI)
 
 | Field | Display |
@@ -240,10 +260,11 @@ Copy: *Series and year cannot be changed. Create a new edition for a different o
 | **Save profile** | Changing name, slug, dates, website, city, or venue sets **Last reviewed** to the current server time automatically. |
 | **Manual backfill** | Saving **only** Last reviewed and/or Primary source preserves the submitted values (no extra auto-bump). |
 | **Live sponsors** | Add, remove, or tier rank/label edit on the Live sponsors tab auto-updates **Last reviewed**. |
-| **Reorder / move** | Same-tier Move Up/Down does **not** auto-update **Last reviewed**. |
+| **Organizers** | Add, remove, or role-label edit in the Profile **Organizers** section auto-updates **Last reviewed**. |
+| **Reorder / move** | Same-tier Move Up/Down on Live sponsors or Profile organizers does **not** auto-update **Last reviewed**. |
 | **Import publish** | Publishing a draft batch auto-updates **Last reviewed** when live sponsor rows are inserted, tier-updated, or tier-label synced. Draft-only steps do not. |
 
-Copy for researchers: *Last reviewed advances automatically when you save meaningful profile changes, edit the live sponsor roster, or publish an import. Creation alone does not count as review. Set the date manually only when backfilling historical research.*
+Copy for researchers: *Last reviewed advances automatically when you save meaningful profile changes, edit the live sponsor roster or organizer list, or publish an import. Creation alone does not count as review. Set the date manually only when backfilling historical research.*
 
 See [Phase — Edition Last Reviewed Automation](./phase-edition-last-reviewed-automation-scope.md).
 
@@ -357,7 +378,7 @@ Create edition form: *Create an event series first* → `/admin/events/series/ne
 | Create / edit series | Series CRUD |
 | Editions list | Index + import status |
 | Create edition | **Create & import sponsors** primary |
-| Edition detail | Profile + import hub |
+| Edition detail | Profile (incl. Organizers) · Live sponsors · Imports |
 | Sponsor import (existing) | Upload → publish |
 
 ---
@@ -399,6 +420,8 @@ Full import screens: see sponsor import admin UI specification (upload through i
 |------|--------|
 | 2026-06-03 | Initial approved workflow |
 | 2026-06-03 | Locked immutability, slug, warnings, Create & Import Sponsors |
+| 2026-07-04 | Edition detail tabs (Organizers); last-reviewed rules for organizer writes |
+| 2026-07-04 | Organizer UX amendment: Profile embed; public Organizers tab documented in organizer design |
 
 ---
 

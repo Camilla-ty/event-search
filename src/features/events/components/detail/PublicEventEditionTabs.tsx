@@ -11,18 +11,20 @@ type PublicEventEditionTabsProps = {
   overviewPanel: ReactNode;
   sponsorsPanel: ReactNode;
   venuePanel: ReactNode;
+  organizersPanel: ReactNode;
 };
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "sponsors", label: "Sponsors" },
   { id: "venue", label: "Venue" },
+  { id: "organizers", label: "Organizers" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 function parseTab(raw: string | null): TabId {
-  if (raw === "sponsors" || raw === "venue") return raw;
+  if (raw === "sponsors" || raw === "venue" || raw === "organizers") return raw;
   return "overview";
 }
 
@@ -31,6 +33,7 @@ export function PublicEventEditionTabs({
   overviewPanel,
   sponsorsPanel,
   venuePanel,
+  organizersPanel,
 }: PublicEventEditionTabsProps) {
   const searchParams = useSearchParams();
   const activeTab = parseTab(searchParams.get("tab"));
@@ -64,6 +67,7 @@ export function PublicEventEditionTabs({
       {activeTab === "overview" ? overviewPanel : null}
       {activeTab === "sponsors" ? sponsorsPanel : null}
       {activeTab === "venue" ? venuePanel : null}
+      {activeTab === "organizers" ? organizersPanel : null}
     </div>
   );
 }

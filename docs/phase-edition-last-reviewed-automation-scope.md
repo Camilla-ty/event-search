@@ -2,7 +2,7 @@
 
 **Status:** Implemented (Phases 1–3 complete)  
 **Version:** v1  
-**Last updated:** 2026-07-03  
+**Last updated:** 2026-07-04  
 
 Implementation scope for **automatically updating** `event_editions.last_reviewed_at` when meaningful Event Edition data is curated in admin. Defines product policy, write-path coverage, implementation boundaries, verification, and rollout — not application code.
 
@@ -36,12 +36,14 @@ Researchers may still set **Last reviewed** and **Primary source** explicitly on
 
 | Area | Behavior |
 |------|----------|
-| `last_reviewed_at` | Auto-updates to `now()` on meaningful edition profile saves, live sponsor add/remove/tier edits, and qualifying sponsor import publish |
+| `last_reviewed_at` | Auto-updates to `now()` on meaningful edition profile saves, live sponsor add/remove/tier edits, organizer add/remove/role-label edits, and qualifying sponsor import publish |
 | Edition create | Always `NULL` — creation is cataloging, not review |
 | Manual research save | PATCH with only `last_reviewed_at` / `primary_source_url` preserves submitted values |
 | Live sponsor reorder/move | Does **not** auto-touch |
+| Organizer reorder | Does **not** auto-touch |
 | Sponsor import draft | Does **not** auto-touch until publish |
-| Company merge | **Not implemented** (optional Phase 4) |
+| Company merge — sponsorship side effects | **Not implemented** (optional Phase 4) |
+| Company merge — organizer repoint/delete/update | **Implemented** — touch each affected edition |
 
 ### 2.2 Why this matters
 
@@ -90,6 +92,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 | Touching editions on **venue entity** edits (name, address, logo) | Venue record change ≠ edition review; edition `venue_id` assignment **is** in scope |
 | Touching editions on **company profile** edits from roster context | Company entity change; roster membership unchanged |
 | Sponsor **display_order** reorder / move within tier | Presentation-only; not research semantics |
+| Organizer **display_order** reorder (Move Up/Down) | Presentation-only; not research semantics |
 | DB triggers as required deliverable | App-layer helper is sufficient for v1; trigger optional follow-up |
 | `last_reviewed_by` / audit log table | Future enhancement |
 | Backfill of historical editions | One-time script or manual form; not part of v1 automation |
@@ -143,16 +146,26 @@ This feature updates **one column on `event_editions`** in response to **meaning
 
 | Action | Auto-touch? | Notes |
 |--------|-------------|-------|
-| `merge_companies` repoints/deletes/updates sponsorships | ✅ **per affected edition** | Each edition whose live `event_sponsors` rows changed gets a touch |
+| `merge_companies` repoints/deletes/updates **sponsorships** | ✅ **per affected edition** (spec) | **Not implemented** in app — optional Phase 4 |
+| `merge_companies` repoints/deletes/updates **organizer links** | ✅ **per affected edition** | Implemented in Organizer O2 (`collectOrganizerMergeEditionIds` + touch loop) |
 
-### 5.5 Indirect / out of scope
+### 5.5 Event edition organizers (`event_edition_organizers`)
+
+| Action | Auto-touch? | Notes |
+|--------|-------------|-------|
+| **Add** organizer link | ✅ | Roster membership |
+| **Remove** organizer link | ✅ | Roster membership |
+| **Update** `role_label` | ✅ | Public Overview display |
+| **Reorder** within edition (`display_order` only) | ❌ | Presentation-only |
+
+### 5.6 Indirect / out of scope
 
 | Action | Auto-touch? |
 |--------|-------------|
 | Series keyword assignment | ❌ |
 | Series profile update | ❌ |
 | Venue record update (without edition `venue_id` change) | ❌ |
-| Company create/edit/merge (except sponsorship side effects above) | ❌ |
+| Company create/edit/merge (except sponsorship / organizer side effects above) | ❌ |
 | Scripts, migrations, one-off SQL | ❌ |
 
 ---
@@ -237,9 +250,22 @@ All paths below are the v1 hook surface. Implementation must cover each **✅** 
 | RPC | `supabase/migrations/20260625120000_company_merge_phase2.sql` | `merge_companies` |
 | API | `src/app/api/admin/companies/merge/route.ts` | `POST` |
 
-Touch each distinct `event_editions_id` affected by sponsorship repoint/delete/update in merge result payload.
+Touch each distinct `event_editions_id` affected by organizer repoint/delete/update in merge result payload. Sponsorship-side touch remains optional Phase 4.
 
-### 7.5 Explicitly not hooked
+### 7.5 Event edition organizers
+
+| Layer | File | Entry point |
+|-------|------|-------------|
+| Server | `src/features/organizers/server/eventOrganizerAdmin.ts` | `createEventOrganizerLinkAdmin()` |
+| Server | Same | `updateEventOrganizerLinkAdmin()` — touch if `role_label` changed |
+| Server | Same | `deleteEventOrganizerLinkAdmin()` |
+| Server | Same | `reorderEventOrganizerLinksAdmin()` — **no touch** |
+| API | `src/app/api/admin/event-editions/[id]/organizers/route.ts` | `POST` |
+| API | `src/app/api/admin/event-editions/[id]/organizers/[organizerId]/route.ts` | `PATCH`, `DELETE` |
+| API | `src/app/api/admin/event-editions/[id]/organizers/reorder/route.ts` | `POST` — **no touch** |
+| Merge | `src/features/companies/server/companyMergeAdmin.ts` | `mergeCompaniesExecute()` — touch editions from `collectOrganizerMergeEditionIds()` |
+
+### 7.6 Explicitly not hooked
 
 - `sponsorImportAdmin.ts` — draft pipeline (upload through `import_to_draft`)
 - `seriesKeywordsAdmin.ts` — `setSeriesKeywords()`
@@ -288,7 +314,7 @@ hasMeaningfulEditionPatch(before, patch): boolean
 | `createEventEdition` | Set `last_reviewed_at: null` explicitly on insert; strip/ignore client-supplied value |
 | Sponsor admin functions | Call touch with `event_editions_id` after successful write |
 | `publishBatch` | After RPC, if live changes → touch `batch.event_edition_id` |
-| Merge execute | Loop affected edition IDs from result → touch each |
+| Merge execute | Loop affected edition IDs from result → touch each (organizer path implemented; sponsorship path optional) |
 
 **Prefer** consolidating in server functions over duplicating in every API route so all entry points stay covered.
 
@@ -417,7 +443,8 @@ hasMeaningfulEditionPatch(before, patch): boolean
 
 | Step | Deliverable | Status |
 |------|-------------|--------|
-| 4.1 | Company merge — touch per affected edition | ⏳ Optional |
+| 4.1 | Company merge — touch per affected edition (**sponsorship** side effects) | ⏳ Optional |
+| 4.1b | Company merge — touch per affected edition (**organizer** side effects) | ✅ (Organizer O2) |
 | 4.2 | Form helper text under **Last reviewed** on edition form | ⏳ Optional |
 | 4.3 | Cross-link in `docs/README.md` | ✅ |
 
@@ -438,6 +465,7 @@ hasMeaningfulEditionPatch(before, patch): boolean
 |------|--------|
 | 2026-07-03 | Initial proposed scope from codebase audit |
 | 2026-07-03 | Phases 1–3 implemented; Phase 4 (merge touch, form copy) optional |
+| 2026-07-04 | Organizer write paths (§5.5, §7.5); organizer merge touch implemented |
 
 ---
 
@@ -450,9 +478,12 @@ hasMeaningfulEditionPatch(before, patch): boolean
 | Profile fields that touch | name, slug, dates, website, city, venue |
 | Sponsor add/remove/tier | Touch |
 | Sponsor reorder/move | No touch |
+| Organizer add/remove/role | Touch |
+| Organizer reorder | No touch |
 | Import draft | No touch |
 | Import publish | Touch when live `event_sponsors` changes |
-| Company merge sponsorship changes | Touch per affected edition |
+| Company merge sponsorship changes | Touch per affected edition (spec; **not implemented**) |
+| Company merge organizer changes | Touch per affected edition (**implemented**) |
 | Series/venue entity/company profile | No touch |
 | Migration | None for v1 |
 | Manual Last reviewed field | Retained; manual-only save respected |

@@ -25,6 +25,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 function parseTab(raw: string | null): TabId {
   if (raw === "sponsors" || raw === "imports") return raw;
+  // Legacy ?tab=organizers (and unknown values) → Profile.
   return "profile";
 }
 

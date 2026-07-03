@@ -21,6 +21,7 @@ export type CompanyMergeSnapshot = {
 
 export type CompanyMergeRequiredResolutions = {
   sponsorship_conflicts: readonly string[];
+  organizer_conflicts: readonly string[];
   draft_link_conflicts: readonly string[];
 };
 
@@ -35,11 +36,13 @@ export type CompanyMergePreviewSnapshot = {
   };
   impact: {
     event_sponsors_to_repoint: number;
+    event_edition_organizers_to_repoint: number;
     import_rows_proposed_to_repoint: number;
     import_rows_resolved_to_repoint: number;
     draft_links_to_repoint: number;
   };
   sponsorship_conflicts: readonly Record<string, unknown>[];
+  organizer_conflicts: readonly Record<string, unknown>[];
   draft_link_conflicts: readonly Record<string, unknown>[];
   required_resolutions: CompanyMergeRequiredResolutions;
   field_differences: Record<string, unknown>;
@@ -55,6 +58,8 @@ export type CompanyMergePreviewResult = {
 };
 
 export type SponsorshipConflictStrategy = "keep_canonical" | "keep_duplicate_tier";
+
+export type OrganizerConflictStrategy = "keep_canonical" | "keep_duplicate_role";
 
 export type DraftLinkConflictStrategy = "keep_canonical_draft" | "keep_duplicate_draft";
 
@@ -79,6 +84,10 @@ export type CompanyMergeResolutions = {
     event_edition_id: string;
     strategy: SponsorshipConflictStrategy;
   }>;
+  organizer_conflicts: Array<{
+    event_edition_id: string;
+    strategy: OrganizerConflictStrategy;
+  }>;
   draft_link_conflicts: Array<{
     batch_id: string;
     strategy: DraftLinkConflictStrategy;
@@ -91,6 +100,9 @@ export type CompanyMergeExecutionActions = {
   event_sponsors_repointed: number;
   event_sponsors_deleted: number;
   event_sponsors_updated: number;
+  event_edition_organizers_repointed: number;
+  event_edition_organizers_deleted: number;
+  event_edition_organizers_updated: number;
   import_rows_proposed_repointed: number;
   import_rows_resolved_repointed: number;
   draft_links_repointed: number;
@@ -191,11 +203,12 @@ function mapCompanyMergeSnapshot(raw: unknown): CompanyMergeSnapshot {
 
 function mapRequiredResolutions(raw: unknown): CompanyMergeRequiredResolutions {
   if (!isRecord(raw)) {
-    return { sponsorship_conflicts: [], draft_link_conflicts: [] };
+    return { sponsorship_conflicts: [], organizer_conflicts: [], draft_link_conflicts: [] };
   }
 
   return {
     sponsorship_conflicts: readStringArray(raw.sponsorship_conflicts),
+    organizer_conflicts: readStringArray(raw.organizer_conflicts),
     draft_link_conflicts: readStringArray(raw.draft_link_conflicts),
   };
 }
@@ -230,11 +243,15 @@ function mapCompanyMergePreviewSnapshot(raw: unknown): CompanyMergePreviewSnapsh
     },
     impact: {
       event_sponsors_to_repoint: readNumber(impactRaw.event_sponsors_to_repoint),
+      event_edition_organizers_to_repoint: readNumber(
+        impactRaw.event_edition_organizers_to_repoint,
+      ),
       import_rows_proposed_to_repoint: readNumber(impactRaw.import_rows_proposed_to_repoint),
       import_rows_resolved_to_repoint: readNumber(impactRaw.import_rows_resolved_to_repoint),
       draft_links_to_repoint: readNumber(impactRaw.draft_links_to_repoint),
     },
     sponsorship_conflicts: readRecordArray(raw.sponsorship_conflicts),
+    organizer_conflicts: readRecordArray(raw.organizer_conflicts),
     draft_link_conflicts: readRecordArray(raw.draft_link_conflicts),
     required_resolutions: mapRequiredResolutions(raw.required_resolutions),
     field_differences: isRecord(raw.field_differences) ? raw.field_differences : {},
@@ -268,6 +285,15 @@ function mapCompanyMergeExecutionSnapshot(raw: unknown): CompanyMergeExecutionSn
       event_sponsors_repointed: readNumber(actionsRaw.event_sponsors_repointed),
       event_sponsors_deleted: readNumber(actionsRaw.event_sponsors_deleted),
       event_sponsors_updated: readNumber(actionsRaw.event_sponsors_updated),
+      event_edition_organizers_repointed: readNumber(
+        actionsRaw.event_edition_organizers_repointed,
+      ),
+      event_edition_organizers_deleted: readNumber(
+        actionsRaw.event_edition_organizers_deleted,
+      ),
+      event_edition_organizers_updated: readNumber(
+        actionsRaw.event_edition_organizers_updated,
+      ),
       import_rows_proposed_repointed:
         proposedRepointed > 0 ? proposedRepointed : legacyImportRepointed,
       import_rows_resolved_repointed: resolvedRepointed,
@@ -373,9 +399,44 @@ export function defaultCompanyMergeResolutions(): CompanyMergeResolutions {
   return {
     schema_version: 2,
     sponsorship_conflicts: [],
+    organizer_conflicts: [],
     draft_link_conflicts: [],
     field_resolutions: defaultCompanyMergeFieldResolutions(),
   };
+}
+
+/** Edition IDs whose organizer links changed during merge (for last_reviewed_at touch). */
+export function collectOrganizerMergeEditionIds(
+  execution: CompanyMergeExecutionSnapshot,
+): string[] {
+  const repointMap = execution.repoint_map;
+  if (!isRecord(repointMap)) return [];
+
+  const fromList = readStringArray(repointMap.event_edition_organizers_affected_edition_ids);
+  if (fromList.length > 0) {
+    return [...new Set(fromList.map((id) => id.trim().toLowerCase()))];
+  }
+
+  const ids = new Set<string>();
+  for (const key of [
+    "event_edition_organizers",
+    "event_edition_organizers_deleted",
+    "event_edition_organizers_updated",
+  ] as const) {
+    for (const entry of readRecordArray(repointMap[key])) {
+      const direct = readString(entry.event_edition_id);
+      if (direct) ids.add(direct.toLowerCase());
+      for (const nestedKey of ["before", "after", "row"] as const) {
+        const nested = entry[nestedKey];
+        if (isRecord(nested)) {
+          const editionId = readString(nested.event_editions_id);
+          if (editionId) ids.add(editionId.toLowerCase());
+        }
+      }
+    }
+  }
+
+  return [...ids];
 }
 
 /** Read-only merge impact preview (no writes). */

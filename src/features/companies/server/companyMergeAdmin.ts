@@ -1,5 +1,6 @@
 import {
   CompanyMergeRpcError,
+  collectOrganizerMergeEditionIds,
   defaultCompanyMergeFieldResolutions,
   defaultCompanyMergeResolutions,
   mergeCompaniesExecute,
@@ -10,9 +11,11 @@ import {
   type CompanyMergeResolutions,
   type DraftLinkConflictStrategy,
   type LogoFieldStrategy,
+  type OrganizerConflictStrategy,
   type SponsorshipConflictStrategy,
   type TextFieldStrategy,
 } from "@/src/features/companies/server/companyMerge";
+import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +25,11 @@ const MERGE_CONFIRMATION = "MERGE";
 const SPONSORSHIP_STRATEGIES = new Set<SponsorshipConflictStrategy>([
   "keep_canonical",
   "keep_duplicate_tier",
+]);
+
+const ORGANIZER_STRATEGIES = new Set<OrganizerConflictStrategy>([
+  "keep_canonical",
+  "keep_duplicate_role",
 ]);
 
 const DRAFT_LINK_STRATEGIES = new Set<DraftLinkConflictStrategy>([
@@ -259,6 +267,48 @@ function parseSponsorshipConflicts(raw: unknown): CompanyMergeResolutions["spons
   return result;
 }
 
+function parseOrganizerConflicts(raw: unknown): CompanyMergeResolutions["organizer_conflicts"] {
+  if (!Array.isArray(raw)) {
+    throw new CompanyMergeAdminHttpError(
+      400,
+      "resolutions.organizer_conflicts must be an array.",
+    );
+  }
+
+  const result: CompanyMergeResolutions["organizer_conflicts"] = [];
+
+  for (const item of raw) {
+    if (!isRecord(item)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        "Each organizer_conflicts entry must be an object.",
+      );
+    }
+    const eventEditionId = readStringField(item, "event_edition_id");
+    const strategy = readStringField(item, "strategy");
+
+    if (eventEditionId === null || !isCompanyMergeUuid(eventEditionId)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        "Each organizer_conflicts entry requires a valid event_edition_id.",
+      );
+    }
+    if (strategy === null || !ORGANIZER_STRATEGIES.has(strategy as OrganizerConflictStrategy)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        "Each organizer_conflicts entry requires strategy 'keep_canonical' or 'keep_duplicate_role'.",
+      );
+    }
+
+    result.push({
+      event_edition_id: normalizeCompanyMergeUuid(eventEditionId),
+      strategy: strategy as OrganizerConflictStrategy,
+    });
+  }
+
+  return result;
+}
+
 function parseDraftLinkConflicts(raw: unknown): CompanyMergeResolutions["draft_link_conflicts"] {
   if (!Array.isArray(raw)) {
     throw new CompanyMergeAdminHttpError(
@@ -323,6 +373,7 @@ export function parseCompanyMergeResolutions(raw: unknown): CompanyMergeResoluti
   return {
     schema_version: 2,
     sponsorship_conflicts: parseSponsorshipConflicts(raw.sponsorship_conflicts ?? []),
+    organizer_conflicts: parseOrganizerConflicts(raw.organizer_conflicts ?? []),
     draft_link_conflicts: parseDraftLinkConflicts(raw.draft_link_conflicts ?? []),
     field_resolutions,
   };
@@ -355,6 +406,33 @@ export function validateResolutionsAgainstPreview(
       throw new CompanyMergeAdminHttpError(
         400,
         `Unexpected sponsorship conflict strategy for edition ${editionId}.`,
+      );
+    }
+  }
+
+  const organizerByEdition = new Map<string, OrganizerConflictStrategy>();
+  for (const entry of resolutions.organizer_conflicts) {
+    organizerByEdition.set(entry.event_edition_id, entry.strategy);
+  }
+
+  for (const editionId of preview.required_resolutions.organizer_conflicts) {
+    const normalized = normalizeCompanyMergeUuid(editionId);
+    if (!organizerByEdition.has(normalized)) {
+      throw new CompanyMergeAdminHttpError(
+        409,
+        `Missing organizer conflict strategy for edition ${normalized}.`,
+      );
+    }
+  }
+
+  for (const [editionId] of organizerByEdition) {
+    const required = preview.required_resolutions.organizer_conflicts.map((id) =>
+      normalizeCompanyMergeUuid(id),
+    );
+    if (!required.includes(editionId)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        `Unexpected organizer conflict strategy for edition ${editionId}.`,
       );
     }
   }
@@ -523,6 +601,11 @@ export async function executeMergeCompaniesAdmin(
       notes,
     }),
   );
+
+  const organizerEditionIds = collectOrganizerMergeEditionIds(result.execution_snapshot);
+  for (const editionId of organizerEditionIds) {
+    await touchEditionLastReviewed(editionId);
+  }
 
   return {
     ...result,
