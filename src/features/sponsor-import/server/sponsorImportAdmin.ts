@@ -545,44 +545,86 @@ export async function bulkAcceptDomainMatches(batchId: string, actorId: string) 
   assertBatchStatus(batch, ["review"]);
 
   const supabase = createAdminClient();
+
+  return bulkAcceptDomainMatchesWithDeps(batchId, actorId, {
+    fetchAutoReadyRows: async (targetBatchId) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .select("id, proposed_company_id")
+        .eq("batch_id", targetBatchId)
+        .eq("status", "auto_ready")
+        .eq("match_confidence", "high")
+        .in("match_method", [...AUTO_READY_MATCH_METHODS]);
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as BulkAcceptDomainMatchRow[];
+    },
+    resolveRow: async (rowId, patch) => {
+      const { error } = await supabase.from("sponsor_import_rows").update(patch).eq("id", rowId);
+      if (error) throw new Error(error.message);
+    },
+    logAction: async ({ batchId: logBatchId, actorId: logActorId, affectedCount }) => {
+      await appendActionLog({
+        batchId: logBatchId,
+        actorId: logActorId,
+        actionType: "bulk_accept_domain_matches",
+        affectedCount,
+      });
+    },
+  });
+}
+
+export type BulkAcceptDomainMatchRow = {
+  id: string;
+  proposed_company_id: string | null;
+};
+
+export type BulkAcceptDomainMatchPatch = {
+  status: "resolved";
+  decision_type: "use_matched";
+  decision_source: "bulk_action";
+  resolved_company_id: string;
+  decision_by: string;
+  decision_at: string;
+  updated_at: string;
+};
+
+export type BulkAcceptDomainMatchesDeps = {
+  fetchAutoReadyRows: (batchId: string) => Promise<readonly BulkAcceptDomainMatchRow[]>;
+  resolveRow: (rowId: string, patch: BulkAcceptDomainMatchPatch) => Promise<void>;
+  logAction: (input: {
+    batchId: string;
+    actorId: string;
+    affectedCount: number;
+  }) => Promise<void>;
+};
+
+export async function bulkAcceptDomainMatchesWithDeps(
+  batchId: string,
+  actorId: string,
+  deps: BulkAcceptDomainMatchesDeps,
+): Promise<{ accepted_count: number }> {
   const now = new Date().toISOString();
-
-  const { data: autoRows, error: fetchError } = await supabase
-    .from("sponsor_import_rows")
-    .select("id, proposed_company_id")
-    .eq("batch_id", batchId)
-    .eq("status", "auto_ready")
-    .eq("match_confidence", "high")
-    .in("match_method", [...AUTO_READY_MATCH_METHODS]);
-
-  if (fetchError) throw new Error(fetchError.message);
+  const autoRows = await deps.fetchAutoReadyRows(batchId);
 
   let accepted = 0;
-  for (const row of autoRows ?? []) {
+  for (const row of autoRows) {
     const proposed = row.proposed_company_id;
     if (!proposed) continue;
-    const { error } = await supabase
-      .from("sponsor_import_rows")
-      .update({
-        status: "resolved",
-        decision_type: "use_matched",
-        decision_source: "bulk_action",
-        resolved_company_id: proposed,
-        decision_by: actorId,
-        decision_at: now,
-        updated_at: now,
-      })
-      .eq("id", row.id);
-    if (error) throw new Error(error.message);
+
+    await deps.resolveRow(row.id, {
+      status: "resolved",
+      decision_type: "use_matched",
+      decision_source: "bulk_action",
+      resolved_company_id: proposed,
+      decision_by: actorId,
+      decision_at: now,
+      updated_at: now,
+    });
     accepted += 1;
   }
 
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "bulk_accept_domain_matches",
-    affectedCount: accepted,
-  });
+  await deps.logAction({ batchId, actorId, affectedCount: accepted });
 
   return { accepted_count: accepted };
 }

@@ -34,7 +34,20 @@ export type MatchResult = {
   intended_link_action: "create_new_link" | "update_tier" | "skip" | null;
 };
 
-export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain"];
+export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain", "alias"];
+
+export function matchesAutoReadyBulkAcceptCriteria(row: {
+  status: string;
+  match_confidence: string | null;
+  match_method: string | null;
+}): boolean {
+  return (
+    row.status === "auto_ready" &&
+    row.match_confidence === "high" &&
+    row.match_method !== null &&
+    (AUTO_READY_MATCH_METHODS as readonly string[]).includes(row.match_method)
+  );
+}
 
 export const IMPORT_MATCH_CONTEXT_PAGE_SIZE = SUPABASE_DEFAULT_PAGE_SIZE;
 

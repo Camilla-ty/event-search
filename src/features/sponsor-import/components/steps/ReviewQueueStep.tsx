@@ -334,10 +334,18 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
     setProgressMessage(IMPORT_PROGRESS.bulkAccept);
     setError(null);
     try {
-      const acceptedCount = summary.auto_ready;
+      const autoReadyBeforeAccept = summary.auto_ready;
       const result = await bulkAcceptDomains(batch.id);
       if (!result.ok) {
         setError(result.error);
+        return;
+      }
+      const acceptedCount = result.accepted_count;
+      if (acceptedCount === 0 && autoReadyBeforeAccept > 0) {
+        setError(
+          "No auto-ready rows were accepted. Refresh the page or resolve the remaining rows manually.",
+        );
+        await reload();
         return;
       }
       if (acceptedCount > 0) {
