@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
+  compareChronologicalOrderDesc,
   compareEventBrowseRecommendedOrder,
   compareRecentlyReviewedOrder,
   DEFAULT_EVENT_EXPLORER_SORT_MODE,
@@ -146,7 +147,7 @@ describe("sortEventExplorerResults", () => {
     );
   });
 
-  it("keeps strict chronological order for event date sort", () => {
+  it("orders date_asc from oldest to newest start_date", () => {
     const events = [
       makeEvent({
         id: "recent-reviewed",
@@ -166,13 +167,128 @@ describe("sortEventExplorerResults", () => {
 
     const sorted = sortEventExplorerResults(events, {
       query: "",
-      sortMode: "date",
+      sortMode: "date_asc",
       today: TODAY,
     });
 
     assert.deepEqual(
       sorted.map((event) => event.id),
       ["old-unreviewed", "recent-reviewed"],
+    );
+  });
+
+  it("orders date_desc from newest to oldest start_date", () => {
+    const events = [
+      makeEvent({
+        id: "old-unreviewed",
+        name: "Old Unreviewed",
+        start_date: "2022-01-01",
+        end_date: "2022-01-03",
+      }),
+      makeEvent({
+        id: "recent-reviewed",
+        name: "Recent Reviewed",
+        start_date: "2026-06-10",
+        end_date: "2026-06-12",
+      }),
+    ];
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "date_desc",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["recent-reviewed", "old-unreviewed"],
+    );
+  });
+
+  it("places dateless editions last in date_asc and date_desc", () => {
+    const events = [
+      {
+        ...makeEvent({
+          id: "dateless",
+          name: "Dateless Event",
+        }),
+        start_date: null,
+        end_date: null,
+      },
+      makeEvent({
+        id: "dated",
+        name: "Dated Event",
+        start_date: "2024-06-01",
+        end_date: "2024-06-03",
+      }),
+    ];
+
+    const asc = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "date_asc",
+      today: TODAY,
+    });
+    const desc = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "date_desc",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      asc.map((event) => event.id),
+      ["dated", "dateless"],
+    );
+    assert.deepEqual(
+      desc.map((event) => event.id),
+      ["dated", "dateless"],
+    );
+  });
+
+  it("uses name and id tie-breaks for equal start_date in date_desc", () => {
+    const events = [
+      makeEvent({
+        id: "b-event",
+        name: "Bravo Event",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15",
+      }),
+      makeEvent({
+        id: "a-event",
+        name: "Alpha Event",
+        start_date: "2026-06-15",
+        end_date: "2026-06-15",
+      }),
+    ];
+
+    assert.ok(compareChronologicalOrderDesc(events[0], events[1]) > 0);
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "date_desc",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["a-event", "b-event"],
+    );
+  });
+
+  it("sorts alphabetically by event name", () => {
+    const events = [
+      makeEvent({ id: "b", name: "Bravo Event" }),
+      makeEvent({ id: "a", name: "Alpha Event" }),
+    ];
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "name",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["a", "b"],
     );
   });
 

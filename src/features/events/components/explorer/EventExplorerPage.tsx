@@ -52,7 +52,8 @@ import type { EventFilters, EventRecord, ExplorerView } from "./types";
 const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
   { value: "recommended", label: "Recommended" },
   { value: "reviewed", label: "Recently Reviewed" },
-  { value: "date", label: "Event Date" },
+  { value: "date_asc", label: "Event Date (Oldest First)" },
+  { value: "date_desc", label: "Event Date (Newest First)" },
   { value: "name", label: "Event Name" },
 ];
 

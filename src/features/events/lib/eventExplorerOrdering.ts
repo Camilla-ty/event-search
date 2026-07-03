@@ -12,7 +12,7 @@ import {
 
 export const RECENTLY_ENDED_DAYS = 180;
 
-export type EventExplorerSortMode = "recommended" | "reviewed" | "date" | "name";
+export type EventExplorerSortMode = "recommended" | "reviewed" | "date_asc" | "date_desc" | "name";
 
 export const DEFAULT_EVENT_EXPLORER_SORT_MODE: EventExplorerSortMode = "recommended";
 
@@ -247,10 +247,27 @@ export function compareEventSearchOrder(
   return a.id.localeCompare(b.id);
 }
 
-function compareChronologicalOrder(a: EventExplorerOrderable, b: EventExplorerOrderable): number {
+function compareChronologicalOrderAsc(a: EventExplorerOrderable, b: EventExplorerOrderable): number {
   const startA = readEventIsoDate(a.start_date);
   const startB = readEventIsoDate(b.start_date);
   const byStart = compareIsoAsc(startA, startB);
+  if (byStart !== 0) return byStart;
+
+  const byName = (a.name ?? "").localeCompare(b.name ?? "", undefined, {
+    sensitivity: "base",
+  });
+  if (byName !== 0) return byName;
+
+  return a.id.localeCompare(b.id);
+}
+
+export function compareChronologicalOrderDesc(
+  a: EventExplorerOrderable,
+  b: EventExplorerOrderable,
+): number {
+  const startA = readEventIsoDate(a.start_date);
+  const startB = readEventIsoDate(b.start_date);
+  const byStart = compareIsoDesc(startA, startB);
   if (byStart !== 0) return byStart;
 
   const byName = (a.name ?? "").localeCompare(b.name ?? "", undefined, {
@@ -302,8 +319,12 @@ export function sortEventExplorerResults<T extends EventRecord>(
     return [...events].sort(compareNameOrder);
   }
 
-  if (options.sortMode === "date") {
-    return [...events].sort(compareChronologicalOrder);
+  if (options.sortMode === "date_asc") {
+    return [...events].sort(compareChronologicalOrderAsc);
+  }
+
+  if (options.sortMode === "date_desc") {
+    return [...events].sort(compareChronologicalOrderDesc);
   }
 
   if (options.sortMode === "reviewed") {

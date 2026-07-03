@@ -1,7 +1,7 @@
 # Phase — Event Explorer Sort: Implementation Scope
 
-**Status:** Proposed  
-**Version:** v1  
+**Status:** Partially implemented (Recommended default, Reset fix, Recently Reviewed shipped; date split pending)  
+**Version:** v1.1  
 **Last updated:** 2026-07-03  
 
 Implementation scope for **Event Explorer sort improvements** on the public `/events` page. Defines product decisions, sort semantics, implementation boundaries, and verification — not application code.
@@ -42,11 +42,15 @@ The **Event Series filter was removed** from the explorer. Series discovery is c
 
 ### 1.3 Current sort implementation (as of this document)
 
-- **Options:** Recommended, Event Date, Event Name
+**Shipped:**
+
+- **Options:** Recommended, Recently Reviewed, Event Date, Event Name
 - **Default (initial load):** Recommended
-- **Reset Filters quirk:** Reset currently sets sort to Event Date — **to be fixed** in this phase (see §5)
+- **Reset Filters:** Returns sort to Recommended
 - **State:** Client-only React state; **not** in URL
 - **Engine:** `sortEventExplorerResults()` in `eventExplorerOrdering.ts` (client-side, in-memory)
+
+**Pending (this scope amendment):** Replace the single **Event Date** option with two explicit date modes (Oldest First / Newest First) — see §3.
 
 ---
 
@@ -75,6 +79,10 @@ EventPixels sorting should prioritize **research freshness** and **sponsor data 
 - **Last Reviewed** (`event_editions.last_reviewed_at`) and admin research metadata are the strongest signals that an edition’s data is current and trustworthy.
 - Upcoming-first ordering optimizes calendar marketing, not sponsor-research workflows.
 
+### 2.4 Event Date labels must be explicit
+
+A single **Event Date** label is **ambiguous** — users cannot tell whether results are oldest-first or newest-first. v1 therefore exposes **two** chronological sort modes with explicit direction in the label.
+
 ---
 
 ## 3. Sort options for v1
@@ -84,17 +92,22 @@ EventPixels sorting should prioritize **research freshness** and **sponsor data 
 | Mode | UI label | Purpose |
 |------|----------|---------|
 | `recommended` | **Recommended** | Default; data-readiness oriented browse/search order |
-| `recently_reviewed` | **Recently Reviewed** | Explicit sort by last research review timestamp |
-| `date` | **Event Date** | Chronological by edition start date (existing behavior) |
+| `reviewed` | **Recently Reviewed** | Explicit sort by last research review timestamp |
+| `date_asc` | **Event Date (Oldest First)** | Chronological ascending by edition `start_date` |
+| `date_desc` | **Event Date (Newest First)** | Chronological descending by edition `start_date` |
 | `name` | **Event Name** | Alphabetical by edition name (existing behavior) |
+
+**Toolbar order:** Recommended → Recently Reviewed → Event Date (Oldest First) → Event Date (Newest First) → Event Name
+
+**Migration note:** The shipped single `date` mode maps to **`date_asc`** (Oldest First). Implementation should rename or alias `date` → `date_asc` and add `date_desc`.
 
 ### 3.2 Excluded (v1)
 
 | Proposed mode | Excluded because |
 |---------------|------------------|
 | **Most Sponsors** | Sponsor count ≠ event importance; count reflects import timing, not research priority |
-| **Upcoming First** | Not the primary EventPixels workflow; date filter + Event Date sort cover chronological needs |
-| **Newest First** (`created_at`) | Catalog “newness” ≠ data readiness; out of scope for this phase |
+| **Upcoming First** (standalone mode) | Not the primary EventPixels workflow; use date filters + explicit date sort instead |
+| **Newest First** (`created_at`) | Catalog “newness” ≠ data readiness; distinct from Event Date (Newest First) which sorts by `start_date` |
 
 These may be reconsidered only with an explicit product decision that does not conflict with the research-freshness principle.
 
@@ -137,14 +150,31 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 **Field:** `event_editions.last_reviewed_at` (already on `EventRecord` via server mapping).
 
-### 4.3 Event Date
+### 4.3 Event Date (Oldest First)
 
-**Intent:** Strict chronological ordering for planning and timeline scans.
+**Intent:** Timeline scan from earliest to latest start dates.
 
-- **Keep existing** `compareChronologicalOrder`: `start_date` ASC (dateless last), then name, id
-- No change to semantics in v1 unless a bug is found
+| Order | Rule |
+|-------|------|
+| Primary | `start_date` ASC |
+| Dateless | Editions with missing/invalid `start_date` **last** |
+| Tie-break | Edition name ASC (case-insensitive), then id |
 
-### 4.4 Event Name
+**Implementation:** Reuse existing `compareChronologicalOrder` (current `date` mode behavior).
+
+### 4.4 Event Date (Newest First)
+
+**Intent:** Timeline scan from latest to earliest start dates.
+
+| Order | Rule |
+|-------|------|
+| Primary | `start_date` DESC |
+| Dateless | Editions with missing/invalid `start_date` **last** |
+| Tie-break | Edition name ASC (case-insensitive), then id |
+
+**Implementation:** Add dedicated `compareChronologicalOrderDesc` (or equivalent) — mirror Oldest First with inverted date comparison; do not overload Recommended.
+
+### 4.5 Event Name
 
 **Intent:** Stable alphabetical scan.
 
@@ -154,20 +184,26 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 ## 5. Implementation scope
 
-### 5.1 In scope
+### 5.1 Shipped
+
+| # | Deliverable | Status |
+|---|-------------|--------|
+| 1 | **`reviewed`** sort mode + **Recently Reviewed** toolbar option | ✅ Shipped |
+| 2 | **`compareRecentlyReviewedOrder`** in `eventExplorerOrdering.ts` | ✅ Shipped |
+| 3 | **Recommended** as default; **Reset → Recommended** | ✅ Shipped |
+| 4 | Client-side sort only | ✅ Shipped |
+
+### 5.2 Pending (date split)
 
 | # | Deliverable |
 |---|-------------|
-| 1 | Add **`recently_reviewed`** to `EventExplorerSortMode` and toolbar options |
-| 2 | Implement **`compareRecentlyReviewedOrder`** (or equivalent) in `eventExplorerOrdering.ts` |
-| 3 | Wire **Recently Reviewed** in `EventExplorerPage` `EVENT_SORT_OPTIONS` |
-| 4 | **Keep Recommended as default** on initial load (`useState("recommended")`) |
-| 5 | **Fix Reset Filters** — `handleReset()` must set sort to **`recommended`**, not `date` |
-| 6 | **Keep sort client-side** — continue using `sortEventExplorerResults()` on the filtered in-memory array |
-| 7 | **Tests** — add/update `eventExplorerOrdering.test.ts` for Recently Reviewed and reset behavior (via page test or ordering unit tests) |
-| 8 | Document Recommended semantics in code comments only as needed for maintainers |
+| 1 | Rename or alias **`date`** → **`date_asc`**; label **Event Date (Oldest First)** |
+| 2 | Add **`date_desc`** mode + **`compareChronologicalOrderDesc`** (or equivalent) |
+| 3 | Add toolbar option **Event Date (Newest First)** |
+| 4 | Update `eventExplorerOrdering.test.ts` — Oldest First + Newest First cases; dateless-last for both |
+| 5 | Remove ambiguous single **Event Date** label from toolbar |
 
-### 5.2 Explicit non-goals for this phase
+### 5.3 Explicit non-goals
 
 | Item | Decision |
 |------|----------|
@@ -175,20 +211,19 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 | Database schema | **No changes** |
 | Migration | **None** |
 | Server-side sort in `getEventExplorerData` | **No** — client re-sorts after server filter |
-| `created_at` on `EventRecord` | **Not required** for v1 (Newest First excluded) |
+| `created_at` on `EventRecord` | **Not required** for v1 |
 
-### 5.3 Files expected to change (implementation reference)
+### 5.4 Files expected to change (date split)
 
 | Area | Path |
 |------|------|
 | Sort engine | `src/features/events/lib/eventExplorerOrdering.ts` |
 | Sort tests | `src/features/events/lib/eventExplorerOrdering.test.ts` |
-| Toolbar options + reset | `src/features/events/components/explorer/EventExplorerPage.tsx` |
-| Shared toolbar UI | `src/components/common/explorer/ExplorerResultsToolbar.tsx` (likely unchanged) |
+| Toolbar options | `src/features/events/components/explorer/EventExplorerPage.tsx` |
 
-**Not in scope:** `FilterPanel.tsx`, `eventExplorerQuery.ts`, filter URL builders, `getEventExplorerData.ts` (except no changes expected).
+**Not in scope:** `FilterPanel.tsx`, `eventExplorerQuery.ts`, filter URL builders, `getEventExplorerData.ts`, calendar sub-views.
 
-### 5.4 Calendar view
+### 5.5 Calendar view
 
 - Sort dropdown remains **hidden** in calendar view (`showSort={explorerView === "list"}`).
 - **No calendar sort redesign** in v1 — day cells and agenda may continue local name ordering.
@@ -199,7 +234,8 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 - Moving sort into the left filter panel
 - **Most Sponsors** sort mode
-- **Upcoming First** / **Newest First** sort modes
+- **Upcoming First** as a standalone sort mode
+- **Catalog Newest First** (`created_at`)
 - Server-side sorting or DB `ORDER BY` changes for explorer
 - URL sort persistence (`?sort=`)
 - Calendar sub-view sort alignment with toolbar
@@ -219,7 +255,8 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 | Recently Reviewed — reviewed rows | `last_reviewed_at` DESC |
 | Recently Reviewed — unreviewed | All NULL/empty `last_reviewed_at` rows **after** reviewed rows |
 | Recently Reviewed — ties | Stable name / id tie-break |
-| Event Date | Existing chronological tests **remain valid** |
+| Event Date (Oldest First) | `start_date` ASC; dateless last; name/id tie-break |
+| Event Date (Newest First) | `start_date` DESC; dateless last; name/id tie-break |
 | Event Name | Existing alphabetical tests **remain valid** |
 | Search + Recommended | Existing relevance-first tests **remain valid** unless product explicitly changes §4.1 |
 
@@ -227,9 +264,10 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 | Check | Expectation |
 |-------|-------------|
-| Toolbar | Four options visible in list view: Recommended, Recently Reviewed, Event Date, Event Name |
+| Toolbar | Five options: Recommended, Recently Reviewed, Event Date (Oldest First), Event Date (Newest First), Event Name |
 | Default on load | Recommended selected |
-| Reset Filters | Sort returns to **Recommended** (not Event Date) |
+| Reset Filters | Sort returns to **Recommended** |
+| Date split | Oldest/Newest labels are explicit; no ambiguous “Event Date” |
 | Filters + sort | Changing sort does not alter filter URL or chip state |
 | Pagination | Sort change does not break client pagination (9 per page) |
 | Calendar | Sort control hidden; calendar still usable |
@@ -246,28 +284,36 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 | Document | Action |
 |----------|--------|
-| **This file** (`phase-event-explorer-sort-scope.md`) | **Created** — scope for sort v1 |
+| **This file** (`phase-event-explorer-sort-scope.md`) | **Living scope** for sort v1 |
 | [`project-state.md`](./project-state.md) | Update **only after implementation ships** (per maintenance rule) |
 | [`README.md`](./README.md) | Optional: add link under public site / explorer when implementation starts |
 | Migration design | **Not required** — no schema changes |
 
 ---
 
-## 9. Verification checklist (post-implementation)
+## 9. Verification checklist
 
-- [ ] `recently_reviewed` sort mode implemented and labeled **Recently Reviewed**
-- [ ] Recommended remains default on load
-- [ ] Reset Filters sets sort to Recommended
-- [ ] Recently Reviewed: `last_reviewed_at` DESC; unreviewed last
-- [ ] Event Date and Event Name behavior unchanged
-- [ ] Search + Recommended behavior unchanged (unless §4.1 amendment approved)
-- [ ] Sort remains in results toolbar only
-- [ ] No URL `sort=` param added
+### Shipped
+
+- [x] `reviewed` sort mode and **Recently Reviewed** label
+- [x] Recommended default on load
+- [x] Reset Filters sets sort to Recommended
+- [x] Recently Reviewed: `last_reviewed_at` DESC; unreviewed last
+- [x] Sort remains in results toolbar only
+- [x] No URL `sort=` param
+
+### Pending (date split)
+
+- [ ] `date_asc` labeled **Event Date (Oldest First)** (replaces ambiguous **Event Date**)
+- [ ] `date_desc` labeled **Event Date (Newest First)**
+- [ ] Dateless editions last in both date modes
+- [ ] Event Name behavior unchanged
+- [ ] Search + Recommended behavior unchanged
 - [ ] `npm run build` passes; ordering tests pass
-- [ ] `project-state.md` updated in same change set as code
+- [ ] `project-state.md` updated when date split ships
 
 ---
 
 ## 10. Summary
 
-Event Explorer sort v1 adds **Recently Reviewed**, keeps **Recommended** as the research-oriented default, fixes **Reset → Recommended**, and leaves sort **client-side** without URL persistence. Sort stays in the **results toolbar**, separate from Keyword/Country/Date filters. Popularity-style sorts (Most Sponsors, Upcoming First, Newest First) are **explicitly excluded** in favor of research freshness and data readiness signals.
+Event Explorer sort v1 prioritizes **research freshness** over popularity. **Recommended** remains the default; **Recently Reviewed** sorts by `last_reviewed_at`. Chronological sorting uses **two explicit date modes** — **Event Date (Oldest First)** and **Event Date (Newest First)** — so users always know sort direction. **Event Name** remains alphabetical. Sort stays **client-side** in the **results toolbar** without URL persistence. Most Sponsors, Upcoming First, and catalog Newest First (`created_at`) remain excluded.
