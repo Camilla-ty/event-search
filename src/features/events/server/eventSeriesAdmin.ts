@@ -16,7 +16,6 @@ const EVENT_SERIES_ADMIN_SELECT = `
   website_url,
   logo_url,
   lifecycle_status,
-  lifecycle_note,
   merged_into_series_id,
   created_at,
   merged_into_series:merged_into_series_id ( id, name, slug )
@@ -36,7 +35,6 @@ export type EventSeriesRow = {
   website_url: string | null;
   logo_url: string | null;
   lifecycle_status: string | null;
-  lifecycle_note: string | null;
   merged_into_series_id: string | null;
   created_at: string;
   merged_into_series?: MergedIntoSeriesSummary | null;
@@ -49,7 +47,6 @@ export type CreateEventSeriesInput = {
   website_url?: string | null;
   logo_url?: string | null;
   lifecycle_status?: string | null;
-  lifecycle_note?: string | null;
   merged_into_series_id?: string | null;
 };
 
@@ -60,7 +57,6 @@ export type UpdateEventSeriesInput = {
   website_url?: string | null;
   logo_url?: string | null;
   lifecycle_status?: string | null;
-  lifecycle_note?: string | null;
   merged_into_series_id?: string | null;
 };
 
@@ -89,7 +85,6 @@ function mapEventSeriesRow(raw: Record<string, unknown>): EventSeriesRow {
     website_url: typeof raw.website_url === "string" ? raw.website_url : null,
     logo_url: typeof raw.logo_url === "string" ? raw.logo_url : null,
     lifecycle_status: typeof raw.lifecycle_status === "string" ? raw.lifecycle_status : null,
-    lifecycle_note: typeof raw.lifecycle_note === "string" ? raw.lifecycle_note : null,
     merged_into_series_id:
       typeof raw.merged_into_series_id === "string" ? raw.merged_into_series_id : null,
     created_at: typeof raw.created_at === "string" ? raw.created_at : "",
@@ -163,7 +158,6 @@ export async function createEventSeries(
     website_url: input.website_url?.trim() || null,
     logo_url: input.logo_url?.trim() || null,
     lifecycle_status: input.lifecycle_status?.trim() || null,
-    lifecycle_note: input.lifecycle_note?.trim() || null,
     merged_into_series_id: input.merged_into_series_id ?? null,
   };
 
@@ -197,9 +191,6 @@ export async function updateEventSeries(
   }
   if (input.lifecycle_status !== undefined) {
     patch.lifecycle_status = input.lifecycle_status?.trim() || null;
-  }
-  if (input.lifecycle_note !== undefined) {
-    patch.lifecycle_note = input.lifecycle_note?.trim() || null;
   }
   if (input.merged_into_series_id !== undefined) {
     patch.merged_into_series_id = input.merged_into_series_id;

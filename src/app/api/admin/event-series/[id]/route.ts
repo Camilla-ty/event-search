@@ -44,7 +44,6 @@ type PatchSeriesBody = {
   logo_url?: string | null;
   keyword_ids?: string[];
   lifecycle_status?: string | null;
-  lifecycle_note?: string | null;
   merged_into_series_id?: string | null;
 };
 
@@ -90,19 +89,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const hasLifecycleField =
     body.lifecycle_status !== undefined ||
-    body.lifecycle_note !== undefined ||
     body.merged_into_series_id !== undefined;
 
   if (hasLifecycleField) {
     const lifecycle = validateSeriesLifecycleUpdate(
       {
         lifecycle_status: existing.lifecycle_status,
-        lifecycle_note: existing.lifecycle_note,
         merged_into_series_id: existing.merged_into_series_id,
       },
       {
         lifecycle_status: body.lifecycle_status,
-        lifecycle_note: body.lifecycle_note,
         merged_into_series_id: body.merged_into_series_id,
       },
       id,

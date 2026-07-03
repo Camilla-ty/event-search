@@ -22,7 +22,6 @@ const EVENT_SERIES_PUBLIC_EMBED = `
   website_url,
   logo_url,
   lifecycle_status,
-  lifecycle_note,
   merged_into_series:merged_into_series_id ( id, name, slug )
 `;
 

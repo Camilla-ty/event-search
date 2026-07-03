@@ -8,7 +8,6 @@ const UUID_REGEX =
 
 export type SeriesLifecycleState = {
   lifecycle_status: string | null;
-  lifecycle_note: string | null;
   merged_into_series_id: string | null;
 };
 
@@ -21,7 +20,6 @@ function parseOptionalUuid(raw: unknown): string | null {
 
 export function parseSeriesLifecycleFields(body: {
   lifecycle_status?: unknown;
-  lifecycle_note?: unknown;
   merged_into_series_id?: unknown;
 }): { ok: true; partial: Partial<SeriesLifecycleState> } | { ok: false; errors: string[] } {
   const errors: string[] = [];
@@ -33,15 +31,6 @@ export function parseSeriesLifecycleFields(body: {
       errors.push("lifecycle_status must be active, discontinued, or merged");
     } else {
       partial.lifecycle_status = parsed ?? null;
-    }
-  }
-
-  if (body.lifecycle_note !== undefined) {
-    if (body.lifecycle_note === null) {
-      partial.lifecycle_note = null;
-    } else {
-      const value = typeof body.lifecycle_note === "string" ? body.lifecycle_note.trim() : "";
-      partial.lifecycle_note = value === "" ? null : value;
     }
   }
 
@@ -74,8 +63,6 @@ export function resolveSeriesLifecycleState(
       partial.lifecycle_status !== undefined
         ? partial.lifecycle_status
         : existing.lifecycle_status,
-    lifecycle_note:
-      partial.lifecycle_note !== undefined ? partial.lifecycle_note : existing.lifecycle_note,
     merged_into_series_id:
       partial.merged_into_series_id !== undefined
         ? partial.merged_into_series_id
@@ -116,7 +103,6 @@ export function validateSeriesLifecycleUpdate(
   existing: SeriesLifecycleState,
   body: {
     lifecycle_status?: unknown;
-    lifecycle_note?: unknown;
     merged_into_series_id?: unknown;
   },
   seriesId?: string,
@@ -140,7 +126,6 @@ export function validateSeriesLifecycleUpdate(
     ok: true,
     patch: {
       lifecycle_status: resolved.lifecycle_status,
-      lifecycle_note: resolved.lifecycle_note,
       merged_into_series_id: resolved.merged_into_series_id,
     },
   };
@@ -148,7 +133,6 @@ export function validateSeriesLifecycleUpdate(
 
 export function validateSeriesLifecycleCreate(body: {
   lifecycle_status?: unknown;
-  lifecycle_note?: unknown;
   merged_into_series_id?: unknown;
 }): { ok: true; data: SeriesLifecycleState } | { ok: false; errors: string[] } {
   const parsed = parseSeriesLifecycleFields(body);
@@ -159,7 +143,6 @@ export function validateSeriesLifecycleCreate(body: {
   const resolved = resolveSeriesLifecycleState(
     {
       lifecycle_status: null,
-      lifecycle_note: null,
       merged_into_series_id: null,
     },
     parsed.partial,

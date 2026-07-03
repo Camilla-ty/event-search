@@ -32,7 +32,6 @@ type SeriesFormValues = {
   website_url: string;
   logo_url: string;
   lifecycle_status: string;
-  lifecycle_note: string;
   merged_into_series_id: string;
 };
 
@@ -138,8 +137,6 @@ export function EventSeriesForm({
       description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
       lifecycle_status: lifecycleStatus,
-      lifecycle_note:
-        lifecycleStatus === "merged" ? values.lifecycle_note.trim() || null : null,
       merged_into_series_id: mergedIntoSeriesId,
       keyword_ids: keywordIds,
     };
@@ -384,7 +381,6 @@ export function EventSeriesForm({
                 lifecycle_status: nextStatus,
                 merged_into_series_id:
                   nextStatus === "merged" ? prev.merged_into_series_id : "",
-                lifecycle_note: nextStatus === "merged" ? prev.lifecycle_note : "",
               }));
               if (nextStatus !== "merged") {
                 setMergedIntoSelection(null);
@@ -402,34 +398,19 @@ export function EventSeriesForm({
         </label>
 
         {values.lifecycle_status === "merged" ? (
-          <>
-            <MergedIntoSeriesPicker
-              selected={mergedIntoSelection}
-              excludeSeriesId={seriesId}
-              disabled={fieldsDisabled}
-              onSelect={(series) => {
-                setMergedIntoSelection(series);
-                updateField("merged_into_series_id", series.id);
-              }}
-              onClear={() => {
-                setMergedIntoSelection(null);
-                updateField("merged_into_series_id", "");
-              }}
-            />
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">
-                Lifecycle note (internal)
-              </span>
-              <textarea
-                value={values.lifecycle_note}
-                onChange={(e) => updateField("lifecycle_note", e.target.value)}
-                disabled={fieldsDisabled}
-                rows={3}
-                className={formInputClass}
-                placeholder="Optional admin-only context (not shown publicly)."
-              />
-            </label>
-          </>
+          <MergedIntoSeriesPicker
+            selected={mergedIntoSelection}
+            excludeSeriesId={seriesId}
+            disabled={fieldsDisabled}
+            onSelect={(series) => {
+              setMergedIntoSelection(series);
+              updateField("merged_into_series_id", series.id);
+            }}
+            onClear={() => {
+              setMergedIntoSelection(null);
+              updateField("merged_into_series_id", "");
+            }}
+          />
         ) : null}
 
         {mode === "edit" ? (

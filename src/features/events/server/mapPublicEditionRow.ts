@@ -46,7 +46,6 @@ export function mapPublicEventSeries(raw: unknown): PublicEventSeriesSummary | n
     logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
     lifecycle_status:
       typeof row.lifecycle_status === "string" ? row.lifecycle_status : null,
-    lifecycle_note: typeof row.lifecycle_note === "string" ? row.lifecycle_note : null,
     merged_into_series: mapMergedIntoSeries(row.merged_into_series),
   };
 }

@@ -37,7 +37,6 @@ type CreateSeriesBody = {
   logo_url?: string | null;
   keyword_ids?: string[];
   lifecycle_status?: string | null;
-  lifecycle_note?: string | null;
   merged_into_series_id?: string | null;
 };
 
@@ -67,7 +66,6 @@ export async function POST(request: Request) {
 
   const lifecycle = validateSeriesLifecycleCreate({
     lifecycle_status: body.lifecycle_status,
-    lifecycle_note: body.lifecycle_note,
     merged_into_series_id: body.merged_into_series_id,
   });
   if (!lifecycle.ok) {
@@ -90,7 +88,6 @@ export async function POST(request: Request) {
       website_url: website,
       logo_url: null,
       lifecycle_status: lifecycle.data.lifecycle_status,
-      lifecycle_note: lifecycle.data.lifecycle_note,
       merged_into_series_id: lifecycle.data.merged_into_series_id,
     });
 

@@ -17,11 +17,8 @@ export type EventHistoryRow =
 
 export function buildEventHistoryRows(input: {
   lifecycleStatus: string | null | undefined;
-  lifecycleNote?: string | null | undefined;
   mergedIntoSeries?: MergedIntoSeriesDestination | null;
 }): EventHistoryRow[] | null {
-  void input.lifecycleNote;
-
   const statusLabel = formatEventLifecycleStatusLabel(input.lifecycleStatus);
   const rows: EventHistoryRow[] = [];
 

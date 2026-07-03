@@ -34,7 +34,6 @@ export default async function AdminCreateEventSeriesPage() {
           website_url: "",
           logo_url: "",
           lifecycle_status: "",
-          lifecycle_note: "",
           merged_into_series_id: "",
         }}
       />

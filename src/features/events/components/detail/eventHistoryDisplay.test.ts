@@ -7,7 +7,6 @@ describe("buildEventHistoryRows", () => {
   it("renders status only for active", () => {
     const rows = buildEventHistoryRows({
       lifecycleStatus: "active",
-      lifecycleNote: "Should not appear",
     });
 
     assert.deepEqual(rows, [{ kind: "status", label: "Status", value: "Active" }]);
@@ -26,7 +25,6 @@ describe("buildEventHistoryRows", () => {
   it("renders merged status and series hub link metadata", () => {
     const rows = buildEventHistoryRows({
       lifecycleStatus: "merged",
-      lifecycleNote: "Internal note only",
       mergedIntoSeries: {
         name: "Hong Kong FinTech Week",
         slug: "hong-kong-fintech-week",
@@ -42,18 +40,6 @@ describe("buildEventHistoryRows", () => {
         destinationHref: "/events/series/hong-kong-fintech-week",
       },
     ]);
-  });
-
-  it("does not render lifecycle_note publicly", () => {
-    const rows = buildEventHistoryRows({
-      lifecycleStatus: "active",
-      lifecycleNote: "Absorbed into HK FinTech Week",
-    });
-
-    assert.equal(
-      rows?.some((row) => JSON.stringify(row).includes("Absorbed into HK FinTech Week")),
-      false,
-    );
   });
 
   it("returns null when no lifecycle status is set", () => {

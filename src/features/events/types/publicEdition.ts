@@ -12,7 +12,6 @@ export type PublicEventSeriesSummary = {
   website_url: string | null;
   logo_url: string | null;
   lifecycle_status: string | null;
-  lifecycle_note: string | null;
   merged_into_series: PublicMergedIntoSeries | null;
 };
 

@@ -11,7 +11,6 @@ describe("eventSeriesLifecycle", () => {
   it("requires merged_into_series_id when status is merged", () => {
     const errors = validateSeriesLifecycleState({
       lifecycle_status: "merged",
-      lifecycle_note: null,
       merged_into_series_id: null,
     });
     assert.match(errors.join("; "), /merged_into_series_id is required/);
@@ -21,7 +20,6 @@ describe("eventSeriesLifecycle", () => {
     const resolved = resolveSeriesLifecycleState(
       {
         lifecycle_status: "merged",
-        lifecycle_note: null,
         merged_into_series_id: "11111111-1111-4111-8111-111111111111",
       },
       { lifecycle_status: "active" },
@@ -36,7 +34,6 @@ describe("eventSeriesLifecycle", () => {
     const result = validateSeriesLifecycleUpdate(
       {
         lifecycle_status: null,
-        lifecycle_note: null,
         merged_into_series_id: null,
       },
       {
@@ -56,7 +53,6 @@ describe("eventSeriesLifecycle", () => {
     const result = validateSeriesLifecycleUpdate(
       {
         lifecycle_status: null,
-        lifecycle_note: null,
         merged_into_series_id: null,
       },
       {
