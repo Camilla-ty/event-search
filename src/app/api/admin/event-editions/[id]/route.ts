@@ -44,6 +44,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: false, error: "Invalid JSON payload." }, { status: 400 });
   }
 
+  const existing = await getEventEditionAdminById(id);
+  if (!existing) {
+    return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+  }
+
   const validated = validateEditionUpdateBody({
     name: typeof body.name === "string" ? body.name : undefined,
     slug: typeof body.slug === "string" ? body.slug : undefined,
@@ -71,11 +76,6 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const existing = await getEventEditionAdminById(id);
-    if (!existing) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
-    }
-
     const finalCityId =
       validated.patch.city_id !== undefined
         ? (validated.patch.city_id as string | null)

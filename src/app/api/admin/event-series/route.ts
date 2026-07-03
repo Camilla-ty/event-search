@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
-import {
-  isEventLifecycleStatus,
-  parseOptionalLifecycleStatus,
-} from "@/src/lib/validation/eventLifecycleStatus";
+import { validateSeriesLifecycleCreate } from "@/src/lib/validation/eventSeriesLifecycle";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
@@ -41,6 +38,7 @@ type CreateSeriesBody = {
   keyword_ids?: string[];
   lifecycle_status?: string | null;
   lifecycle_note?: string | null;
+  merged_into_series_id?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -67,18 +65,21 @@ export async function POST(request: Request) {
   if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");
   if (logoInput && !isValidHttpUrl(logoInput)) errors.push("logo_url must be a valid URL");
 
-  let lifecycleStatus: string | null = null;
-  if (body.lifecycle_status !== undefined) {
-    const parsed = parseOptionalLifecycleStatus(body.lifecycle_status);
-    if (parsed !== null && parsed !== undefined && !isEventLifecycleStatus(parsed)) {
-      errors.push("lifecycle_status must be active, discontinued, rebranded, or merged");
-    } else {
-      lifecycleStatus = parsed ?? null;
-    }
+  const lifecycle = validateSeriesLifecycleCreate({
+    lifecycle_status: body.lifecycle_status,
+    lifecycle_note: body.lifecycle_note,
+    merged_into_series_id: body.merged_into_series_id,
+  });
+  if (!lifecycle.ok) {
+    errors.push(...lifecycle.errors);
   }
 
   if (errors.length > 0) {
     return NextResponse.json({ ok: false, error: errors.join("; ") }, { status: 400 });
+  }
+
+  if (!lifecycle.ok) {
+    return NextResponse.json({ ok: false, error: "Invalid lifecycle fields." }, { status: 400 });
   }
 
   try {
@@ -88,8 +89,9 @@ export async function POST(request: Request) {
       description: body.description ?? null,
       website_url: website,
       logo_url: null,
-      lifecycle_status: lifecycleStatus,
-      lifecycle_note: body.lifecycle_note?.trim() || null,
+      lifecycle_status: lifecycle.data.lifecycle_status,
+      lifecycle_note: lifecycle.data.lifecycle_note,
+      merged_into_series_id: lifecycle.data.merged_into_series_id,
     });
 
     const warnings: string[] = [];

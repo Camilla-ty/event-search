@@ -1,3 +1,9 @@
+export type PublicMergedIntoSeries = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
 export type PublicEventSeriesSummary = {
   id: string;
   slug: string;
@@ -7,6 +13,7 @@ export type PublicEventSeriesSummary = {
   logo_url: string | null;
   lifecycle_status: string | null;
   lifecycle_note: string | null;
+  merged_into_series: PublicMergedIntoSeries | null;
 };
 
 export type PublicEditionSummary = {

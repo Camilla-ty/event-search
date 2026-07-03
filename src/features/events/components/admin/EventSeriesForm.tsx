@@ -10,6 +10,10 @@ import { formInputClass } from "@/src/lib/design/classes";
 import { EVENT_LIFECYCLE_STATUS_OPTIONS } from "@/src/lib/validation/eventLifecycleStatus";
 import { slugify } from "@/src/lib/slugify";
 
+import {
+  MergedIntoSeriesPicker,
+  type MergedIntoSeriesOption,
+} from "./MergedIntoSeriesPicker";
 import { EventSeriesLogoPreview } from "./EventSeriesLogoPreview";
 import { SeriesKeywordMultiSelect } from "./SeriesKeywordMultiSelect";
 
@@ -29,6 +33,7 @@ type SeriesFormValues = {
   logo_url: string;
   lifecycle_status: string;
   lifecycle_note: string;
+  merged_into_series_id: string;
 };
 
 type EventSeriesFormProps = {
@@ -37,6 +42,7 @@ type EventSeriesFormProps = {
   initial: SeriesFormValues;
   allKeywords: KeywordRow[];
   initialKeywordIds: string[];
+  initialMergedIntoSeries?: MergedIntoSeriesOption | null;
 };
 
 type ApiResponse = {
@@ -85,9 +91,12 @@ export function EventSeriesForm({
   initial,
   allKeywords,
   initialKeywordIds,
+  initialMergedIntoSeries = null,
 }: EventSeriesFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<SeriesFormValues>(initial);
+  const [mergedIntoSelection, setMergedIntoSelection] =
+    useState<MergedIntoSeriesOption | null>(initialMergedIntoSeries);
   const [keywordIds, setKeywordIds] = useState<string[]>(initialKeywordIds);
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,13 +128,19 @@ export function EventSeriesForm({
   }
 
   async function submitPayload() {
+    const lifecycleStatus = values.lifecycle_status.trim() || null;
+    const mergedIntoSeriesId =
+      lifecycleStatus === "merged" ? values.merged_into_series_id.trim() || null : null;
+
     const base = {
       name: values.name,
       slug: effectiveSlug,
       description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
-      lifecycle_status: values.lifecycle_status.trim() || null,
-      lifecycle_note: values.lifecycle_note.trim() || null,
+      lifecycle_status: lifecycleStatus,
+      lifecycle_note:
+        lifecycleStatus === "merged" ? values.lifecycle_note.trim() || null : null,
+      merged_into_series_id: mergedIntoSeriesId,
       keyword_ids: keywordIds,
     };
 
@@ -182,6 +197,15 @@ export function EventSeriesForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (values.lifecycle_status === "merged" && values.merged_into_series_id.trim() === "") {
+      setResult({
+        ok: false,
+        message: "Select a destination series when lifecycle status is Merged.",
+        variant: "error",
+      });
+      return;
+    }
+
     if (slugChanged && !slugModalOpen) {
       setSlugModalOpen(true);
       return;
@@ -353,7 +377,19 @@ export function EventSeriesForm({
           <span className="text-sm font-medium text-slate-700">Lifecycle status</span>
           <select
             value={values.lifecycle_status}
-            onChange={(e) => updateField("lifecycle_status", e.target.value)}
+            onChange={(e) => {
+              const nextStatus = e.target.value;
+              setValues((prev) => ({
+                ...prev,
+                lifecycle_status: nextStatus,
+                merged_into_series_id:
+                  nextStatus === "merged" ? prev.merged_into_series_id : "",
+                lifecycle_note: nextStatus === "merged" ? prev.lifecycle_note : "",
+              }));
+              if (nextStatus !== "merged") {
+                setMergedIntoSelection(null);
+              }
+            }}
             disabled={fieldsDisabled}
             className={formInputClass}
           >
@@ -365,16 +401,36 @@ export function EventSeriesForm({
           </select>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Lifecycle note</span>
-          <textarea
-            value={values.lifecycle_note}
-            onChange={(e) => updateField("lifecycle_note", e.target.value)}
-            disabled={fieldsDisabled}
-            rows={3}
-            className={formInputClass}
-          />
-        </label>
+        {values.lifecycle_status === "merged" ? (
+          <>
+            <MergedIntoSeriesPicker
+              selected={mergedIntoSelection}
+              excludeSeriesId={seriesId}
+              disabled={fieldsDisabled}
+              onSelect={(series) => {
+                setMergedIntoSelection(series);
+                updateField("merged_into_series_id", series.id);
+              }}
+              onClear={() => {
+                setMergedIntoSelection(null);
+                updateField("merged_into_series_id", "");
+              }}
+            />
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">
+                Lifecycle note (internal)
+              </span>
+              <textarea
+                value={values.lifecycle_note}
+                onChange={(e) => updateField("lifecycle_note", e.target.value)}
+                disabled={fieldsDisabled}
+                rows={3}
+                className={formInputClass}
+                placeholder="Optional admin-only context (not shown publicly)."
+              />
+            </label>
+          </>
+        ) : null}
 
         {mode === "edit" ? (
           <>

@@ -14,9 +14,23 @@ export const EVENT_EDITION_LIST_SELECT = `
 const EVENT_SERIES_PUBLIC_SELECT =
   "id, name, slug, description, website_url, logo_url";
 
+const EVENT_SERIES_PUBLIC_EMBED = `
+  id,
+  name,
+  slug,
+  description,
+  website_url,
+  logo_url,
+  lifecycle_status,
+  lifecycle_note,
+  merged_into_series:merged_into_series_id ( id, name, slug )
+`;
+
 const EVENT_EDITION_DETAIL_SELECT = `
   *,
-  event_series (*),
+  event_series (
+    ${EVENT_SERIES_PUBLIC_EMBED}
+  ),
   cities (
     *,
     countries (

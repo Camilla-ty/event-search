@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
-import {
-  isEventLifecycleStatus,
-  parseOptionalLifecycleStatus,
-} from "@/src/lib/validation/eventLifecycleStatus";
+import { validateSeriesLifecycleUpdate } from "@/src/lib/validation/eventSeriesLifecycle";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
@@ -48,6 +45,7 @@ type PatchSeriesBody = {
   keyword_ids?: string[];
   lifecycle_status?: string | null;
   lifecycle_note?: string | null;
+  merged_into_series_id?: string | null;
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -64,9 +62,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const errors: string[] = [];
-  const patch: PatchSeriesBody = {};
+  const patch: Record<string, unknown> = {};
   const warnings: string[] = [];
   let persistedLogoUrl: string | null | undefined;
+
+  const existing = await getEventSeriesAdminById(id);
+  if (!existing) {
+    return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+  }
 
   if (body.name !== undefined) {
     const name = body.name.trim();
@@ -84,16 +87,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");
     else patch.website_url = website;
   }
-  if (body.lifecycle_status !== undefined) {
-    const lifecycleStatus = parseOptionalLifecycleStatus(body.lifecycle_status);
-    if (lifecycleStatus !== null && lifecycleStatus !== undefined && !isEventLifecycleStatus(lifecycleStatus)) {
-      errors.push("lifecycle_status must be active, discontinued, rebranded, or merged");
+
+  const hasLifecycleField =
+    body.lifecycle_status !== undefined ||
+    body.lifecycle_note !== undefined ||
+    body.merged_into_series_id !== undefined;
+
+  if (hasLifecycleField) {
+    const lifecycle = validateSeriesLifecycleUpdate(
+      {
+        lifecycle_status: existing.lifecycle_status,
+        lifecycle_note: existing.lifecycle_note,
+        merged_into_series_id: existing.merged_into_series_id,
+      },
+      {
+        lifecycle_status: body.lifecycle_status,
+        lifecycle_note: body.lifecycle_note,
+        merged_into_series_id: body.merged_into_series_id,
+      },
+      id,
+    );
+    if (!lifecycle.ok) {
+      errors.push(...lifecycle.errors);
     } else {
-      patch.lifecycle_status = lifecycleStatus ?? null;
+      Object.assign(patch, lifecycle.patch);
     }
-  }
-  if (body.lifecycle_note !== undefined) {
-    patch.lifecycle_note = body.lifecycle_note?.trim() || null;
   }
 
   if (body.logo_url !== undefined) {
@@ -101,11 +119,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (logoInput && !isValidHttpUrl(logoInput)) {
       errors.push("logo_url must be a valid URL");
     } else {
-      const existing = await getEventSeriesAdminById(id);
-      if (!existing) {
-        return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
-      }
-
       const resolved = await resolveEventManualLogoUrl({
         incomingLogoUrl: logoInput,
         existingLogoUrl: existing.logo_url,
@@ -130,15 +143,12 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     let series;
     if (Object.keys(patch).length === 0) {
-      series = await getEventSeriesAdminById(id);
-      if (!series) {
-        return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
-      }
+      series = existing;
       if (warnings.length === 0) {
         return NextResponse.json({ ok: false, error: "No fields to update." }, { status: 400 });
       }
     } else {
-      series = await updateEventSeries(id, patch);
+      series = await updateEventSeries(id, patch as Parameters<typeof updateEventSeries>[1]);
       if (persistedLogoUrl !== undefined) {
         scheduleEventSeriesLogoCleanupAfterPersist({
           seriesId: id,

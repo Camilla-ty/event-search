@@ -17,6 +17,18 @@ function readCityEmbed(raw: unknown): {
   };
 }
 
+function mapMergedIntoSeries(raw: unknown): PublicEventSeriesSummary["merged_into_series"] {
+  if (raw === null || raw === undefined) return null;
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (row === null || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const slug = typeof record.slug === "string" ? record.slug.trim() : "";
+  if (id === "" || name === "" || slug === "") return null;
+  return { id, name, slug };
+}
+
 export function mapPublicEventSeries(raw: unknown): PublicEventSeriesSummary | null {
   if (raw === null || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
@@ -35,6 +47,7 @@ export function mapPublicEventSeries(raw: unknown): PublicEventSeriesSummary | n
     lifecycle_status:
       typeof row.lifecycle_status === "string" ? row.lifecycle_status : null,
     lifecycle_note: typeof row.lifecycle_note === "string" ? row.lifecycle_note : null,
+    merged_into_series: mapMergedIntoSeries(row.merged_into_series),
   };
 }
 

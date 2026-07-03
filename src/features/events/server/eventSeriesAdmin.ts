@@ -8,6 +8,26 @@ import {
   verifyEventSeriesLogoStorageObject,
 } from "./eventSeriesLogoStorage";
 
+const EVENT_SERIES_ADMIN_SELECT = `
+  id,
+  name,
+  slug,
+  description,
+  website_url,
+  logo_url,
+  lifecycle_status,
+  lifecycle_note,
+  merged_into_series_id,
+  created_at,
+  merged_into_series:merged_into_series_id ( id, name, slug )
+`;
+
+export type MergedIntoSeriesSummary = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export type EventSeriesRow = {
   id: string;
   name: string;
@@ -17,7 +37,9 @@ export type EventSeriesRow = {
   logo_url: string | null;
   lifecycle_status: string | null;
   lifecycle_note: string | null;
+  merged_into_series_id: string | null;
   created_at: string;
+  merged_into_series?: MergedIntoSeriesSummary | null;
 };
 
 export type CreateEventSeriesInput = {
@@ -28,6 +50,7 @@ export type CreateEventSeriesInput = {
   logo_url?: string | null;
   lifecycle_status?: string | null;
   lifecycle_note?: string | null;
+  merged_into_series_id?: string | null;
 };
 
 export type UpdateEventSeriesInput = {
@@ -38,17 +61,47 @@ export type UpdateEventSeriesInput = {
   logo_url?: string | null;
   lifecycle_status?: string | null;
   lifecycle_note?: string | null;
+  merged_into_series_id?: string | null;
 };
 
 export type EventSeriesListItem = EventSeriesRow & {
   edition_count: number;
 };
 
+function normalizeMergedIntoSeries(raw: unknown): MergedIntoSeriesSummary | null {
+  if (raw === null || raw === undefined) return null;
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (row === null || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id : "";
+  const name = typeof record.name === "string" ? record.name : "";
+  const slug = typeof record.slug === "string" ? record.slug : "";
+  if (id === "" || name === "" || slug === "") return null;
+  return { id, name, slug };
+}
+
+function mapEventSeriesRow(raw: Record<string, unknown>): EventSeriesRow {
+  return {
+    id: String(raw.id),
+    name: typeof raw.name === "string" ? raw.name : "",
+    slug: typeof raw.slug === "string" ? raw.slug : "",
+    description: typeof raw.description === "string" ? raw.description : null,
+    website_url: typeof raw.website_url === "string" ? raw.website_url : null,
+    logo_url: typeof raw.logo_url === "string" ? raw.logo_url : null,
+    lifecycle_status: typeof raw.lifecycle_status === "string" ? raw.lifecycle_status : null,
+    lifecycle_note: typeof raw.lifecycle_note === "string" ? raw.lifecycle_note : null,
+    merged_into_series_id:
+      typeof raw.merged_into_series_id === "string" ? raw.merged_into_series_id : null,
+    created_at: typeof raw.created_at === "string" ? raw.created_at : "",
+    merged_into_series: normalizeMergedIntoSeries(raw.merged_into_series),
+  };
+}
+
 export async function listEventSeriesAdmin(search?: string): Promise<EventSeriesListItem[]> {
   const supabase = createAdminClient();
   let query = supabase
     .from("event_series")
-    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
+    .select(EVENT_SERIES_ADMIN_SELECT)
     .order("name", { ascending: true });
 
   const term = search?.trim() ?? "";
@@ -59,7 +112,9 @@ export async function listEventSeriesAdmin(search?: string): Promise<EventSeries
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const series = (data ?? []) as EventSeriesRow[];
+  const series = (data ?? []).map((row) =>
+    mapEventSeriesRow(row as Record<string, unknown>),
+  );
   if (series.length === 0) return [];
 
   const { data: editionRows, error: editionError } = await supabase
@@ -88,12 +143,13 @@ export async function getEventSeriesAdminById(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("event_series")
-    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
+    .select(EVENT_SERIES_ADMIN_SELECT)
     .eq("id", id)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as EventSeriesRow | null;
+  if (!data) return null;
+  return mapEventSeriesRow(data as Record<string, unknown>);
 }
 
 export async function createEventSeries(
@@ -108,16 +164,17 @@ export async function createEventSeries(
     logo_url: input.logo_url?.trim() || null,
     lifecycle_status: input.lifecycle_status?.trim() || null,
     lifecycle_note: input.lifecycle_note?.trim() || null,
+    merged_into_series_id: input.merged_into_series_id ?? null,
   };
 
   const { data, error } = await supabase
     .from("event_series")
     .insert(payload)
-    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
+    .select(EVENT_SERIES_ADMIN_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
-  return data as EventSeriesRow;
+  return mapEventSeriesRow(data as Record<string, unknown>);
 }
 
 export async function updateEventSeries(
@@ -144,16 +201,19 @@ export async function updateEventSeries(
   if (input.lifecycle_note !== undefined) {
     patch.lifecycle_note = input.lifecycle_note?.trim() || null;
   }
+  if (input.merged_into_series_id !== undefined) {
+    patch.merged_into_series_id = input.merged_into_series_id;
+  }
 
   const { data, error } = await supabase
     .from("event_series")
     .update(patch)
     .eq("id", id)
-    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
+    .select(EVENT_SERIES_ADMIN_SELECT)
     .single();
 
   if (error) throw new Error(error.message);
-  return data as EventSeriesRow;
+  return mapEventSeriesRow(data as Record<string, unknown>);
 }
 
 export function defaultSeriesSlug(name: string): string {
@@ -211,7 +271,7 @@ export async function uploadEventSeriesLogoFileAdmin(
     .from("event_series")
     .update({ logo_url: upload.publicUrl })
     .eq("id", seriesId)
-    .select("id, name, slug, description, website_url, logo_url, lifecycle_status, lifecycle_note, created_at")
+    .select(EVENT_SERIES_ADMIN_SELECT)
     .single();
 
   if (error) {
@@ -223,5 +283,5 @@ export async function uploadEventSeriesLogoFileAdmin(
     publicUrl: upload.publicUrl,
   });
 
-  return { ok: true, series: data as EventSeriesRow };
+  return { ok: true, series: mapEventSeriesRow(data as Record<string, unknown>) };
 }

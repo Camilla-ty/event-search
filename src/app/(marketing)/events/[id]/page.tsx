@@ -133,7 +133,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const primarySourceUrl =
     typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
   const lifecycleStatus = series?.lifecycle_status ?? null;
-  const lifecycleNote = series?.lifecycle_note ?? null;
+  const mergedIntoSeries = series?.merged_into_series ?? null;
 
   return (
     <section className="space-y-6">
@@ -219,7 +219,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <div className="space-y-6">
               <EventHistorySection
                 lifecycleStatus={lifecycleStatus}
-                lifecycleNote={lifecycleNote}
+                mergedIntoSeries={mergedIntoSeries}
               />
               <ResearchInformationSection
                 lastReviewedAt={lastReviewedAt}

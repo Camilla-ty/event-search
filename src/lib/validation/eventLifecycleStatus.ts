@@ -1,7 +1,6 @@
 export const EVENT_LIFECYCLE_STATUSES = [
   "active",
   "discontinued",
-  "rebranded",
   "merged",
 ] as const;
 
@@ -14,7 +13,6 @@ export const EVENT_LIFECYCLE_STATUS_OPTIONS: ReadonlyArray<{
   { value: "", label: "Not set" },
   { value: "active", label: "Active" },
   { value: "discontinued", label: "Discontinued" },
-  { value: "rebranded", label: "Rebranded" },
   { value: "merged", label: "Merged" },
 ];
 

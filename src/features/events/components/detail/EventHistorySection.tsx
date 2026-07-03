@@ -1,10 +1,15 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
-import { formatEventLifecycleStatusLabel } from "@/src/lib/validation/eventLifecycleStatus";
+import {
+  buildEventHistoryRows,
+  type MergedIntoSeriesDestination,
+} from "@/src/features/events/components/detail/eventHistoryDisplay";
+import { brandLinkClass } from "@/src/lib/design/classes";
 
 type EventHistorySectionProps = {
   lifecycleStatus: string | null | undefined;
-  lifecycleNote: string | null | undefined;
+  mergedIntoSeries?: MergedIntoSeriesDestination | null;
 };
 
 function MetadataRow({ label, children }: { label: string; children: ReactNode }) {
@@ -18,12 +23,14 @@ function MetadataRow({ label, children }: { label: string; children: ReactNode }
 
 export function EventHistorySection({
   lifecycleStatus,
-  lifecycleNote,
+  mergedIntoSeries = null,
 }: EventHistorySectionProps) {
-  const statusLabel = formatEventLifecycleStatusLabel(lifecycleStatus);
-  const note = lifecycleNote?.trim() ?? "";
+  const rows = buildEventHistoryRows({
+    lifecycleStatus,
+    mergedIntoSeries,
+  });
 
-  if (!statusLabel && note === "") {
+  if (!rows) {
     return null;
   }
 
@@ -31,10 +38,23 @@ export function EventHistorySection({
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">Event History</h2>
       <dl className="mt-3 space-y-3">
-        {statusLabel ? (
-          <MetadataRow label="Status">{statusLabel}</MetadataRow>
-        ) : null}
-        {note !== "" ? <MetadataRow label="Lifecycle Note">{note}</MetadataRow> : null}
+        {rows.map((row) => {
+          if (row.kind === "status") {
+            return (
+              <MetadataRow key="status" label={row.label}>
+                {row.value}
+              </MetadataRow>
+            );
+          }
+
+          return (
+            <MetadataRow key="merged_into" label={row.label}>
+              <Link href={row.destinationHref} className={brandLinkClass}>
+                {row.destinationName}
+              </Link>
+            </MetadataRow>
+          );
+        })}
       </dl>
     </section>
   );
