@@ -1,3 +1,5 @@
+import { shouldAutoTouchSponsorUpdate } from "@/src/features/events/server/editionLastReviewedPolicy";
+import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type {
@@ -84,6 +86,8 @@ export async function updateEventSponsorLinkAdmin(
   patch: EventSponsorUpdatePatch,
 ): Promise<EventSponsorLinkAdminRow> {
   const supabase = createAdminClient();
+  const current = await getEventSponsorLinkAdminById(linkId);
+  if (!current) throw new Error("Sponsor link not found.");
 
   const writePatch: EventSponsorUpdatePatch & { display_order?: number } = {
     ...patch,
@@ -91,16 +95,12 @@ export async function updateEventSponsorLinkAdmin(
 
   // A tier change moves the sponsor to the end of its new tier so it lands in
   // a predictable position without colliding with existing orders.
-  if (patch.tier_rank !== undefined) {
-    const current = await getEventSponsorLinkAdminById(linkId);
-    if (!current) throw new Error("Sponsor link not found.");
-    if (current.tier_rank !== patch.tier_rank) {
-      writePatch.display_order = await nextDisplayOrderForTier(
-        supabase,
-        current.event_editions_id,
-        patch.tier_rank,
-      );
-    }
+  if (patch.tier_rank !== undefined && current.tier_rank !== patch.tier_rank) {
+    writePatch.display_order = await nextDisplayOrderForTier(
+      supabase,
+      current.event_editions_id,
+      patch.tier_rank,
+    );
   }
 
   const { data, error } = await supabase
@@ -112,6 +112,11 @@ export async function updateEventSponsorLinkAdmin(
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Sponsor link not found.");
+
+  if (shouldAutoTouchSponsorUpdate(current, patch)) {
+    await touchEditionLastReviewed(current.event_editions_id);
+  }
+
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -143,6 +148,7 @@ export async function createEventSponsorLinkAdmin(
     }
     throw new Error(error.message);
   }
+  await touchEditionLastReviewed(editionId);
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -281,5 +287,9 @@ export async function deleteEventSponsorLinkAdmin(
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data ? toLinkRow(data as Record<string, unknown>) : null;
+  const row = data ? toLinkRow(data as Record<string, unknown>) : null;
+  if (row) {
+    await touchEditionLastReviewed(row.event_editions_id);
+  }
+  return row;
 }

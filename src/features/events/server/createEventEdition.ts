@@ -1,3 +1,8 @@
+import {
+  applyEditionUpdateLastReviewedPolicy,
+  editionCreateLastReviewedAtValue,
+} from "@/src/features/events/server/editionLastReviewedPolicy";
+import { getEventEditionAdminById } from "@/src/features/events/server/eventEditionAdmin";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export type CreateEventEditionInput = {
@@ -49,7 +54,7 @@ export async function createEventEdition(
     website_url: input.website_url?.trim() || null,
     city_id: input.city_id ?? null,
     venue_id: input.venue_id ?? null,
-    last_reviewed_at: input.last_reviewed_at ?? null,
+    last_reviewed_at: editionCreateLastReviewedAtValue(),
     primary_source_url: input.primary_source_url?.trim() || null,
   };
 
@@ -83,6 +88,11 @@ export async function updateEventEdition(
     primary_source_url?: string | null;
   },
 ): Promise<EventEditionRow> {
+  const existing = await getEventEditionAdminById(id);
+  if (!existing) {
+    throw new Error("Edition not found.");
+  }
+
   const supabase = createAdminClient();
   const patch: Record<string, unknown> = {};
 
@@ -100,9 +110,15 @@ export async function updateEventEdition(
     patch.primary_source_url = input.primary_source_url?.trim() || null;
   }
 
+  const finalPatch = applyEditionUpdateLastReviewedPolicy(
+    existing,
+    patch,
+    new Date().toISOString(),
+  );
+
   const { data, error } = await supabase
     .from("event_editions")
-    .update(patch)
+    .update(finalPatch)
     .eq("id", id)
     .select(
       "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, created_at",

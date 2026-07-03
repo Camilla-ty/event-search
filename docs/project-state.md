@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-06-25 (Venue v1 documentation reconciliation)
+> Last updated: 2026-07-03 (Edition last reviewed automation)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -20,7 +20,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 | Entity | Table | Notes |
 |---|---|---|
 | **Event Series** | `event_series` | Recurring event brand (name, slug, description, website, logo). |
-| **Event Editions** | `event_editions` | Series occurrence (year, dates, city, website, globally unique slug). Multiple editions per series + year allowed. Optional `venue_id` → `venues`. |
+| **Event Editions** | `event_editions` | Series occurrence (year, dates, city, website, globally unique slug). Multiple editions per series + year allowed. Optional `venue_id` → `venues`. `last_reviewed_at` auto-updates on meaningful admin curation. |
 | **Venues** | `venues` | Reusable named location (name, slug, city, address, website, logo). Linked to editions via nullable `event_editions.venue_id`; `city_id` retained on editions. Archive-only lifecycle (`archived_at`). See [venue-design.md](./venue-design.md) and [phase-venue-scope.md](./phase-venue-scope.md). |
 | **Companies** | `companies` | Canonical company entity. No separate sponsors table — "sponsor" = company linked to an edition. |
 | **Event Sponsors** | `event_sponsors` | Edition-scoped join: `tier_rank`, `tier_label`, `display_order` (dense 1..n within edition + tier). `UNIQUE (event_editions_id, company_id)`. |
@@ -53,7 +53,9 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 
 **Admin — companies** — Read-only Sponsorships section (edition + series links, tier label, rank).
 
-**Admin — sponsor imports** — Full Excel pipeline through atomic publish and history. Spreadsheet columns: Sponsor Tier (`tier_rank`), Sponsor Label (`tier_label`), Name, Website. Publish writes both rank and label from draft links; blank spreadsheet labels publish as NULL.
+**Admin — sponsor imports** — Full Excel pipeline through atomic publish and history. Spreadsheet columns: Sponsor Tier (`tier_rank`), Sponsor Label (`tier_label`), Name, Website. Publish writes both rank and label from draft links; blank spreadsheet labels publish as NULL. Qualifying publish auto-updates edition `last_reviewed_at`.
+
+**Admin — edition research metadata** — `last_reviewed_at` auto-updates on meaningful profile saves, live sponsor add/remove/tier edits, and qualifying import publish. Edition create keeps `last_reviewed_at` NULL. Manual-only Last reviewed / Primary source saves are preserved. Reorder/move and draft import steps do not touch. See [phase-edition-last-reviewed-automation-scope.md](./phase-edition-last-reviewed-automation-scope.md).
 
 **Admin — venues** — List, create, edit, archive/unarchive at `/admin/venues`. Optional venue picker on edition create/edit (city-filtered; inline Add venue). Logo via HTTP URL paste or file upload on edit. Duplicate names in same city warn only. `city_id` immutable when editions linked.
 
@@ -67,7 +69,7 @@ Nothing is mid-flight.
 - Import publish can overwrite manual `tier_rank` and re-add removed sponsors for companies in the batch (warning banner only).
 - No pagination/search on admin lists (editions, companies, venues, edition roster).
 - Venue logo URL paste stores the URL as-is (no automatic ingest into Storage); file upload writes to `COMPANY_LOGO_BUCKET`. External URL ingest deferred to a future enhancement.
-- No company dedupe/merge tooling.
+- Company merge does not yet auto-touch affected editions' `last_reviewed_at` (optional follow-up).
 - Concurrent admin edits are last-write-wins.
 
 ## 5. Key Decisions
@@ -83,6 +85,7 @@ Nothing is mid-flight.
 | Bulk via import, corrections via roster UI | Same page hosts both paths; banner when import is active. |
 | "Remove from edition" never deletes the company | Modal language makes scope explicit. |
 | Companies = entity; sponsor = company-on-an-edition | Reduces navigation ambiguity. |
+| **Edition `last_reviewed_at` automation** | Meaningful profile + live roster + qualifying import publish set `now()`; create stays NULL; manual-only research saves preserved; reorder/move excluded | Feeds Event Explorer **Recommended** / **Recently Reviewed** sort signals |
 | API routes + service role; manual validation; hand-rolled UI | Existing codebase conventions; build is the gate. |
 
 **Other sources:** schema in `supabase/migrations/` (applied through `20260704120000_venues_v1`); phase design docs in `docs/` for detail beyond this file.
@@ -90,7 +93,7 @@ Nothing is mid-flight.
 ## 6. Operations
 
 - **Migrations:** apply with `supabase db push` against the linked project. Deploy migrations before code that depends on new columns or RPC changes.
-- **Verification:** `npm run build` plus manual API/UI checks; no automated test suite.
+- **Verification:** `npm run build` plus `npx tsx --test` on policy/wiring tests and manual API/UI checks.
 - **Auth:** admin layout requires `profiles.role = admin`; public reads use RLS on the anon/authenticated Supabase client.
 
 ## 7. Next Priorities
@@ -98,9 +101,10 @@ Nothing is mid-flight.
 1. Server-side pagination + search for edition roster and admin lists.
 2. Create-and-attach company from Add-sponsor drawer (with dedupe safeguards).
 3. Import publish hardening (preserve manual rank edits when unchanged in batch).
-4. Company dedupe/merge tooling.
-5. Cleanups: remove dead stubs (`EditionImportsStub.tsx`, `/admin/events/new` redirect); consolidate duplicated tier-label helpers.
-6. Venue logo URL ingest into Storage (mirror Event Series `resolveEventManualLogoUrl` pattern) and storage cleanup on logo clear.
+4. Edition form helper text for Last reviewed automation (optional UX polish).
+5. Company merge — auto-touch `last_reviewed_at` on affected editions (optional Phase 4).
+6. Cleanups: remove dead stubs (`EditionImportsStub.tsx`, `/admin/events/new` redirect); consolidate duplicated tier-label helpers.
+7. Venue logo URL ingest into Storage (mirror Event Series `resolveEventManualLogoUrl` pattern) and storage cleanup on logo clear.
 
 ---
 

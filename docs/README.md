@@ -46,6 +46,7 @@
 | Document | Description |
 |----------|-------------|
 | [Event Series & Edition Admin Workflow](./event-admin-workflow.md) | **Approved** series/edition UX, field rules, import linking |
+| [Phase — Edition Last Reviewed Automation](./phase-edition-last-reviewed-automation-scope.md) | **Implemented** — auto-update `last_reviewed_at` on meaningful curation (Phases 1–3) |
 
 **Locked highlights:** multiple editions per series + year (e.g. multi-city); globally unique edition slug; series and year immutable after create; slug editable with warnings; dates/city warn but do not block import; **Create & import sponsors** is the primary post-create path.
 

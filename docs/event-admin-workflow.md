@@ -230,7 +230,22 @@ Copy: *Series and year cannot be changed. Create a new edition for a different o
 
 #### Editable fields
 
-`name`, `slug` (with warnings), `website_url`, `start_date`, `end_date`, `city_id`
+`name`, `slug` (with warnings), `website_url`, `start_date`, `end_date`, `city_id`, `venue_id`, **Last reviewed**, **Primary source**
+
+#### Research metadata — Last reviewed automation
+
+| Rule | Behavior |
+|------|----------|
+| **Create edition** | `last_reviewed_at` is always `NULL`. Filling website, dates, city, or venue on create does **not** count as review. |
+| **Save profile** | Changing name, slug, dates, website, city, or venue sets **Last reviewed** to the current server time automatically. |
+| **Manual backfill** | Saving **only** Last reviewed and/or Primary source preserves the submitted values (no extra auto-bump). |
+| **Live sponsors** | Add, remove, or tier rank/label edit on the Live sponsors tab auto-updates **Last reviewed**. |
+| **Reorder / move** | Same-tier Move Up/Down does **not** auto-update **Last reviewed**. |
+| **Import publish** | Publishing a draft batch auto-updates **Last reviewed** when live sponsor rows are inserted, tier-updated, or tier-label synced. Draft-only steps do not. |
+
+Copy for researchers: *Last reviewed advances automatically when you save meaningful profile changes, edit the live sponsor roster, or publish an import. Creation alone does not count as review. Set the date manually only when backfilling historical research.*
+
+See [Phase — Edition Last Reviewed Automation](./phase-edition-last-reviewed-automation-scope.md).
 
 #### Header
 
