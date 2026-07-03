@@ -6,8 +6,7 @@ import { filterEventRecords } from "@/src/features/events/lib/eventExplorerFilte
 
 const defaultFilters: EventFilters = {
   query: "",
-  series: "all",
-  region: "all",
+  regions: [],
   startDate: "",
   endDate: "",
   topics: [],
@@ -51,41 +50,9 @@ describe("filterEventRecords", () => {
     }),
   ];
 
-  it("matches search against event and series names only", () => {
+  it("matches q search against series names", () => {
     assert.deepEqual(
       filterEventRecords(events, { ...defaultFilters, query: "token" }).map((event) => event.id),
-      ["1"],
-    );
-    assert.deepEqual(
-      filterEventRecords(events, { ...defaultFilters, query: "fintech week" }).map(
-        (event) => event.id,
-      ),
-      ["2"],
-    );
-    assert.deepEqual(
-      filterEventRecords(events, { ...defaultFilters, query: "london" }).map((event) => event.id),
-      [],
-    );
-    assert.deepEqual(
-      filterEventRecords(
-        [
-          makeEvent({
-            id: "3",
-            name: "Singapore Edition 2026",
-            event_series: { name: "UniqueSeriesName", logo_url: null },
-          }),
-        ],
-        { ...defaultFilters, query: "uniqueseriesname" },
-      ).map((event) => event.id),
-      ["3"],
-    );
-  });
-
-  it("filters by event series", () => {
-    assert.deepEqual(
-      filterEventRecords(events, { ...defaultFilters, series: "TOKEN2049" }).map(
-        (event) => event.id,
-      ),
       ["1"],
     );
   });
@@ -109,10 +76,21 @@ describe("filterEventRecords", () => {
 
   it("applies region and date overlap filters", () => {
     assert.deepEqual(
-      filterEventRecords(events, { ...defaultFilters, region: "Singapore" }).map(
+      filterEventRecords(events, { ...defaultFilters, regions: ["Singapore"] }).map(
         (event) => event.id,
       ),
       ["1"],
+    );
+    assert.deepEqual(
+      filterEventRecords(events, {
+        ...defaultFilters,
+        regions: ["Singapore", "United Kingdom"],
+      }).map((event) => event.id),
+      ["1", "2"],
+    );
+    assert.deepEqual(
+      filterEventRecords(events, { ...defaultFilters, regions: [] }).map((event) => event.id),
+      ["1", "2"],
     );
     assert.deepEqual(
       filterEventRecords(events, { ...defaultFilters, startDate: "2026-07-02" }).map(

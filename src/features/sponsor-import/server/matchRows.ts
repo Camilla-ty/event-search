@@ -170,10 +170,10 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
   const supabase = createAdminClient();
 
   const [companies, companyDomains] = await Promise.all([
-    fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(({ from, to }) =>
+    fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(async ({ from, to }) =>
       supabase.from("companies").select("id, name, domain, aliases").range(from, to),
     ),
-    fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(({ from, to }) =>
+    fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(async ({ from, to }) =>
       supabase.from("company_domains").select("company_id, domain").range(from, to),
     ),
   ]);

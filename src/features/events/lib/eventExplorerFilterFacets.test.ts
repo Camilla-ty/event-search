@@ -41,7 +41,7 @@ describe("getEventExplorerFacetEditions", () => {
 });
 
 describe("buildEventExplorerFilterFacets", () => {
-  it("collects unique sorted series and country labels", () => {
+  it("collects unique sorted country labels", () => {
     const facets = buildEventExplorerFilterFacets([
       makeEdition({
         event_series: { name: "TOKEN2049" },
@@ -57,7 +57,6 @@ describe("buildEventExplorerFilterFacets", () => {
       }),
     ]);
 
-    assert.deepEqual(facets.series, ["FinTech Week", "TOKEN2049"]);
     assert.deepEqual(facets.countries, [
       "Singapore",
       "United Arab Emirates",
@@ -66,7 +65,7 @@ describe("buildEventExplorerFilterFacets", () => {
     assert.deepEqual(facets.topics, []);
   });
 
-  it("ignores blank series and country names", () => {
+  it("ignores blank country names", () => {
     const facets = buildEventExplorerFilterFacets([
       makeEdition({
         event_series: { name: "  " },
@@ -78,7 +77,6 @@ describe("buildEventExplorerFilterFacets", () => {
       }),
     ]);
 
-    assert.deepEqual(facets.series, ["EthCC"]);
     assert.deepEqual(facets.countries, ["France"]);
     assert.deepEqual(facets.topics, []);
   });
@@ -110,7 +108,7 @@ describe("buildEventExplorerTopicFacets", () => {
 });
 
 describe("buildEventExplorerFilterFacetsFromEditions", () => {
-  it("builds series, country, and topic facets together", () => {
+  it("builds country and topic facets together", () => {
     const facets = buildEventExplorerFilterFacetsFromEditions(
       [
         makeEdition({
@@ -129,7 +127,6 @@ describe("buildEventExplorerFilterFacetsFromEditions", () => {
       ],
     );
 
-    assert.deepEqual(facets.series, ["EthCC"]);
     assert.deepEqual(facets.countries, ["France"]);
     assert.deepEqual(facets.topics, [
       { slug: "defi", name: "DeFi" },

@@ -9,6 +9,7 @@ import {
   PageHeader,
 } from "@/src/components/common/explorer";
 import type { EventExplorerFilterFacets } from "@/src/features/events/lib/eventExplorerFilterFacets";
+import { toggleCountrySelection } from "@/src/features/events/lib/filterPanelCountries";
 import { toggleTopicSelection } from "@/src/features/events/lib/filterPanelTopics";
 import {
   eventsIntersectMonth,
@@ -16,6 +17,7 @@ import {
   getCurrentMonthKey,
 } from "@/src/features/events/lib/eventCalendarGrouping";
 import { buildCalendarToolbarCounts } from "@/src/features/events/lib/eventExplorerCounts";
+import { applyOptimisticCountryDisplayFilter, isRegionOptimisticDisplaySufficient } from "@/src/features/events/lib/eventOptimisticCountryFilter";
 import { applyOptimisticTopicDisplayFilter, isTopicOptimisticDisplaySufficient } from "@/src/features/events/lib/eventOptimisticTopicFilter";
 import {
   buildEventExplorerFilterKey,
@@ -104,16 +106,30 @@ export function EventExplorerPage({
   const showResultsApplyingState = useMemo(
     () =>
       isFiltersApplying &&
-      !isTopicOptimisticDisplaySufficient(draftFilters.topics, serverFilters.topics),
-    [draftFilters.topics, isFiltersApplying, serverFilters.topics],
+      !isTopicOptimisticDisplaySufficient(draftFilters.topics, serverFilters.topics) &&
+      !isRegionOptimisticDisplaySufficient(draftFilters.regions, serverFilters.regions),
+    [
+      draftFilters.regions,
+      draftFilters.topics,
+      isFiltersApplying,
+      serverFilters.regions,
+      serverFilters.topics,
+    ],
   );
 
   const sortedEvents = useMemo(() => {
-    const displayEvents = applyOptimisticTopicDisplayFilter(events, {
-      draftTopics: draftFilters.topics,
-      serverTopics: serverFilters.topics,
-      isFiltersApplying,
-    });
+    const displayEvents = applyOptimisticCountryDisplayFilter(
+      applyOptimisticTopicDisplayFilter(events, {
+        draftTopics: draftFilters.topics,
+        serverTopics: serverFilters.topics,
+        isFiltersApplying,
+      }),
+      {
+        draftRegions: draftFilters.regions,
+        serverRegions: serverFilters.regions,
+        isFiltersApplying,
+      },
+    );
 
     return sortEventExplorerResults(displayEvents, {
       query: appliedFilters.query,
@@ -121,9 +137,11 @@ export function EventExplorerPage({
     });
   }, [
     appliedFilters.query,
+    draftFilters.regions,
     draftFilters.topics,
     events,
     isFiltersApplying,
+    serverFilters.regions,
     serverFilters.topics,
     sort,
   ]);
@@ -219,10 +237,11 @@ export function EventExplorerPage({
     setPage(1);
   }
 
-  function handleClearTopics() {
+  function handleClearAllFilters() {
     setDraftFilters({
       ...draftFilters,
       topics: [],
+      regions: [],
     });
   }
 
@@ -230,6 +249,13 @@ export function EventExplorerPage({
     setDraftFilters({
       ...draftFilters,
       topics: toggleTopicSelection(draftFilters.topics, slug, false),
+    });
+  }
+
+  function handleRemoveCountry(country: string) {
+    setDraftFilters({
+      ...draftFilters,
+      regions: toggleCountrySelection(draftFilters.regions, country, false),
     });
   }
 
@@ -244,7 +270,6 @@ export function EventExplorerPage({
         <div className="hidden md:block">
           <FilterPanel
             filters={draftFilters}
-            seriesOptions={filterFacets.series}
             countryOptions={filterFacets.countries}
             topicOptions={filterFacets.topics}
             onChange={setDraftFilters}
@@ -257,8 +282,11 @@ export function EventExplorerPage({
           <ActiveTopicFilters
             topics={draftFilters.topics}
             topicOptions={filterFacets.topics}
+            regions={draftFilters.regions}
+            countryOptions={filterFacets.countries}
             onRemoveTopic={handleRemoveTopic}
-            onClearAll={handleClearTopics}
+            onRemoveCountry={handleRemoveCountry}
+            onClearAll={handleClearAllFilters}
           />
           <div className="flex flex-wrap items-center gap-3">
             <EventViewToggle view={explorerView} onViewChange={handleViewChange} />
@@ -308,7 +336,6 @@ export function EventExplorerPage({
       >
         <FilterPanel
           filters={draftFilters}
-          seriesOptions={filterFacets.series}
           countryOptions={filterFacets.countries}
           topicOptions={filterFacets.topics}
           onChange={setDraftFilters}

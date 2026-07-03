@@ -5,10 +5,13 @@ import {
   FilterField,
   FilterPanelShell,
   filterDateInputClass,
-  filterInputClass,
 } from "@/src/components/common/explorer";
 
 import type { EventExplorerTopicFacet } from "@/src/features/events/lib/eventExplorerFilterFacets";
+import {
+  buildCountryCheckboxOptions,
+  toggleCountrySelection,
+} from "@/src/features/events/lib/filterPanelCountries";
 import {
   buildTopicCheckboxOptions,
   toggleTopicSelection,
@@ -18,7 +21,6 @@ import type { EventFilters } from "./types";
 
 type FilterPanelProps = {
   filters: EventFilters;
-  seriesOptions: string[];
   countryOptions: string[];
   topicOptions: EventExplorerTopicFacet[];
   /** @deprecated Unknown topics are derived from selected slugs not in `topicOptions`. */
@@ -30,7 +32,6 @@ type FilterPanelProps = {
 
 export function FilterPanel({
   filters,
-  seriesOptions,
   countryOptions,
   topicOptions,
   onChange,
@@ -39,12 +40,19 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const topicCheckboxOptions = buildTopicCheckboxOptions(topicOptions, filters.topics);
   const selectedTopicCount = filters.topics.length;
+  const countryCheckboxOptions = buildCountryCheckboxOptions(
+    countryOptions,
+    filters.regions,
+  );
+  const selectedCountryCount = filters.regions.length;
 
   return (
     <FilterPanelShell onReset={onReset} className={className}>
       <FilterField
         label={
-          selectedTopicCount > 0 ? `Topic (${selectedTopicCount} selected)` : "Topic"
+          selectedTopicCount > 0
+            ? `Keyword (${selectedTopicCount} selected)`
+            : "Keyword"
         }
       >
         <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
@@ -90,34 +98,54 @@ export function FilterPanel({
         </div>
       </FilterField>
 
-      <FilterField label="Event series">
-        <select
-          value={filters.series}
-          onChange={(event) => onChange({ ...filters, series: event.target.value })}
-          className={filterInputClass}
-        >
-          <option value="all">All series</option>
-          {seriesOptions.map((series) => (
-            <option key={series} value={series}>
-              {series}
-            </option>
-          ))}
-        </select>
-      </FilterField>
+      <FilterField
+        label={
+          selectedCountryCount > 0
+            ? `Country (${selectedCountryCount} selected)`
+            : "Country"
+        }
+      >
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+          {countryCheckboxOptions.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-slate-500">No countries available</p>
+          ) : (
+            countryCheckboxOptions.map((country) => {
+              const checked = filters.regions.includes(country.value);
 
-      <FilterField label="Country">
-        <select
-          value={filters.region}
-          onChange={(event) => onChange({ ...filters, region: event.target.value })}
-          className={filterInputClass}
-        >
-          <option value="all">All countries</option>
-          {countryOptions.map((country) => (
-            <option key={country} value={country}>
-              {country}
-            </option>
-          ))}
-        </select>
+              return (
+                <label
+                  key={country.value}
+                  className="flex h-9 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-sm transition hover:bg-slate-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) =>
+                      onChange({
+                        ...filters,
+                        regions: toggleCountrySelection(
+                          filters.regions,
+                          country.value,
+                          event.target.checked,
+                        ),
+                      })
+                    }
+                    className="size-4 shrink-0 rounded border-slate-300 text-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+                  />
+                  <span
+                    className={[
+                      "min-w-0 truncate",
+                      checked ? "font-medium text-brand-primary" : "text-slate-700",
+                    ].join(" ")}
+                    title={country.label}
+                  >
+                    {country.label}
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
       </FilterField>
 
       <div className="grid grid-cols-2 gap-2">

@@ -19,7 +19,7 @@ type EventsPageProps = {
   searchParams: Promise<{
     q?: string;
     industry?: string;
-    region?: string;
+    region?: string | string[];
     type?: string;
     start?: string;
     end?: string;
@@ -37,7 +37,6 @@ function toEventExplorerSearchParams(
   const entries: Array<[string, string | string[] | undefined]> = [
     ["q", raw.q],
     ["industry", raw.industry],
-    ["region", raw.region],
     ["type", raw.type],
     ["start", raw.start],
     ["end", raw.end],
@@ -48,6 +47,12 @@ function toEventExplorerSearchParams(
   for (const [key, value] of entries) {
     if (typeof value !== "string" || value === "") continue;
     params.set(key, value);
+  }
+
+  const regionValues =
+    raw.region === undefined ? [] : Array.isArray(raw.region) ? raw.region : [raw.region];
+  for (const region of regionValues) {
+    if (region !== "") params.append("region", region);
   }
 
   const topicValues = raw.topic === undefined ? [] : Array.isArray(raw.topic) ? raw.topic : [raw.topic];
@@ -63,8 +68,7 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
   const filters = parseEventExplorerFiltersFromSearchParams(toEventExplorerSearchParams(raw));
   const data = await getEventExplorerData({
     query: filters.query,
-    series: filters.series,
-    region: filters.region,
+    regions: filters.regions,
     startDate: filters.startDate,
     endDate: filters.endDate,
     topics: filters.topics,
@@ -130,8 +134,7 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
       events={events}
       initialFilters={{
         query: data.filters.query ?? "",
-        series: data.filters.series ?? "all",
-        region: data.filters.region ?? "all",
+        regions: data.filters.regions ?? [],
         startDate: data.filters.startDate ?? "",
         endDate: data.filters.endDate ?? "",
         topics: data.filters.topics ?? [],

@@ -34,8 +34,7 @@ export type EventExplorerFilterState = EventFilters;
 
 export const DEFAULT_EVENT_EXPLORER_FILTERS: EventExplorerFilterState = {
   query: "",
-  series: "all",
-  region: "all",
+  regions: [],
   startDate: "",
   endDate: "",
   topics: [],
@@ -43,11 +42,14 @@ export const DEFAULT_EVENT_EXPLORER_FILTERS: EventExplorerFilterState = {
 
 export type EventExplorerSearchParamsInput = {
   q?: string | null;
+  /** @deprecated Ignored; legacy series filter removed. */
   series?: string | null;
-  /** @deprecated Use `series`. Read for URL backward compatibility. */
+  /** @deprecated Ignored; legacy series filter removed. */
   industry?: string | null;
+  /** @deprecated Use repeated `region` URL params / `regions` array. */
   region?: string | null;
-  /** @deprecated Use `series`. Read for URL backward compatibility. */
+  regions?: readonly string[] | null;
+  /** @deprecated Ignored; legacy series filter removed. */
   type?: string | null;
   start?: string | null;
   end?: string | null;
@@ -137,44 +139,73 @@ export function editionMatchesTopicSeriesIds(
   return seriesId !== "" && seriesIds.has(seriesId);
 }
 
-function normalizeFilterSelect(value: string | null | undefined, fallback = "all"): string {
-  const trimmed = (value ?? "").trim();
-  return trimmed !== "" ? trimmed : fallback;
-}
-
 function normalizeFilterDate(value: string | null | undefined): string {
   return (value ?? "").trim();
 }
 
-function readLegacySeriesParam(
-  value: string | null | undefined,
-): string {
-  const trimmed = (value ?? "").trim();
-  return trimmed !== "" ? trimmed : "all";
-}
+/** Normalize country names from URL arrays or legacy single `region` input. */
+export function normalizeEventExplorerRegions(
+  input: {
+    regions?: readonly string[] | null;
+    region?: string | null;
+  } = {},
+): string[] {
+  const raw =
+    input.regions !== undefined && input.regions !== null
+      ? input.regions
+      : input.region !== undefined && input.region !== null
+        ? [input.region]
+        : [];
 
-/** Resolve canonical series from series + legacy industry/type URL fields. */
-export function resolveEventExplorerSeriesFilter(
-  input: Pick<
-    EventExplorerSearchParamsInput,
-    "series" | "industry" | "type"
-  > &
-    Partial<{ series: string | null; industry: string | null; type: string | null }>,
-): string {
-  const explicitSeries = input.series;
-  if (explicitSeries !== undefined && explicitSeries !== null) {
-    const trimmed = String(explicitSeries).trim();
-    if (trimmed !== "") return trimmed;
-    return "all";
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const value of raw) {
+    const trimmed = String(value).trim();
+    if (trimmed === "" || trimmed.toLowerCase() === "all" || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    normalized.push(trimmed);
   }
 
-  const industry = readLegacySeriesParam(input.industry);
-  if (industry !== "all") return industry;
+  return normalized;
+}
 
-  const type = readLegacySeriesParam(input.type);
-  if (type !== "all") return type;
+/** Country names sorted for stable, order-insensitive filter comparison keys. */
+export function sortRegionsForComparison(regions: readonly string[]): string[] {
+  return normalizeEventExplorerRegions({ regions }).sort((a, b) => a.localeCompare(b));
+}
 
-  return "all";
+export function areEventExplorerRegionsEqual(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  const normalizedLeft = sortRegionsForComparison(left);
+  const normalizedRight = sortRegionsForComparison(right);
+
+  if (normalizedLeft.length !== normalizedRight.length) return false;
+
+  return normalizedLeft.every((region, index) => region === normalizedRight[index]);
+}
+
+/** Deduped, lowercased country names for OR region filtering. Empty set = no constraint. */
+export function buildNormalizedRegionNameSet(regions: readonly string[]): Set<string> {
+  const set = new Set<string>();
+  for (const region of normalizeEventExplorerRegions({ regions })) {
+    set.add(normalizeExplorerText(region));
+  }
+  return set;
+}
+
+/** True when the edition country matches any selected region (OR), or when none are selected. */
+export function editionMatchesEventExplorerRegions(
+  item: EventExplorerMatchable,
+  regions: readonly string[],
+): boolean {
+  const regionNames = buildNormalizedRegionNameSet(regions);
+  if (regionNames.size === 0) return true;
+
+  const countryName = normalizeExplorerText(item.cities?.countries?.name);
+  return regionNames.has(countryName);
 }
 
 /** Normalize topic slugs from URL arrays or legacy single `topic` input. */
@@ -226,10 +257,9 @@ export function normalizeEventExplorerFilters(
   input: EventExplorerSearchParamsInput &
     Partial<{
       query: string | null;
-      series: string | null;
-      industry: string | null;
+      regions: readonly string[] | null;
+      /** @deprecated Use `regions`. */
       region: string | null;
-      type: string | null;
       startDate: string | null;
       endDate: string | null;
       topic: string | null;
@@ -245,8 +275,7 @@ export function normalizeEventExplorerFilters(
 
   return {
     query,
-    series: resolveEventExplorerSeriesFilter(input),
-    region: normalizeFilterSelect(input.region),
+    regions: normalizeEventExplorerRegions(input),
     startDate:
       input.startDate !== undefined
         ? normalizeFilterDate(input.startDate)
@@ -267,7 +296,7 @@ export function parseEventExplorerFiltersFromSearchParams(
       q: params.get("q") ?? undefined,
       series: params.get("series") ?? undefined,
       industry: params.get("industry") ?? undefined,
-      region: params.get("region") ?? undefined,
+      regions: params.getAll("region"),
       type: params.get("type") ?? undefined,
       start: params.get("start") ?? undefined,
       end: params.get("end") ?? undefined,
@@ -282,9 +311,17 @@ export function parseEventExplorerFiltersFromSearchParams(
         ? [params.topic]
         : [];
 
+  const regionValues: string[] =
+    params.regions !== undefined && params.regions !== null
+      ? [...params.regions]
+      : params.region !== undefined && params.region !== null
+        ? [params.region]
+        : [];
+
   return normalizeEventExplorerFilters({
     ...params,
     topics: topicValues,
+    regions: regionValues,
   });
 }
 
@@ -299,13 +336,8 @@ export function buildEventExplorerSearchParams(
     next.set("q", normalized.query.trim());
   }
 
-  if (normalized.series !== "all") {
-    // Legacy URL param until F5 canonical `series` migration.
-    next.set("industry", normalized.series);
-  }
-
-  if (normalized.region !== "all") {
-    next.set("region", normalized.region);
+  for (const region of normalized.regions) {
+    next.append("region", region);
   }
 
   if (normalized.startDate !== "") {
@@ -335,6 +367,7 @@ export function buildEventExplorerFilterKey(filters: EventExplorerFilterState): 
   const normalized = normalizeEventExplorerFilters(filters);
   return buildEventExplorerSearchParams({
     ...normalized,
+    regions: sortRegionsForComparison(normalized.regions),
     topics: sortTopicSlugsForComparison(normalized.topics),
   }).toString();
 }
@@ -409,11 +442,8 @@ export function matchesEventExplorerFilters(
   const normalized = normalizeEventExplorerFilters(filters);
 
   const query = normalizeExplorerText(normalized.query);
-  const series = normalizeExplorerText(normalized.series);
-  const region = normalizeExplorerText(normalized.region);
 
   const eventName = normalizeExplorerText(item.name);
-  const countryName = normalizeExplorerText(item.cities?.countries?.name);
   const seriesName = normalizeExplorerText(item.event_series?.name);
 
   const queryMatch =
@@ -422,8 +452,7 @@ export function matchesEventExplorerFilters(
     seriesName.includes(query) ||
     eventExplorerDomainMatchesQuery(item, query, "includes");
 
-  const seriesMatch = series === "" || series === "all" || seriesName === series;
-  const regionMatch = region === "" || region === "all" || countryName === region;
+  const regionMatch = editionMatchesEventExplorerRegions(item, normalized.regions);
 
   const topicSeriesIds =
     options.topicSeriesIds === undefined ? null : options.topicSeriesIds;
@@ -431,7 +460,7 @@ export function matchesEventExplorerFilters(
 
   const dateMatch = eventOverlapsDateRange(item, normalized.startDate, normalized.endDate);
 
-  return queryMatch && seriesMatch && regionMatch && topicMatch && dateMatch;
+  return queryMatch && regionMatch && topicMatch && dateMatch;
 }
 
 export function applyEventExplorerFilters<T extends EventExplorerMatchable>(

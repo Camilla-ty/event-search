@@ -21,12 +21,9 @@ import {
 
 type EventExplorerFilters = {
   query?: string;
-  series?: string;
-  /** @deprecated Resolved into `series` via normalizeEventExplorerFilters. */
-  industry?: string;
+  regions?: readonly string[];
+  /** @deprecated Use `regions`. */
   region?: string;
-  /** @deprecated Resolved into `series` via normalizeEventExplorerFilters. */
-  type?: string;
   startDate?: string;
   endDate?: string;
   /** @deprecated Use `topics`. */
@@ -44,8 +41,7 @@ export type EventExplorerData = {
   total: number;
   filters: {
     query: string;
-    series: string;
-    region: string;
+    regions: string[];
     startDate: string;
     endDate: string;
     topics: string[];
@@ -56,7 +52,6 @@ export type EventExplorerData = {
 };
 
 const EMPTY_EVENT_EXPLORER_FILTER_FACETS: EventExplorerFilterFacets = {
-  series: [],
   countries: [],
   topics: [],
 };

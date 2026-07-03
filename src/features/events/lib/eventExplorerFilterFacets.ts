@@ -9,7 +9,6 @@ export type EventExplorerTopicFacet = {
 };
 
 export type EventExplorerFilterFacets = {
-  series: string[];
   countries: string[];
   topics: EventExplorerTopicFacet[];
 };
@@ -34,15 +33,9 @@ export function getEventExplorerFacetEditions<T extends EventExplorerMatchable &
 export function buildEventExplorerFilterFacets(
   editions: readonly EventExplorerMatchable[],
 ): EventExplorerFilterFacets {
-  const seriesNames = new Set<string>();
   const countryNames = new Set<string>();
 
   for (const edition of editions) {
-    const seriesName = edition.event_series?.name?.trim();
-    if (seriesName) {
-      seriesNames.add(seriesName);
-    }
-
     const countryName = edition.cities?.countries?.name?.trim();
     if (countryName) {
       countryNames.add(countryName);
@@ -53,7 +46,6 @@ export function buildEventExplorerFilterFacets(
     Array.from(values).sort((a, b) => a.localeCompare(b));
 
   return {
-    series: sortLabels(seriesNames),
     countries: sortLabels(countryNames),
     topics: [],
   };
