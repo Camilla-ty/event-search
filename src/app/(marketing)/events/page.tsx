@@ -2,7 +2,10 @@ import Link from "next/link";
 
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
-import { sortEventExplorerResults } from "@/src/features/events/lib/eventExplorerOrdering";
+import {
+  DEFAULT_EVENT_EXPLORER_SORT_MODE,
+  sortEventExplorerResults,
+} from "@/src/features/events/lib/eventExplorerOrdering";
 import { parseEventExplorerFiltersFromSearchParams } from "@/src/features/events/lib/eventExplorerQuery";
 import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
 import { createPageMetadata } from "@/src/lib/metadata/site";
@@ -125,7 +128,7 @@ export default async function EventsPageRoute({ searchParams }: EventsPageProps)
     })),
     {
       query: data.filters.query ?? "",
-      sortMode: "recommended",
+      sortMode: DEFAULT_EVENT_EXPLORER_SORT_MODE,
     },
   );
 

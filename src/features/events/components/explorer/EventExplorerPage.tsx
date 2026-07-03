@@ -28,6 +28,7 @@ import {
   parseEventExplorerFiltersFromSearchParams,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import {
+  DEFAULT_EVENT_EXPLORER_SORT_MODE,
   sortEventExplorerResults,
   type EventExplorerSortMode,
 } from "@/src/features/events/lib/eventExplorerOrdering";
@@ -50,6 +51,7 @@ import type { EventFilters, EventRecord, ExplorerView } from "./types";
 
 const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
   { value: "recommended", label: "Recommended" },
+  { value: "reviewed", label: "Recently Reviewed" },
   { value: "date", label: "Event Date" },
   { value: "name", label: "Event Name" },
 ];
@@ -75,7 +77,7 @@ export function EventExplorerPage({
   );
   const [draftFilters, setDraftFilters] = useState<EventFilters>(appliedFilters);
   const skipUrlSyncRef = useRef(false);
-  const [sort, setSort] = useState<EventExplorerSortMode>("recommended");
+  const [sort, setSort] = useState<EventExplorerSortMode>(DEFAULT_EVENT_EXPLORER_SORT_MODE);
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const explorerView = parseEventExplorerView(searchParams.get("view"));
@@ -233,7 +235,7 @@ export function EventExplorerPage({
 
   function handleReset() {
     setDraftFilters({ ...DEFAULT_EVENT_EXPLORER_FILTERS });
-    setSort("date");
+    setSort(DEFAULT_EVENT_EXPLORER_SORT_MODE);
     setPage(1);
   }
 

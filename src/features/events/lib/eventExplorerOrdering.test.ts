@@ -4,10 +4,18 @@ import { describe, it } from "node:test";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
   compareEventBrowseRecommendedOrder,
+  compareRecentlyReviewedOrder,
+  DEFAULT_EVENT_EXPLORER_SORT_MODE,
   sortEventExplorerResults,
 } from "@/src/features/events/lib/eventExplorerOrdering";
 
 const TODAY = "2026-06-25";
+
+describe("DEFAULT_EVENT_EXPLORER_SORT_MODE", () => {
+  it("defaults initial load and reset to Recommended", () => {
+    assert.equal(DEFAULT_EVENT_EXPLORER_SORT_MODE, "recommended");
+  });
+});
 
 function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): EventRecord {
   return {
@@ -194,5 +202,84 @@ describe("sortEventExplorerResults", () => {
     });
 
     assert.equal(sorted[0]?.id, "exact");
+  });
+
+  it("orders reviewed editions by last_reviewed_at DESC", () => {
+    const events = [
+      makeEvent({
+        id: "older-review",
+        name: "Older Review",
+        last_reviewed_at: "2026-06-01T00:00:00Z",
+      }),
+      makeEvent({
+        id: "newer-review",
+        name: "Newer Review",
+        last_reviewed_at: "2026-06-20T00:00:00Z",
+      }),
+    ];
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "reviewed",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["newer-review", "older-review"],
+    );
+  });
+
+  it("places unreviewed editions after reviewed editions", () => {
+    const events = [
+      makeEvent({
+        id: "unreviewed",
+        name: "Unreviewed",
+      }),
+      makeEvent({
+        id: "reviewed",
+        name: "Reviewed",
+        last_reviewed_at: "2026-06-10T00:00:00Z",
+      }),
+    ];
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "reviewed",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["reviewed", "unreviewed"],
+    );
+  });
+
+  it("uses name and id tie-breaks for equal last_reviewed_at values", () => {
+    const events = [
+      makeEvent({
+        id: "b-event",
+        name: "Bravo Event",
+        last_reviewed_at: "2026-06-15T00:00:00Z",
+      }),
+      makeEvent({
+        id: "a-event",
+        name: "Alpha Event",
+        last_reviewed_at: "2026-06-15T00:00:00Z",
+      }),
+    ];
+
+    assert.ok(compareRecentlyReviewedOrder(events[0], events[1]) > 0);
+
+    const sorted = sortEventExplorerResults(events, {
+      query: "",
+      sortMode: "reviewed",
+      today: TODAY,
+    });
+
+    assert.deepEqual(
+      sorted.map((event) => event.id),
+      ["a-event", "b-event"],
+    );
   });
 });

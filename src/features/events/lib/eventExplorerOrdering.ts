@@ -12,7 +12,9 @@ import {
 
 export const RECENTLY_ENDED_DAYS = 180;
 
-export type EventExplorerSortMode = "recommended" | "date" | "name";
+export type EventExplorerSortMode = "recommended" | "reviewed" | "date" | "name";
+
+export const DEFAULT_EVENT_EXPLORER_SORT_MODE: EventExplorerSortMode = "recommended";
 
 export type EventTemporalBucket =
   | "recently_ended"
@@ -267,6 +269,24 @@ function compareNameOrder(a: EventExplorerOrderable, b: EventExplorerOrderable):
   return a.id.localeCompare(b.id);
 }
 
+function readLastReviewedAt(event: EventExplorerOrderable): string {
+  const value = event.last_reviewed_at;
+  if (typeof value !== "string") return "";
+  return value.trim();
+}
+
+export function compareRecentlyReviewedOrder(
+  a: EventExplorerOrderable,
+  b: EventExplorerOrderable,
+): number {
+  const reviewedA = readLastReviewedAt(a);
+  const reviewedB = readLastReviewedAt(b);
+  const byReviewedAt = compareIsoDesc(reviewedA, reviewedB);
+  if (byReviewedAt !== 0) return byReviewedAt;
+
+  return compareNameOrder(a, b);
+}
+
 export function sortEventExplorerResults<T extends EventRecord>(
   events: readonly T[],
   options: {
@@ -284,6 +304,10 @@ export function sortEventExplorerResults<T extends EventRecord>(
 
   if (options.sortMode === "date") {
     return [...events].sort(compareChronologicalOrder);
+  }
+
+  if (options.sortMode === "reviewed") {
+    return [...events].sort(compareRecentlyReviewedOrder);
   }
 
   if (query === "") {
