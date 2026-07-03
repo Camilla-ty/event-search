@@ -17,6 +17,7 @@ import {
   isHostedPlatformCompany,
   resolveCompanyWebsiteIdentity,
 } from "@/src/lib/domain/hostedPlatformWebsite";
+import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
@@ -171,22 +172,26 @@ function applyCompanyListFilter<T extends CompanyAdminRow>(
   });
 }
 
-async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
-  const supabase = createAdminClient();
-  const { data: links, error: linkError } = await supabase
-    .from("event_sponsors")
-    .select("company_id");
-
-  if (linkError) throw new Error(linkError.message);
-
+export function countSponsorLinksByCompany(
+  links: readonly { company_id: unknown }[],
+): Map<string, number> {
   const countByCompany = new Map<string, number>();
-  for (const link of links ?? []) {
+  for (const link of links) {
     const cid = link.company_id;
     if (typeof cid === "string") {
       countByCompany.set(cid, (countByCompany.get(cid) ?? 0) + 1);
     }
   }
   return countByCompany;
+}
+
+async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
+  const supabase = createAdminClient();
+  const links = await fetchAllPaginatedSupabaseRows<{ company_id: unknown }>(
+    async ({ from, to }) =>
+      supabase.from("event_sponsors").select("company_id").range(from, to),
+  );
+  return countSponsorLinksByCompany(links);
 }
 
 function toCompanyListItems(

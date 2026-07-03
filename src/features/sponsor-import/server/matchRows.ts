@@ -6,6 +6,10 @@ import {
   type ImportMatchContext,
   type ImportMatchMethod,
 } from "@/src/lib/companies/companyImportMatching";
+import {
+  fetchAllPaginatedSupabaseRows,
+  SUPABASE_DEFAULT_PAGE_SIZE,
+} from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type { SponsorImportRowStatus } from "../types";
@@ -32,37 +36,9 @@ export type MatchResult = {
 
 export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain"];
 
-/** Supabase PostgREST defaults to 1,000 rows per request. */
-export const IMPORT_MATCH_CONTEXT_PAGE_SIZE = 1000;
+export const IMPORT_MATCH_CONTEXT_PAGE_SIZE = SUPABASE_DEFAULT_PAGE_SIZE;
 
-type SupabasePageResult<TRow> = {
-  data: TRow[] | null;
-  error: { message: string } | null;
-};
-
-/** Fetch every row from a ranged Supabase select (avoids the 1,000-row default cap). */
-export async function fetchAllPaginatedSupabaseRows<TRow>(
-  runPage: (range: { from: number; to: number }) => Promise<SupabasePageResult<TRow>>,
-  pageSize = IMPORT_MATCH_CONTEXT_PAGE_SIZE,
-): Promise<TRow[]> {
-  const rows: TRow[] = [];
-  let from = 0;
-
-  while (true) {
-    const to = from + pageSize - 1;
-    const { data, error } = await runPage({ from, to });
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const page = data ?? [];
-    rows.push(...page);
-    if (page.length < pageSize) break;
-    from += pageSize;
-  }
-
-  return rows;
-}
+export { fetchAllPaginatedSupabaseRows };
 
 type CompanyDirectoryRow = {
   id: unknown;
