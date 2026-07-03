@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { type KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { AdminCompanyLogoCell } from "@/src/features/companies/components/admin/AdminCompanyLogoCell";
 import { AdminCompanySearchMatchHint } from "@/src/features/companies/components/admin/AdminCompanySearchMatchHint";
@@ -24,10 +25,74 @@ type AdminCompaniesListTableProps = {
 };
 
 function tableColumnCount(filter: CompanyListFilter): number {
-  return filter === "needs_logo_review" ? 6 : 5;
+  return filter === "needs_logo_review" ? 5 : 4;
+}
+
+type AdminCompaniesListTableRowProps = {
+  company: AdminCompaniesListRow;
+  showWebsite: boolean;
+};
+
+function AdminCompaniesListTableRow({
+  company,
+  showWebsite,
+}: AdminCompaniesListTableRowProps) {
+  const router = useRouter();
+  const detailHref = `/admin/companies/${company.id}`;
+  const companyName = company.name.trim() !== "" ? company.name.trim() : "Unknown company";
+
+  function navigateToDetail() {
+    router.push(detailHref);
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      navigateToDetail();
+    }
+  }
+
+  return (
+    <tr
+      onClick={navigateToDetail}
+      onKeyDown={handleRowKeyDown}
+      tabIndex={0}
+      role="link"
+      aria-label={`View company: ${companyName}`}
+      className={[
+        "cursor-pointer border-b border-slate-100 last:border-0",
+        "hover:bg-brand-primary-muted/50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/25 focus-visible:ring-inset",
+      ].join(" ")}
+    >
+      <td className="px-4 py-3 align-top">
+        <AdminCompanyLogoCell
+          name={company.name}
+          logoUrl={company.logo_url}
+          logoSource={company.logo_source}
+        />
+      </td>
+      <td className="px-4 py-3 font-medium text-slate-900">
+        <div>{company.name}</div>
+        <AdminCompanySearchMatchHint
+          matchedAlias={company.matched_alias}
+          className="mt-0.5 block"
+        />
+      </td>
+      <td className="px-4 py-3 text-slate-600">{company.domain ?? "—"}</td>
+      {showWebsite ? (
+        <td className="max-w-xs truncate px-4 py-3 text-slate-600">
+          {company.website ?? "—"}
+        </td>
+      ) : null}
+      <td className="px-4 py-3 text-slate-600">{company.sponsor_link_count}</td>
+    </tr>
+  );
 }
 
 export function AdminCompaniesListTable({ companies, filter }: AdminCompaniesListTableProps) {
+  const showWebsite = filter === "needs_logo_review";
+
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="min-w-full text-left text-sm">
@@ -36,11 +101,10 @@ export function AdminCompaniesListTable({ companies, filter }: AdminCompaniesLis
             <th className="w-20 px-4 py-3 font-medium">Logo</th>
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Domain</th>
-            {filter === "needs_logo_review" ? (
+            {showWebsite ? (
               <th className="px-4 py-3 font-medium">Website</th>
             ) : null}
             <th className="px-4 py-3 font-medium">Event links</th>
-            <th className="whitespace-nowrap px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -55,37 +119,11 @@ export function AdminCompaniesListTable({ companies, filter }: AdminCompaniesLis
             </tr>
           ) : (
             companies.map((company) => (
-              <tr key={company.id} className="border-b border-slate-100 last:border-0">
-                <td className="px-4 py-3 align-top">
-                  <AdminCompanyLogoCell
-                    name={company.name}
-                    logoUrl={company.logo_url}
-                    logoSource={company.logo_source}
-                  />
-                </td>
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  <div>{company.name}</div>
-                  <AdminCompanySearchMatchHint
-                    matchedAlias={company.matched_alias}
-                    className="mt-0.5 block"
-                  />
-                </td>
-                <td className="px-4 py-3 text-slate-600">{company.domain ?? "—"}</td>
-                {filter === "needs_logo_review" ? (
-                  <td className="max-w-xs truncate px-4 py-3 text-slate-600">
-                    {company.website ?? "—"}
-                  </td>
-                ) : null}
-                <td className="px-4 py-3 text-slate-600">{company.sponsor_link_count}</td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/companies/${company.id}`}
-                    className="text-brand-primary hover:underline"
-                  >
-                    View
-                  </Link>
-                </td>
-              </tr>
+              <AdminCompaniesListTableRow
+                key={company.id}
+                company={company}
+                showWebsite={showWebsite}
+              />
             ))
           )}
         </tbody>
