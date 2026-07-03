@@ -39,7 +39,7 @@ export function EventGrid({ events, loading, page, onPageChange, onReset }: Even
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="space-y-3">
         {pageItems.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}

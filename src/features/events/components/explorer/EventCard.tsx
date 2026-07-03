@@ -4,7 +4,10 @@ import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
-import { buildEventCardKeywordPreview } from "@/src/features/events/lib/eventCardKeywordPreview";
+import {
+  buildEventCardKeywordPreview,
+  type EventCardKeywordPreview,
+} from "@/src/features/events/lib/eventCardKeywordPreview";
 import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
 
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
@@ -33,6 +36,51 @@ function formatSponsorCount(count: number): string {
   return `${count} Sponsors`;
 }
 
+type EventCardKeywordBadgesProps = {
+  keywordPreview: EventCardKeywordPreview;
+};
+
+function EventCardKeywordBadges({ keywordPreview }: EventCardKeywordBadgesProps) {
+  return (
+    <div className="flex flex-wrap gap-1.5 md:max-w-[45%] md:justify-end lg:max-w-[50%]">
+      {keywordPreview.visibleKeywords.map((keyword) => (
+        <Badge
+          key={keyword.key}
+          variant="neutral"
+          className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+        >
+          {keyword.label}
+        </Badge>
+      ))}
+      {keywordPreview.overflowCount > 0 ? (
+        <Badge
+          variant="neutral"
+          className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+        >
+          +{keywordPreview.overflowCount}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+type EventCardMetaBlockProps = {
+  children: React.ReactNode;
+  withDivider?: boolean;
+};
+
+function EventCardMetaBlock({ children, withDivider = false }: EventCardMetaBlockProps) {
+  return (
+    <div
+      className={`min-w-0 text-sm text-slate-600 md:flex-1 ${
+        withDivider ? "md:border-l md:border-slate-200 md:px-4" : "md:pr-4"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
 type EventCardContentProps = {
   event: EventRecord;
   location: string;
@@ -40,48 +88,32 @@ type EventCardContentProps = {
 };
 
 function EventCardContent({ event, location, keywordPreview }: EventCardContentProps) {
+  const dateLabel = formatDateRange(event.start_date, event.end_date);
+  const locationLabel = location || "Location not set";
+
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-4">
       <SeriesLogo
         series={event.event_series}
         fallbackName={event.name}
-        className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
-        monogramClassName="text-base font-semibold text-slate-400"
+        className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+        monogramClassName="text-lg font-semibold text-slate-400"
       />
-      <div className="min-w-0 space-y-2">
-        <h3 className="line-clamp-1 text-base font-semibold text-slate-900">
-          {event.name ?? "Untitled Event"}
-        </h3>
-        <p className="text-sm text-slate-600">
-          {formatSponsorCount(event.sponsor_count ?? 0)}
-        </p>
-        {keywordPreview ? (
-          <div className="flex flex-wrap gap-1.5">
-            {keywordPreview.visibleKeywords.map((keyword) => (
-              <Badge
-                key={keyword.key}
-                variant="neutral"
-                className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-              >
-                {keyword.label}
-              </Badge>
-            ))}
-            {keywordPreview.overflowCount > 0 ? (
-              <Badge
-                variant="neutral"
-                className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-              >
-                +{keywordPreview.overflowCount}
-              </Badge>
-            ) : null}
-          </div>
-        ) : null}
-        <p className="text-xs text-slate-500">
-          {formatDateRange(event.start_date, event.end_date)}
-        </p>
-        <p className="line-clamp-1 text-sm text-slate-600">
-          {location || "Location not set"}
-        </p>
+      <div className="min-w-0 flex-1 space-y-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-3">
+          <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900">
+            {event.name ?? "Untitled Event"}
+          </h3>
+          {keywordPreview ? <EventCardKeywordBadges keywordPreview={keywordPreview} /> : null}
+        </div>
+
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <EventCardMetaBlock>{formatSponsorCount(event.sponsor_count ?? 0)}</EventCardMetaBlock>
+          <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
+          <EventCardMetaBlock withDivider>
+            <span className="line-clamp-2">{locationLabel}</span>
+          </EventCardMetaBlock>
+        </div>
       </div>
     </div>
   );
