@@ -89,6 +89,52 @@ describe("validateRow", () => {
     assert.equal(instagram.normalized_domain, null);
   });
 
+  it("treats link3.to profile URLs as no_identity with distinct normalized websites", () => {
+    const foo = validateRow({
+      id: "row-link3-foo",
+      excel_row_number: 10,
+      raw_company_name: "Foo Project",
+      raw_website: "https://link3.to/foo",
+      raw_tier_rank: 1,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const bar = validateRow({
+      id: "row-link3-bar",
+      excel_row_number: 11,
+      raw_company_name: "Bar Project",
+      raw_website: "https://link3.to/bar",
+      raw_tier_rank: 1,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+
+    assert.equal(foo.normalized_domain, null);
+    assert.equal(bar.normalized_domain, null);
+    assert.equal(foo.normalized_website, "https://link3.to/foo");
+    assert.equal(bar.normalized_website, "https://link3.to/bar");
+    assert.ok(
+      foo.validation_issues.some(
+        (issue) => issue.type === "community_website" && issue.severity === "warning",
+      ),
+    );
+  });
+
+  it("rejects bare link3.to host as normalized_domain", () => {
+    const result = validateRow({
+      id: "row-link3-bare",
+      excel_row_number: 12,
+      raw_company_name: "Example",
+      raw_website: "https://link3.to",
+      raw_tier_rank: 1,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+
+    assert.equal(result.normalized_domain, null);
+    assert.equal(result.normalized_website, "https://link3.to");
+  });
+
   it("keeps path-aware identity for hosted marketplace and LinkedIn company URLs", () => {
     const opensea = validateRow({
       id: "row-6",

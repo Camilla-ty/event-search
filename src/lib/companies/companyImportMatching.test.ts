@@ -424,6 +424,30 @@ describe("companyImportMatching", () => {
     assert.equal(result.proposed_company_id, "example-id");
   });
 
+  it("does not domain-match rows that only share polluted link3.to catalog domain", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "polluted-id",
+        name: "Polluted Co",
+        domain: "link3.to",
+        website: "https://link3.to/foo",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://link3.to/bar",
+        normalized_company_name: "Different Co",
+      },
+      context,
+    );
+
+    assert.notEqual(result.match_method, "domain");
+    assert.equal(result.status, "needs_review");
+  });
+
   it("does not domain-match link3.to profiles that share only the host", () => {
     const context = buildImportMatchContext([
       company({

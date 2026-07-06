@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "bash -c 'if [ \"$1\" = link3 ]; then exec npx tsx --test src/lib/domain/hostedPlatformWebsite.test.ts src/lib/domain/importWebsiteMatchKey.test.ts src/lib/companies/companyImportMatching.test.ts src/features/partner-alumni-import/server/validateRows.test.ts src/features/sponsor-import/server/validateRows.test.ts src/features/sponsor-import/server/importWebsiteSelection.test.ts; else exec find src -name \"*.test.ts\" -print0 | xargs -0 npx tsx --test; fi' bash",
     "backfill:companies-logos": "tsx --env-file=.env.local scripts/backfill-companies-logos.ts",
     "backfill:venue-logos-from-url": "tsx --env-file=.env.local scripts/backfill-venue-logos-from-url.ts",
     "migrate:company-logos": "tsx --env-file=.env.local scripts/migrate-company-logos-to-company-id.ts",

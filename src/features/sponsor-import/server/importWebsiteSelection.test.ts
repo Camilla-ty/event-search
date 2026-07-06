@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  applyCanonicalWebsiteFields,
   duplicateClusterKey,
   finalizeImportRowWebsites,
   normalizeWebsiteClusterKey,
@@ -9,6 +10,26 @@ import {
   shouldMergeWebsiteCandidates,
 } from "./importWebsiteSelection";
 import { assignDuplicateClusters, validateRow, type ValidatedImportRow } from "./validateRows";
+
+describe("applyCanonicalWebsiteFields", () => {
+  it("keeps full link3.to profile URLs with null normalized_domain", () => {
+    assert.deepEqual(applyCanonicalWebsiteFields("https://link3.to/foo"), {
+      normalized_website: "https://link3.to/foo",
+      normalized_domain: null,
+    });
+    assert.deepEqual(applyCanonicalWebsiteFields("https://link3.to/bar"), {
+      normalized_website: "https://link3.to/bar",
+      normalized_domain: null,
+    });
+  });
+
+  it("rejects bare link3.to host as normalized_domain", () => {
+    assert.deepEqual(applyCanonicalWebsiteFields("https://link3.to"), {
+      normalized_website: "https://link3.to",
+      normalized_domain: null,
+    });
+  });
+});
 
 describe("selectImportCanonicalWebsite", () => {
   it("prefers sorare.com over games.gg", () => {
