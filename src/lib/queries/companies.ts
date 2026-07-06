@@ -1,5 +1,6 @@
 import { createClient } from "@/src/lib/supabase/server";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
@@ -88,7 +89,9 @@ export async function getCompanyById(id: string): Promise<CompanyPublicRow | nul
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return getCompanyByIdAdmin(id);
+  }
   if (data) {
     return data as CompanyPublicRow;
   }
@@ -122,7 +125,9 @@ export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow |
     .eq("slug", key)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return getCompanyBySlugAdmin(key);
+  }
   if (data) {
     return data as CompanyPublicRow;
   }
@@ -137,13 +142,11 @@ export async function getCompaniesByIds(ids: readonly string[]) {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_PUBLIC_SELECT)
-    .in("id", unique);
+  const rows = await fetchAllByIdInBatches(unique, (batchIds) =>
+    supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
+  );
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CompanyPublicRow[];
+  return rows as CompanyPublicRow[];
 }
 
 async function getCompaniesByIdsAdmin(ids: readonly string[]) {
@@ -152,14 +155,9 @@ async function getCompaniesByIdsAdmin(ids: readonly string[]) {
 
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("companies")
-      .select(COMPANY_PUBLIC_SELECT)
-      .in("id", unique);
-    if (error) {
-      return [];
-    }
-    return (data ?? []) as CompanyPublicRow[];
+    return (await fetchAllByIdInBatches(unique, (batchIds) =>
+      supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
+    )) as CompanyPublicRow[];
   } catch {
     return [];
   }
@@ -292,7 +290,9 @@ export async function getCompaniesByEventEdition(eventEditionId: string) {
     .order("display_order", { ascending: true, nullsFirst: false })
     .order("id", { ascending: true });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    return [];
+  }
   const list = links ?? [];
 
   if (list.length === 0) {

@@ -482,7 +482,7 @@ export async function runBatchMatching(batchId: string, actorId: string) {
   const { data: rows, error } = await supabase
     .from("sponsor_import_rows")
     .select(
-      "id, status, normalized_domain, normalized_company_name, mapped_tier_rank, has_blocking_validation",
+      "id, status, normalized_domain, normalized_website, normalized_company_name, mapped_tier_rank, has_blocking_validation",
     )
     .eq("batch_id", batchId);
 
@@ -498,6 +498,7 @@ export async function runBatchMatching(batchId: string, actorId: string) {
         id: String(row.id),
         status: status as ImportRowRecord["status"],
         normalized_domain: row.normalized_domain as string | null,
+        normalized_website: row.normalized_website as string | null,
         normalized_company_name: row.normalized_company_name as string | null,
         mapped_tier_rank: row.mapped_tier_rank as number | null,
         has_blocking_validation: Boolean(row.has_blocking_validation),

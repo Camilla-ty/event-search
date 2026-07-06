@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Badge } from "@/src/components/common";
@@ -35,12 +35,18 @@ import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmb
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
+import { EventPartnerAlumniSection } from "@/src/features/partner-alumni/components/detail/EventPartnerAlumniSection";
+import {
+  getPublicPartnerAlumniForSeriesId,
+  shouldShowPublicPartnerAlumniTab,
+} from "@/src/features/partner-alumni/server/partnerAlumniPublic";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 function readSeriesId(
@@ -74,8 +80,12 @@ export async function generateMetadata({
   });
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({
+  params,
+  searchParams,
+}: EventDetailPageProps) {
   const { id } = await params;
+  const { tab: requestedTab } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -96,8 +106,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const series = mapPublicEventSeries(edition.event_series);
   const seriesId = readSeriesId(edition, series);
   const seriesHubHref = series ? buildSeriesHubPath(series) : null;
+  const eventSlug = typeof edition.slug === "string" ? edition.slug : id;
 
-  const [relatedEditions, topics, totalSponsorCount] = await Promise.all([
+  const [relatedEditions, topics, totalSponsorCount, partnerAlumni] = await Promise.all([
     seriesId !== null && editionId !== null
       ? getRelatedEditions({
           seriesId,
@@ -108,13 +119,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       ? getPublicKeywordsForSeriesId(seriesId)
       : Promise.resolve([]),
     editionId !== null ? getTotalSponsorCount(editionId) : Promise.resolve(0),
+    seriesId !== null
+      ? getPublicPartnerAlumniForSeriesId(seriesId)
+      : Promise.resolve(null),
   ]);
+
+  const showPartnerAlumniTab = shouldShowPublicPartnerAlumniTab(partnerAlumni);
+
+  if (requestedTab === "partner-alumni" && !showPartnerAlumniTab) {
+    redirect(`/events/${eventSlug || id}`);
+  }
 
   const sponsors = filterDisplayableSponsors(
     (edition.event_sponsors ?? []) as EventSponsorRow[],
   );
   const isAuthenticated = user !== null;
-  const eventSlug = typeof edition.slug === "string" ? edition.slug : "";
   const cityLabel = formatLocationFromCityEmbed(edition.cities) || "";
   const venue = mapPublicVenueFromEditionRow(editionRecord);
   const organizers = mapPublicOrganizersFromEditionRow(editionRecord);
@@ -218,6 +237,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
         <PublicEventEditionTabs
           eventSlug={eventSlug}
+          showPartnerAlumniTab={showPartnerAlumniTab}
           overviewPanel={
             <div className="space-y-6">
               <EventHistorySection
@@ -280,6 +300,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             )
           }
           organizersPanel={<EventOrganizersSection organizers={organizers} />}
+          partnerAlumniPanel={
+            partnerAlumni ? (
+              <EventPartnerAlumniSection
+                partnerAlumni={partnerAlumni}
+                seriesName={seriesBrandLabel}
+              />
+            ) : null
+          }
         />
       </Suspense>
     </section>

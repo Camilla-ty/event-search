@@ -7,18 +7,20 @@ import { Button } from "@/src/components/common";
 type AdminDrawerShellProps = {
   title: string;
   saving: boolean;
-  saveLabel: string;
-  saveDisabled: boolean;
+  saveLabel?: string;
+  saveDisabled?: boolean;
+  showSave?: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   children: ReactNode;
 };
 
 export function AdminDrawerShell({
   title,
   saving,
-  saveLabel,
-  saveDisabled,
+  saveLabel = "Save",
+  saveDisabled = false,
+  showSave = true,
   onClose,
   onSave,
   children,
@@ -44,9 +46,11 @@ export function AdminDrawerShell({
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={onSave} disabled={saving || saveDisabled}>
-            {saving ? "Saving…" : saveLabel}
-          </Button>
+          {showSave && onSave ? (
+            <Button onClick={onSave} disabled={saving || saveDisabled}>
+              {saving ? "Saving…" : saveLabel}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

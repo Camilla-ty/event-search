@@ -62,6 +62,13 @@ export function ImportRowMatchReason({
         </p>
       ) : null}
 
+      {reason?.kind === "website" ? (
+        <p className={infoClass}>
+          Matched by website URL
+          {reason.website ? `: ${reason.website}` : ""}
+        </p>
+      ) : null}
+
       {reason?.kind === "exact_name" ? (
         <p className={infoClass}>Matched by exact name</p>
       ) : null}
@@ -75,7 +82,9 @@ export function ImportRowMatchReason({
 
       {reason?.kind === "domain_name_mismatch" ? (
         <p className={warningClass}>
-          Domain matched, but company name differs. Please verify manually.
+          {row.match_method === "website" || (row.normalized_domain ?? "").trim() === ""
+            ? "Website URL matched, but company name differs. Please verify manually."
+            : "Domain matched, but company name differs. Please verify manually."}
         </p>
       ) : null}
 

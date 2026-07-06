@@ -22,7 +22,14 @@ export async function getEventDetailData(identifier: string) {
     return { ...raw, event_sponsors: [] };
   }
 
-  const eventSponsors = await getCompaniesByEventEdition(editionId);
+  let eventSponsors: Awaited<ReturnType<typeof getCompaniesByEventEdition>> = [];
+  try {
+    eventSponsors = await getCompaniesByEventEdition(editionId);
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[events] edition sponsors load failed:", error);
+    }
+  }
 
   return { ...raw, event_sponsors: eventSponsors };
 }

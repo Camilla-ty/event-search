@@ -1,8 +1,13 @@
 import { resolveRowCompanyName, resolveRowDomain } from "./reviewQueueEligibility";
 import type { SponsorImportRow } from "./client/types";
 
+function resolveRowWebsite(row: SponsorImportRow): string {
+  return (row.normalized_website ?? row.raw_website ?? "").trim();
+}
+
 export type ImportRowMatchReasonKind =
   | "domain"
+  | "website"
   | "exact_name"
   | "alias"
   | "domain_name_mismatch"
@@ -11,6 +16,7 @@ export type ImportRowMatchReasonKind =
 export type ImportRowMatchReasonView = {
   kind: ImportRowMatchReasonKind;
   domain?: string;
+  website?: string;
   alias?: string;
   importName?: string;
 };
@@ -47,6 +53,14 @@ export function resolveImportRowMatchReason(
       return { kind: "domain" };
     }
     return { kind: "domain", domain };
+  }
+
+  if (row.match_method === "website") {
+    const website = resolveRowWebsite(row);
+    if (website === "") {
+      return { kind: "website" };
+    }
+    return { kind: "website", website };
   }
 
   if (row.match_method === "exact_name") {

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 import type { SponsorImportRow } from "./client/types";
 import {
@@ -43,40 +44,55 @@ function baseRow(overrides: Partial<SponsorImportRow> = {}): SponsorImportRow {
 
 describe("resolveImportRowMatchReason", () => {
   it("returns domain match with normalized domain", () => {
-    expect(
+    assert.deepEqual(
       resolveImportRowMatchReason(
         baseRow({
           match_method: "domain",
           normalized_domain: "keelinfra.com",
         }),
       ),
-    ).toEqual({ kind: "domain", domain: "keelinfra.com" });
+      { kind: "domain", domain: "keelinfra.com" },
+    );
+  });
+
+  it("returns website match with normalized website", () => {
+    assert.deepEqual(
+      resolveImportRowMatchReason(
+        baseRow({
+          match_method: "website",
+          normalized_website: "https://beacons.ai/nftfy",
+        }),
+      ),
+      { kind: "website", website: "https://beacons.ai/nftfy" },
+    );
   });
 
   it("returns exact name match", () => {
-    expect(
+    assert.deepEqual(
       resolveImportRowMatchReason(
         baseRow({
           match_method: "exact_name",
           raw_company_name: "Keel Infrastructure",
         }),
       ),
-    ).toEqual({ kind: "exact_name" });
+      { kind: "exact_name" },
+    );
   });
 
   it("returns alias match with import company name", () => {
-    expect(
+    assert.deepEqual(
       resolveImportRowMatchReason(
         baseRow({
           match_method: "alias",
           raw_company_name: "Bitfarms",
         }),
       ),
-    ).toEqual({ kind: "alias", alias: "Bitfarms" });
+      { kind: "alias", alias: "Bitfarms" },
+    );
   });
 
   it("returns domain/name mismatch warning context", () => {
-    expect(
+    assert.deepEqual(
       resolveImportRowMatchReason(
         baseRow({
           status: "needs_review",
@@ -86,50 +102,54 @@ describe("resolveImportRowMatchReason", () => {
           proposed_company_id: "company-1",
         }),
       ),
-    ).toEqual({
-      kind: "domain_name_mismatch",
-      domain: "keelinfra.com",
-      importName: "Wrong Co",
-    });
+      {
+        kind: "domain_name_mismatch",
+        domain: "keelinfra.com",
+        importName: "Wrong Co",
+      },
+    );
   });
 
   it("returns multiple candidates warning", () => {
-    expect(
+    assert.deepEqual(
       resolveImportRowMatchReason(
         baseRow({
           status: "needs_review",
           conflict_type: "multiple_candidates",
         }),
       ),
-    ).toEqual({ kind: "multiple_candidates" });
+      { kind: "multiple_candidates" },
+    );
   });
 });
 
 describe("getImportRowMatchedAlias", () => {
   it("returns null when match method is not alias", () => {
-    expect(
+    assert.equal(
       getImportRowMatchedAlias(
         baseRow({
           match_method: "domain",
           raw_company_name: "Bitfarms",
         }),
       ),
-    ).toBeNull();
+      null,
+    );
   });
 });
 
 describe("hasImportRowMatchReason", () => {
   it("is false for unmatched rows", () => {
-    expect(hasImportRowMatchReason(baseRow())).toBe(false);
+    assert.equal(hasImportRowMatchReason(baseRow()), false);
   });
 
   it("is true when a match method is present", () => {
-    expect(
+    assert.equal(
       hasImportRowMatchReason(
         baseRow({
           match_method: "exact_name",
         }),
       ),
-    ).toBe(true);
+      true,
+    );
   });
 });

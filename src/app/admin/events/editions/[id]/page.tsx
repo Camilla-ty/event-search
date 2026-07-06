@@ -2,17 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { InlineErrorBanner } from "@/src/components/common";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
-import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
 import { EditionOrganizersPanel } from "@/src/features/organizers/components/admin/EditionOrganizersPanel";
-import { getOrganizersForEditionAdmin } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
-import { getEditionImportsData } from "@/src/features/sponsor-import/server/importUiData";
 import {
   EditionSponsorsPanel,
   type ActiveImportInfo,
@@ -20,14 +18,13 @@ import {
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
 import { buildEditionFormInitialValues } from "@/src/features/events/components/admin/editionFormValues";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
-import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
 import {
-  countLiveSponsorsForEdition,
-  getEventEditionAdminById,
-  getLiveSponsorsForEditionAdmin,
-} from "@/src/features/events/server/eventEditionAdmin";
-import { getSeriesOptions } from "@/src/features/events/server/getSeriesOptions";
-import { primaryCtaClass } from "@/src/lib/design/classes";
+  adminEditionPanelErrorMessage,
+  loadAdminEditionOptionalPanels,
+  loadAdminEditionRequired,
+  summarizeAdminEditionPanelErrors,
+} from "@/src/features/events/server/eventEditionAdminPageLoad";
+import { brandLinkClass, primaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 
 export const dynamic = "force-dynamic";
@@ -69,28 +66,46 @@ function editionProfileWarnings(edition: {
 
 export default async function AdminEventEditionDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const edition = await getEventEditionAdminById(id);
+  const required = await loadAdminEditionRequired(id);
+
+  if (required.loadError) {
+    return (
+      <section>
+        <AdminBreadcrumbs
+          items={[
+            { label: "Admin", href: "/admin" },
+            { label: "Events", href: "/admin/events" },
+            { label: "Editions", href: "/admin/events/editions" },
+            { label: "Edition unavailable" },
+          ]}
+        />
+        <AdminPageHeader
+          title="Edition unavailable"
+          description="This edition could not be loaded from the database."
+        />
+        <EventsSubNav />
+        <InlineErrorBanner
+          message={`Could not load this edition: ${required.loadError}. Refresh the page to try again.`}
+        />
+        <p className="mt-4 text-sm text-slate-600">
+          <Link href="/admin/events/editions" className={brandLinkClass}>
+            ← Back to editions
+          </Link>
+        </p>
+      </section>
+    );
+  }
+
+  const edition = required.edition;
   if (!edition) notFound();
+
+  const panels = await loadAdminEditionOptionalPanels(edition);
+  const panelErrorSummary = summarizeAdminEditionPanelErrors(panels.panelErrors);
 
   const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
 
-  const [cities, series, liveSponsorCount, sponsors, organizers, importsData, inheritedKeywords] =
-    await Promise.all([
-      getCityOptions(),
-      getSeriesOptions(),
-      countLiveSponsorsForEdition(id),
-      getLiveSponsorsForEditionAdmin(id),
-      getOrganizersForEditionAdmin(id),
-      getEditionImportsData(
-        id,
-        edition.name,
-        edition.event_series?.name ?? "—",
-        0,
-      ),
-      getInheritedKeywordsForEditionId(id),
-    ]);
-
-  importsData.liveSponsorCount = liveSponsorCount;
+  const importsData = panels.importsData;
+  importsData.liveSponsorCount = panels.liveSponsorCount;
 
   const activeBatch = importsData.activeBatch;
   const activeBatchId =
@@ -103,6 +118,14 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
     activeBatchId && parsedActiveStatus
       ? { batchId: activeBatchId, status: parsedActiveStatus }
       : null;
+
+  const sponsorsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "sponsors");
+  const organizersPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "organizers");
+  const importsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "imports");
+  const profilePanelError =
+    adminEditionPanelErrorMessage(panels.panelErrors, "cities") ??
+    adminEditionPanelErrorMessage(panels.panelErrors, "series") ??
+    adminEditionPanelErrorMessage(panels.panelErrors, "keywords");
 
   return (
     <section>
@@ -167,10 +190,17 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
             {edition.slug}
           </Link>
         </span>
-        <span>Live sponsors: {liveSponsorCount}</span>
+        <span>Live sponsors: {panels.liveSponsorCount}</span>
       </div>
 
       <EventsSubNav />
+
+      {panelErrorSummary ? (
+        <InlineErrorBanner
+          className="mb-4"
+          message={`Some edition panels failed to load (${panelErrorSummary}). Refresh the page to try again.`}
+        />
+      ) : null}
 
       <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
         <EditionDetailTabs
@@ -178,12 +208,15 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
           profileWarnings={editionProfileWarnings(edition)}
           profilePanel={
             <div className="space-y-6">
-              <SeriesKeywordsChips keywords={inheritedKeywords} />
+              {profilePanelError ? (
+                <InlineErrorBanner message={`Profile data unavailable: ${profilePanelError}`} />
+              ) : null}
+              <SeriesKeywordsChips keywords={panels.inheritedKeywords} />
               <EventEditionForm
                 mode="edit"
                 editionId={edition.id}
-                series={series}
-                cities={cities}
+                series={panels.series}
+                cities={panels.cities}
                 readOnlySeriesName={edition.event_series?.name}
                 readOnlySeriesId={edition.event_series?.id ?? edition.series_id ?? undefined}
                 readOnlyYear={edition.year}
@@ -221,27 +254,41 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                 <p className="mb-4 text-sm text-slate-500">
                   Edition metadata — link companies that organize or host this occurrence.
                 </p>
-                <EditionOrganizersPanel
-                  editionId={edition.id}
-                  editionName={edition.name}
-                  editionYear={edition.year}
-                  organizers={organizers}
-                />
+                {organizersPanelError ? (
+                  <InlineErrorBanner message={`Organizers unavailable: ${organizersPanelError}`} />
+                ) : (
+                  <EditionOrganizersPanel
+                    editionId={edition.id}
+                    editionName={edition.name}
+                    editionYear={edition.year}
+                    organizers={panels.organizers}
+                  />
+                )}
               </div>
             </div>
           }
           sponsorsPanel={
-            <EditionSponsorsPanel
-              editionId={edition.id}
-              editionName={edition.name}
-              editionYear={edition.year}
-              editionSlug={edition.slug}
-              eventWebsiteUrl={edition.website_url}
-              sponsors={sponsors}
-              activeImport={activeImport}
-            />
+            sponsorsPanelError ? (
+              <InlineErrorBanner message={`Live sponsors unavailable: ${sponsorsPanelError}`} />
+            ) : (
+              <EditionSponsorsPanel
+                editionId={edition.id}
+                editionName={edition.name}
+                editionYear={edition.year}
+                editionSlug={edition.slug}
+                eventWebsiteUrl={edition.website_url}
+                sponsors={panels.sponsors}
+                activeImport={activeImport}
+              />
+            )
           }
-          importsPanel={<EditionImportsPanel data={importsData} />}
+          importsPanel={
+            importsPanelError ? (
+              <InlineErrorBanner message={`Import history unavailable: ${importsPanelError}`} />
+            ) : (
+              <EditionImportsPanel data={importsData} />
+            )
+          }
         />
       </Suspense>
     </section>

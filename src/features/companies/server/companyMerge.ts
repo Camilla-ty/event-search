@@ -40,6 +40,7 @@ export type CompanyMergePreviewSnapshot = {
     import_rows_proposed_to_repoint: number;
     import_rows_resolved_to_repoint: number;
     draft_links_to_repoint: number;
+    partner_alumni_version_members_to_repoint: number;
   };
   sponsorship_conflicts: readonly Record<string, unknown>[];
   organizer_conflicts: readonly Record<string, unknown>[];
@@ -103,6 +104,9 @@ export type CompanyMergeExecutionActions = {
   event_edition_organizers_repointed: number;
   event_edition_organizers_deleted: number;
   event_edition_organizers_updated: number;
+  partner_alumni_version_members_repointed: number;
+  partner_alumni_version_members_deleted: number;
+  partner_alumni_version_members_updated: number;
   import_rows_proposed_repointed: number;
   import_rows_resolved_repointed: number;
   draft_links_repointed: number;
@@ -249,6 +253,9 @@ function mapCompanyMergePreviewSnapshot(raw: unknown): CompanyMergePreviewSnapsh
       import_rows_proposed_to_repoint: readNumber(impactRaw.import_rows_proposed_to_repoint),
       import_rows_resolved_to_repoint: readNumber(impactRaw.import_rows_resolved_to_repoint),
       draft_links_to_repoint: readNumber(impactRaw.draft_links_to_repoint),
+      partner_alumni_version_members_to_repoint: readNumber(
+        impactRaw.partner_alumni_version_members_to_repoint,
+      ),
     },
     sponsorship_conflicts: readRecordArray(raw.sponsorship_conflicts),
     organizer_conflicts: readRecordArray(raw.organizer_conflicts),
@@ -293,6 +300,15 @@ function mapCompanyMergeExecutionSnapshot(raw: unknown): CompanyMergeExecutionSn
       ),
       event_edition_organizers_updated: readNumber(
         actionsRaw.event_edition_organizers_updated,
+      ),
+      partner_alumni_version_members_repointed: readNumber(
+        actionsRaw.partner_alumni_version_members_repointed,
+      ),
+      partner_alumni_version_members_deleted: readNumber(
+        actionsRaw.partner_alumni_version_members_deleted,
+      ),
+      partner_alumni_version_members_updated: readNumber(
+        actionsRaw.partner_alumni_version_members_updated,
       ),
       import_rows_proposed_repointed:
         proposedRepointed > 0 ? proposedRepointed : legacyImportRepointed,

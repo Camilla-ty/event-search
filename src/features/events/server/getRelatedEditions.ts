@@ -13,9 +13,17 @@ export async function getRelatedEditions(params: {
   const excludeEditionId = params.excludeEditionId.trim();
   if (seriesId === "" || excludeEditionId === "") return [];
 
-  const rows = await getEventEditionsBySeriesId(seriesId, {
-    excludeEditionId,
-  });
+  let rows: Awaited<ReturnType<typeof getEventEditionsBySeriesId>>;
+  try {
+    rows = await getEventEditionsBySeriesId(seriesId, {
+      excludeEditionId,
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[events] related editions load failed:", error);
+    }
+    return [];
+  }
 
   const limit = params.limit ?? DEFAULT_RELATED_LIMIT;
   const editions: PublicEditionSummary[] = [];

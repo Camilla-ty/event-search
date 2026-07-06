@@ -1,6 +1,8 @@
 import type { LiveSponsorRow } from "@/src/features/events/components/admin/liveSponsorTypes";
 import { parseCompanyAliasesFromRow } from "@/src/lib/companies/companyAliases";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
+import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
 import { EVENT_EDITION_LIST_SELECT } from "@/src/lib/queries/events";
 
@@ -172,16 +174,26 @@ export async function getLiveSponsorsForEditionAdmin(
   const supabase = createAdminClient();
   const editionKey = eventEditionId.trim();
 
-  const { data: links, error } = await supabase
-    .from("event_sponsors")
-    .select("id, company_id, tier_rank, tier_label, display_order")
-    .eq("event_editions_id", editionKey)
-    .order("tier_rank", { ascending: true, nullsFirst: false })
-    .order("display_order", { ascending: true, nullsFirst: false })
-    .order("id", { ascending: true });
+  type SponsorLinkRow = {
+    id: unknown;
+    company_id: unknown;
+    tier_rank: unknown;
+    tier_label: unknown;
+    display_order: unknown;
+  };
 
-  if (error) throw new Error(error.message);
-  if (!links || links.length === 0) {
+  const links = await fetchAllPaginatedSupabaseRows<SponsorLinkRow>(async ({ from, to }) =>
+    supabase
+      .from("event_sponsors")
+      .select("id, company_id, tier_rank, tier_label, display_order")
+      .eq("event_editions_id", editionKey)
+      .order("tier_rank", { ascending: true, nullsFirst: false })
+      .order("display_order", { ascending: true, nullsFirst: false })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+
+  if (links.length === 0) {
     return [];
   }
 
@@ -192,6 +204,27 @@ export async function getLiveSponsorsForEditionAdmin(
         .filter((id) => id !== ""),
     ),
   ];
+
+  type CompanyAdminRow = {
+    id: unknown;
+    name: unknown;
+    slug: unknown;
+    domain: unknown;
+    logo_url: unknown;
+    logo_source: unknown;
+    logo_status: unknown;
+    logo_fetched_at: unknown;
+    aliases: unknown;
+  };
+
+  const companyRows = await fetchAllByIdInBatches(companyIds, (batchIds) =>
+    supabase
+      .from("companies")
+      .select(
+        "id, name, slug, domain, logo_url, logo_source, logo_status, logo_fetched_at, aliases",
+      )
+      .in("id", batchIds),
+  );
 
   const companyById = new Map<
     string,
@@ -208,30 +241,19 @@ export async function getLiveSponsorsForEditionAdmin(
     }
   >();
 
-  if (companyIds.length > 0) {
-    const { data: companies, error: companyError } = await supabase
-      .from("companies")
-      .select(
-        "id, name, slug, domain, logo_url, logo_source, logo_status, logo_fetched_at, aliases",
-      )
-      .in("id", companyIds);
-
-    if (companyError) throw new Error(companyError.message);
-
-    for (const row of companies ?? []) {
-      companyById.set(companyIdKey(row.id), {
-        id: String(row.id),
-        name: typeof row.name === "string" ? row.name : null,
-        slug: typeof row.slug === "string" ? row.slug : null,
-        domain: typeof row.domain === "string" ? row.domain : null,
-        logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
-        logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
-        logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
-        logo_fetched_at:
-          typeof row.logo_fetched_at === "string" ? row.logo_fetched_at : null,
-        aliases: parseCompanyAliasesFromRow(row.aliases),
-      });
-    }
+  for (const row of companyRows as CompanyAdminRow[]) {
+    companyById.set(companyIdKey(row.id), {
+      id: String(row.id),
+      name: typeof row.name === "string" ? row.name : null,
+      slug: typeof row.slug === "string" ? row.slug : null,
+      domain: typeof row.domain === "string" ? row.domain : null,
+      logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+      logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
+      logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
+      logo_fetched_at:
+        typeof row.logo_fetched_at === "string" ? row.logo_fetched_at : null,
+      aliases: parseCompanyAliasesFromRow(row.aliases),
+    });
   }
 
   return links.map((link) => {

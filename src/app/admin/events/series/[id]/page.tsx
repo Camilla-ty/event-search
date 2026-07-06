@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
+import { SeriesPartnerAlumniPanel } from "@/src/features/partner-alumni/components/admin/SeriesPartnerAlumniPanel";
+import { loadPartnerAlumniAdminForSeriesPage } from "@/src/features/partner-alumni/server/partnerAlumniAdminPageLoad";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getEventSeriesAdminById } from "@/src/features/events/server/eventSeriesAdmin";
@@ -26,10 +28,11 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
   const series = await getEventSeriesAdminById(id);
   if (!series) notFound();
 
-  const [editions, allKeywords, seriesKeywords] = await Promise.all([
+  const [editions, allKeywords, seriesKeywords, partnerAlumniLoad] = await Promise.all([
     listEventEditionsAdmin({ seriesId: id }),
     listKeywordsAdmin(),
     getKeywordsForSeriesId(id),
+    loadPartnerAlumniAdminForSeriesPage(id),
   ]);
 
   return (
@@ -85,6 +88,12 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
               }
             : null
         }
+      />
+
+      <SeriesPartnerAlumniPanel
+        seriesId={series.id}
+        initialData={partnerAlumniLoad.data}
+        initialLoadError={partnerAlumniLoad.loadError}
       />
 
       <div className="mt-8">

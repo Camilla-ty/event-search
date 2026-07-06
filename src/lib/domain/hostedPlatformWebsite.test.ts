@@ -194,6 +194,8 @@ describe("resolveCompanyWebsiteIdentity", () => {
       "https://angel.co/company/acme",
       "https://beacons.ai/acme",
       "https://bio.site/acme",
+      "https://link3.to/example",
+      "https://link3.to",
       "https://www.reddit.com/r/acme",
       "https://substack.com/@acme",
       "https://coinmarketcap.com/currencies/example-token/",
@@ -251,6 +253,33 @@ describe("resolveCompanyWebsiteIdentity", () => {
     const b = normalizeCompanyIdentityFromWebsite("https://www.crunchbase.com/organization/beta");
     assert.equal(a, "");
     assert.equal(b, "");
+  });
+
+  it("treats link3.to profile URLs as no_identity without a shared domain key", () => {
+    const foo = resolveCompanyWebsiteIdentity("https://link3.to/foo");
+    const bar = resolveCompanyWebsiteIdentity("https://link3.to/bar");
+    assert.deepEqual(foo, { status: "no_identity" });
+    assert.deepEqual(bar, { status: "no_identity" });
+    assert.equal(normalizeCompanyIdentityFromWebsite("https://link3.to/foo"), "");
+    assert.equal(normalizeCompanyIdentityFromWebsite("https://link3.to/bar"), "");
+    assert.notEqual(
+      normalizeCompanyIdentityFromWebsite("https://link3.to/foo"),
+      "link3.to",
+    );
+    assert.notEqual(
+      normalizeCompanyIdentityFromWebsite("https://link3.to/bar"),
+      "link3.to",
+    );
+  });
+
+  it("rejects bare link3.to host as company identity", () => {
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://link3.to"), {
+      status: "no_identity",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.link3.to/"), {
+      status: "no_identity",
+    });
+    assert.equal(normalizeCompanyIdentityFromWebsite("https://link3.to"), "");
   });
 
   it("treats LinkedIn personal profiles and bare host as no_identity", () => {
@@ -339,6 +368,7 @@ describe("isCommunityPlatformWebsite", () => {
     assert.equal(isCommunityPlatformWebsite("https://gitlab.com/acme"), true);
     assert.equal(isCommunityPlatformWebsite("https://medium.com/@acme"), true);
     assert.equal(isCommunityPlatformWebsite("https://beacons.ai/acme"), true);
+    assert.equal(isCommunityPlatformWebsite("https://link3.to/example"), true);
     assert.equal(isCommunityPlatformWebsite("https://www.crunchbase.com/organization/acme"), true);
     assert.equal(isCommunityPlatformWebsite("https://x.com"), true);
     assert.equal(isCommunityPlatformWebsite("https://www.linkedin.com/in/jane"), true);

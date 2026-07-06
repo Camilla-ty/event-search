@@ -10,6 +10,11 @@ function readKeywordFromSeriesKeywordLink(link: unknown): unknown {
   return Array.isArray(embedded) ? embedded[0] : embedded;
 }
 
+function logPublicKeywordsLoadFailure(context: string, error: unknown): void {
+  if (process.env.NODE_ENV !== "development") return;
+  console.error(`[series-keywords] public load failed (${context}):`, error);
+}
+
 export function sortPublicKeywordsByName(
   keywords: readonly PublicKeywordSummary[],
 ): PublicKeywordSummary[] {
@@ -67,15 +72,23 @@ export async function getPublicKeywordsForSeriesIds(
   );
   if (uniqueIds.length === 0) return new Map();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("event_series_keyword")
-    .select("series_id, keyword_id, keyword ( id, name, slug )")
-    .in("series_id", uniqueIds);
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("event_series_keyword")
+      .select("series_id, keyword_id, keyword ( id, name, slug )")
+      .in("series_id", uniqueIds);
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      logPublicKeywordsLoadFailure("batch lookup", error.message);
+      return new Map();
+    }
 
-  return groupPublicKeywordsBySeriesId(data ?? []);
+    return groupPublicKeywordsBySeriesId(data ?? []);
+  } catch (error) {
+    logPublicKeywordsLoadFailure("batch lookup", error);
+    return new Map();
+  }
 }
 
 export async function getPublicKeywordsForSeriesId(
@@ -84,13 +97,21 @@ export async function getPublicKeywordsForSeriesId(
   const trimmedSeriesId = seriesId.trim();
   if (trimmedSeriesId === "") return [];
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("event_series_keyword")
-    .select("keyword_id, keyword ( id, name, slug )")
-    .eq("series_id", trimmedSeriesId);
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("event_series_keyword")
+      .select("keyword_id, keyword ( id, name, slug )")
+      .eq("series_id", trimmedSeriesId);
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      logPublicKeywordsLoadFailure("series lookup", error.message);
+      return [];
+    }
 
-  return mapPublicKeywordsFromSeriesKeywordLinks(data ?? []);
+    return mapPublicKeywordsFromSeriesKeywordLinks(data ?? []);
+  } catch (error) {
+    logPublicKeywordsLoadFailure("series lookup", error);
+    return [];
+  }
 }

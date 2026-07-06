@@ -1,9 +1,11 @@
 import { normalizeCompanyNameKey } from "@/src/lib/companies/companyAliases";
+import { importWebsiteMatchKey } from "@/src/lib/domain/importWebsiteMatchKey";
 
 export type ImportMatchCompany = {
   id: string;
   name: string;
   domain: string | null;
+  website: string | null;
   aliases: readonly string[];
 };
 
@@ -15,11 +17,12 @@ export type ImportMatchCompanyDomain = {
 
 export type ImportMatchContext = {
   companiesByDomain: ReadonlyMap<string, readonly ImportMatchCompany[]>;
+  companiesByWebsite: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByExactName: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByExactAlias: ReadonlyMap<string, readonly ImportMatchCompany[]>;
 };
 
-export type ImportMatchMethod = "domain" | "exact_name" | "alias";
+export type ImportMatchMethod = "domain" | "exact_name" | "alias" | "website";
 
 export type ImportMatchConflictType = "multiple_candidates" | "domain_name_mismatch";
 
@@ -33,6 +36,7 @@ export type ImportMatchDecision = {
 
 export type ImportMatchableRow = {
   normalized_domain: string | null;
+  normalized_website: string | null;
   normalized_company_name: string | null;
 };
 
@@ -147,6 +151,51 @@ function matchByDomain(
   });
 }
 
+function matchByWebsite(
+  row: ImportMatchableRow,
+  context: ImportMatchContext,
+): ImportMatchDecision | null {
+  const domain = row.normalized_domain?.trim().toLowerCase() ?? "";
+  if (domain !== "") return null;
+
+  const website = row.normalized_website?.trim() ?? "";
+  if (website === "") return null;
+
+  const key = importWebsiteMatchKey(website);
+  if (!key) return null;
+
+  const candidates = context.companiesByWebsite.get(key) ?? [];
+  if (candidates.length > 1) {
+    return needsReview({ conflict_type: "multiple_candidates" });
+  }
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const candidate = candidates[0];
+  if (!candidate) {
+    return needsReview({});
+  }
+
+  const rowName = row.normalized_company_name?.trim() ?? "";
+  if (rowName === "") {
+    return autoReady(candidate.id, "website");
+  }
+
+  if (exactNameMatches(rowName, candidate.name)) {
+    return autoReady(candidate.id, "website");
+  }
+
+  if (findExactAliasOnCompany(rowName, candidate) !== null) {
+    return autoReady(candidate.id, "alias");
+  }
+
+  return needsReview({
+    proposed_company_id: candidate.id,
+    conflict_type: "domain_name_mismatch",
+  });
+}
+
 function matchByExactName(
   rowName: string,
   context: ImportMatchContext,
@@ -201,6 +250,11 @@ export function matchImportRowIdentity(
     return domainDecision;
   }
 
+  const websiteDecision = matchByWebsite(row, context);
+  if (websiteDecision !== null) {
+    return websiteDecision;
+  }
+
   if (rowName !== "") {
     const nameDecision = matchByExactName(rowName, context);
     if (nameDecision !== null) {
@@ -214,6 +268,19 @@ export function matchImportRowIdentity(
   }
 
   return needsReview({});
+}
+
+function addWebsiteCandidate(
+  companiesByWebsite: Map<string, ImportMatchCompany[]>,
+  key: string,
+  company: ImportMatchCompany,
+): void {
+  const list = companiesByWebsite.get(key) ?? [];
+  if (list.some((candidate) => candidate.id === company.id)) {
+    return;
+  }
+  list.push(company);
+  companiesByWebsite.set(key, list);
 }
 
 function addDomainCandidate(
@@ -235,6 +302,7 @@ export function buildImportMatchContext(
 ): ImportMatchContext {
   const companiesById = new Map(companies.map((company) => [company.id, company]));
   const companiesByDomain = new Map<string, ImportMatchCompany[]>();
+  const companiesByWebsite = new Map<string, ImportMatchCompany[]>();
   const companiesByExactName = new Map<string, ImportMatchCompany[]>();
   const companiesByExactAlias = new Map<string, ImportMatchCompany[]>();
 
@@ -242,6 +310,14 @@ export function buildImportMatchContext(
     const domain = company.domain?.trim().toLowerCase() ?? "";
     if (domain !== "") {
       addDomainCandidate(companiesByDomain, domain, company);
+    }
+
+    const website = company.website?.trim() ?? "";
+    if (website !== "") {
+      const websiteKey = importWebsiteMatchKey(website);
+      if (websiteKey) {
+        addWebsiteCandidate(companiesByWebsite, websiteKey, company);
+      }
     }
 
     const nameKey = normalizeImportName(company.name);
@@ -272,6 +348,7 @@ export function buildImportMatchContext(
 
   return {
     companiesByDomain,
+    companiesByWebsite,
     companiesByExactName,
     companiesByExactAlias,
   };

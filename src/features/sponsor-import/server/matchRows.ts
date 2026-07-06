@@ -18,6 +18,7 @@ export type MatchableRow = {
   id: string;
   status: SponsorImportRowStatus;
   normalized_domain: string | null;
+  normalized_website: string | null;
   normalized_company_name: string | null;
   mapped_tier_rank: number | null;
   has_blocking_validation: boolean;
@@ -34,7 +35,11 @@ export type MatchResult = {
   intended_link_action: "create_new_link" | "update_tier" | "skip" | null;
 };
 
-export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = ["domain", "alias"];
+export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = [
+  "domain",
+  "alias",
+  "website",
+];
 
 export function matchesAutoReadyBulkAcceptCriteria(row: {
   status: string;
@@ -57,6 +62,7 @@ type CompanyDirectoryRow = {
   id: unknown;
   name: unknown;
   domain: unknown;
+  website: unknown;
   aliases: unknown;
 };
 
@@ -74,6 +80,7 @@ export function buildImportMatchContextFromDirectory(
     id: String(row.id),
     name: String(row.name),
     domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : null,
+    website: typeof row.website === "string" ? row.website.trim() : null,
     aliases: parseCompanyAliasesFromRow(row.aliases),
   }));
 
@@ -144,6 +151,7 @@ export async function matchRow(
   const decision = matchImportRowIdentity(
     {
       normalized_domain: row.normalized_domain,
+      normalized_website: row.normalized_website,
       normalized_company_name: row.normalized_company_name,
     },
     context,
@@ -160,7 +168,7 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
 
   const [companies, companyDomains] = await Promise.all([
     fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(async ({ from, to }) =>
-      supabase.from("companies").select("id, name, domain, aliases").range(from, to),
+      supabase.from("companies").select("id, name, domain, website, aliases").range(from, to),
     ),
     fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(async ({ from, to }) =>
       supabase.from("company_domains").select("company_id, domain").range(from, to),

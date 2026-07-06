@@ -6,38 +6,54 @@ import type { ReactNode } from "react";
 
 import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/classes";
 
-type PublicEventEditionTabsProps = {
-  eventSlug: string;
-  overviewPanel: ReactNode;
-  sponsorsPanel: ReactNode;
-  venuePanel: ReactNode;
-  organizersPanel: ReactNode;
-};
-
-const TABS = [
+const BASE_TABS = [
   { id: "overview", label: "Overview" },
   { id: "sponsors", label: "Sponsors" },
   { id: "venue", label: "Venue" },
   { id: "organizers", label: "Organizers" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type BaseTabId = (typeof BASE_TABS)[number]["id"];
+export type PublicEditionTabId = BaseTabId | "partner-alumni";
 
-function parseTab(raw: string | null): TabId {
+type PublicEventEditionTabsProps = {
+  eventSlug: string;
+  showPartnerAlumniTab: boolean;
+  overviewPanel: ReactNode;
+  sponsorsPanel: ReactNode;
+  venuePanel: ReactNode;
+  organizersPanel: ReactNode;
+  partnerAlumniPanel: ReactNode;
+};
+
+export function parsePublicEditionTab(
+  raw: string | null,
+  showPartnerAlumniTab: boolean,
+): PublicEditionTabId {
+  if (raw === "partner-alumni") {
+    return showPartnerAlumniTab ? "partner-alumni" : "overview";
+  }
   if (raw === "sponsors" || raw === "venue" || raw === "organizers") return raw;
   return "overview";
 }
 
 export function PublicEventEditionTabs({
   eventSlug,
+  showPartnerAlumniTab,
   overviewPanel,
   sponsorsPanel,
   venuePanel,
   organizersPanel,
+  partnerAlumniPanel,
 }: PublicEventEditionTabsProps) {
   const searchParams = useSearchParams();
-  const activeTab = parseTab(searchParams.get("tab"));
+  const activeTab = parsePublicEditionTab(searchParams.get("tab"), showPartnerAlumniTab);
   const basePath = `/events/${eventSlug}`;
+
+  const tabs: Array<{ id: PublicEditionTabId; label: string }> = [...BASE_TABS];
+  if (showPartnerAlumniTab) {
+    tabs.push({ id: "partner-alumni", label: "Partner Alumni" });
+  }
 
   return (
     <div className="space-y-6">
@@ -45,7 +61,7 @@ export function PublicEventEditionTabs({
         aria-label="Event edition sections"
         className="flex flex-wrap gap-1 border-b border-slate-200 pb-3"
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const href = tab.id === "overview" ? basePath : `${basePath}?tab=${tab.id}`;
           const active = activeTab === tab.id;
           return (
@@ -68,6 +84,7 @@ export function PublicEventEditionTabs({
       {activeTab === "sponsors" ? sponsorsPanel : null}
       {activeTab === "venue" ? venuePanel : null}
       {activeTab === "organizers" ? organizersPanel : null}
+      {activeTab === "partner-alumni" ? partnerAlumniPanel : null}
     </div>
   );
 }

@@ -4,39 +4,15 @@ import {
   resolveCompanyWebsiteIdentity,
   selectCanonicalCompanyWebsite,
 } from "@/src/lib/domain/hostedPlatformWebsite";
+import { normalizeWebsiteClusterKey } from "@/src/lib/domain/importWebsiteMatchKey";
+
+export { normalizeWebsiteClusterKey };
 
 export type WebsiteNormalizableRow = {
   normalized_company_name: string | null;
   normalized_website: string | null;
   normalized_domain: string | null;
 };
-
-/** Stable key for clustering no_identity rows on full URL instead of shared bare hosts. */
-export function normalizeWebsiteClusterKey(website: string): string {
-  const trimmed = website.trim();
-  if (trimmed === "") return "";
-
-  const identity = resolveCompanyWebsiteIdentity(trimmed);
-  if (identity.status === "domain") {
-    return `domain:${identity.domain}`;
-  }
-
-  try {
-    const withProtocol =
-      trimmed.startsWith("http://") || trimmed.startsWith("https://")
-        ? trimmed
-        : `https://${trimmed}`;
-    const parsed = new URL(withProtocol);
-    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
-    let path = parsed.pathname.toLowerCase();
-    if (path !== "/" && path.endsWith("/")) {
-      path = path.slice(0, -1);
-    }
-    return `website:${host}${path}`;
-  } catch {
-    return `website:${trimmed.toLowerCase()}`;
-  }
-}
 
 export function duplicateClusterKey(
   row: WebsiteNormalizableRow & { excel_row_number: number },

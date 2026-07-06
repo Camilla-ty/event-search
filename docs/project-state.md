@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-07-04 (Organizer O5 UX amendment complete)
+> Last updated: 2026-07-06 (Partner Alumni import PA-IMP-4 admin UI complete; PA-IMP-5 next)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -26,6 +26,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 | **Event Sponsors** | `event_sponsors` | Edition-scoped join: `tier_rank`, `tier_label`, `display_order` (dense 1..n within edition + tier). `UNIQUE (event_editions_id, company_id)`. |
 | **Event Edition Organizers** | `event_edition_organizers` | Edition-scoped join: company as organizer with `role_label` (default "Organizer") and `display_order`. `UNIQUE (event_editions_id, company_id)`. Replaces rejected legacy `event_organizers` → `organizers` architecture (those tables were never shipped). See [organizer-design.md](./organizer-design.md) and [phase-organizer-scope.md](./phase-organizer-scope.md). |
 | **Keywords** | `keyword`, `event_series_keyword` | Attach to series; editions inherit (read-only chips on edition profile). |
+| **Partner Alumni** *(v2 — PA5 complete)* | `event_partner_alumni`, `event_partner_alumni_versions`, `event_partner_alumni_version_companies` | Series-scoped **versioned** roster; **`current_version_id`** public pointer (server-side resolution); version-scoped bulk import; company merge repoints version members. Separate from sponsors. Migrations: `20260710120000_partner_alumni_v1.sql`, `20260711120000_partner_alumni_v2_versions.sql`, `20260712120000_company_merge_partner_alumni.sql`. See [partner-alumni-design.md](./partner-alumni-design.md), [phase-partner-alumni-scope.md](./phase-partner-alumni-scope.md). |
 | **Logos** | columns on `companies`; `event_series.logo_url`; `venues.logo_url` | Companies: Logo.dev ingest + metadata. Event series and venues: manual HTTP URL and/or file upload to `COMPANY_LOGO_BUCKET` (`venues/{id}/logo.{ext}`). Event edition logos are manual-only. |
 | **Imports** | `sponsor_import_*` (4 tables) | Excel pipeline → validate/match → draft links → publish RPC. One active batch per edition. |
 
@@ -33,6 +34,8 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 
 - `event_sponsors`: anon SELECT only where `tier_rank = 1`; authenticated SELECT all tiers; no client writes.
 - `event_edition_organizers`: anon and authenticated SELECT all rows (no tier gate); no client writes.
+- `event_partner_alumni` / draft tables (v1): RLS enabled; **no** anon/authenticated SELECT — **draft table removed in v2 (PA1′)**.
+- `event_partner_alumni_snapshots` / snapshot members (v1): anon SELECT all rows — **v2: current version only (or server-resolved)**.
 - Core catalog tables: public SELECT; admin writes via service role.
 - Import tables: service role only.
 
@@ -63,15 +66,17 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 
 **Admin — venues** — List, create, edit, archive/unarchive at `/admin/venues`. Optional venue picker on edition create/edit (city-filtered; inline Add venue). Logo via HTTP URL paste or file upload on edit. Duplicate names in same city warn only. `city_id` immutable when editions linked.
 
+**Admin — Partner Alumni (v2)** — Version-centric admin on series detail: create version (copy-from-current default), set current, delete (block current), member CRUD. **Bulk import (PA3′ drawer) superseded:** [partner-alumni-import-redesign.md](./partner-alumni-import-redesign.md) **approved 2026-07-06** — batch workflow modeled on Sponsor Import; implement PA-IMP-1–6. **Do not re-import NFT NYC until golden-file QA (§19) passes.** NFT NYC corrupt import (2026-07-05) cleaned up — no current public version. Public edition tab reads `current_version_id` only. Company merge repoints `event_partner_alumni_version_companies` with same-version dedupe. See [phase-partner-alumni-scope.md](./phase-partner-alumni-scope.md).
+
 **Public — venue** — Event edition detail tabs: Overview (default), Sponsors (`?tab=sponsors`), Venue (`?tab=venue`). No public `/venues/...` routes; Explorer cards unchanged (city only).
 
 **Public — organizers** — Event edition detail tabs: Overview, Sponsors, Venue, **Organizers** (`?tab=organizers`). Organizers tab always visible; list or standard empty state inside tab. Fully public (no tier gate). No organizers block on Overview. No `/organizers/...` routes; no “Events organized” on public company pages in v1.
 
 ## 4. In Progress
 
-Nothing is mid-flight.
+**Partner Alumni import (PA-IMP-1–6)** — PA-IMP-4 admin UI complete (full-page stepper, match summary, create-new ack). Next: PA-IMP-5 deprecate legacy drawer. Redesign complete only when NFT NYC golden file QA passes (§19).
 
-**Known limitations**
+**Known limitations (catalog-wide)**
 - Import publish can overwrite manual `tier_rank` and re-add removed sponsors for companies in the batch (warning banner only).
 - No pagination/search on admin lists (editions, companies, venues, edition roster).
 - Venue logo URL paste stores the URL as-is (no automatic ingest into Storage); file upload writes to `COMPANY_LOGO_BUCKET`. External URL ingest deferred to a future enhancement.
@@ -94,7 +99,7 @@ Nothing is mid-flight.
 | **Edition `last_reviewed_at` automation** | Meaningful profile + live roster + qualifying import publish set `now()`; create stays NULL; manual-only research saves preserved; reorder/move excluded | Feeds Event Explorer **Recommended** / **Recently Reviewed** sort signals |
 | API routes + service role; manual validation; hand-rolled UI | Existing codebase conventions; build is the gate. |
 
-**Other sources:** schema in `supabase/migrations/` (applied through `20260709120000_company_merge_organizers`); phase design docs in `docs/` for detail beyond this file.
+**Other sources:** schema in `supabase/migrations/`; phase design docs in `docs/` for detail beyond this file.
 
 ## 6. Operations
 
@@ -104,14 +109,17 @@ Nothing is mid-flight.
 
 ## 7. Next Priorities
 
-1. Server-side pagination + search for edition roster and admin lists.
-2. Create-and-attach company from Add-sponsor drawer (with dedupe safeguards).
-3. Import publish hardening (preserve manual rank edits when unchanged in batch).
-4. Edition form helper text for Last reviewed automation (optional UX polish).
-5. Company merge — auto-touch `last_reviewed_at` when **sponsorship** links change (organizer path done; optional Phase 4).
-6. Organizer O5 / v1 manual QA per [phase-organizer-ux-amendment-scope.md §7](./phase-organizer-ux-amendment-scope.md).
-7. Cleanups: remove dead stubs (`EditionImportsStub.tsx`, `/admin/events/new` redirect); consolidate duplicated tier-label helpers.
-8. Venue logo URL ingest into Storage (mirror Event Series `resolveEventManualLogoUrl` pattern) and storage cleanup on logo clear.
+1. Apply PA5 merge migration (`20260712120000_company_merge_partner_alumni.sql`) + verify script on linked Supabase.
+2. **Partner Alumni import (PA-IMP-1–6)** — PA-IMP-5 deprecate legacy drawer next. NFT NYC re-import only after golden-file QA sign-off (§19).
+3. Server-side pagination + search for edition roster and admin lists.
+4. Create-and-attach company from Add-sponsor drawer (with dedupe safeguards).
+5. Import publish hardening (preserve manual rank edits when unchanged in batch).
+6. Edition form helper text for Last reviewed automation (optional UX polish).
+7. Company merge — auto-touch `last_reviewed_at` when **sponsorship** links change (organizer path done; optional Phase 4).
+8. Organizer O5 / v1 manual QA per [phase-organizer-ux-amendment-scope.md §7](./phase-organizer-ux-amendment-scope.md).
+9. Public company detail Partner Alumni recognition section (deferred).
+10. Cleanups: remove dead stubs (`EditionImportsStub.tsx`, `/admin/events/new` redirect); consolidate duplicated tier-label helpers.
+11. Venue logo URL ingest into Storage (mirror Event Series `resolveEventManualLogoUrl` pattern) and storage cleanup on logo clear.
 
 ---
 

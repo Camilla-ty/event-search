@@ -156,7 +156,14 @@ export async function getSponsorDetailData(
     return null;
   }
 
-  const stats = await getCompanySponsorStats(company.id);
+  let stats: Awaited<ReturnType<typeof getCompanySponsorStats>> = null;
+  try {
+    stats = await getCompanySponsorStats(company.id);
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[sponsors] company stats load failed:", error);
+    }
+  }
   const summary = buildSummary(stats, isAuthenticated);
 
   if (!isAuthenticated) {
@@ -168,7 +175,14 @@ export async function getSponsorDetailData(
     };
   }
 
-  const links = await getSponsorLinksWithEditionsForCompany(company.id);
+  let links: Awaited<ReturnType<typeof getSponsorLinksWithEditionsForCompany>> = [];
+  try {
+    links = (await getSponsorLinksWithEditionsForCompany(company.id)) ?? [];
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[sponsors] company edition links load failed:", error);
+    }
+  }
   const byEditionId = new Map<string, SponsorDetailEditionEntry>();
 
   for (const row of links ?? []) {

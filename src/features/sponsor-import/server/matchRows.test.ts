@@ -24,6 +24,7 @@ function fillerCompany(index: number) {
     id: `filler-company-${index}`,
     name: `Filler Company ${index}`,
     domain: `filler-${index}.example`,
+    website: null,
     aliases: [],
   };
 }
@@ -63,6 +64,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
         id: NINE_CAT_ID,
         name: "9 CAT DIGITAL",
         domain: "9catdigital.com",
+        website: null,
         aliases: [],
       },
     ];
@@ -84,6 +86,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     const truncated = matchImportRowIdentity(
       {
         normalized_domain: "9catgroup.com",
+        normalized_website: null,
         normalized_company_name: "9 CAT DIGITAL",
       },
       truncatedContext,
@@ -91,6 +94,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     const full = matchImportRowIdentity(
       {
         normalized_domain: "9catgroup.com",
+        normalized_website: null,
         normalized_company_name: "9 CAT DIGITAL",
       },
       fullContext,
@@ -134,6 +138,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     const truncated = matchImportRowIdentity(
       {
         normalized_domain: "vntr.vc",
+        normalized_website: null,
         normalized_company_name: "VNTR Capital",
       },
       truncatedContext,
@@ -141,6 +146,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     const full = matchImportRowIdentity(
       {
         normalized_domain: "vntr.vc",
+        normalized_website: null,
         normalized_company_name: "VNTR Capital",
       },
       fullContext,
@@ -174,6 +180,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "9catgroup.com",
+        normalized_website: null,
         normalized_company_name: "9 CAT DIGITAL",
       },
       context,

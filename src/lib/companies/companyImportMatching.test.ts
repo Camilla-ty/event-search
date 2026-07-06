@@ -12,6 +12,7 @@ function company(overrides: Partial<ImportMatchCompany> & Pick<ImportMatchCompan
   return {
     name: "Keel Infrastructure",
     domain: "keelinfra.com",
+    website: null,
     aliases: ["Bitfarms"],
     ...overrides,
   };
@@ -32,6 +33,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "keelinfra.com",
+        normalized_website: null,
         normalized_company_name: "Keel Infrastructure",
       },
       directory,
@@ -46,6 +48,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "keelinfra.com",
+        normalized_website: null,
         normalized_company_name: "Bitfarms",
       },
       directory,
@@ -61,6 +64,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "keelinfra.com",
+        normalized_website: null,
         normalized_company_name: "Totally Different Co",
       },
       directory,
@@ -75,6 +79,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
+        normalized_website: null,
         normalized_company_name: "Keel",
       },
       directory,
@@ -89,6 +94,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
+        normalized_website: null,
         normalized_company_name: "Keel Infrastructure",
       },
       directory,
@@ -105,6 +111,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
+        normalized_website: null,
         normalized_company_name: "Bitfarms",
       },
       directory,
@@ -126,6 +133,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "shared.com",
+        normalized_website: null,
         normalized_company_name: "Anything",
       },
       context,
@@ -139,6 +147,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: null,
+        normalized_website: null,
         normalized_company_name: "Unknown Sponsor LLC",
       },
       directory,
@@ -149,19 +158,25 @@ describe("companyImportMatching", () => {
     assert.equal(result.match_method, null);
   });
 
-  it("community rows (null domain) never auto-match and never collapse together", () => {
-    // Two unrelated communities that previously would both normalize to a bare
-    // host (e.g. discord.com) now carry a null domain and cannot domain-match.
+  it("community rows without matching catalog website do not auto-match", () => {
     const context = buildImportMatchContext([
       company({ id: "existing", name: "Existing Discord Co", domain: null, aliases: [] }),
     ]);
 
     const communityA = matchImportRowIdentity(
-      { normalized_domain: null, normalized_company_name: "Community A" },
+      {
+        normalized_domain: null,
+        normalized_website: "https://discord.com/invite/example-a",
+        normalized_company_name: "Community A",
+      },
       context,
     );
     const communityB = matchImportRowIdentity(
-      { normalized_domain: null, normalized_company_name: "Community B" },
+      {
+        normalized_domain: null,
+        normalized_website: "https://discord.com/invite/example-b",
+        normalized_company_name: "Community B",
+      },
       context,
     );
 
@@ -187,6 +202,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "bitlifi.jp",
+        normalized_website: null,
         normalized_company_name: "Bitlifi",
       },
       context,
@@ -213,6 +229,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "bitlifi.com",
+        normalized_website: null,
         normalized_company_name: "Bitlifi",
       },
       context,
@@ -239,6 +256,7 @@ describe("companyImportMatching", () => {
     const unstoredTld = matchImportRowIdentity(
       {
         normalized_domain: "bitlifi.de",
+        normalized_website: null,
         normalized_company_name: "Bitlifi",
       },
       context,
@@ -246,6 +264,7 @@ describe("companyImportMatching", () => {
     const fuzzySimilar = matchImportRowIdentity(
       {
         normalized_domain: "bitlifi.japan",
+        normalized_website: null,
         normalized_company_name: "Bitlifi Japan GmbH",
       },
       context,
@@ -272,6 +291,7 @@ describe("companyImportMatching", () => {
     const result = matchImportRowIdentity(
       {
         normalized_domain: "shared.jp",
+        normalized_website: null,
         normalized_company_name: "Company A",
       },
       context,
@@ -298,5 +318,268 @@ describe("companyImportMatching", () => {
     const candidates = context.companiesByDomain.get("bitlifi.com") ?? [];
     assert.equal(candidates.length, 1);
     assert.equal(candidates[0]?.id, "bitlifi-id");
+  });
+
+  it("auto_ready on exact no_identity website match (Discord)", () => {
+    const discordUrl = "https://discord.com/invite/galactic-punks-881200105817010258";
+    const context = buildImportMatchContext([
+      company({
+        id: "galacticpunks-id",
+        name: "Galacticpunks",
+        domain: null,
+        website: discordUrl,
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: discordUrl,
+        normalized_company_name: "Galacticpunks",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "website");
+    assert.equal(result.proposed_company_id, "galacticpunks-id");
+  });
+
+  it("auto_ready on exact no_identity website match (Beacons)", () => {
+    const beaconsUrl = "https://beacons.ai/nftfy";
+    const context = buildImportMatchContext([
+      company({
+        id: "nftfy-id",
+        name: "NFTFY",
+        domain: null,
+        website: beaconsUrl,
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: beaconsUrl,
+        normalized_company_name: "NFTFY",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "website");
+    assert.equal(result.proposed_company_id, "nftfy-id");
+  });
+
+  it("auto_ready on exact no_identity website match (games.gg)", () => {
+    const gamesUrl = "https://games.gg/sorare/";
+    const context = buildImportMatchContext([
+      company({
+        id: "sorare-id",
+        name: "Sorare",
+        domain: null,
+        website: "https://games.gg/sorare",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: gamesUrl,
+        normalized_company_name: "Sorare",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "website");
+    assert.equal(result.proposed_company_id, "sorare-id");
+  });
+
+  it("auto_ready on exact no_identity website match (link3.to)", () => {
+    const link3Url = "https://link3.to/example";
+    const context = buildImportMatchContext([
+      company({
+        id: "example-id",
+        name: "Example Co",
+        domain: null,
+        website: link3Url,
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: link3Url,
+        normalized_company_name: "Example Co",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "website");
+    assert.equal(result.proposed_company_id, "example-id");
+  });
+
+  it("does not domain-match link3.to profiles that share only the host", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "foo-id",
+        name: "Foo Project",
+        domain: null,
+        website: "https://link3.to/foo",
+        aliases: [],
+      }),
+      company({
+        id: "bar-id",
+        name: "Bar Project",
+        domain: null,
+        website: "https://link3.to/bar",
+        aliases: [],
+      }),
+    ]);
+
+    const fooMatch = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://link3.to/foo",
+        normalized_company_name: "Foo Project",
+      },
+      context,
+    );
+    const barMatch = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://link3.to/bar",
+        normalized_company_name: "Bar Project",
+      },
+      context,
+    );
+
+    assert.equal(fooMatch.status, "auto_ready");
+    assert.equal(fooMatch.match_method, "website");
+    assert.equal(fooMatch.proposed_company_id, "foo-id");
+    assert.equal(barMatch.status, "auto_ready");
+    assert.equal(barMatch.match_method, "website");
+    assert.equal(barMatch.proposed_company_id, "bar-id");
+  });
+
+  it("does not website-match bare Discord host URLs", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "galacticpunks-id",
+        name: "Galacticpunks",
+        domain: null,
+        website: "https://discord.com/invite/galactic-punks-881200105817010258",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://discord.com",
+        normalized_company_name: "Galacticpunks",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "galacticpunks-id");
+  });
+
+  it("does not website-match bare link3.to host URLs", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "example-id",
+        name: "Example Co",
+        domain: null,
+        website: "https://link3.to/example",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://link3.to",
+        normalized_company_name: "Example Co",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "example-id");
+  });
+
+  it("prefers domain match when normalized_domain is present", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: "keelinfra.com",
+        normalized_website: "https://keelinfra.com",
+        normalized_company_name: "Keel Infrastructure",
+      },
+      directory,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "domain");
+  });
+
+  it("needs_review on website match with name mismatch", () => {
+    const beaconsUrl = "https://beacons.ai/nftfy";
+    const context = buildImportMatchContext([
+      company({
+        id: "nftfy-id",
+        name: "NFTFY",
+        domain: null,
+        website: beaconsUrl,
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: beaconsUrl,
+        normalized_company_name: "Totally Different Co",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.conflict_type, "domain_name_mismatch");
+    assert.equal(result.proposed_company_id, "nftfy-id");
+    assert.equal(result.match_method, null);
+  });
+
+  it("falls back to exact_name when catalog website URL differs", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "sorare-id",
+        name: "Sorare",
+        domain: "sorare.com",
+        website: "https://www.sorare.com",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://games.gg/sorare",
+        normalized_company_name: "Sorare",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "sorare-id");
   });
 });

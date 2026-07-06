@@ -77,6 +77,25 @@
 
 ---
 
+## Partner Alumni (v2 — PA5 complete; import redesign approved)
+
+| Document | Description |
+|----------|-------------|
+| [Partner Alumni Design](./partner-alumni-design.md) | **Approved (v2)** — series-level **versioned** roster; current version public |
+| [Phase — Partner Alumni v2 Scope](./phase-partner-alumni-scope.md) | **Approved (v2)** — PA0′–PA5 deliverables |
+| [Partner Alumni Import Redesign](./partner-alumni-import-redesign.md) | **Approved (v1.1)** — batch workflow modeled on Sponsor Import (replaces PA3′ drawer); locked decisions §2; golden QA file §19 |
+| [Partner Alumni Migration Design](./partner-alumni-migration-design.md) | **Approved (v2)** — PA1′ migration authored; apply + verify next |
+
+**Status:** **PA0′ complete**; **PA1′ migration authored** (OQ1–OQ4, OQ7 locked; OQ8–OQ9 locked for PA2′/PA3′). v1 draft/Verify/snapshot model **deprecated**.
+
+**Next step:** Apply **`20260711120000_partner_alumni_v2_versions.sql`** + run verify script, then PA2′ admin.
+
+**Locked highlights (v2):** `event_partner_alumni` program + **`event_partner_alumni_versions`** + **version members**; **`current_version_id`** public pointer; **no draft table**; **no Verify**; **Create New Version copies current by default**; **cannot delete current version**; **cannot set empty version as current** (OQ8); **bulk import does not auto-set current** (OQ9); **rename snapshot→version tables** (no parallel system); **discard v1 draft rows**; **server-side public resolution**; versions **editable/deletable**; **version-scoped bulk import** (400+ companies); public edition tab shows **current version only**; historical versions **admin-only**; separate from sponsors; sponsor counts unaffected; series hub out of scope.
+
+**Deprecated (v1):** `event_partner_alumni_companies`, Verify, `latest_snapshot_id`, immutable snapshots.
+
+---
+
 ## Sponsor import (v1)
 
 | Document | Description |

@@ -168,6 +168,7 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
   // Link-in-bio aggregators
   "beacons.ai",
   "bio.site",
+  "link3.to",
 ]);
 
 /**
