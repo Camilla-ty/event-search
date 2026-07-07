@@ -273,7 +273,6 @@ export default async function EventDetailPage({
             <EventSponsorsSection
               sponsors={sponsors}
               isAuthenticated={isAuthenticated}
-              eventSlug={eventSlug}
               totalSponsorCount={totalSponsorCount}
             />
           }

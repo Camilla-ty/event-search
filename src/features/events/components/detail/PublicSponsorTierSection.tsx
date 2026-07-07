@@ -11,7 +11,7 @@ type PublicSponsorTierSectionProps = {
 export function PublicSponsorTierSection({ group }: PublicSponsorTierSectionProps) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white">
-      <header className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+      <header className="border-b border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-tight text-slate-800">
         {publicTierSectionTitle(group)}
       </header>
       <ul>
