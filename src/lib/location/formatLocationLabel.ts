@@ -13,22 +13,38 @@ function partsEqual(a: string, b: string): boolean {
   return a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0;
 }
 
+function isUnitedStatesCountry(country: string): boolean {
+  const normalized = country.trim().toLowerCase();
+  return (
+    normalized === "united states" ||
+    normalized === "united states of america" ||
+    normalized === "usa" ||
+    normalized === "u.s." ||
+    normalized === "u.s.a."
+  );
+}
+
 /**
  * Display label for a city FK embed.
- * - state ≠ city → "city, state"
- * - else country ≠ city → "city, country"
- * - else → city only
+ * - US events with state → "City, State"
+ * - Non-US events with distinct country → "City, Country"
+ * - City-state / same-name city and country → city only
  */
 export function formatLocationLabel(input: LocationLabelInput): string {
   const city = normalizePart(input.city);
   if (city === "") return "";
 
   const state = normalizePart(input.state);
-  if (state !== "" && !partsEqual(state, city)) {
-    return `${city}, ${state}`;
+  const country = normalizePart(input.country);
+
+  if (isUnitedStatesCountry(country)) {
+    if (state !== "" && !partsEqual(state, city)) {
+      return `${city}, ${state}`;
+    }
+
+    return city;
   }
 
-  const country = normalizePart(input.country);
   if (country !== "" && !partsEqual(country, city)) {
     return `${city}, ${country}`;
   }

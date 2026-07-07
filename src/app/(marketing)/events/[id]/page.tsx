@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Badge } from "@/src/components/common";
+import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
 import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
 import { EventHistorySection } from "@/src/features/events/components/detail/EventHistorySection";
@@ -156,19 +157,21 @@ export default async function EventDetailPage({
     typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
+  const eventDisplayName = edition.name?.trim() || "Event";
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link href="/events" className={`text-sm ${brandLinkClass}`}>
-          ← Back to Events
-        </Link>
-      </div>
+      <PublicBreadcrumbs
+        items={[
+          { label: "Events", href: "/events" },
+          { label: eventDisplayName },
+        ]}
+      />
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_1fr] lg:grid-cols-[minmax(0,380px)_1fr]">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted">
+      <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
+        <div className="mx-auto w-28 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted md:mx-0">
           {seriesLogoUrl ? (
-            <div className="aspect-[16/9] w-full p-8">
+            <div className="flex h-28 w-28 items-center justify-center p-3">
               <SeriesLogo
                 series={{
                   name:
@@ -183,29 +186,31 @@ export default async function EventDetailPage({
                 fallbackName={typeof edition.name === "string" ? edition.name : null}
                 className="flex h-full w-full items-center justify-center"
                 imageClassName="max-h-full max-w-full object-contain"
-                monogramClassName="text-5xl font-semibold text-slate-400"
+                monogramClassName="text-2xl font-semibold text-slate-400"
               />
             </div>
           ) : (
-            <div className="aspect-[16/9] w-full bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
+            <div className="h-28 w-28 bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
           )}
         </div>
 
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="space-y-2">
-            {seriesBrandLabel && seriesHubHref ? (
-              <Link href={seriesHubHref}>
-                <Badge variant="neutral">{seriesBrandLabel}</Badge>
-              </Link>
-            ) : (
-              <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
-            )}
-            <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
-            <p className="text-sm text-slate-600">{cityLabel || "Location not set"}</p>
-            <p className="text-sm text-slate-500">
-              {formatEventDateRange(edition.start_date, edition.end_date)}
-            </p>
-            <PublicTopicsSection topics={topics} />
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0 space-y-2">
+              {seriesBrandLabel && seriesHubHref ? (
+                <Link href={seriesHubHref}>
+                  <Badge variant="neutral">{seriesBrandLabel}</Badge>
+                </Link>
+              ) : (
+                <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
+              )}
+              <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
+              <p className="text-sm text-slate-600">{cityLabel || "Location not set"}</p>
+              <p className="text-sm text-slate-500">
+                {formatEventDateRange(edition.start_date, edition.end_date)}
+              </p>
+            </div>
+            <PublicTopicsSection topics={topics} layout="header" />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -244,10 +249,6 @@ export default async function EventDetailPage({
                 lifecycleStatus={lifecycleStatus}
                 mergedIntoSeries={mergedIntoSeries}
               />
-              <ResearchInformationSection
-                lastReviewedAt={lastReviewedAt}
-                primarySourceUrl={primarySourceUrl}
-              />
               {seriesBrandLabel && seriesHubHref ? (
                 <RelatedEditionsSection
                   seriesName={seriesBrandLabel}
@@ -255,6 +256,10 @@ export default async function EventDetailPage({
                   editions={relatedEditions}
                 />
               ) : null}
+              <ResearchInformationSection
+                lastReviewedAt={lastReviewedAt}
+                primarySourceUrl={primarySourceUrl}
+              />
             </div>
           }
           sponsorsPanel={

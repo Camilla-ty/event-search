@@ -2,8 +2,14 @@ import Link from "next/link";
 
 import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
-import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { brandLinkClass } from "@/src/lib/design/classes";
 import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
+
+const relatedEditionLinkClass = [
+  "block rounded-lg px-2 py-3 transition",
+  "hover:bg-brand-primary-muted/30",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
 
 type RelatedEditionsSectionProps = {
   seriesName: string;
@@ -38,22 +44,24 @@ export function RelatedEditionsSection({
           if (dateRange !== "Date TBC") metaParts.push(dateRange);
           if (edition.locationLabel !== "") metaParts.push(edition.locationLabel);
 
-          return (
-            <li
-              key={edition.id}
-              className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="font-medium text-slate-900">{edition.name}</p>
-                {metaParts.length > 0 ? (
-                  <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
-                ) : null}
-              </div>
-              {href ? (
-                <Link href={href} className={`${secondaryCtaClass} h-9 shrink-0 px-4`}>
-                  View event
-                </Link>
+          const content = (
+            <div className="min-w-0">
+              <p className="font-medium text-slate-900">{edition.name}</p>
+              {metaParts.length > 0 ? (
+                <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
               ) : null}
+            </div>
+          );
+
+          return (
+            <li key={edition.id} className="first:pt-0 last:pb-0">
+              {href ? (
+                <Link href={href} className={relatedEditionLinkClass} aria-label={`View ${edition.name}`}>
+                  {content}
+                </Link>
+              ) : (
+                <div className="px-2 py-3">{content}</div>
+              )}
             </li>
           );
         })}
