@@ -104,10 +104,10 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
 
 export async function applyManualCompanyLogoStorage(
   companyId: string,
-  storageUrl: string,
+  storageReference: string,
 ): Promise<CompanyRow> {
   const supabase = createAdminClient();
-  const patch = logoMetadataPatchForManualLogoStorage(storageUrl);
+  const patch = logoMetadataPatchForManualLogoStorage(storageReference, companyId);
 
   const { data, error } = await supabase
     .from("companies")
@@ -165,7 +165,7 @@ export async function enrichCompanyLogo(
     const ingestResult = await ingestCompanyLogoByDomain(normalizedDomain, {
       companyId,
     });
-    const patch = companyLogoMetadataPatch(ingestResult);
+    const patch = companyLogoMetadataPatch(ingestResult, companyId);
 
     await supabase.from("companies").update(patch).eq("id", companyId);
 

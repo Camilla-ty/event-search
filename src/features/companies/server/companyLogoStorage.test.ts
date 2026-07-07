@@ -5,8 +5,10 @@ import {
   companyLogoObjectPath,
   extensionForContentType,
   isCompanyIdLogoStorageSegment,
+  normalizeStoredCompanyLogoUrl,
   parseCompanyLogoStoragePathFromUrl,
   selectStaleCompanyLogoCleanupPaths,
+  storedCompanyLogoUrlFromUpload,
 } from "@/src/features/companies/server/companyLogoStorage";
 
 const COMPANY_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -82,6 +84,36 @@ describe("parseCompanyLogoStoragePathFromUrl", () => {
       null,
     );
     assert.equal(parseCompanyLogoStoragePathFromUrl(null), null);
+  });
+});
+
+describe("normalizeStoredCompanyLogoUrl", () => {
+  it("converts full Supabase URLs to bucket-relative paths", () => {
+    assert.equal(
+      normalizeStoredCompanyLogoUrl(
+        `${BASE_URL}/companies/${COMPANY_ID}/logo.webp`,
+        COMPANY_ID,
+      ),
+      `companies/${COMPANY_ID}/logo.webp`,
+    );
+  });
+
+  it("passes through bucket-relative paths unchanged", () => {
+    assert.equal(
+      normalizeStoredCompanyLogoUrl(`companies/${COMPANY_ID}/logo.png`, COMPANY_ID),
+      `companies/${COMPANY_ID}/logo.png`,
+    );
+  });
+});
+
+describe("storedCompanyLogoUrlFromUpload", () => {
+  it("returns the storage path for DB persistence", () => {
+    assert.equal(
+      storedCompanyLogoUrlFromUpload({
+        storagePath: `companies/${COMPANY_ID}/logo.png`,
+      }),
+      `companies/${COMPANY_ID}/logo.png`,
+    );
   });
 });
 

@@ -1,4 +1,5 @@
 import type { LogoStatus } from "@/src/lib/companies/logoTypes";
+import { normalizeStoredCompanyLogoUrl } from "@/src/features/companies/server/companyLogoStorage";
 
 export type CompanyLogoIngestStatus = LogoStatus;
 
@@ -12,12 +13,14 @@ export type CompanyLogoIngestResult = {
 
 export function companyLogoMetadataPatch(
   result: CompanyLogoIngestResult,
+  companyId?: string,
 ): Record<string, unknown> {
   const now = new Date().toISOString();
 
   if (result.status === "ok" && result.logoUrl) {
     return {
-      logo_url: result.logoUrl,
+      logo_url:
+        normalizeStoredCompanyLogoUrl(result.logoUrl, companyId) ?? result.logoUrl,
       logo_source: "storage",
       logo_status: "ok",
       logo_fetched_at: now,

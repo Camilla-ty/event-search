@@ -48,6 +48,43 @@ export function companyLogoObjectPath(companyId: string, extension: string): str
   return `${COMPANY_LOGO_STORAGE_NAMESPACE}/${id}/logo.${ext}`;
 }
 
+/** Persist bucket-relative logo_url values instead of full public Storage URLs. */
+export function storedCompanyLogoUrlFromUpload(upload: {
+  storagePath: string;
+}): string {
+  return upload.storagePath.trim();
+}
+
+/**
+ * Normalize a stored company logo reference to a bucket-relative path when possible.
+ * External URLs pass through unchanged.
+ */
+export function normalizeStoredCompanyLogoUrl(
+  logoReference: string | null | undefined,
+  companyId?: string,
+): string | null {
+  const trimmed = logoReference?.trim() ?? "";
+  if (trimmed === "") return null;
+
+  const parsed = parseCompanyLogoStoragePathFromUrl(trimmed);
+  if (!parsed) return trimmed;
+
+  const expectedCompanyId = companyId?.trim() ?? "";
+  if (
+    expectedCompanyId !== "" &&
+    parsed.companyId !== null &&
+    parsed.companyId.toLowerCase() !== expectedCompanyId.toLowerCase()
+  ) {
+    return trimmed;
+  }
+
+  if (expectedCompanyId !== "" && parsed.companyId === null) {
+    return companyLogoObjectPath(expectedCompanyId, parsed.extension);
+  }
+
+  return parsed.bucketRelativePath;
+}
+
 export function isCompanyIdLogoStorageSegment(segment: string): boolean {
   return COMPANY_ID_SEGMENT_PATTERN.test(segment.trim());
 }

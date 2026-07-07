@@ -1,5 +1,5 @@
 import { ingestManualCompanyLogoFromUrl } from "@/src/features/companies/server/companyLogoIngest";
-import { scheduleCompanyLogoCleanupAfterPersist, uploadCompanyLogoBytes, verifyCompanyLogoStorageObject } from "@/src/features/companies/server/companyLogoStorage";
+import { scheduleCompanyLogoCleanupAfterPersist, uploadCompanyLogoBytes, verifyCompanyLogoStorageObject, normalizeStoredCompanyLogoUrl, storedCompanyLogoUrlFromUpload } from "@/src/features/companies/server/companyLogoStorage";
 import {
   normalizeCompanyAliases,
   parseCompanyAliasesFromRow,
@@ -118,9 +118,20 @@ async function resolveManualLogoPatch(params: {
   }
 
   if (isCompanyLogoStorageUrl(params.incomingLogoUrl)) {
+    const normalized = normalizeStoredCompanyLogoUrl(
+      params.incomingLogoUrl,
+      params.existing.id,
+    );
+    if (!normalized) {
+      return { patch: {}, warnings };
+    }
+    if (normalized === normalizeStoredCompanyLogoUrl(existingLogo, params.existing.id)) {
+      return { patch: {}, warnings };
+    }
     return {
-      patch: logoMetadataPatchForManualLogoStorage(params.incomingLogoUrl),
+      patch: logoMetadataPatchForManualLogoStorage(normalized, params.existing.id),
       warnings,
+      persistedLogoUrl: normalized,
     };
   }
 
@@ -131,7 +142,7 @@ async function resolveManualLogoPatch(params: {
 
   if (ingest.ok) {
     return {
-      patch: logoMetadataPatchForManualLogoStorage(ingest.storageUrl),
+      patch: logoMetadataPatchForManualLogoStorage(ingest.storageUrl, params.existing.id),
       warnings,
       persistedLogoUrl: ingest.storageUrl,
     };
@@ -396,8 +407,9 @@ export async function uploadCompanyLogoFileAdmin(
     return { ok: false, status: 500, error: "Uploaded logo could not be verified." };
   }
 
+  const storedLogoUrl = storedCompanyLogoUrlFromUpload(upload);
   const supabase = createAdminClient();
-  const patch = logoMetadataPatchForManualLogoStorage(upload.publicUrl);
+  const patch = logoMetadataPatchForManualLogoStorage(storedLogoUrl, companyId);
   const { data, error } = await supabase
     .from("companies")
     .update(patch)
@@ -411,7 +423,7 @@ export async function uploadCompanyLogoFileAdmin(
 
   scheduleCompanyLogoCleanupAfterPersist({
     companyId,
-    publicUrl: upload.publicUrl,
+    publicUrl: storedLogoUrl,
   });
 
   return { ok: true, company: mapCompanyAdminRow(data as Record<string, unknown>) };

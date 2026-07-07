@@ -1,8 +1,12 @@
 import { initialLogoMetadata } from "@/src/lib/companies/initialLogoMetadata";
+import { normalizeStoredCompanyLogoUrl } from "@/src/features/companies/server/companyLogoStorage";
 
-export function logoMetadataPatchForManualLogoStorage(storageUrl: string): Record<string, unknown> {
+export function logoMetadataPatchForManualLogoStorage(
+  storageReference: string,
+  companyId?: string,
+): Record<string, unknown> {
   return {
-    logo_url: storageUrl,
+    logo_url: normalizeStoredCompanyLogoUrl(storageReference, companyId) ?? storageReference.trim(),
     logo_source: "manual",
     logo_status: "ok",
     logo_fetched_at: new Date().toISOString(),

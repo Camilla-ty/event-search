@@ -14,6 +14,7 @@ import {
   COMPANY_LOGO_STORAGE_NAMESPACE,
   extensionForContentType,
   MAX_COMPANY_LOGO_SIZE_BYTES,
+  storedCompanyLogoUrlFromUpload,
   uploadCompanyLogoBytes,
 } from "./companyLogoStorage";
 import type { CompanyLogoIngestResult } from "./companyLogoMetadata";
@@ -299,10 +300,10 @@ export async function ingestCompanyLogoByDomain(
 
     return {
       status: "ok",
-      logoUrl: upload.publicUrl,
+      logoUrl: storedCompanyLogoUrlFromUpload(upload),
       strategy: strategy.name,
       error: null,
-      preview: `${upload.publicUrl} (via ${strategy.name})`,
+      preview: `${storedCompanyLogoUrlFromUpload(upload)} (via ${strategy.name})`,
     };
   }
 
@@ -355,5 +356,5 @@ export async function ingestManualCompanyLogoFromUrl(
     return { ok: false, error: upload.error };
   }
 
-  return { ok: true, storageUrl: upload.publicUrl, storagePath: upload.storagePath };
+  return { ok: true, storageUrl: upload.storagePath, storagePath: upload.storagePath };
 }
