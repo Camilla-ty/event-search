@@ -1,0 +1,56 @@
+name: Backup storage
+
+on:
+  schedule:
+    # Weekly on Sunday at 3:30 AM US Eastern (operating timezone). GitHub cron is UTC-only.
+    # 07:30 UTC ≈ 3:30 AM EDT and 3:30 PM Singapore (UTC+8); runs 30 min after the database backup.
+    # Revisit this UTC offset when US daylight saving time changes (EST vs EDT).
+    - cron: "30 7 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-storage
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: company-logos mirror to Google Drive
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rclone
+          rclone version
+
+      - name: Set backup output path
+        run: echo "BACKUP_OUTPUT_ROOT=${RUNNER_TEMP}/backups/storage" >> "$GITHUB_ENV"
+
+      - name: Mirror company-logos and upload to Google Drive
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          chmod +x scripts/backup/storage-company-logos.sh
+          ./scripts/backup/storage-company-logos.sh

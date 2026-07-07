@@ -5,6 +5,7 @@
  * Tables:
  *   - companies.logo_url      -> companies/{companyId}/logo.{ext}
  *   - event_series.logo_url   -> event-series/{seriesId}/logo.{ext}
+ *   - venues.logo_url         -> venues/{venueId}/logo.{ext}
  *
  * Skips external URLs, empty values, and rows already using relative paths.
  * Does not modify event_editions.logo_url.
@@ -38,11 +39,12 @@ import { createBackfillSupabaseClient } from "./backfill/core/supabase";
 import {
   planCompanyLogoUrlToRelativePath,
   planEventSeriesLogoUrlToRelativePath,
+  planVenueLogoUrlToRelativePath,
   type LogoUrlRelativePlan,
   type LogoUrlRelativeSkipReason,
 } from "./lib/logoUrlRelativeMigration";
 
-type TargetTable = "companies" | "event_series";
+type TargetTable = "companies" | "event_series" | "venues";
 
 type LogoRow = {
   id: string;
@@ -207,7 +209,10 @@ function planRow(table: TargetTable, row: LogoRow): LogoUrlRelativePlan {
   if (table === "companies") {
     return planCompanyLogoUrlToRelativePath(row);
   }
-  return planEventSeriesLogoUrlToRelativePath(row);
+  if (table === "event_series") {
+    return planEventSeriesLogoUrlToRelativePath(row);
+  }
+  return planVenueLogoUrlToRelativePath(row);
 }
 
 function applyLimit(
@@ -312,11 +317,13 @@ async function applyPlannedConversions(params: {
 }): Promise<{
   companies: { updated: number; failed: number };
   event_series: { updated: number; failed: number };
+  venues: { updated: number; failed: number };
 }> {
   const { supabase, planned, env, reportPath, migratedAt } = params;
   const stats = {
     companies: { updated: 0, failed: 0 },
     event_series: { updated: 0, failed: 0 },
+    venues: { updated: 0, failed: 0 },
   };
 
   for (const entry of planned) {
@@ -407,16 +414,20 @@ async function main() {
   if (env.dryRun) {
     console.log("[migrate-logo-urls] dry-run mode: no DB updates");
   } else {
-    console.log("[migrate-logo-urls] LIVE mode: will update companies and event_series logo_url");
+    console.log(
+      "[migrate-logo-urls] LIVE mode: will update companies, event_series, and venues logo_url",
+    );
   }
 
-  const [companyRows, seriesRows] = await Promise.all([
+  const [companyRows, seriesRows, venueRows] = await Promise.all([
     loadRowsWithLogoUrl(supabase, "companies"),
     loadRowsWithLogoUrl(supabase, "event_series"),
+    loadRowsWithLogoUrl(supabase, "venues"),
   ]);
 
   console.log(`[migrate-logo-urls] companies: loaded ${companyRows.length} rows with logo_url`);
   console.log(`[migrate-logo-urls] event_series: loaded ${seriesRows.length} rows with logo_url`);
+  console.log(`[migrate-logo-urls] venues: loaded ${venueRows.length} rows with logo_url`);
 
   const companiesPlan = await planTableConversions(
     "companies",
@@ -430,17 +441,25 @@ async function main() {
     env.reportPath,
     migratedAt,
   );
+  const venuesPlan = await planTableConversions(
+    "venues",
+    venueRows,
+    env.reportPath,
+    migratedAt,
+  );
   const allPlanned = applyLimit(
-    [...companiesPlan.planned, ...seriesPlan.planned],
+    [...companiesPlan.planned, ...seriesPlan.planned, ...venuesPlan.planned],
     env.limit,
   );
 
   const companiesSummary = { ...companiesPlan.summary };
   const seriesSummary = { ...seriesPlan.summary };
+  const venuesSummary = { ...venuesPlan.summary };
 
   if (env.limit !== null) {
     companiesSummary.convert = allPlanned.filter((entry) => entry.table === "companies").length;
     seriesSummary.convert = allPlanned.filter((entry) => entry.table === "event_series").length;
+    venuesSummary.convert = allPlanned.filter((entry) => entry.table === "venues").length;
   }
 
   if (!env.dryRun && allPlanned.length > 0) {
@@ -459,6 +478,8 @@ async function main() {
   companiesSummary.failed = applyResult.companies.failed;
   seriesSummary.updated = applyResult.event_series.updated;
   seriesSummary.failed = applyResult.event_series.failed;
+  venuesSummary.updated = applyResult.venues.updated;
+  venuesSummary.failed = applyResult.venues.failed;
 
   const samples = allPlanned.slice(0, env.sampleSize).map(toSample);
   printSamples(samples);
@@ -469,12 +490,19 @@ async function main() {
     backup_path: env.dryRun ? null : env.backupPath,
     companies: companiesSummary,
     event_series: seriesSummary,
+    venues: venuesSummary,
     totals: {
-      loaded: companiesSummary.loaded + seriesSummary.loaded,
-      convert: companiesSummary.convert + seriesSummary.convert,
-      skip: companiesSummary.skip + seriesSummary.skip,
-      updated: applyResult.companies.updated + applyResult.event_series.updated,
-      failed: applyResult.companies.failed + applyResult.event_series.failed,
+      loaded: companiesSummary.loaded + seriesSummary.loaded + venuesSummary.loaded,
+      convert: companiesSummary.convert + seriesSummary.convert + venuesSummary.convert,
+      skip: companiesSummary.skip + seriesSummary.skip + venuesSummary.skip,
+      updated:
+        applyResult.companies.updated +
+        applyResult.event_series.updated +
+        applyResult.venues.updated,
+      failed:
+        applyResult.companies.failed +
+        applyResult.event_series.failed +
+        applyResult.venues.failed,
     },
     sample_changes: samples,
     verification_sql: {
@@ -482,10 +510,14 @@ async function main() {
         "SELECT count(*) FROM companies WHERE logo_url IS NOT NULL AND logo_url ~ '^https?://.*/storage/v1/object/public/company-logos/'",
       remaining_full_storage_urls_event_series:
         "SELECT count(*) FROM event_series WHERE logo_url IS NOT NULL AND logo_url ~ '^https?://.*/storage/v1/object/public/company-logos/'",
+      remaining_full_storage_urls_venues:
+        "SELECT count(*) FROM venues WHERE logo_url IS NOT NULL AND logo_url ~ '^https?://.*/storage/v1/object/public/company-logos/'",
       relative_path_rows_companies:
         "SELECT id, logo_url FROM companies WHERE logo_url ~ '^companies/' ORDER BY name LIMIT 20",
       relative_path_rows_event_series:
         "SELECT id, logo_url FROM event_series WHERE logo_url ~ '^event-series/' ORDER BY name LIMIT 20",
+      relative_path_rows_venues:
+        "SELECT id, logo_url FROM venues WHERE logo_url ~ '^venues/' ORDER BY name LIMIT 20",
       event_editions_unchanged:
         "SELECT count(*) FROM event_editions WHERE logo_url IS NOT NULL",
     },

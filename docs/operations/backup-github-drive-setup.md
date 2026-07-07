@@ -4,20 +4,27 @@ Phase B: daily PostgreSQL backups from GitHub Actions to Google Drive using **OA
 
 This setup avoids service account JSON keys, which many Google Workspace organizations block via `iam.disableServiceAccountKeyCreation`.
 
-Workflow: [`.github/workflows/backup-database.yml`](../../.github/workflows/backup-database.yml)
+Workflows:
+
+- Database: [`.github/workflows/backup-database.yml`](../../.github/workflows/backup-database.yml)
+- Storage: [`.github/workflows/backup-storage.yml`](../../.github/workflows/backup-storage.yml)
 
 ## Overview
 
 | Item | Value |
 |------|-------|
-| Schedule | Daily at **03:00 UTC** (`cron: 0 3 * * *`) |
-| Manual run | Actions → **Backup database** → **Run workflow** |
+| Operating timezone | **US Eastern** (schedules are defined in Eastern time; GitHub `cron` uses UTC) |
+| Database schedule | Daily at **3:00 AM US Eastern** (`cron: 0 7 * * *` UTC — ≈ 3:00 AM EDT, 3:00 PM Singapore) |
+| Storage schedule | Weekly **Sunday** at **3:30 AM US Eastern** (`cron: 30 7 * * 0` UTC — ≈ 3:30 AM EDT, 3:30 PM Singapore) |
+| Manual run | Actions → **Backup database** or **Backup storage** → **Run workflow** |
 | Backup script | `scripts/backup/database.sh` (data-only, `public` + `auth`) |
 | Upload | `scripts/backup/upload-to-drive.sh` via **rclone** + OAuth refresh token |
 | Retention | **30 days** (`scripts/backup/prune-drive.sh`) |
 | Drive layout | `db/YYYY-MM-DDTHHMMSSZ/eventpixels-db.dump.gz` + `manifest.json` |
 
 The OAuth-authorized Google account must own (or have **Editor** access to) the folder identified by `GDRIVE_FOLDER_ID`. All backup paths are relative to that folder.
+
+**Daylight saving:** GitHub `cron` cannot follow US Eastern DST automatically. The current UTC values target **EDT** (UTC−4). When clocks switch to **EST** (UTC−5), jobs run one hour earlier in Eastern time unless the UTC `cron` is updated.
 
 ---
 
@@ -102,14 +109,21 @@ Then use the Web client’s ID and secret in the steps below.
 
 No folder sharing step is required — the OAuth user accesses their own Drive (or Shared drives they belong to).
 
-### Expected structure after first successful run
+### Expected structure after first successful runs
 
 ```text
 <EventPixels/backups>/          ← GDRIVE_FOLDER_ID
-└── db/
-    └── 2026-06-24T030000Z/
-        ├── eventpixels-db.dump.gz
-        └── manifest.json
+├── db/
+│   └── 2026-06-24T030000Z/
+│       ├── eventpixels-db.dump.gz
+│       └── manifest.json
+└── storage/
+    └── company-logos/
+        └── mirror/
+            ├── manifest.json
+            ├── companies/
+            ├── event-series/
+            └── venues/
 ```
 
 ---
@@ -198,7 +212,9 @@ Repository → **Settings** → **Secrets and variables** → **Actions** → **
 
 | Secret | Required | Description |
 |--------|----------|-------------|
-| `SUPABASE_DB_URL` | Yes | Direct Postgres URI (step 7) |
+| `SUPABASE_DB_URL` | Yes (database workflow) | Direct Postgres URI (step 7) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes (storage workflow) | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (storage workflow) | Service role key for storage list/download |
 | `GDRIVE_CLIENT_ID` | Yes | OAuth client ID (step 4) |
 | `GDRIVE_CLIENT_SECRET` | Yes | OAuth client secret (step 4) |
 | `GDRIVE_REFRESH_TOKEN` | Yes | Refresh token from step 6c |

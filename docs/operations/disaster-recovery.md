@@ -2,7 +2,7 @@
 
 Restore EventPixels into a **brand-new Supabase project** after total loss of the production database, storage, or both.
 
-**Phase A/B** covers database restore from `pg_dump` backups (local or downloaded from Google Drive). Storage restore is documented as manual steps until Phase C automation exists.
+**Phase A/B** covers database restore from `pg_dump` backups (local or downloaded from Google Drive). **Phase C** mirrors the `company-logos` bucket to Google Drive at `storage/company-logos/mirror/` for storage restore.
 
 ## Overview
 
@@ -60,7 +60,7 @@ Bucket creation is **not** in SQL migrations. Recreate manually in the new proje
 |---------|-------|
 | Name | `company-logos` |
 | Public | **Yes** |
-| Purpose | Company logos (`companies/{companyId}/logo.*`), event-series logos (`event-series/{seriesId}/logo.*`) |
+| Purpose | Company logos (`companies/{companyId}/logo.*`), event-series logos (`event-series/{seriesId}/logo.*`), venue logos (`venues/{venueId}/logo.*`) |
 
 Export policies from the old project (Dashboard → Storage → `company-logos` → Policies) and recreate equivalent rules. Public read access is required for logo URLs embedded in the database.
 
@@ -137,30 +137,43 @@ psql "${TARGET_SUPABASE_DB_URL}" -c "SET session_replication_role = DEFAULT;"
 
 ## Step 5 — Restore Storage (`company-logos`)
 
-**Not automated in Phase A.** Options:
+### 5a. Download the Drive mirror (recommended)
 
-1. **Supabase Dashboard** — upload objects preserving paths (`companies/...`, `event-series/...`).
-2. **Supabase CLI** — `supabase storage cp` from a local mirror (after Phase C produces `tar.gz` archives).
+Phase C stores a path-preserving mirror at `storage/company-logos/mirror/` under the backup folder (`GDRIVE_FOLDER_ID`).
+
+With the same OAuth env vars as CI:
+
+```bash
+source scripts/backup/lib/drive-rclone.sh
+drive_rclone_ensure_env
+
+mkdir -p ./restore-storage/company-logos
+rclone copy "$(drive_remote_path storage/company-logos/mirror)" ./restore-storage/company-logos/mirror
+```
+
+Inspect `restore-storage/company-logos/mirror/manifest.json` for object counts.
+
+### 5b. Upload objects to the new project
+
+Options:
+
+1. **Supabase CLI** — from the downloaded mirror tree:
+
+   ```bash
+   supabase storage cp --recursive ./restore-storage/company-logos/mirror/companies ss:///company-logos/companies
+   supabase storage cp --recursive ./restore-storage/company-logos/mirror/event-series ss:///company-logos/event-series
+   supabase storage cp --recursive ./restore-storage/company-logos/mirror/venues ss:///company-logos/venues
+   # Repeat for any legacy top-level folders listed in manifest.json
+   ```
+
+2. **Supabase Dashboard** — upload objects preserving paths (`companies/...`, `event-series/...`, `venues/...`).
 3. **Service-role script** — reuse patterns from `scripts/audit/listStoragePrefix.ts` to upload from a local directory tree.
 
-Logo URLs in the database look like:
+### 5c. Database logo paths
 
-```
-https://<project-ref>.supabase.co/storage/v1/object/public/company-logos/companies/<id>/logo.png
-```
+After logo URL normalization, `logo_url` values are **bucket-relative** paths (for example `companies/<id>/logo.png`). No host rewrite is required when restoring to a new Supabase project — the runtime resolver builds public URLs from `NEXT_PUBLIC_SUPABASE_URL`.
 
-After restore to a new project, URLs must use the **new** project host. If paths are unchanged, updating `NEXT_PUBLIC_SUPABASE_URL` may be enough for newly generated URLs; existing `logo_url` column values may still reference the old host. Run a URL rewrite if needed:
-
-```sql
--- Example: replace old project ref in logo_url columns (adjust host)
-UPDATE companies
-SET logo_url = replace(logo_url, 'oldref.supabase.co', 'newref.supabase.co')
-WHERE logo_url LIKE '%oldref.supabase.co%';
-
-UPDATE event_series
-SET logo_url = replace(logo_url, 'oldref.supabase.co', 'newref.supabase.co')
-WHERE logo_url LIKE '%oldref.supabase.co%';
-```
+External venue logos (non-Supabase URLs) are stored only in `venues.logo_url` and are not part of the `company-logos` mirror.
 
 ## Step 6 — Application configuration
 

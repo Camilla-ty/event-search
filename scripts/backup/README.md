@@ -1,6 +1,10 @@
 # Backup scripts
 
-EventPixels disaster recovery tooling: local database backups (Phase A) and Google Drive upload/prune helpers used by GitHub Actions (Phase B).
+EventPixels disaster recovery tooling:
+
+- **Phase A** — local database backups
+- **Phase B** — daily database backups to Google Drive (GitHub Actions)
+- **Phase C** — weekly `company-logos` storage mirror to Google Drive (GitHub Actions)
 
 ## Prerequisites
 
@@ -55,7 +59,7 @@ DDL for `public` objects is version-controlled in `supabase/migrations/`. The de
 
 ### Automated daily backup (Phase B)
 
-GitHub Actions workflow [`.github/workflows/backup-database.yml`](../../.github/workflows/backup-database.yml) runs daily at 03:00 UTC:
+GitHub Actions workflow [`.github/workflows/backup-database.yml`](../../.github/workflows/backup-database.yml) runs daily at **3:00 AM US Eastern** (operating timezone; `cron: 0 7 * * *` UTC — ≈ 3:00 AM EDT, 3:00 PM Singapore). Revisit the UTC offset when US daylight saving changes.
 
 1. `database.sh` — create dump under `${RUNNER_TEMP}/backups/db/`
 2. `upload-to-drive.sh` — copy to Google Drive `db/<timestamp>/`
@@ -63,9 +67,21 @@ GitHub Actions workflow [`.github/workflows/backup-database.yml`](../../.github/
 
 Setup: [docs/operations/backup-github-drive-setup.md](../../docs/operations/backup-github-drive-setup.md)
 
-### What is not included (yet)
+### Automated weekly storage backup (Phase C)
 
-- Supabase Storage (`company-logos`, `sponsor-imports`) — planned Phase C
+GitHub Actions workflow [`.github/workflows/backup-storage.yml`](../../.github/workflows/backup-storage.yml) runs weekly on **Sunday at 3:30 AM US Eastern** (operating timezone; `cron: 30 7 * * 0` UTC — ≈ 3:30 AM EDT, 3:30 PM Singapore). Revisit the UTC offset when US daylight saving changes.
+
+1. `mirror-company-logos.ts` — list and download all objects from the `company-logos` bucket into a local mirror tree
+2. `upload-storage-mirror-to-drive.sh` — `rclone copy` to Google Drive `storage/company-logos/mirror/`
+
+**Copy behavior:** new and changed files are uploaded. Files that exist only on Drive are **not** deleted. There is **no** storage-backup prune step.
+
+Setup: same Google Drive OAuth secrets as Phase B, plus Supabase URL and service role key. See [docs/operations/backup-policy.md](../../docs/operations/backup-policy.md).
+
+### What is not included
+
+- `sponsor-imports` bucket (ephemeral import uploads)
+- Storage object cleanup / orphan pruning
 
 ## Restore
 
@@ -84,6 +100,39 @@ pg_restore \
   /tmp/eventpixels-db.dump
 ```
 
+## Storage backup (`company-logos`)
+
+From the repository root (loads Supabase credentials from `.env.local` when present):
+
+```bash
+set -a && source .env.local && set +a
+
+# Mirror only (local tree under supabase/dumps/backups/storage/)
+npx tsx scripts/backup/mirror-company-logos.ts
+
+# Mirror + upload to Google Drive
+export GDRIVE_CLIENT_ID='...'
+export GDRIVE_CLIENT_SECRET='...'
+export GDRIVE_REFRESH_TOKEN='...'
+export GDRIVE_FOLDER_ID='...'
+./scripts/backup/storage-company-logos.sh
+```
+
+### Output layout
+
+```
+supabase/dumps/backups/storage/
+└── company-logos/
+    └── mirror/
+        ├── manifest.json
+        ├── companies/
+        ├── event-series/
+        ├── venues/
+        └── … (legacy top-level folders preserved)
+```
+
+`manifest.json` records object count, total bytes, top-level prefixes, mirror timestamp, and git SHA (no secrets).
+
 ## Google Drive scripts (CI / manual)
 
 Requires [rclone](https://rclone.org/install/) and the same secrets as GitHub Actions:
@@ -96,6 +145,8 @@ export GDRIVE_FOLDER_ID='...'
 
 ./scripts/backup/upload-to-drive.sh supabase/dumps/backups/db/2026-06-24T030000Z
 ./scripts/backup/prune-drive.sh   # BACKUP_RETENTION_DAYS=30 by default
+
+./scripts/backup/upload-storage-mirror-to-drive.sh supabase/dumps/backups/storage/company-logos/mirror
 ```
 
 ## Related docs

@@ -7,9 +7,11 @@ import {
   eventSeriesLogoObjectPath,
   parseEventSeriesLogoStoragePathFromUrl,
 } from "@/src/features/events/server/eventSeriesLogoStorage";
-
-export const BUCKET_RELATIVE_LOGO_PATTERN =
-  /^(companies|event-series)\/[^/]+\/logo\.[a-z0-9]+$/i;
+import {
+  parseVenueLogoStoragePathFromUrl,
+  venueLogoObjectPath,
+} from "@/src/features/venues/server/venueLogoStorage";
+import { isBucketRelativeStorageLogoPath } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 export type LogoUrlRelativeSkipReason =
   | "empty"
@@ -29,7 +31,7 @@ export type LogoUrlRelativePlan =
     };
 
 export function isBucketRelativeLogoPath(value: string): boolean {
-  return BUCKET_RELATIVE_LOGO_PATTERN.test(value.trim());
+  return isBucketRelativeStorageLogoPath(value);
 }
 
 export function planCompanyLogoUrlToRelativePath(row: {
@@ -81,5 +83,31 @@ export function planEventSeriesLogoUrlToRelativePath(row: {
   }
 
   const after = eventSeriesLogoObjectPath(row.id, parsed.extension);
+  return { kind: "convert", before, after };
+}
+
+export function planVenueLogoUrlToRelativePath(row: {
+  id: string;
+  logo_url: string | null;
+}): LogoUrlRelativePlan {
+  const before = row.logo_url?.trim() ?? "";
+  if (!before) {
+    return { kind: "skip", reason: "empty" };
+  }
+
+  if (isBucketRelativeLogoPath(before)) {
+    return { kind: "skip", reason: "already_relative" };
+  }
+
+  if (!isCompanyLogoStorageUrl(before)) {
+    return { kind: "skip", reason: "external_url" };
+  }
+
+  const parsed = parseVenueLogoStoragePathFromUrl(before);
+  if (!parsed) {
+    return { kind: "skip", reason: "unparseable_storage_url" };
+  }
+
+  const after = venueLogoObjectPath(row.id, parsed.extension);
   return { kind: "convert", before, after };
 }

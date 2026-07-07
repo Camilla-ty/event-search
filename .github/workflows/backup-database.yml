@@ -2,8 +2,10 @@ name: Backup database
 
 on:
   schedule:
-    # Daily at 03:00 UTC
-    - cron: "0 3 * * *"
+    # Daily at 3:00 AM US Eastern (operating timezone). GitHub cron is UTC-only.
+    # 07:00 UTC ≈ 3:00 AM EDT and 3:00 PM Singapore (UTC+8).
+    # Revisit this UTC offset when US daylight saving time changes (EST vs EDT).
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 permissions:
