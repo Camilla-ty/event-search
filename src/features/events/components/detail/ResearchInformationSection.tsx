@@ -1,24 +1,15 @@
-import type { ReactNode } from "react";
-
 import {
   formatEventLastReviewedDate,
   formatPrimarySourceLink,
 } from "@/src/features/events/lib/formatEventResearchMetadata";
 import { brandLinkClass } from "@/src/lib/design/classes";
 
+import { MetadataRow } from "./MetadataRow";
+
 type ResearchInformationSectionProps = {
   lastReviewedAt: string | null | undefined;
   primarySourceUrl: string | null | undefined;
 };
-
-function MetadataRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-      <dt className="shrink-0 text-sm font-medium text-slate-700 sm:w-36">{label}</dt>
-      <dd className="text-sm text-slate-600">{children}</dd>
-    </div>
-  );
-}
 
 export function ResearchInformationSection({
   lastReviewedAt,

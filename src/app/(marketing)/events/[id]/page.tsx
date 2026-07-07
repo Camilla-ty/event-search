@@ -6,10 +6,8 @@ import { Suspense } from "react";
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
 import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
-import { EventSponsorsOverviewSection } from "@/src/features/events/components/detail/EventSponsorsOverviewSection";
+import { EventOverviewSummarySection } from "@/src/features/events/components/detail/EventOverviewSummarySection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
-import { EventHistorySection } from "@/src/features/events/components/detail/EventHistorySection";
-import { EventVenueOverviewSection } from "@/src/features/events/components/detail/EventVenueOverviewSection";
 import { ResearchInformationSection } from "@/src/features/events/components/detail/ResearchInformationSection";
 import {
   EventVenueEmptyState,
@@ -170,76 +168,78 @@ export default async function EventDetailPage({
         ]}
       />
 
-      <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
-        <div className="mx-auto w-36 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted md:mx-0">
-          {seriesLogoUrl ? (
-            <div className="flex h-36 w-36 items-center justify-center p-3">
-              <SeriesLogo
-                series={{
-                  name:
-                    typeof edition.event_series?.name === "string"
-                      ? edition.event_series.name
-                      : null,
-                  logo_url:
-                    typeof edition.event_series?.logo_url === "string"
-                      ? edition.event_series.logo_url
-                      : null,
-                }}
-                fallbackName={typeof edition.name === "string" ? edition.name : null}
-                className="flex h-full w-full items-center justify-center"
-                imageClassName="max-h-full max-w-full object-contain"
-                monogramClassName="text-3xl font-semibold text-slate-400"
-              />
-            </div>
-          ) : (
-            <div className="h-36 w-36 bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
-          )}
-        </div>
-
-        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 space-y-2">
-              {seriesBrandLabel && seriesHubHref ? (
-                <Link href={seriesHubHref}>
-                  <Badge variant="neutral">{seriesBrandLabel}</Badge>
-                </Link>
-              ) : (
-                <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
-              )}
-              <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
-              <p className="text-sm text-slate-600">{cityLabel || "Location not set"}</p>
-              <p className="text-sm text-slate-500">
-                {formatEventDateRange(edition.start_date, edition.end_date)}
-              </p>
-            </div>
-            <PublicTopicsSection topics={topics} layout="header" />
+      <header className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
+          <div className="mx-auto shrink-0 md:mx-0">
+            {seriesLogoUrl ? (
+              <div className="flex h-40 w-40 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <SeriesLogo
+                  series={{
+                    name:
+                      typeof edition.event_series?.name === "string"
+                        ? edition.event_series.name
+                        : null,
+                    logo_url:
+                      typeof edition.event_series?.logo_url === "string"
+                        ? edition.event_series.logo_url
+                        : null,
+                  }}
+                  fallbackName={typeof edition.name === "string" ? edition.name : null}
+                  className="flex h-full w-full items-center justify-center"
+                  imageClassName="max-h-full max-w-full object-contain"
+                  monogramClassName="text-3xl font-semibold text-slate-400"
+                />
+              </div>
+            ) : (
+              <div className="h-40 w-40 rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
+            )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Sponsors</p>
-              <p className="text-lg font-semibold text-slate-900">{totalSponsorCount}</p>
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0 space-y-2">
+                {seriesBrandLabel && seriesHubHref ? (
+                  <Link href={seriesHubHref}>
+                    <Badge variant="neutral">{seriesBrandLabel}</Badge>
+                  </Link>
+                ) : (
+                  <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
+                )}
+                <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
+                <p className="text-sm text-slate-600">{cityLabel || "Location not set"}</p>
+                <p className="text-sm text-slate-500">
+                  {formatEventDateRange(edition.start_date, edition.end_date)}
+                </p>
+              </div>
+              <PublicTopicsSection topics={topics} layout="header" />
             </div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Year</p>
-              <p className="text-lg font-semibold text-slate-900">{edition.year ?? "TBC"}</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-slate-500">Event brand</p>
-              {seriesBrandLabel && seriesHubHref ? (
-                <Link
-                  href={seriesHubHref}
-                  className={`text-lg font-semibold ${brandLinkClass}`}
-                >
-                  {seriesBrandLabel}
-                </Link>
-              ) : (
-                <p className="text-lg font-semibold text-slate-900">Not set</p>
-              )}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500">Sponsors</p>
+                <p className="text-lg font-semibold text-slate-900">{totalSponsorCount}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500">Year</p>
+                <p className="text-lg font-semibold text-slate-900">{edition.year ?? "TBC"}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500">Event brand</p>
+                {seriesBrandLabel && seriesHubHref ? (
+                  <Link
+                    href={seriesHubHref}
+                    className={`text-lg font-semibold ${brandLinkClass}`}
+                  >
+                    {seriesBrandLabel}
+                  </Link>
+                ) : (
+                  <p className="text-lg font-semibold text-slate-900">Not set</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
         <PublicEventEditionTabs
@@ -247,18 +247,12 @@ export default async function EventDetailPage({
           showPartnerAlumniTab={showPartnerAlumniTab}
           overviewPanel={
             <div className="space-y-6">
-              <EventHistorySection
+              <EventOverviewSummarySection
+                eventSlug={eventSlug}
                 lifecycleStatus={lifecycleStatus}
                 mergedIntoSeries={mergedIntoSeries}
-              />
-              <EventVenueOverviewSection
-                eventSlug={eventSlug}
                 venue={venue}
-                cityLabel={cityLabel}
                 hasVenueId={hasVenueId}
-              />
-              <EventSponsorsOverviewSection
-                eventSlug={eventSlug}
                 sponsors={sponsors}
                 totalSponsorCount={totalSponsorCount}
               />
