@@ -33,10 +33,7 @@ const EVENT_EDITION_DETAIL_SELECT = `
   ),
   cities (
     *,
-    countries (
-      *,
-      regions (*)
-    )
+    ${CITY_PUBLIC_EMBED}
   ),
   venues (
     id,
