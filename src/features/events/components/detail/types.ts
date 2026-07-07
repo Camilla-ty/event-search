@@ -21,5 +21,6 @@ export type EventSponsorRow = {
   company_id?: string | null;
   tier_rank?: number | null;
   tier_label?: string | null;
+  display_order?: number | null;
   companies?: EventSponsorCompany | null;
 };

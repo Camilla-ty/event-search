@@ -31,7 +31,7 @@ import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditi
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
-import { brandLinkClass, primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
+import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
 import { createPageMetadata } from "@/src/lib/metadata/site";
@@ -270,34 +270,12 @@ export default async function EventDetailPage({
             </div>
           }
           sponsorsPanel={
-            <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-              <EventSponsorsSection
-                sponsors={sponsors}
-                isAuthenticated={isAuthenticated}
-                eventSlug={eventSlug}
-                totalSponsorCount={totalSponsorCount}
-              />
-
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Actions</h2>
-                <div className="mt-3 space-y-2">
-                  <Link
-                    href={`/sponsors?event=${eventSlug}`}
-                    className={`${primaryCtaClass} h-10 w-full`}
-                  >
-                    Search event sponsors
-                  </Link>
-                  {seriesHubHref ? (
-                    <Link href={seriesHubHref} className={`${secondaryCtaClass} h-10 w-full`}>
-                      View event brand
-                    </Link>
-                  ) : null}
-                  <Link href="/events" className={`${secondaryCtaClass} h-10 w-full`}>
-                    Back to Events
-                  </Link>
-                </div>
-              </div>
-            </section>
+            <EventSponsorsSection
+              sponsors={sponsors}
+              isAuthenticated={isAuthenticated}
+              eventSlug={eventSlug}
+              totalSponsorCount={totalSponsorCount}
+            />
           }
           venuePanel={
             venue ? (
