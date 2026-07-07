@@ -6,6 +6,7 @@ import type {
   SponsorDiscoveryRow,
   SponsorDiscoverySort,
 } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 type SponsorDiscoveryRpcRow = Omit<SponsorDiscoveryRow, "location_label">;
 
@@ -81,7 +82,7 @@ function parseRpcRow(
     name,
     domain: readNullableString(row.domain),
     website: readNullableString(row.website),
-    logo_url: readNullableString(row.logo_url),
+    logo_url: mapPublicLogoUrl(readNullableString(row.logo_url)),
     logo_source: readNullableString(row.logo_source),
     logo_status: readNullableString(row.logo_status),
     short_description: readNullableString(row.short_description),

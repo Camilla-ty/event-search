@@ -18,6 +18,7 @@ import {
   getSponsorCountsByEditionIds,
   readSponsorCountForEdition,
 } from "@/src/lib/queries/companies";
+import { mapEventEditionSeriesEmbedForDisplay } from "@/src/lib/storage/mapPublicLogoUrl";
 
 type EventExplorerFilters = {
   query?: string;
@@ -135,7 +136,12 @@ export async function getEventExplorerData(
   filters: EventExplorerFilters = {},
 ): Promise<EventExplorerData> {
   const normalizedFilters = normalizeEventExplorerFilters(filters);
-  const editions = (await getEventEditions()) ?? [];
+  const editions = ((await getEventEditions()) ?? []).map(
+    (edition) =>
+      mapEventEditionSeriesEmbedForDisplay(
+        edition as Record<string, unknown>,
+      ) as typeof edition,
+  );
   const seriesIds = editions
     .map((edition) => readExplorerSeriesId(edition))
     .filter((seriesId) => seriesId !== "");

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
 function companyIdKey(raw: unknown): string {
@@ -67,7 +68,19 @@ export type CompanyPublicRow = {
   industry?: string | null;
 };
 
-async function getCompanyByIdAdmin(id: string) {
+/** Map bucket-relative logo_url values to display-ready public URLs for UI surfaces. */
+export function mapCompanyPublicRowForDisplay(row: CompanyPublicRow): CompanyPublicRow {
+  return {
+    ...row,
+    logo_url: mapPublicLogoUrl(row.logo_url),
+  };
+}
+
+function mapCompanyPublicRowsForDisplay(rows: CompanyPublicRow[]): CompanyPublicRow[] {
+  return rows.map(mapCompanyPublicRowForDisplay);
+}
+
+async function getCompanyByIdAdmin(id: string): Promise<CompanyPublicRow | null> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -91,13 +104,15 @@ export async function getCompanyById(id: string): Promise<CompanyPublicRow | nul
     .maybeSingle();
 
   if (error) {
-    return getCompanyByIdAdmin(id);
+    const row = await getCompanyByIdAdmin(id);
+    return row ? mapCompanyPublicRowForDisplay(row) : null;
   }
   if (data) {
-    return data as CompanyPublicRow;
+    return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
   }
 
-  return getCompanyByIdAdmin(id);
+  const row = await getCompanyByIdAdmin(id);
+  return row ? mapCompanyPublicRowForDisplay(row) : null;
 }
 
 async function getCompanyBySlugAdmin(slug: string): Promise<CompanyPublicRow | null> {
@@ -127,13 +142,15 @@ export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow |
     .maybeSingle();
 
   if (error) {
-    return getCompanyBySlugAdmin(key);
+    const row = await getCompanyBySlugAdmin(key);
+    return row ? mapCompanyPublicRowForDisplay(row) : null;
   }
   if (data) {
-    return data as CompanyPublicRow;
+    return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
   }
 
-  return getCompanyBySlugAdmin(key);
+  const row = await getCompanyBySlugAdmin(key);
+  return row ? mapCompanyPublicRowForDisplay(row) : null;
 }
 
 export async function getCompaniesByIds(ids: readonly string[]) {
@@ -147,7 +164,7 @@ export async function getCompaniesByIds(ids: readonly string[]) {
     supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
   );
 
-  return rows as CompanyPublicRow[];
+  return mapCompanyPublicRowsForDisplay(rows as CompanyPublicRow[]);
 }
 
 async function getCompaniesByIdsAdmin(ids: readonly string[]) {

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { EVENT_SERIES_LOGO_STORAGE_NAMESPACE } from "@/src/lib/events/eventLogoPolicy";
+import { bucketRelativePathFromLogoReference } from "@/src/lib/storage/bucketRelativeLogoPath";
 
 import {
   COMPANY_LOGO_BUCKET,
@@ -65,17 +66,7 @@ export function eventSeriesLogoObjectPath(seriesId: string, extension: string): 
 export function parseEventSeriesLogoStoragePathFromUrl(
   url: string | null | undefined,
 ): ParsedEventSeriesLogoStoragePath | null {
-  const trimmed = url?.trim();
-  if (!trimmed) return null;
-
-  let pathname: string;
-  try {
-    pathname = new URL(trimmed).pathname;
-  } catch {
-    return null;
-  }
-
-  const bucketRelativePath = extractCompanyLogoBucketRelativePath(pathname);
+  const bucketRelativePath = bucketRelativePathFromLogoReference(url);
   if (!bucketRelativePath) return null;
 
   const match = EVENT_SERIES_LOGO_OBJECT_PATTERN.exec(bucketRelativePath);

@@ -9,6 +9,7 @@ import type { CityOption } from "@/src/features/companies/server/getCityOptions"
 import { buildVenueGoogleMapsUrl } from "@/src/features/venues/lib/buildGoogleMapsUrl";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import { formInputClass } from "@/src/lib/design/classes";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 import { slugify } from "@/src/lib/slugify";
 
 const MAX_LOGO_UPLOAD_BYTES = 2 * 1024 * 1024;
@@ -79,7 +80,7 @@ function validateLogoUploadFile(file: File): string | null {
 }
 
 function previewSrc(logoUrl: string, cacheKey: string | null | undefined): string {
-  const trimmed = logoUrl.trim();
+  const trimmed = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   if (!trimmed) return "";
   if (!cacheKey) return trimmed;
   const separator = trimmed.includes("?") ? "&" : "?";

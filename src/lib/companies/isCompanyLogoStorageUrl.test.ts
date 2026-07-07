@@ -22,6 +22,15 @@ describe("isCompanyLogoStorageUrl", () => {
     );
   });
 
+  it("returns true for bucket-relative company logo paths", () => {
+    assert.equal(
+      isCompanyLogoStorageUrl(
+        "companies/550e8400-e29b-41d4-a716-446655440000/logo.png",
+      ),
+      true,
+    );
+  });
+
   it("returns false for external URLs", () => {
     assert.equal(isCompanyLogoStorageUrl("https://cdn.example.com/logo.png"), false);
   });

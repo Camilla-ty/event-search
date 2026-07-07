@@ -1,4 +1,5 @@
 import type { CompanyLogoFields } from "@/src/lib/companies/logoTypes";
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 /** Minimal company row shape needed for public logo resolution. */
 export type CompanyPublicLogoRow = {
@@ -24,7 +25,7 @@ export function companyLogoFieldsFromRow(
 
   return {
     name: row.name ?? null,
-    logo_url: row.logo_url ?? null,
+    logo_url: mapPublicLogoUrl(row.logo_url),
     domain: row.domain ?? null,
     logo_source: row.logo_source ?? null,
     logo_status: row.logo_status ?? null,

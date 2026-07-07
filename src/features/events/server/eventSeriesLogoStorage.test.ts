@@ -66,6 +66,17 @@ describe("parseEventSeriesLogoStoragePathFromUrl", () => {
     assert.equal(parsed.bucketRelativePath, `event-series/${SERIES_ID}/logo.webp`);
   });
 
+  it("parses bucket-relative event-series logo paths", () => {
+    const parsed = parseEventSeriesLogoStoragePathFromUrl(
+      `event-series/${SERIES_ID}/logo.jpg`,
+    );
+
+    assert.ok(parsed);
+    assert.equal(parsed.seriesId, SERIES_ID);
+    assert.equal(parsed.extension, "jpg");
+    assert.equal(parsed.bucketRelativePath, `event-series/${SERIES_ID}/logo.jpg`);
+  });
+
   it("rejects company logo paths", () => {
     const publicUrl = `${SUPABASE_PUBLIC_BASE}/companies/${SERIES_ID}/logo.png`;
     assert.equal(parseEventSeriesLogoStoragePathFromUrl(publicUrl), null);

@@ -1,4 +1,5 @@
 import type { CompanyLogoFields, ResolvedCompanyLogo } from "@/src/lib/companies/logoTypes";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 export function companyLogoMonogramLetter(name: string | null | undefined): string {
   const trimmed = name?.trim();
@@ -7,7 +8,7 @@ export function companyLogoMonogramLetter(name: string | null | undefined): stri
 }
 
 export function resolveCompanyLogo(company: CompanyLogoFields): ResolvedCompanyLogo {
-  const storedLogoUrl = company.logo_url?.trim();
+  const storedLogoUrl = resolveStorageLogoDisplayUrl(company.logo_url);
   if (storedLogoUrl) {
     return { kind: "image", src: storedLogoUrl };
   }

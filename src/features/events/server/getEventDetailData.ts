@@ -3,6 +3,7 @@ import {
   getEventEditionDetail,
   getEventEditionDetailById,
 } from "@/src/lib/queries/events";
+import { mapEventEditionSeriesEmbedForDisplay } from "@/src/lib/storage/mapPublicLogoUrl";
 
 export async function getEventDetailData(identifier: string) {
   const raw =
@@ -11,15 +12,19 @@ export async function getEventDetailData(identifier: string) {
     return null;
   }
 
+  const edition = mapEventEditionSeriesEmbedForDisplay(
+    raw as Record<string, unknown>,
+  ) as typeof raw;
+
   const editionId =
-    typeof raw.id === "string" && raw.id.trim() !== ""
-      ? raw.id
-      : raw.id !== undefined && raw.id !== null
-        ? String(raw.id).trim()
+    typeof edition.id === "string" && edition.id.trim() !== ""
+      ? edition.id
+      : edition.id !== undefined && edition.id !== null
+        ? String(edition.id).trim()
         : null;
 
   if (editionId === null || editionId === "") {
-    return { ...raw, event_sponsors: [] };
+    return { ...edition, event_sponsors: [] };
   }
 
   let eventSponsors: Awaited<ReturnType<typeof getCompaniesByEventEdition>> = [];
@@ -31,5 +36,5 @@ export async function getEventDetailData(identifier: string) {
     }
   }
 
-  return { ...raw, event_sponsors: eventSponsors };
+  return { ...edition, event_sponsors: eventSponsors };
 }

@@ -1,12 +1,14 @@
 "use client";
 
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
+
 type EventSeriesLogoPreviewProps = {
   logoUrl: string;
   previewCacheKey?: string | null;
 };
 
 function previewSrc(logoUrl: string, cacheKey: string | null | undefined): string {
-  const trimmed = logoUrl.trim();
+  const trimmed = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   if (!trimmed) return "";
   if (!cacheKey) return trimmed;
   const separator = trimmed.includes("?") ? "&" : "?";

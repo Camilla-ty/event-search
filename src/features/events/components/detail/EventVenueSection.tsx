@@ -2,6 +2,7 @@ import { Badge } from "@/src/components/common";
 import type { PublicVenueSummary } from "@/src/features/events/server/mapPublicVenue";
 import { buildVenueGoogleMapsUrl } from "@/src/features/venues/lib/buildGoogleMapsUrl";
 import { brandLinkClass } from "@/src/lib/design/classes";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 type EventVenueSectionProps = {
   venue: PublicVenueSummary;
@@ -14,7 +15,7 @@ export function EventVenueSection({ venue, cityLabel }: EventVenueSectionProps) 
     addressText: venue.address_text,
     cityLabel,
   });
-  const logoUrl = venue.logo_url?.trim() ?? "";
+  const logoUrl = resolveStorageLogoDisplayUrl(venue.logo_url) ?? "";
   const websiteUrl = venue.website_url?.trim() ?? "";
   const addressText = venue.address_text?.trim() ?? "";
 

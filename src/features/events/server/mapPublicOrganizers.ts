@@ -1,4 +1,5 @@
 import type { EventSponsorCompany } from "@/src/features/events/components/detail/types";
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 export type PublicOrganizerRow = {
   id: string;
@@ -20,7 +21,7 @@ function mapOrganizerCompany(raw: unknown): EventSponsorCompany | null {
     id,
     slug: typeof row.slug === "string" ? row.slug : null,
     name: typeof row.name === "string" ? row.name : null,
-    logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+    logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
     logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
   };

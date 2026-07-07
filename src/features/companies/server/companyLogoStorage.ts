@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { bucketRelativePathFromLogoReference } from "@/src/lib/storage/bucketRelativeLogoPath";
 
 export const COMPANY_LOGO_BUCKET = process.env.BACKFILL_LOGO_BUCKET ?? "company-logos";
 export const COMPANY_LOGO_STORAGE_NAMESPACE = "companies";
@@ -51,37 +52,12 @@ export function isCompanyIdLogoStorageSegment(segment: string): boolean {
   return COMPANY_ID_SEGMENT_PATTERN.test(segment.trim());
 }
 
-function extractCompanyLogoBucketRelativePath(pathname: string): string | null {
-  const markers = [
-    `/storage/v1/object/public/${COMPANY_LOGO_BUCKET}/`,
-    `/object/public/${COMPANY_LOGO_BUCKET}/`,
-  ];
-
-  for (const marker of markers) {
-    const markerIndex = pathname.indexOf(marker);
-    if (markerIndex !== -1) {
-      return pathname.slice(markerIndex + marker.length);
-    }
-  }
-
-  return null;
-}
-
 export function parseCompanyLogoStoragePathFromUrl(
   url: string | null | undefined,
 ): ParsedCompanyLogoStoragePath | null {
-  const trimmed = url?.trim();
-  if (!trimmed) return null;
-
-  let pathname: string;
-  try {
-    pathname = new URL(trimmed).pathname;
-  } catch {
-    return null;
-  }
-
-  const bucketRelativePath = extractCompanyLogoBucketRelativePath(pathname);
+  const bucketRelativePath = bucketRelativePathFromLogoReference(url);
   if (!bucketRelativePath) return null;
+
   const match = COMPANY_LOGO_OBJECT_PATTERN.exec(bucketRelativePath);
   if (!match) return null;
 

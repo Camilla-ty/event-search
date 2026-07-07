@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/src/components/common";
 import type { BadgeProps } from "@/src/components/common/Badge";
 import { companyLogoMonogramLetter } from "@/src/lib/companies/resolveCompanyLogo";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 type LiveSponsorLogoPreviewProps = {
   name: string;
@@ -40,7 +41,7 @@ export function LiveSponsorLogoPreview({
   logoSource,
 }: LiveSponsorLogoPreviewProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const storedLogoUrl = logoUrl?.trim() ?? "";
+  const storedLogoUrl = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   const showImage = storedLogoUrl !== "" && !imageFailed;
   const badge = logoSourceBadge(logoSource);
   const missingLogo = !showImage;

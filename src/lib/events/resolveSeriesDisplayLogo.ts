@@ -1,10 +1,8 @@
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
+
 export type SeriesLogoSource = {
   logo_url?: string | null;
 };
-
-function trimLogoUrl(value: string | null | undefined): string {
-  return value?.trim() ?? "";
-}
 
 /**
  * Public display logo for an event edition: series logo only.
@@ -13,6 +11,6 @@ function trimLogoUrl(value: string | null | undefined): string {
 export function resolveSeriesDisplayLogo(
   series: SeriesLogoSource | null | undefined,
 ): string | null {
-  const seriesLogo = trimLogoUrl(series?.logo_url);
-  return seriesLogo !== "" ? seriesLogo : null;
+  const seriesLogo = resolveStorageLogoDisplayUrl(series?.logo_url);
+  return seriesLogo;
 }

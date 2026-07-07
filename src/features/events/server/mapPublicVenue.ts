@@ -1,3 +1,5 @@
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
+
 export type PublicVenueSummary = {
   id: string;
   name: string;
@@ -32,7 +34,7 @@ export function mapPublicVenueFromEditionRow(
     name,
     website_url: typeof row.website_url === "string" ? row.website_url : null,
     address_text: typeof row.address_text === "string" ? row.address_text : null,
-    logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+    logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     archived_at: typeof row.archived_at === "string" ? row.archived_at : null,
   };
 }

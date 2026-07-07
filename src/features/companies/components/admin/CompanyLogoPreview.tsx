@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
+
 export type CompanyLogoMetadata = {
   logo_url: string;
   logo_source: string | null;
@@ -19,7 +21,7 @@ function formatFetchedAt(value: string | null): string {
 }
 
 function previewSrc(logoUrl: string, cacheKey: string | null): string {
-  const trimmed = logoUrl.trim();
+  const trimmed = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   if (!trimmed) return "";
   if (!cacheKey) return trimmed;
   const separator = trimmed.includes("?") ? "&" : "?";

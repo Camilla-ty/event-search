@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { AdminDrawerShell } from "@/src/features/admin/components/AdminDrawerShell";
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { formInputClass } from "@/src/lib/design/classes";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 import type { LiveSponsorCompanyLogoUpdate, LiveSponsorRow } from "./liveSponsorTypes";
 
@@ -35,7 +36,7 @@ const ALLOWED_LOGO_UPLOAD_MIME_TYPES = [
 ] as const;
 
 function previewSrc(logoUrl: string | null, cacheKey: string | null): string {
-  const trimmed = logoUrl?.trim() ?? "";
+  const trimmed = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   if (!trimmed) return "";
   if (!cacheKey) return trimmed;
   const separator = trimmed.includes("?") ? "&" : "?";

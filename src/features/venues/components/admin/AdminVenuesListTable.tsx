@@ -2,13 +2,14 @@ import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
 import type { VenueListItem } from "@/src/features/venues/server/venueAdmin";
+import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
 type AdminVenuesListTableProps = {
   venues: VenueListItem[];
 };
 
 function VenueLogoCell({ logoUrl }: { logoUrl: string | null }) {
-  const trimmed = logoUrl?.trim() ?? "";
+  const trimmed = resolveStorageLogoDisplayUrl(logoUrl) ?? "";
   if (trimmed === "") {
     return <span className="text-slate-400">—</span>;
   }

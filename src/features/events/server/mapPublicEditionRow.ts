@@ -3,6 +3,7 @@ import type {
   PublicEventSeriesSummary,
 } from "@/src/features/events/types/publicEdition";
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
+import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 function readCityEmbed(raw: unknown): {
   name?: string | null;
@@ -43,7 +44,7 @@ export function mapPublicEventSeries(raw: unknown): PublicEventSeriesSummary | n
     name,
     description: typeof row.description === "string" ? row.description : null,
     website_url: typeof row.website_url === "string" ? row.website_url : null,
-    logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+    logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     lifecycle_status:
       typeof row.lifecycle_status === "string" ? row.lifecycle_status : null,
     merged_into_series: mapMergedIntoSeries(row.merged_into_series),

@@ -27,4 +27,23 @@ describe("resolveSeriesDisplayLogo", () => {
       editionOverride,
     );
   });
+
+  it("resolves bucket-relative series logo paths", () => {
+    const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+
+    try {
+      const seriesId = "622665d9-ff74-4e68-8ec7-25551590c435";
+      assert.equal(
+        resolveSeriesDisplayLogo({ logo_url: `event-series/${seriesId}/logo.svg` }),
+        `https://example.supabase.co/storage/v1/object/public/company-logos/event-series/${seriesId}/logo.svg`,
+      );
+    } finally {
+      if (originalSupabaseUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
+      }
+    }
+  });
 });
