@@ -30,8 +30,6 @@ export type EventRecord = {
   last_reviewed_at?: string | null;
 };
 
-export type ExplorerView = "list" | "calendar";
-
 export type EventFilters = {
   query: string;
   regions: string[];

@@ -4,6 +4,12 @@ import type { FormEvent, InputHTMLAttributes } from "react";
 import { useState } from "react";
 
 import { Button } from "@/src/components/common/Button";
+import {
+  explorerGlobalSearchInputClass,
+  explorerSearchFormDefaultClass,
+  explorerSearchFormToolbarClass,
+  SearchSubmitIconButton,
+} from "@/src/components/common/explorer";
 
 export type SearchBarProps = {
   placeholder?: string;
@@ -13,7 +19,11 @@ export type SearchBarProps = {
   inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
   className?: string;
   submitVariant?: "primary" | "secondary";
+  variant?: "default" | "toolbar";
 };
+
+const defaultInputClass =
+  "h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15";
 
 export function SearchBar({
   placeholder = "Search...",
@@ -23,8 +33,10 @@ export function SearchBar({
   inputProps,
   className,
   submitVariant = "primary",
+  variant = "default",
 }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue);
+  const isToolbar = variant === "toolbar";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +47,7 @@ export function SearchBar({
     <form
       onSubmit={handleSubmit}
       className={[
-        "flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm",
+        isToolbar ? explorerSearchFormToolbarClass : explorerSearchFormDefaultClass,
         className,
       ]
         .filter(Boolean)
@@ -49,15 +61,19 @@ export function SearchBar({
         placeholder={placeholder}
         aria-label={ariaLabel}
         className={[
-          "h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15",
+          isToolbar ? explorerGlobalSearchInputClass : defaultInputClass,
           inputProps?.className,
         ]
           .filter(Boolean)
           .join(" ")}
       />
-      <Button type="submit" size="md" variant={submitVariant}>
-        Search
-      </Button>
+      {isToolbar ? (
+        <SearchSubmitIconButton ariaLabel={ariaLabel} />
+      ) : (
+        <Button type="submit" size="md" variant={submitVariant}>
+          Search
+        </Button>
+      )}
     </form>
   );
 }

@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation";
 import { parseSponsorDiscoverySuggestQuery } from "@/src/features/sponsors/server/sponsorDiscoverySuggestParams";
 
 import { Button } from "@/src/components/common/Button";
+import {
+  explorerGlobalSearchInputClass,
+  explorerSearchFormDefaultClass,
+  explorerSearchFormToolbarClass,
+  SearchSubmitIconButton,
+} from "@/src/components/common/explorer";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import type { SponsorSuggestItem } from "@/src/features/sponsors/server/sponsorDiscoverySuggestTypes";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
@@ -25,6 +31,7 @@ type SponsorSearchComboboxProps = {
   ariaLabel?: string;
   className?: string;
   submitVariant?: "primary" | "secondary";
+  variant?: "default" | "toolbar";
 };
 
 function suggestItemLogoFields(item: SponsorSuggestItem) {
@@ -41,11 +48,13 @@ export function SponsorSearchCombobox({
   ariaLabel = "Search sponsoring companies globally",
   className,
   submitVariant = "secondary",
+  variant = "default",
 }: SponsorSearchComboboxProps) {
   const router = useRouter();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const normalizedQueryFromUrl = parseSponsorDiscoverySuggestQuery(queryFromUrl);
+  const isToolbar = variant === "toolbar";
 
   const [value, setValue] = useState(normalizedQueryFromUrl);
   const [isFocused, setIsFocused] = useState(false);
@@ -163,10 +172,20 @@ export function SponsorSearchCombobox({
       : undefined;
 
   return (
-    <div className={["relative min-w-0", className].filter(Boolean).join(" ")}>
+    <div
+      className={[
+        "relative min-w-0",
+        isToolbar ? "flex flex-1" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm"
+        className={
+          isToolbar ? explorerSearchFormToolbarClass : explorerSearchFormDefaultClass
+        }
         role="combobox"
         aria-expanded={dropdownOpen}
         aria-haspopup="listbox"
@@ -199,11 +218,17 @@ export function SponsorSearchCombobox({
           aria-controls={listboxId}
           aria-activedescendant={activeDescendantId}
           autoComplete="off"
-          className="h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15"
+          className={
+            isToolbar ? explorerGlobalSearchInputClass : defaultSponsorInputClass
+          }
         />
-        <Button type="submit" size="md" variant={submitVariant}>
-          Search
-        </Button>
+        {isToolbar ? (
+          <SearchSubmitIconButton ariaLabel={ariaLabel} />
+        ) : (
+          <Button type="submit" size="md" variant={submitVariant}>
+            Search
+          </Button>
+        )}
       </form>
 
       {dropdownOpen ? (
@@ -292,3 +317,6 @@ export function SponsorSearchCombobox({
     </div>
   );
 }
+
+const defaultSponsorInputClass =
+  "h-10 w-full rounded-lg border border-transparent bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/30 focus:ring-2 focus:ring-brand-primary/15";

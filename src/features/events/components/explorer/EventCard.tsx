@@ -31,9 +31,16 @@ function formatDateRange(start?: string | null, end?: string | null) {
   return `${start} - ${end}`;
 }
 
-function formatSponsorCount(count: number): string {
-  if (count === 1) return "1 Sponsor";
-  return `${count} Sponsors`;
+function EventCardSponsorCount({ count }: { count: number }) {
+  const value = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+  const label = value === 1 ? "Sponsor" : "Sponsors";
+
+  return (
+    <span>
+      <span className="font-semibold text-slate-800">{value.toLocaleString()}</span>
+      <span className="text-slate-500"> {label}</span>
+    </span>
+  );
 }
 
 type EventCardKeywordBadgesProps = {
@@ -108,7 +115,9 @@ function EventCardContent({ event, location, keywordPreview }: EventCardContentP
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <EventCardMetaBlock>{formatSponsorCount(event.sponsor_count ?? 0)}</EventCardMetaBlock>
+          <EventCardMetaBlock>
+            <EventCardSponsorCount count={event.sponsor_count ?? 0} />
+          </EventCardMetaBlock>
           <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
           <EventCardMetaBlock withDivider>
             <span className="line-clamp-2">{locationLabel}</span>

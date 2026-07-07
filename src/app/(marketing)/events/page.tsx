@@ -27,8 +27,6 @@ type EventsPageProps = {
     start?: string;
     end?: string;
     topic?: string | string[];
-    view?: string;
-    month?: string;
   }>;
 };
 
@@ -43,8 +41,6 @@ function toEventExplorerSearchParams(
     ["type", raw.type],
     ["start", raw.start],
     ["end", raw.end],
-    ["view", raw.view],
-    ["month", raw.month],
   ];
 
   for (const [key, value] of entries) {

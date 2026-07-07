@@ -11,12 +11,6 @@ import {
 import type { EventExplorerFilterFacets } from "@/src/features/events/lib/eventExplorerFilterFacets";
 import { toggleCountrySelection } from "@/src/features/events/lib/filterPanelCountries";
 import { toggleTopicSelection } from "@/src/features/events/lib/filterPanelTopics";
-import {
-  eventsIntersectMonth,
-  formatCalendarMonthLabel,
-  getCurrentMonthKey,
-} from "@/src/features/events/lib/eventCalendarGrouping";
-import { buildCalendarToolbarCounts } from "@/src/features/events/lib/eventExplorerCounts";
 import { applyOptimisticCountryDisplayFilter, isRegionOptimisticDisplaySufficient } from "@/src/features/events/lib/eventOptimisticCountryFilter";
 import { applyOptimisticTopicDisplayFilter, isTopicOptimisticDisplaySufficient } from "@/src/features/events/lib/eventOptimisticTopicFilter";
 import {
@@ -36,18 +30,12 @@ import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
-import {
-  parseEventExplorerMonth,
-  parseEventExplorerView,
-} from "@/src/lib/routes/explorerUrls";
 
 import { ActiveTopicFilters } from "./ActiveTopicFilters";
-import { EventCalendar } from "./EventCalendar";
 import { EventGrid } from "./EventGrid";
-import { EventViewToggle } from "./EventViewToggle";
 import { FilterApplyingIndicator } from "./FilterApplyingIndicator";
 import { FilterPanel } from "./FilterPanel";
-import type { EventFilters, EventRecord, ExplorerView } from "./types";
+import type { EventFilters, EventRecord } from "./types";
 
 const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
   { value: "recommended", label: "Recommended" },
@@ -81,16 +69,6 @@ export function EventExplorerPage({
   const [sort, setSort] = useState<EventExplorerSortMode>(DEFAULT_EVENT_EXPLORER_SORT_MODE);
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const explorerView = parseEventExplorerView(searchParams.get("view"));
-  const calendarMonth = parseEventExplorerMonth(searchParams.get("month"));
-  const defaultCalendarMonth = useMemo(() => {
-    const fromStartFilter = parseEventExplorerMonth(
-      appliedFilters.startDate.slice(0, 7),
-    );
-    if (fromStartFilter !== null) return fromStartFilter;
-    return getCurrentMonthKey();
-  }, [appliedFilters.startDate]);
-  const visibleCalendarMonth = calendarMonth ?? defaultCalendarMonth;
   const appliedFilterKey = useMemo(
     () => buildEventExplorerFilterKey(appliedFilters),
     [appliedFilters],
@@ -149,19 +127,6 @@ export function EventExplorerPage({
     sort,
   ]);
 
-  const calendarToolbarCounts = useMemo(() => {
-    if (explorerView !== "calendar") return null;
-
-    const totalMatchingCount = sortedEvents.length;
-    const monthEventCount = eventsIntersectMonth(
-      sortedEvents,
-      visibleCalendarMonth,
-    ).length;
-    const monthLabel = formatCalendarMonthLabel(visibleCalendarMonth);
-
-    return buildCalendarToolbarCounts(monthEventCount, monthLabel, totalMatchingCount);
-  }, [explorerView, sortedEvents, visibleCalendarMonth]);
-
   useEffect(() => {
     setDraftFilters(appliedFilters);
     skipUrlSyncRef.current = true;
@@ -177,16 +142,8 @@ export function EventExplorerPage({
       return;
     }
 
-    const next = buildEventExplorerSearchParams(draftFilters, {
-      view: explorerView === "calendar" ? "calendar" : undefined,
-      month: visibleCalendarMonth,
-    });
-    if (
-      eventExplorerClientUrlMatchesDraft(searchParams, draftFilters, {
-        view: explorerView,
-        month: visibleCalendarMonth,
-      })
-    ) {
+    const next = buildEventExplorerSearchParams(draftFilters);
+    if (eventExplorerClientUrlMatchesDraft(searchParams, draftFilters)) {
       return;
     }
 
@@ -194,45 +151,7 @@ export function EventExplorerPage({
     startTransition(() => {
       router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
     });
-  }, [
-    draftFilters,
-    explorerView,
-    pathname,
-    router,
-    searchParams,
-    visibleCalendarMonth,
-  ]);
-
-  function buildExplorerSearchParams(options?: { view?: ExplorerView; month?: string }) {
-    const nextView = options?.view ?? explorerView;
-    return buildEventExplorerSearchParams(draftFilters, {
-      view: nextView === "calendar" ? "calendar" : undefined,
-      month: options?.month ?? visibleCalendarMonth,
-    });
-  }
-
-  function replaceExplorerUrl(options?: { view?: ExplorerView; month?: string }) {
-    const next = buildExplorerSearchParams(options);
-    const nextValue = next.toString();
-    startTransition(() => {
-      router.replace(nextValue ? `${pathname}?${nextValue}` : pathname);
-    });
-  }
-
-  function handleViewChange(nextView: ExplorerView) {
-    if (nextView === "list") {
-      setPage(1);
-    }
-
-    replaceExplorerUrl({
-      view: nextView,
-      month: nextView === "calendar" ? visibleCalendarMonth : undefined,
-    });
-  }
-
-  function handleCalendarMonthChange(month: string) {
-    replaceExplorerUrl({ view: "calendar", month });
-  }
+  }, [draftFilters, pathname, router, searchParams]);
 
   function handleReset() {
     setDraftFilters({ ...DEFAULT_EVENT_EXPLORER_FILTERS });
@@ -291,21 +210,14 @@ export function EventExplorerPage({
             onRemoveCountry={handleRemoveCountry}
             onClearAll={handleClearAllFilters}
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <EventViewToggle view={explorerView} onViewChange={handleViewChange} />
-            <div className="min-w-0 flex-1">
-              <ExplorerResultsToolbar
-                total={sortedEvents.length}
-                entityLabel="events"
-                sort={sort}
-                sortOptions={EVENT_SORT_OPTIONS}
-                onSortChange={setSort}
-                onOpenFilters={() => setMobileFiltersOpen(true)}
-                showSort={explorerView === "list"}
-                calendarCounts={calendarToolbarCounts}
-              />
-            </div>
-          </div>
+          <ExplorerResultsToolbar
+            total={sortedEvents.length}
+            entityLabel="events"
+            sort={sort}
+            sortOptions={EVENT_SORT_OPTIONS}
+            onSortChange={setSort}
+            onOpenFilters={() => setMobileFiltersOpen(true)}
+          />
           <FilterApplyingIndicator visible={showResultsApplyingState} />
           <div
             className={
@@ -314,21 +226,13 @@ export function EventExplorerPage({
                 : "transition-opacity duration-200"
             }
           >
-            {explorerView === "list" ? (
-              <EventGrid
-                events={sortedEvents}
-                loading={false}
-                page={page}
-                onPageChange={setPage}
-                onReset={handleReset}
-              />
-            ) : (
-              <EventCalendar
-                events={sortedEvents}
-                month={visibleCalendarMonth}
-                onMonthChange={handleCalendarMonthChange}
-              />
-            )}
+            <EventGrid
+              events={sortedEvents}
+              loading={false}
+              page={page}
+              onPageChange={setPage}
+              onReset={handleReset}
+            />
           </div>
         </div>
       </div>

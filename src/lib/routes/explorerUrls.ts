@@ -7,16 +7,6 @@ export function buildSponsorSearchUrl(query?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
-export type EventExplorerView = "list" | "calendar";
-
-export function parseEventExplorerView(
-  raw: string | null | undefined,
-): EventExplorerView {
-  const trimmed = (raw ?? "").trim().toLowerCase();
-  if (trimmed === "calendar") return "calendar";
-  return "list";
-}
-
 export function parseEventExplorerMonth(raw: string | null | undefined): string | null {
   const trimmed = (raw ?? "").trim();
   if (!/^\d{4}-\d{2}$/.test(trimmed)) return null;
@@ -40,15 +30,6 @@ export function buildEventExplorerUpcomingUrl(fromDate?: string): string {
   const url = new URL("/events", "http://local");
   const date = fromDate?.trim() || new Date().toISOString().slice(0, 10);
   url.searchParams.set("start", date);
-  return `${url.pathname}${url.search}`;
-}
-
-export function buildEventExplorerCalendarUrl(month?: string): string {
-  const url = new URL("/events", "http://local");
-  url.searchParams.set("view", "calendar");
-  const normalizedMonth =
-    parseEventExplorerMonth(month) ?? new Date().toISOString().slice(0, 7);
-  url.searchParams.set("month", normalizedMonth);
   return `${url.pathname}${url.search}`;
 }
 
