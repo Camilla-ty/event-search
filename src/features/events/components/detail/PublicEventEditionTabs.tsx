@@ -6,6 +6,11 @@ import type { ReactNode } from "react";
 
 import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/classes";
 
+import {
+  buildPublicEditionTabHref,
+  type PublicEditionTabId,
+} from "./publicEditionTabUrls";
+
 const BASE_TABS = [
   { id: "overview", label: "Overview" },
   { id: "sponsors", label: "Sponsors" },
@@ -14,7 +19,7 @@ const BASE_TABS = [
 ] as const;
 
 type BaseTabId = (typeof BASE_TABS)[number]["id"];
-export type PublicEditionTabId = BaseTabId | "partner-alumni";
+export type { PublicEditionTabId };
 
 type PublicEventEditionTabsProps = {
   eventSlug: string;
@@ -48,7 +53,6 @@ export function PublicEventEditionTabs({
 }: PublicEventEditionTabsProps) {
   const searchParams = useSearchParams();
   const activeTab = parsePublicEditionTab(searchParams.get("tab"), showPartnerAlumniTab);
-  const basePath = `/events/${eventSlug}`;
 
   const tabs: Array<{ id: PublicEditionTabId; label: string }> = [...BASE_TABS];
   if (showPartnerAlumniTab) {
@@ -62,7 +66,7 @@ export function PublicEventEditionTabs({
         className="flex flex-wrap gap-1 border-b border-slate-200 pb-3"
       >
         {tabs.map((tab) => {
-          const href = tab.id === "overview" ? basePath : `${basePath}?tab=${tab.id}`;
+          const href = buildPublicEditionTabHref(eventSlug, tab.id);
           const active = activeTab === tab.id;
           return (
             <Link

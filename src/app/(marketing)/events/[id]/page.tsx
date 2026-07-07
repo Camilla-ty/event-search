@@ -6,8 +6,10 @@ import { Suspense } from "react";
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
 import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
+import { EventSponsorsOverviewSection } from "@/src/features/events/components/detail/EventSponsorsOverviewSection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
 import { EventHistorySection } from "@/src/features/events/components/detail/EventHistorySection";
+import { EventVenueOverviewSection } from "@/src/features/events/components/detail/EventVenueOverviewSection";
 import { ResearchInformationSection } from "@/src/features/events/components/detail/ResearchInformationSection";
 import {
   EventVenueEmptyState,
@@ -169,9 +171,9 @@ export default async function EventDetailPage({
       />
 
       <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
-        <div className="mx-auto w-28 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted md:mx-0">
+        <div className="mx-auto w-36 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-brand-primary-muted md:mx-0">
           {seriesLogoUrl ? (
-            <div className="flex h-28 w-28 items-center justify-center p-3">
+            <div className="flex h-36 w-36 items-center justify-center p-3">
               <SeriesLogo
                 series={{
                   name:
@@ -186,11 +188,11 @@ export default async function EventDetailPage({
                 fallbackName={typeof edition.name === "string" ? edition.name : null}
                 className="flex h-full w-full items-center justify-center"
                 imageClassName="max-h-full max-w-full object-contain"
-                monogramClassName="text-2xl font-semibold text-slate-400"
+                monogramClassName="text-3xl font-semibold text-slate-400"
               />
             </div>
           ) : (
-            <div className="h-28 w-28 bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
+            <div className="h-36 w-36 bg-gradient-to-br from-brand-primary to-brand-primary-hover" />
           )}
         </div>
 
@@ -248,6 +250,17 @@ export default async function EventDetailPage({
               <EventHistorySection
                 lifecycleStatus={lifecycleStatus}
                 mergedIntoSeries={mergedIntoSeries}
+              />
+              <EventVenueOverviewSection
+                eventSlug={eventSlug}
+                venue={venue}
+                cityLabel={cityLabel}
+                hasVenueId={hasVenueId}
+              />
+              <EventSponsorsOverviewSection
+                eventSlug={eventSlug}
+                sponsors={sponsors}
+                totalSponsorCount={totalSponsorCount}
               />
               {seriesBrandLabel && seriesHubHref ? (
                 <RelatedEditionsSection
