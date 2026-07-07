@@ -1,6 +1,7 @@
 import { createClient } from "@/src/lib/supabase/server";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
+import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
@@ -252,16 +253,18 @@ export async function getSponsorCountsByEditionIds(
 
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("event_sponsors")
-      .select("event_editions_id")
-      .in("event_editions_id", uniqueEditionIds);
+    const editionIdSet = new Set(uniqueEditionIds);
+    const links = await fetchAllPaginatedSupabaseRows<{ event_editions_id?: unknown }>(
+      async ({ from, to }) =>
+        supabase.from("event_sponsors").select("event_editions_id").range(from, to),
+    );
 
-    if (error) {
-      return new Map();
-    }
+    const filteredLinks = links.filter((link) => {
+      if (typeof link.event_editions_id !== "string") return false;
+      return editionIdSet.has(normalizeEditionIdForQuery(link.event_editions_id));
+    });
 
-    return buildSponsorCountByEditionId(data ?? []);
+    return buildSponsorCountByEditionId(filteredLinks);
   } catch {
     return new Map();
   }

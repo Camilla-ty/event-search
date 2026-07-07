@@ -33,4 +33,15 @@ describe("buildSponsorCountByEditionId", () => {
 
     assert.equal(counts.size, 0);
   });
+
+  it("aggregates counts beyond the Supabase 1000-row page default", () => {
+    const editionId = "11111111-1111-1111-1111-111111111111";
+    const links = Array.from({ length: 1001 }, () => ({
+      event_editions_id: editionId,
+    }));
+
+    const counts = buildSponsorCountByEditionId(links);
+
+    assert.equal(readSponsorCountForEdition(counts, editionId), 1001);
+  });
 });

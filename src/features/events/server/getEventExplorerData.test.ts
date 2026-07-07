@@ -6,6 +6,26 @@ import {
   mergeTopicSeriesResolutions,
   readEditionSeriesId,
 } from "@/src/features/events/server/getEventExplorerData";
+import { readSponsorCountForEdition } from "@/src/lib/queries/companies";
+
+describe("explorer sponsor count wiring", () => {
+  it("maps sponsorCountsByEditionId onto filtered editions", () => {
+    const filtered = [{ id: "585aa4e5-25ba-4182-9c2a-c524eea8b82b", name: "BTC Prague 2026" }];
+    const sponsorCountsByEditionId = new Map([
+      ["585aa4e5-25ba-4182-9c2a-c524eea8b82b", 81],
+    ]);
+
+    const editionsWithSponsorCounts = filtered.map((edition) => ({
+      ...edition,
+      sponsor_count: readSponsorCountForEdition(
+        sponsorCountsByEditionId,
+        String(edition.id),
+      ),
+    }));
+
+    assert.equal(editionsWithSponsorCounts[0]?.sponsor_count, 81);
+  });
+});
 
 describe("readEditionSeriesId", () => {
   it("reads a trimmed series id", () => {
