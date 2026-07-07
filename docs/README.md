@@ -127,6 +127,14 @@ Plus one constraint on existing `event_sponsors`: `UNIQUE (event_editions_id, co
 
 ---
 
+## Backlog (future ideas)
+
+| Document | Description |
+|----------|-------------|
+| [Product Backlog](./backlog.md) | Deferred enhancements — not approved for implementation until promoted to a scope doc |
+
+---
+
 ## End-to-end admin flow
 
 ```
