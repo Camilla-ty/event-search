@@ -1,5 +1,6 @@
 export { Badge } from "./Badge";
 export { Button } from "./Button";
+export { InfoHelpPopover } from "./InfoHelpPopover";
 export {
   Card,
   CardContent,

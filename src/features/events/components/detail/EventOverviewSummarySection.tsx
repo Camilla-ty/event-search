@@ -11,6 +11,7 @@ import {
 import type { PublicVenueSummary } from "@/src/features/events/server/mapPublicVenue";
 import { brandLinkClass } from "@/src/lib/design/classes";
 
+import { EventStatusHelpPopover } from "./EventStatusHelpPopover";
 import { MetadataRow } from "./MetadataRow";
 import { buildPublicEditionTabHref } from "./publicEditionTabUrls";
 import type { EventSponsorRow } from "./types";
@@ -65,7 +66,7 @@ export function EventOverviewSummarySection({
       <dl className="divide-y divide-slate-100">
         {statusRow ? (
           <div className="py-3 first:pt-0 last:pb-0">
-            <MetadataRow label="Event Status">
+            <MetadataRow label="Event Status" labelSuffix={<EventStatusHelpPopover />}>
               <div className="space-y-2">
                 <Badge variant={statusBadgeVariant(statusRow.value)}>{statusRow.value}</Badge>
                 {mergedIntoRow ? (
