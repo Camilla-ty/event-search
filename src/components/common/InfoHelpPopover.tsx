@@ -54,10 +54,9 @@ export function InfoHelpPopover({ ariaLabel, title, children }: InfoHelpPopoverP
           id={panelId}
           role="region"
           aria-label={title}
-          className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 text-left text-xs font-normal normal-case tracking-normal text-slate-600 shadow-lg"
+          className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3.5 text-left font-normal normal-case tracking-normal shadow-lg"
         >
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
-          <div className="mt-2 space-y-2">{children}</div>
+          {children}
         </div>
       ) : null}
     </span>

@@ -18,12 +18,14 @@ const STATUS_HELP_ITEMS = [
 export function EventStatusHelpPopover() {
   return (
     <InfoHelpPopover ariaLabel="About Event Status" title="About Event Status">
-      {STATUS_HELP_ITEMS.map((item) => (
-        <div key={item.label}>
-          <p className="font-medium text-slate-800">{item.label}</p>
-          <p>{item.description}</p>
-        </div>
-      ))}
+      <div className="space-y-3.5">
+        {STATUS_HELP_ITEMS.map((item) => (
+          <div key={item.label}>
+            <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.description}</p>
+          </div>
+        ))}
+      </div>
     </InfoHelpPopover>
   );
 }
