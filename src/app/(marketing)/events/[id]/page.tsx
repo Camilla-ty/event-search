@@ -30,6 +30,7 @@ import {
 import { mapPublicOrganizersFromEditionRow } from "@/src/features/events/server/mapPublicOrganizers";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
+import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import { brandLinkClass } from "@/src/lib/design/classes";
@@ -156,6 +157,9 @@ export default async function EventDetailPage({
     typeof edition.last_reviewed_at === "string" ? edition.last_reviewed_at : null;
   const primarySourceUrl =
     typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
+  const sponsorNoteType = parseSponsorNoteType(
+    (edition as { sponsor_note_type?: unknown }).sponsor_note_type,
+  );
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
   const eventDisplayName = edition.name?.trim() || "Event";
@@ -276,6 +280,7 @@ export default async function EventDetailPage({
               sponsors={sponsors}
               isAuthenticated={isAuthenticated}
               totalSponsorCount={totalSponsorCount}
+              sponsorNoteType={sponsorNoteType}
             />
           }
           venuePanel={

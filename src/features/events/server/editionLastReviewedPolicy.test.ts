@@ -40,6 +40,15 @@ describe("shouldSetAutoReviewTimestamp", () => {
     );
   });
 
+  it("returns false for manual-only sponsor_note_type saves", () => {
+    assert.equal(
+      shouldSetAutoReviewTimestamp(existing, {
+        sponsor_note_type: "upcoming_pending",
+      }),
+      false,
+    );
+  });
+
   it("returns false when meaningful fields are present but unchanged", () => {
     assert.equal(
       shouldSetAutoReviewTimestamp(existing, {

@@ -11,6 +11,7 @@ import type { CityOption } from "@/src/features/companies/server/getCityOptions"
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import { AdminVenueSelect } from "@/src/features/venues/components/admin/AdminVenueSelect";
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
+import { SPONSOR_NOTE_TYPE_OPTIONS } from "@/src/features/events/lib/sponsorNoteType";
 import { formInputClass } from "@/src/lib/design/classes";
 import { EditionSiblingWarnings } from "@/src/features/events/components/admin/EditionSiblingWarnings";
 import type { EditionFormValues } from "@/src/features/events/components/admin/editionFormValues";
@@ -153,6 +154,7 @@ export function EventEditionForm({
       venue_id: values.venue_id.trim() || null,
       last_reviewed_at: values.last_reviewed_at.trim() || null,
       primary_source_url: values.primary_source_url.trim() || null,
+      sponsor_note_type: values.sponsor_note_type.trim() || null,
     };
     if (mode === "create") {
       return { ...payload, series_id: values.series_id, year: yearNumber };
@@ -431,6 +433,26 @@ export function EventEditionForm({
               className={formInputClass}
               placeholder="https://…"
             />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Sponsor note</span>
+            <select
+              value={values.sponsor_note_type}
+              onChange={(e) => updateField("sponsor_note_type", e.target.value)}
+              disabled={isSubmitting}
+              className={formInputClass}
+            >
+              {SPONSOR_NOTE_TYPE_OPTIONS.map((option) => (
+                <option key={option.label} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              Explain why sponsor data is missing when the live roster is empty. Shown publicly
+              only when there are no sponsors.
+            </p>
           </label>
 
           <div className="flex flex-col gap-2 pt-2 sm:flex-row">

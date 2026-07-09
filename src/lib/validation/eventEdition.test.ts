@@ -14,3 +14,27 @@ describe("validateEditionUpdateBody logo policy", () => {
     assert.match(result.errors.join("; "), /logo_url cannot be updated on event editions/i);
   });
 });
+
+describe("validateEditionUpdateBody sponsor_note_type", () => {
+  it("accepts allowed sponsor note types and null", () => {
+    assert.deepEqual(
+      validateEditionUpdateBody({ sponsor_note_type: "upcoming_pending" }),
+      { ok: true, patch: { sponsor_note_type: "upcoming_pending" } },
+    );
+    assert.deepEqual(validateEditionUpdateBody({ sponsor_note_type: null }), {
+      ok: true,
+      patch: { sponsor_note_type: null },
+    });
+    assert.deepEqual(validateEditionUpdateBody({ sponsor_note_type: "" }), {
+      ok: true,
+      patch: { sponsor_note_type: null },
+    });
+  });
+
+  it("rejects unknown sponsor note types", () => {
+    const result = validateEditionUpdateBody({ sponsor_note_type: "other" });
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.match(result.errors.join("; "), /sponsor_note_type must be upcoming_pending or virtual_covid/i);
+  });
+});

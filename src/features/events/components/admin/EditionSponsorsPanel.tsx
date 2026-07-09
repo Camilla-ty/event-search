@@ -12,6 +12,8 @@ import {
 import type { SponsorImportBatchStatus } from "@/src/features/sponsor-import/types";
 
 import { EditionLiveSponsorsQARoster } from "./EditionLiveSponsorsQARoster";
+import { EditionSponsorNote } from "@/src/features/events/components/detail/EditionSponsorNote";
+import type { SponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { EditionSponsorsQAHeader } from "./EditionSponsorsQAHeader";
 import { CompanyLogoDrawer } from "./CompanyLogoDrawer";
 import {
@@ -69,6 +71,7 @@ type EditionSponsorsPanelProps = {
   eventWebsiteUrl: string | null;
   sponsors: LiveSponsorRow[];
   activeImport: ActiveImportInfo | null;
+  sponsorNoteType?: SponsorNoteType | null;
 };
 
 export function EditionSponsorsPanel({
@@ -79,6 +82,7 @@ export function EditionSponsorsPanel({
   eventWebsiteUrl,
   sponsors,
   activeImport,
+  sponsorNoteType = null,
 }: EditionSponsorsPanelProps) {
   const router = useRouter();
   const [action, setAction] = useState<PanelAction>(null);
@@ -145,6 +149,8 @@ export function EditionSponsorsPanel({
   );
   const emptySearch = searchQuery.trim() !== "" && filteredSponsors.length === 0;
   const reorderDisabled = searchQuery.trim() !== "" || isSaving;
+  const showSponsorNote =
+    draftRoster.length === 0 && sponsorNoteType !== null && sponsorNoteType !== undefined;
 
   const attachedCompanyIds = new Set<string>();
   for (const sponsor of draftRoster) {
@@ -300,6 +306,10 @@ export function EditionSponsorsPanel({
         }
         reorderDisabled={reorderDisabled}
       />
+
+      {showSponsorNote ? (
+        <EditionSponsorNote sponsorNoteType={sponsorNoteType} />
+      ) : null}
 
       {action?.type === "logo" ? (
         <CompanyLogoDrawer

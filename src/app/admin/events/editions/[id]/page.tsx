@@ -26,6 +26,7 @@ import {
 } from "@/src/features/events/server/eventEditionAdminPageLoad";
 import { brandLinkClass, primaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
+import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
   const panelErrorSummary = summarizeAdminEditionPanelErrors(panels.panelErrors);
 
   const editionLocationLabel = formatLocationFromCityEmbed(edition.cities);
+  const sponsorNoteType = parseSponsorNoteType(edition.sponsor_note_type);
 
   const importsData = panels.importsData;
   importsData.liveSponsorCount = panels.liveSponsorCount;
@@ -232,6 +234,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                   venue_id: edition.venue_id,
                   last_reviewed_at: edition.last_reviewed_at,
                   primary_source_url: edition.primary_source_url,
+                  sponsor_note_type: edition.sponsor_note_type,
                 })}
                 linkedVenue={
                   edition.venues
@@ -279,6 +282,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
                 eventWebsiteUrl={edition.website_url}
                 sponsors={panels.sponsors}
                 activeImport={activeImport}
+                sponsorNoteType={sponsorNoteType}
               />
             )
           }

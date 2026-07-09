@@ -17,6 +17,7 @@ export type CreateEventEditionInput = {
   venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
+  sponsor_note_type?: string | null;
 };
 
 export type EventEditionRow = {
@@ -33,6 +34,7 @@ export type EventEditionRow = {
   venue_id: string | null;
   last_reviewed_at: string | null;
   primary_source_url: string | null;
+  sponsor_note_type: string | null;
   created_at?: string | null;
 };
 
@@ -56,6 +58,7 @@ export async function createEventEdition(
     venue_id: input.venue_id ?? null,
     last_reviewed_at: editionCreateLastReviewedAtValue(),
     primary_source_url: input.primary_source_url?.trim() || null,
+    sponsor_note_type: input.sponsor_note_type ?? null,
   };
 
   const { data: inserted, error: insertError } = await supabase
@@ -63,7 +66,7 @@ export async function createEventEdition(
     .from("event_editions")
     .insert(insertPayload)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, venue_id, last_reviewed_at, primary_source_url, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, venue_id, last_reviewed_at, primary_source_url, sponsor_note_type, created_at",
     )
     .single();
 
@@ -86,6 +89,7 @@ export async function updateEventEdition(
     venue_id?: string | null;
     last_reviewed_at?: string | null;
     primary_source_url?: string | null;
+    sponsor_note_type?: string | null;
   },
 ): Promise<EventEditionRow> {
   const existing = await getEventEditionAdminById(id);
@@ -109,6 +113,9 @@ export async function updateEventEdition(
   if (input.primary_source_url !== undefined) {
     patch.primary_source_url = input.primary_source_url?.trim() || null;
   }
+  if (input.sponsor_note_type !== undefined) {
+    patch.sponsor_note_type = input.sponsor_note_type;
+  }
 
   const finalPatch = applyEditionUpdateLastReviewedPolicy(
     existing,
@@ -121,7 +128,7 @@ export async function updateEventEdition(
     .update(finalPatch)
     .eq("id", id)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, sponsor_note_type, created_at",
     )
     .single();
 

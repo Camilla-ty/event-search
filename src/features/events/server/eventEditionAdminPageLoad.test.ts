@@ -25,6 +25,7 @@ const sampleEdition: EventEditionAdminRow = {
   venue_id: null,
   last_reviewed_at: null,
   primary_source_url: null,
+  sponsor_note_type: null,
   created_at: null,
   event_series: {
     id: "00000000-0000-0000-0000-000000000001",

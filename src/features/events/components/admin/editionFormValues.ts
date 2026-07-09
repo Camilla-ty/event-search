@@ -1,4 +1,5 @@
 import { toReviewedAtDateInputValue } from "@/src/features/events/lib/formatEventResearchMetadata";
+import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 
 export const CURRENT_YEAR = new Date().getFullYear();
 
@@ -14,6 +15,7 @@ export type EditionFormValues = {
   venue_id: string;
   last_reviewed_at: string;
   primary_source_url: string;
+  sponsor_note_type: string;
 };
 
 export function buildEditionFormInitialValues(input: {
@@ -28,6 +30,7 @@ export function buildEditionFormInitialValues(input: {
   venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
+  sponsor_note_type?: string | null;
 }): EditionFormValues {
   return {
     series_id: input.series_id ?? "",
@@ -41,5 +44,6 @@ export function buildEditionFormInitialValues(input: {
     venue_id: input.venue_id ?? "",
     last_reviewed_at: toReviewedAtDateInputValue(input.last_reviewed_at),
     primary_source_url: input.primary_source_url ?? "",
+    sponsor_note_type: parseSponsorNoteType(input.sponsor_note_type) ?? "",
   };
 }

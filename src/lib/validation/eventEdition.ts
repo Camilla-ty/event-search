@@ -1,4 +1,5 @@
 import { isValidHttpUrl } from "@/src/lib/validation/url";
+import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -50,6 +51,7 @@ export type EditionCreatePayload = {
   venue_id: string | null;
   last_reviewed_at: string | null;
   primary_source_url: string | null;
+  sponsor_note_type: string | null;
 };
 
 export function validateEditionCreateBody(body: {
@@ -64,6 +66,7 @@ export function validateEditionCreateBody(body: {
   venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
+  sponsor_note_type?: string | null;
 }): { ok: true; data: EditionCreatePayload } | { ok: false; errors: string[] } {
   const seriesId = body.series_id?.trim() ?? "";
   const name = body.name?.trim() ?? "";
@@ -136,6 +139,16 @@ export function validateEditionCreateBody(body: {
     }
   }
 
+  let sponsorNoteType: string | null = null;
+  if (body.sponsor_note_type !== undefined) {
+    const parsed = parseSponsorNoteType(body.sponsor_note_type);
+    if (body.sponsor_note_type !== null && body.sponsor_note_type !== "" && parsed === null) {
+      errors.push("sponsor_note_type must be upcoming_pending or virtual_covid");
+    } else {
+      sponsorNoteType = parsed;
+    }
+  }
+
   if (errors.length > 0 || year === null) {
     return { ok: false, errors };
   }
@@ -154,6 +167,7 @@ export function validateEditionCreateBody(body: {
       venue_id: venueId,
       last_reviewed_at: lastReviewedAt,
       primary_source_url: primarySourceUrl,
+      sponsor_note_type: sponsorNoteType,
     },
   };
 }
@@ -169,6 +183,7 @@ export function validateEditionUpdateBody(body: {
   venue_id?: string | null;
   last_reviewed_at?: string | null;
   primary_source_url?: string | null;
+  sponsor_note_type?: string | null;
   series_id?: string;
   year?: number | string;
 }): { ok: true; patch: Record<string, unknown> } | { ok: false; errors: string[] } {
@@ -260,6 +275,18 @@ export function validateEditionUpdateBody(body: {
       errors.push("primary_source_url must be a valid URL");
     } else {
       patch.primary_source_url = primarySourceUrl;
+    }
+  }
+  if (body.sponsor_note_type !== undefined) {
+    const sponsorNoteType = parseSponsorNoteType(body.sponsor_note_type);
+    if (
+      body.sponsor_note_type !== null &&
+      body.sponsor_note_type !== "" &&
+      sponsorNoteType === null
+    ) {
+      errors.push("sponsor_note_type must be upcoming_pending or virtual_covid");
+    } else {
+      patch.sponsor_note_type = sponsorNoteType;
     }
   }
 

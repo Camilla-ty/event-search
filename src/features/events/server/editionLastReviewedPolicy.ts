@@ -11,6 +11,7 @@ export const MEANINGFUL_EDITION_FIELDS = [
 export const RESEARCH_ONLY_EDITION_FIELDS = [
   "last_reviewed_at",
   "primary_source_url",
+  "sponsor_note_type",
 ] as const;
 
 const MEANINGFUL_EDITION_FIELD_SET = new Set<string>(MEANINGFUL_EDITION_FIELDS);
