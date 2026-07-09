@@ -21,8 +21,8 @@ export function EventStatusHelpPopover() {
       <div className="space-y-3.5">
         {STATUS_HELP_ITEMS.map((item) => (
           <div key={item.label}>
-            <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.description}</p>
+            <p className="text-sm font-semibold text-slate-700">{item.label}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{item.description}</p>
           </div>
         ))}
       </div>
