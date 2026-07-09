@@ -67,15 +67,15 @@ export function EventOverviewSummarySection({
         {statusRow ? (
           <div className="py-3 first:pt-0 last:pb-0">
             <MetadataRow label="Event Status" labelSuffix={<EventStatusHelpPopover />}>
-              <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <Badge variant={statusBadgeVariant(statusRow.value)}>{statusRow.value}</Badge>
                 {mergedIntoRow ? (
-                  <p>
-                    Merged into{" "}
+                  <>
+                    <span className="text-slate-500">into</span>
                     <Link href={mergedIntoRow.destinationHref} className={brandLinkClass}>
                       {mergedIntoRow.destinationName}
                     </Link>
-                  </p>
+                  </>
                 ) : null}
               </div>
             </MetadataRow>
