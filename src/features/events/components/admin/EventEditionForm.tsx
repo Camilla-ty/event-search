@@ -12,6 +12,7 @@ import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySe
 import { AdminVenueSelect } from "@/src/features/venues/components/admin/AdminVenueSelect";
 import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions";
 import { SPONSOR_NOTE_TYPE_OPTIONS } from "@/src/features/events/lib/sponsorNoteType";
+import { localTodayDateInputValue } from "@/src/features/events/lib/formatEventResearchMetadata";
 import { formInputClass } from "@/src/lib/design/classes";
 import { EditionSiblingWarnings } from "@/src/features/events/components/admin/EditionSiblingWarnings";
 import type { EditionFormValues } from "@/src/features/events/components/admin/editionFormValues";
@@ -412,16 +413,27 @@ export function EventEditionForm({
             Research information
           </h2>
 
-          <label className="block space-y-2">
+          <div className="block space-y-2">
             <span className="text-sm font-medium text-slate-700">Last reviewed</span>
-            <input
-              type="date"
-              value={values.last_reviewed_at}
-              onChange={(e) => updateField("last_reviewed_at", e.target.value)}
-              disabled={isSubmitting}
-              className={formInputClass}
-            />
-          </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={values.last_reviewed_at}
+                onChange={(e) => updateField("last_reviewed_at", e.target.value)}
+                disabled={isSubmitting}
+                className={formInputClass}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={() => updateField("last_reviewed_at", localTodayDateInputValue())}
+              >
+                Set to Today
+              </Button>
+            </div>
+          </div>
 
           <label className="block space-y-2">
             <span className="text-sm font-medium text-slate-700">Primary source URL</span>

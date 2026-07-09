@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   formatEventLastReviewedDate,
   formatPrimarySourceLink,
+  localTodayDateInputValue,
   toReviewedAtDateInputValue,
 } from "@/src/features/events/lib/formatEventResearchMetadata";
 
@@ -22,6 +23,13 @@ describe("formatEventResearchMetadata", () => {
       "2026-06-30",
     );
     assert.equal(toReviewedAtDateInputValue(""), "");
+  });
+
+  it("formats local today for date inputs", () => {
+    assert.equal(
+      localTodayDateInputValue(new Date(2026, 6, 9, 15, 30)),
+      "2026-07-09",
+    );
   });
 
   it("formats primary source links", () => {

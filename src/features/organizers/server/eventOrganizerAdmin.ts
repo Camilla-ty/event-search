@@ -1,4 +1,3 @@
-import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
 import { computeMoveOrderedLinkIds } from "@/src/features/events/server/eventSponsorReorder";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { shouldAutoTouchOrganizerUpdate } from "@/src/lib/validation/eventOrganizer";
@@ -226,7 +225,6 @@ export async function createEventOrganizerLinkAdmin(
     throw new Error(error.message);
   }
 
-  await touchEditionLastReviewed(editionId);
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -257,7 +255,6 @@ export async function updateEventOrganizerLinkAdmin(
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Organizer link not found.");
 
-  await touchEditionLastReviewed(editionId);
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -289,7 +286,6 @@ export async function deleteEventOrganizerLinkAdmin(
     );
   }
 
-  await touchEditionLastReviewed(editionId);
   return row;
 }
 

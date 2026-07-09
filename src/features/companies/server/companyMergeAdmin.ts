@@ -1,6 +1,5 @@
 import {
   CompanyMergeRpcError,
-  collectOrganizerMergeEditionIds,
   defaultCompanyMergeFieldResolutions,
   defaultCompanyMergeResolutions,
   mergeCompaniesExecute,
@@ -15,7 +14,6 @@ import {
   type SponsorshipConflictStrategy,
   type TextFieldStrategy,
 } from "@/src/features/companies/server/companyMerge";
-import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -601,11 +599,6 @@ export async function executeMergeCompaniesAdmin(
       notes,
     }),
   );
-
-  const organizerEditionIds = collectOrganizerMergeEditionIds(result.execution_snapshot);
-  for (const editionId of organizerEditionIds) {
-    await touchEditionLastReviewed(editionId);
-  }
 
   return {
     ...result,

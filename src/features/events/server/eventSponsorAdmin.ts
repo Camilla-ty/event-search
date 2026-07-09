@@ -1,5 +1,3 @@
-import { shouldAutoTouchSponsorUpdate } from "@/src/features/events/server/editionLastReviewedPolicy";
-import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type {
@@ -113,10 +111,6 @@ export async function updateEventSponsorLinkAdmin(
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Sponsor link not found.");
 
-  if (shouldAutoTouchSponsorUpdate(current, patch)) {
-    await touchEditionLastReviewed(current.event_editions_id);
-  }
-
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -148,7 +142,6 @@ export async function createEventSponsorLinkAdmin(
     }
     throw new Error(error.message);
   }
-  await touchEditionLastReviewed(editionId);
   return toLinkRow(data as Record<string, unknown>);
 }
 
@@ -287,9 +280,5 @@ export async function deleteEventSponsorLinkAdmin(
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  const row = data ? toLinkRow(data as Record<string, unknown>) : null;
-  if (row) {
-    await touchEditionLastReviewed(row.event_editions_id);
-  }
-  return row;
+  return data ? toLinkRow(data as Record<string, unknown>) : null;
 }

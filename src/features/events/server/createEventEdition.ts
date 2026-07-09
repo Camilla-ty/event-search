@@ -1,7 +1,3 @@
-import {
-  applyEditionUpdateLastReviewedPolicy,
-  editionCreateLastReviewedAtValue,
-} from "@/src/features/events/server/editionLastReviewedPolicy";
 import { getEventEditionAdminById } from "@/src/features/events/server/eventEditionAdmin";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
@@ -56,7 +52,7 @@ export async function createEventEdition(
     website_url: input.website_url?.trim() || null,
     city_id: input.city_id ?? null,
     venue_id: input.venue_id ?? null,
-    last_reviewed_at: editionCreateLastReviewedAtValue(),
+    last_reviewed_at: null,
     primary_source_url: input.primary_source_url?.trim() || null,
     sponsor_note_type: input.sponsor_note_type ?? null,
   };
@@ -117,15 +113,9 @@ export async function updateEventEdition(
     patch.sponsor_note_type = input.sponsor_note_type;
   }
 
-  const finalPatch = applyEditionUpdateLastReviewedPolicy(
-    existing,
-    patch,
-    new Date().toISOString(),
-  );
-
   const { data, error } = await supabase
     .from("event_editions")
-    .update(finalPatch)
+    .update(patch)
     .eq("id", id)
     .select(
       "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, sponsor_note_type, created_at",

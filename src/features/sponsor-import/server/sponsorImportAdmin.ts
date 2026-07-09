@@ -1,8 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
-import { shouldAutoTouchAfterPublish } from "@/src/features/events/server/editionLastReviewedPolicy";
-import { touchEditionLastReviewed } from "@/src/features/events/server/touchEditionLastReviewed";
-
 import type {
   ColumnMapping,
   DraftDiffSummary,
@@ -1710,10 +1707,6 @@ export async function publishBatch(batchId: string, actorId: string): Promise<Pu
     unchanged_count: raw?.unchanged_count ?? 0,
     excluded_count: raw?.excluded_count ?? 0,
   };
-
-  if (shouldAutoTouchAfterPublish(result)) {
-    await touchEditionLastReviewed(String(batch.event_edition_id));
-  }
 
   try {
     await deleteImportBatchData({ batchId, storagePath });
