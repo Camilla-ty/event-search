@@ -32,6 +32,7 @@ function statusBadgeVariant(value: string): BadgeProps["variant"] {
   const normalized = value.trim().toLowerCase();
   if (normalized === "active") return "success";
   if (normalized === "discontinued") return "warning";
+  if (normalized === "merged") return "accent";
   return "neutral";
 }
 
