@@ -13,6 +13,7 @@ import {
   EventVenueEmptyState,
   EventVenueSection,
 } from "@/src/features/events/components/detail/EventVenueSection";
+import { EditionSectionSurface } from "@/src/features/events/components/detail/EditionSectionSurface";
 import { PublicEventEditionTabs } from "@/src/features/events/components/detail/PublicEventEditionTabs";
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
@@ -271,6 +272,7 @@ export default async function EventDetailPage({
           }
           sponsorsPanel={
             <EventSponsorsSection
+              embedded
               sponsors={sponsors}
               isAuthenticated={isAuthenticated}
               totalSponsorCount={totalSponsorCount}
@@ -278,17 +280,17 @@ export default async function EventDetailPage({
           }
           venuePanel={
             venue ? (
-              <EventVenueSection venue={venue} cityLabel={cityLabel} />
+              <EventVenueSection embedded venue={venue} cityLabel={cityLabel} />
             ) : hasVenueId ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <EditionSectionSurface embedded>
                 <h2 className="text-lg font-semibold text-slate-900">Venue</h2>
                 <p className="mt-3 text-sm text-slate-600">Venue details are unavailable.</p>
-              </div>
+              </EditionSectionSurface>
             ) : (
-              <EventVenueEmptyState cityLabel={cityLabel} />
+              <EventVenueEmptyState embedded cityLabel={cityLabel} />
             )
           }
-          organizersPanel={<EventOrganizersSection organizers={organizers} />}
+          organizersPanel={<EventOrganizersSection embedded organizers={organizers} />}
           partnerAlumniPanel={
             partnerAlumni ? (
               <EventPartnerAlumniSection

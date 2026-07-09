@@ -50,6 +50,27 @@ export const feedbackErrorClass =
 export const feedbackWarningClass =
   "rounded-lg border border-brand-warning/40 bg-brand-warning/15 px-4 py-3 text-sm text-amber-950";
 
+/** Public edition detail file tabs (horizontal, dark-text active state). */
+export const fileTabShellClass =
+  "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm";
+
+export const fileTabBarClass = "border-b border-slate-200 bg-slate-100";
+
+export const fileTabScrollRowClass =
+  "-mb-px flex flex-nowrap overflow-x-auto overscroll-x-contain gap-0.5 px-1 pt-1";
+
+export const fileTabActiveClass =
+  "relative z-10 -mb-px shrink-0 whitespace-nowrap rounded-t-lg border border-slate-200 border-b-white bg-white px-4 py-2.5 text-base font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2";
+
+export const fileTabInactiveClass =
+  "relative shrink-0 whitespace-nowrap rounded-t-lg border border-slate-200 border-b-slate-200 bg-slate-100 px-4 py-2.5 text-base font-medium text-slate-700 transition hover:bg-slate-200/80 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2";
+
+export const fileTabPanelClass = "bg-white p-5";
+
+export function fileTabLinkClass(active: boolean): string {
+  return active ? fileTabActiveClass : fileTabInactiveClass;
+}
+
 export function importFilterChipClass(active: boolean): string {
   return [
     "cursor-pointer rounded-md px-3 py-1.5 text-sm transition",

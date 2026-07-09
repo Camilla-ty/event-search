@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { buildSignupEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import { secondaryCtaClass } from "@/src/lib/design/classes";
 
+import { EditionSectionSurface } from "./EditionSectionSurface";
 import { PublicSponsorTierGroupedRoster } from "./PublicSponsorTierGroupedRoster";
 import type { EventSponsorRow } from "./types";
 
@@ -13,18 +14,20 @@ type EventSponsorsSectionProps = {
   sponsors: EventSponsorRow[];
   isAuthenticated: boolean;
   totalSponsorCount?: number;
+  embedded?: boolean;
 };
 
 export function EventSponsorsSection({
   sponsors,
   isAuthenticated,
   totalSponsorCount,
+  embedded = false,
 }: EventSponsorsSectionProps) {
   const pathname = usePathname();
   const signupHref = buildSignupEntryUrl(pathname);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <EditionSectionSurface embedded={embedded}>
       <h2 className="mb-4 text-lg font-semibold text-slate-900">
         Sponsors{totalSponsorCount != null && totalSponsorCount > 0 ? ` (${totalSponsorCount})` : ""}
       </h2>
@@ -44,6 +47,6 @@ export function EventSponsorsSection({
           </Link>
         </div>
       ) : null}
-    </div>
+    </EditionSectionSurface>
   );
 }

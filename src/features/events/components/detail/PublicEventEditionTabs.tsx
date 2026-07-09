@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/classes";
+import {
+  fileTabBarClass,
+  fileTabLinkClass,
+  fileTabPanelClass,
+  fileTabScrollRowClass,
+  fileTabShellClass,
+} from "@/src/lib/design/classes";
 
 import {
   buildPublicEditionTabHref,
@@ -18,7 +24,6 @@ const BASE_TABS = [
   { id: "organizers", label: "Organizers" },
 ] as const;
 
-type BaseTabId = (typeof BASE_TABS)[number]["id"];
 export type { PublicEditionTabId };
 
 type PublicEventEditionTabsProps = {
@@ -59,36 +64,41 @@ export function PublicEventEditionTabs({
     tabs.push({ id: "partner-alumni", label: "Partner Alumni" });
   }
 
+  const activePanel =
+    activeTab === "overview"
+      ? overviewPanel
+      : activeTab === "sponsors"
+        ? sponsorsPanel
+        : activeTab === "venue"
+          ? venuePanel
+          : activeTab === "organizers"
+            ? organizersPanel
+            : partnerAlumniPanel;
+
   return (
-    <div className="space-y-6">
-      <nav
-        aria-label="Event edition sections"
-        className="flex flex-wrap gap-1 border-b border-slate-200 pb-3"
-      >
-        {tabs.map((tab) => {
-          const href = buildPublicEditionTabHref(eventSlug, tab.id);
-          const active = activeTab === tab.id;
-          return (
-            <Link
-              key={tab.id}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={[
-                "rounded-md px-3 py-1.5 text-base font-medium",
-                active ? navItemActiveClass : navItemInactiveClass,
-              ].join(" ")}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
+    <div className={fileTabShellClass}>
+      <nav aria-label="Event edition sections" className={fileTabBarClass} role="tablist">
+        <div className={fileTabScrollRowClass}>
+          {tabs.map((tab) => {
+            const href = buildPublicEditionTabHref(eventSlug, tab.id);
+            const active = activeTab === tab.id;
+            return (
+              <Link
+                key={tab.id}
+                href={href}
+                role="tab"
+                aria-current={active ? "page" : undefined}
+                aria-selected={active}
+                className={fileTabLinkClass(active)}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      {activeTab === "overview" ? overviewPanel : null}
-      {activeTab === "sponsors" ? sponsorsPanel : null}
-      {activeTab === "venue" ? venuePanel : null}
-      {activeTab === "organizers" ? organizersPanel : null}
-      {activeTab === "partner-alumni" ? partnerAlumniPanel : null}
+      <div className={fileTabPanelClass}>{activePanel}</div>
     </div>
   );
 }

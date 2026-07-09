@@ -4,12 +4,19 @@ import { buildVenueGoogleMapsUrl } from "@/src/features/venues/lib/buildGoogleMa
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLogoDisplayUrl";
 
+import { EditionSectionSurface } from "./EditionSectionSurface";
+
 type EventVenueSectionProps = {
   venue: PublicVenueSummary;
   cityLabel: string;
+  embedded?: boolean;
 };
 
-export function EventVenueSection({ venue, cityLabel }: EventVenueSectionProps) {
+export function EventVenueSection({
+  venue,
+  cityLabel,
+  embedded = false,
+}: EventVenueSectionProps) {
   const mapUrl = buildVenueGoogleMapsUrl({
     name: venue.name,
     addressText: venue.address_text,
@@ -20,7 +27,7 @@ export function EventVenueSection({ venue, cityLabel }: EventVenueSectionProps) 
   const addressText = venue.address_text?.trim() ?? "";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <EditionSectionSurface embedded={embedded}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-900">Venue</h2>
@@ -76,17 +83,21 @@ export function EventVenueSection({ venue, cityLabel }: EventVenueSectionProps) 
           </div>
         </div>
       </div>
-    </div>
+    </EditionSectionSurface>
   );
 }
 
 type EventVenueEmptyStateProps = {
   cityLabel: string;
+  embedded?: boolean;
 };
 
-export function EventVenueEmptyState({ cityLabel }: EventVenueEmptyStateProps) {
+export function EventVenueEmptyState({
+  cityLabel,
+  embedded = false,
+}: EventVenueEmptyStateProps) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <EditionSectionSurface embedded={embedded}>
       <h2 className="text-lg font-semibold text-slate-900">Venue</h2>
       <p className="mt-3 text-sm text-slate-600">
         Venue not specified for this edition.
@@ -95,6 +106,6 @@ export function EventVenueEmptyState({ cityLabel }: EventVenueEmptyStateProps) {
       <p className="mt-2 text-sm text-slate-500">
         Event location details may still appear on the Overview tab when a city is set.
       </p>
-    </div>
+    </EditionSectionSurface>
   );
 }
