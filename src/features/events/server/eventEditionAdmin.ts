@@ -4,6 +4,10 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
+import {
+  getSponsorCountsByEditionIds,
+  readSponsorCountForEdition,
+} from "@/src/lib/queries/companies";
 import { EVENT_EDITION_LIST_SELECT } from "@/src/lib/queries/events";
 
 export type EventEditionAdminRow = {
@@ -118,25 +122,12 @@ export async function listEventEditionsAdmin(
 
   if (rows.length === 0) return [];
 
-  const editionIds = rows.map((r) => r.id);
-  const { data: sponsorLinks, error: sponsorError } = await supabase
-    .from("event_sponsors")
-    .select("event_editions_id")
-    .in("event_editions_id", editionIds);
-
-  if (sponsorError) throw new Error(sponsorError.message);
-
-  const countByEdition = new Map<string, number>();
-  for (const link of sponsorLinks ?? []) {
-    const eid = link.event_editions_id;
-    if (typeof eid === "string") {
-      countByEdition.set(eid, (countByEdition.get(eid) ?? 0) + 1);
-    }
-  }
+  const editionIds = rows.map((row) => row.id);
+  const countByEdition = await getSponsorCountsByEditionIds(editionIds);
 
   return rows.map((row) => ({
     ...row,
-    live_sponsor_count: countByEdition.get(row.id) ?? 0,
+    live_sponsor_count: readSponsorCountForEdition(countByEdition, row.id),
   }));
 }
 
