@@ -6,10 +6,17 @@ export type StorageMirrorObjectSummary = {
 
 export type StorageMirrorManifest = {
   kind: "company-logos-mirror";
-  version: 1;
+  version: 2;
+  source: "db_referenced_paths";
   mirrored_at: string;
   bucket: string;
+  /** Same as downloaded_count (kept for backward compatibility). */
   object_count: number;
+  referenced_path_count: number;
+  downloaded_count: number;
+  missing_paths: string[];
+  skipped_external_url_count: number;
+  skipped_invalid_count: number;
   total_bytes: number;
   top_level_prefixes: string[];
   supabase_host: string | null;
@@ -28,20 +35,34 @@ export function topLevelPrefixes(paths: string[]): string[] {
 export function buildStorageMirrorManifest(params: {
   bucket: string;
   mirroredAt: string;
-  objects: StorageMirrorObjectSummary[];
+  referencedPathCount: number;
+  downloadedObjects: StorageMirrorObjectSummary[];
+  missingPaths: string[];
+  skippedExternalUrlCount: number;
+  skippedInvalidCount: number;
   supabaseHost: string | null;
   gitSha: string | null;
 }): StorageMirrorManifest {
-  const totalBytes = params.objects.reduce((sum, object) => sum + (object.size ?? 0), 0);
+  const downloadedPaths = params.downloadedObjects.map((object) => object.path);
+  const totalBytes = params.downloadedObjects.reduce(
+    (sum, object) => sum + (object.size ?? 0),
+    0,
+  );
 
   return {
     kind: "company-logos-mirror",
-    version: 1,
+    version: 2,
+    source: "db_referenced_paths",
     mirrored_at: params.mirroredAt,
     bucket: params.bucket,
-    object_count: params.objects.length,
+    object_count: params.downloadedObjects.length,
+    referenced_path_count: params.referencedPathCount,
+    downloaded_count: params.downloadedObjects.length,
+    missing_paths: [...params.missingPaths].sort(),
+    skipped_external_url_count: params.skippedExternalUrlCount,
+    skipped_invalid_count: params.skippedInvalidCount,
     total_bytes: totalBytes,
-    top_level_prefixes: topLevelPrefixes(params.objects.map((object) => object.path)),
+    top_level_prefixes: topLevelPrefixes(downloadedPaths),
     supabase_host: params.supabaseHost,
     git_sha: params.gitSha,
   };

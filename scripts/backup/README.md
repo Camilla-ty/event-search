@@ -71,10 +71,12 @@ Setup: [docs/operations/backup-github-drive-setup.md](../../docs/operations/back
 
 GitHub Actions workflow [`.github/workflows/backup-storage.yml`](../../.github/workflows/backup-storage.yml) runs weekly on **Sunday at 3:30 AM US Eastern** (operating timezone; `cron: 30 7 * * 0` UTC — ≈ 3:30 AM EDT, 3:30 PM Singapore). Revisit the UTC offset when US daylight saving changes.
 
-1. `mirror-company-logos.ts` — list and download all objects from the `company-logos` bucket into a local mirror tree
+1. `mirror-company-logos.ts` — query catalog `logo_url` values, then download referenced objects from the `company-logos` bucket into a local mirror tree (no recursive bucket walk)
 2. `upload-storage-mirror-to-drive.sh` — `rclone copy` to Google Drive `storage/company-logos/mirror/`
 
 **Copy behavior:** new and changed files are uploaded. Files that exist only on Drive are **not** deleted. There is **no** storage-backup prune step.
+
+For full-bucket storage audits (orphans, legacy paths), use `npm run audit:event-logo-storage` or `scripts/audit/listStoragePrefix.ts` — not the weekly backup job.
 
 Setup: same Google Drive OAuth secrets as Phase B, plus Supabase URL and service role key. See [docs/operations/backup-policy.md](../../docs/operations/backup-policy.md).
 
@@ -127,11 +129,10 @@ supabase/dumps/backups/storage/
         ├── manifest.json
         ├── companies/
         ├── event-series/
-        ├── venues/
-        └── … (legacy top-level folders preserved)
+        └── venues/
 ```
 
-`manifest.json` records object count, total bytes, top-level prefixes, mirror timestamp, and git SHA (no secrets).
+`manifest.json` records `source: db_referenced_paths`, referenced/downloaded counts, missing paths, skipped external/invalid URL counts, total bytes, top-level prefixes, mirror timestamp, and git SHA (no secrets).
 
 ## Google Drive scripts (CI / manual)
 

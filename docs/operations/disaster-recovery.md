@@ -151,7 +151,7 @@ mkdir -p ./restore-storage/company-logos
 rclone copy "$(drive_remote_path storage/company-logos/mirror)" ./restore-storage/company-logos/mirror
 ```
 
-Inspect `restore-storage/company-logos/mirror/manifest.json` for object counts.
+Inspect `restore-storage/company-logos/mirror/manifest.json` for `referenced_path_count`, `downloaded_count`, and `missing_paths`.
 
 ### 5b. Upload objects to the new project
 
@@ -163,11 +163,12 @@ Options:
    supabase storage cp --recursive ./restore-storage/company-logos/mirror/companies ss:///company-logos/companies
    supabase storage cp --recursive ./restore-storage/company-logos/mirror/event-series ss:///company-logos/event-series
    supabase storage cp --recursive ./restore-storage/company-logos/mirror/venues ss:///company-logos/venues
-   # Repeat for any legacy top-level folders listed in manifest.json
    ```
 
+   The weekly mirror backs up catalog-referenced paths only. Legacy/orphan bucket objects are not included; recover those only if you have a separate full-bucket audit export.
+
 2. **Supabase Dashboard** — upload objects preserving paths (`companies/...`, `event-series/...`, `venues/...`).
-3. **Service-role script** — reuse patterns from `scripts/audit/listStoragePrefix.ts` to upload from a local directory tree.
+3. **Service-role script** — reuse patterns from `scripts/backup/mirror-company-logos.ts` to upload from a local directory tree. For full-bucket investigations, use `scripts/audit/listStoragePrefix.ts`.
 
 ### 5c. Database logo paths
 

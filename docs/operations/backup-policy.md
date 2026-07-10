@@ -23,9 +23,11 @@ Setup: [backup-github-drive-setup.md](./backup-github-drive-setup.md)
 
 Workflow: [`.github/workflows/backup-storage.yml`](../../.github/workflows/backup-storage.yml)
 
+**Weekly scope:** catalog-referenced logo objects only — paths from `companies.logo_url`, `event_series.logo_url`, and `venues.logo_url` (storage-backed, canonical UUID paths). The job does **not** recursively list the bucket.
+
 **Copy behavior:** `rclone copy` uploads new and changed objects. Remote-only files on Drive are **not** deleted. There is **no** prune step for storage backups.
 
-**Preserved structure:** `companies/`, `event-series/`, `venues/`, and any legacy top-level folders still present in the bucket.
+**Preserved structure:** `companies/`, `event-series/`, and `venues/` paths referenced by the database. Legacy/orphan bucket objects are excluded; use audit tooling for full-bucket scans.
 
 ### Local manual (Phase A)
 
@@ -68,9 +70,9 @@ Required for admin login recovery:
 | `companies/{uuid}/logo.*` | Company logos |
 | `event-series/{uuid}/logo.*` | Event series logos |
 | `venues/{uuid}/logo.*` | Venue logos (storage-backed) |
-| Legacy folders | Preserved until explicit cleanup |
+| Legacy/orphan bucket objects | **Not included** in weekly backup — use `npm run audit:event-logo-storage` or `listStoragePrefix.ts` for investigations |
 
-Database `logo_url` values are bucket-relative paths; the mirror restores objects by path. External venue URLs (non-Supabase) are stored only in the database, not in this bucket.
+Database `logo_url` values are bucket-relative paths; the weekly mirror downloads only storage-backed paths referenced by the catalog. External venue URLs (non-Supabase) are stored only in the database, not in this bucket.
 
 ## Backup modes
 
@@ -126,7 +128,7 @@ storage/
 
 Database `manifest.json` records timestamp, mode, file size, git SHA, migration count, and connection host (no credentials).
 
-Storage `manifest.json` records mirror timestamp, object count, total bytes, top-level prefixes, Supabase host, and git SHA.
+Storage `manifest.json` records `source: db_referenced_paths`, referenced/downloaded counts, missing paths, skipped external/invalid URL counts, total bytes, top-level prefixes, Supabase host, and git SHA.
 
 ## Retention
 
@@ -174,7 +176,7 @@ Setup walkthrough: [backup-github-drive-setup.md](./backup-github-drive-setup.md
 | Before bulk admin edits | Manual local backup |
 | Quarterly (recommended) | Full restore drill to a staging Supabase project |
 | Weekly (recommended) | Confirm latest Drive backup in `db/`; investigate failed workflow runs |
-| Monthly (recommended) | Spot-check `storage/company-logos/mirror/manifest.json` object counts |
+| Monthly (recommended) | Spot-check `storage/company-logos/mirror/manifest.json` (`referenced_path_count`, `missing_paths`) |
 
 ## Related documentation
 
