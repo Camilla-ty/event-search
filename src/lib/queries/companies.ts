@@ -4,6 +4,7 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
+import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
 function companyIdKey(raw: unknown): string {
@@ -37,7 +38,8 @@ export const COMPANY_PUBLIC_COLUMNS = `
   short_description,
   description,
   city_id,
-  created_at
+  created_at,
+  restricted_at
 `;
 
 /** Public company profile fields + city/country for detail pages. */
@@ -64,9 +66,14 @@ export type CompanyPublicRow = {
   description: string | null;
   city_id: string | null;
   created_at: string | null;
+  restricted_at?: string | null;
   cities?: unknown;
   industry?: string | null;
 };
+
+function isPublicCompanyProfileRow(row: CompanyPublicRow | null): row is CompanyPublicRow {
+  return row !== null && !isCompanyRestricted(row);
+}
 
 /** Map bucket-relative logo_url values to display-ready public URLs for UI surfaces. */
 export function mapCompanyPublicRowForDisplay(row: CompanyPublicRow): CompanyPublicRow {
@@ -101,18 +108,19 @@ export async function getCompanyById(id: string): Promise<CompanyPublicRow | nul
     .from("companies")
     .select(COMPANY_PUBLIC_SELECT)
     .eq("id", id)
+    .is("restricted_at", null)
     .maybeSingle();
 
   if (error) {
     const row = await getCompanyByIdAdmin(id);
-    return row ? mapCompanyPublicRowForDisplay(row) : null;
+    return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
   }
   if (data) {
     return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
   }
 
   const row = await getCompanyByIdAdmin(id);
-  return row ? mapCompanyPublicRowForDisplay(row) : null;
+  return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
 }
 
 async function getCompanyBySlugAdmin(slug: string): Promise<CompanyPublicRow | null> {
@@ -139,18 +147,19 @@ export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow |
     .from("companies")
     .select(COMPANY_PUBLIC_SELECT)
     .eq("slug", key)
+    .is("restricted_at", null)
     .maybeSingle();
 
   if (error) {
     const row = await getCompanyBySlugAdmin(key);
-    return row ? mapCompanyPublicRowForDisplay(row) : null;
+    return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
   }
   if (data) {
     return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
   }
 
   const row = await getCompanyBySlugAdmin(key);
-  return row ? mapCompanyPublicRowForDisplay(row) : null;
+  return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
 }
 
 export async function getCompaniesByIds(ids: readonly string[]) {

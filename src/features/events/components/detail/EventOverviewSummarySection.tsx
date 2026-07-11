@@ -4,6 +4,7 @@ import { Badge } from "@/src/components/common";
 import type { BadgeProps } from "@/src/components/common/Badge";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
+import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 import {
   buildEventHistoryRows,
   type MergedIntoSeriesDestination,
@@ -55,6 +56,11 @@ export function EventOverviewSummarySection({
   const showVenueRow = venue !== null || hasVenueId;
   const hasSponsorData = totalSponsorCount > 0 || sponsors.length > 0;
   const previewSponsors = sponsors.slice(0, SPONSOR_PREVIEW_LIMIT);
+  const previewLogoSponsors = sponsors
+    .filter(
+      (sponsor) => sponsor.companies && !isCompanyRestricted(sponsor.companies),
+    )
+    .slice(0, SPONSOR_PREVIEW_LIMIT);
   const overflowCount = Math.max(0, totalSponsorCount - previewSponsors.length);
   const venueTabHref = buildPublicEditionTabHref(eventSlug, "venue");
   const sponsorsTabHref = buildPublicEditionTabHref(eventSlug, "sponsors");
@@ -106,12 +112,9 @@ export function EventOverviewSummarySection({
                   aria-label={`View all ${totalSponsorCount.toLocaleString()} sponsors`}
                   className="inline-flex flex-wrap items-center gap-3 rounded-lg transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
                 >
-                  {previewSponsors.map((sponsor) => {
+                  {previewLogoSponsors.map((sponsor) => {
                     const company = sponsor.companies;
-
-                    if (!company) {
-                      return null;
-                    }
+                    if (!company) return null;
 
                     return (
                       <CompanyLogo

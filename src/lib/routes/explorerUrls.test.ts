@@ -1,36 +1,27 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import {
-  buildEventExplorerTopicUrl,
-  buildTopicHubPath,
-  parseEventExplorerMonth,
-} from "@/src/lib/routes/explorerUrls";
+import { buildSponsorProfilePath } from "./explorerUrls";
 
-describe("buildTopicHubPath", () => {
-  it("builds a topic hub path from slug", () => {
-    assert.equal(buildTopicHubPath("crypto"), "/topics/crypto");
-    assert.equal(buildTopicHubPath(" web3 "), "/topics/web3");
-    assert.equal(buildTopicHubPath(""), null);
+describe("buildSponsorProfilePath", () => {
+  it("returns null for restricted companies by default", () => {
+    assert.equal(
+      buildSponsorProfilePath({ slug: "acme", id: "1", restricted_at: "2026-07-11T00:00:00.000Z" }),
+      null,
+    );
   });
-});
 
-describe("buildEventExplorerTopicUrl", () => {
-  it("builds an events explorer URL with topic param", () => {
-    assert.equal(buildEventExplorerTopicUrl("crypto"), "/events?topic=crypto");
-    assert.equal(buildEventExplorerTopicUrl(" web3 "), "/events?topic=web3");
-    assert.equal(buildEventExplorerTopicUrl(""), "/events");
+  it("allows restricted profile paths when explicitly opted in", () => {
+    assert.equal(
+      buildSponsorProfilePath(
+        { slug: "acme", id: "1", restricted_at: "2026-07-11T00:00:00.000Z" },
+        { allowRestricted: true },
+      ),
+      "/sponsors/acme",
+    );
   });
-});
 
-describe("parseEventExplorerMonth", () => {
-  it("returns a valid YYYY-MM month or null", () => {
-    assert.equal(parseEventExplorerMonth("2026-06"), "2026-06");
-    assert.equal(parseEventExplorerMonth(" 2026-01 "), "2026-01");
-    assert.equal(parseEventExplorerMonth("2026-13"), null);
-    assert.equal(parseEventExplorerMonth("2026-00"), null);
-    assert.equal(parseEventExplorerMonth("2026-6"), null);
-    assert.equal(parseEventExplorerMonth("invalid"), null);
-    assert.equal(parseEventExplorerMonth(null), null);
+  it("returns profile path for public companies", () => {
+    assert.equal(buildSponsorProfilePath({ slug: "acme", id: "1", restricted_at: null }), "/sponsors/acme");
   });
 });

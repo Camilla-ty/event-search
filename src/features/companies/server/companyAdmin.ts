@@ -23,7 +23,10 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
 
 const COMPANY_ADMIN_SELECT =
-  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases, status, merged_into_company_id, merged_at";
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at";
+
+export const RESTRICTED_AT_IMMUTABLE_MESSAGE =
+  "restricted_at cannot be updated directly; use restrict or unrestrict routes.";
 
 function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
   return {
@@ -46,6 +49,7 @@ function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
     merged_into_company_id:
       typeof row.merged_into_company_id === "string" ? row.merged_into_company_id : null,
     merged_at: typeof row.merged_at === "string" ? row.merged_at : null,
+    restricted_at: typeof row.restricted_at === "string" ? row.restricted_at : null,
   };
 }
 
@@ -68,6 +72,7 @@ export type CompanyAdminRow = {
   status: string;
   merged_into_company_id: string | null;
   merged_at: string | null;
+  restricted_at: string | null;
 };
 
 export type CompanyListItem = CompanyAdminRow & {
@@ -76,6 +81,7 @@ export type CompanyListItem = CompanyAdminRow & {
 };
 
 export type UpdateCompanyAdminInput = {
+  restricted_at?: unknown;
   name?: string;
   slug?: string;
   website?: string;
@@ -294,6 +300,9 @@ export async function updateCompanyAdmin(
   }
   if (!isCompanyAdminEditable(existing)) {
     throw new Error(MERGED_COMPANY_READ_ONLY_MESSAGE);
+  }
+  if (input.restricted_at !== undefined) {
+    throw new Error(RESTRICTED_AT_IMMUTABLE_MESSAGE);
   }
 
   const patch: Record<string, unknown> = {};

@@ -2,6 +2,10 @@ import Link from "next/link";
 
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
+import {
+  isCompanyRestricted,
+  RESTRICTED_COMPANY_PUBLIC_MESSAGE,
+} from "@/src/lib/companies/companyPublicRestriction";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { EventSponsorRow } from "./types";
@@ -12,13 +16,17 @@ type PublicSponsorRosterRowProps = {
 
 export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps) {
   const company = sponsor.companies;
+  const restricted = isCompanyRestricted(company);
   const companyName = company?.name?.trim() || "Unknown sponsor";
-  const domain = company?.domain?.trim() || null;
-  const profileHref = company
-    ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
-    : null;
+  const domain = restricted ? null : company?.domain?.trim() || null;
+  const profileHref = company ? buildSponsorProfilePath(company) : null;
 
-  const content = (
+  const content = restricted ? (
+    <div className="min-w-0">
+      <p className="font-medium text-slate-900">{companyName}</p>
+      <p className="mt-1 text-sm text-slate-600">{RESTRICTED_COMPANY_PUBLIC_MESSAGE}</p>
+    </div>
+  ) : (
     <div className="flex items-center gap-3">
       {company ? (
         <CompanyLogo

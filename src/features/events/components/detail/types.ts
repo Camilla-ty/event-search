@@ -9,6 +9,7 @@ export type EventSponsorCompany = {
   logo_status?: string | null;
   short_description?: string | null;
   description?: string | null;
+  restricted_at?: string | null;
   city_id?: string | null;
   cities?: {
     name?: string | null;

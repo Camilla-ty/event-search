@@ -6,6 +6,7 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { CompanyAdminForm } from "@/src/features/companies/components/admin/CompanyAdminForm";
 import { CompanyAdminMergeActions } from "@/src/features/companies/components/admin/CompanyAdminMergeActions";
 import { CompanyAdminStatusBadge } from "@/src/features/companies/components/admin/CompanyAdminStatusBadge";
+import { CompanyPublicVisibilitySection } from "@/src/features/companies/components/admin/CompanyPublicVisibilitySection";
 import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
@@ -63,7 +64,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         title={company.name}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <CompanyAdminStatusBadge status={company.status} />
+            <CompanyAdminStatusBadge status={company.status} restrictedAt={company.restricted_at} />
             <span>
               {isEditable
                 ? "Edit company profile."
@@ -74,7 +75,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         actions={
           <>
             {isEditable ? <CompanyAdminMergeActions companyId={company.id} /> : null}
-            {company.slug && isEditable ? (
+            {company.slug && isEditable && company.restricted_at === null ? (
               <Link
                 href={`/sponsors/${company.slug}`}
                 className="inline-flex h-10 items-center text-sm text-brand-primary hover:underline"
@@ -100,6 +101,13 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           . The duplicate record is kept for audit and sponsorship history.
         </div>
       ) : null}
+
+      <CompanyPublicVisibilitySection
+        companyId={company.id}
+        companyName={company.name}
+        restrictedAt={company.restricted_at}
+        canRestrict={isEditable}
+      />
 
       <CompanyAdminForm
         key={`${company.id}:${company.domain ?? ""}:${company.website ?? ""}`}

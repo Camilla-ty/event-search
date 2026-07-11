@@ -48,10 +48,21 @@ export function buildEventExplorerTopicUrl(slug: string): string {
   return `${url.pathname}${url.search}`;
 }
 
-export function buildSponsorProfilePath(company: {
-  slug?: string | null;
-  id?: string | null;
-}): string | null {
+export function buildSponsorProfilePath(
+  company: {
+    slug?: string | null;
+    id?: string | null;
+    restricted_at?: string | null;
+  },
+  options?: { allowRestricted?: boolean },
+): string | null {
+  if (
+    !options?.allowRestricted &&
+    company.restricted_at !== null &&
+    company.restricted_at !== undefined
+  ) {
+    return null;
+  }
   const slug = company.slug?.trim() ?? "";
   const id = company.id?.trim() ?? "";
   const segment = slug !== "" ? slug : id;
