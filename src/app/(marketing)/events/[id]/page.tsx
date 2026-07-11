@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Suspense } from "react";
 
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
@@ -15,6 +14,7 @@ import {
 } from "@/src/features/events/components/detail/EventVenueSection";
 import { EditionSectionSurface } from "@/src/features/events/components/detail/EditionSectionSurface";
 import { PublicEventEditionTabs } from "@/src/features/events/components/detail/PublicEventEditionTabs";
+import { parsePublicEditionTab } from "@/src/features/events/components/detail/publicEditionTabUrls";
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
@@ -128,6 +128,7 @@ export default async function EventDetailPage({
   ]);
 
   const showPartnerAlumniTab = shouldShowPublicPartnerAlumniTab(partnerAlumni);
+  const initialTab = parsePublicEditionTab(requestedTab ?? null, showPartnerAlumniTab);
 
   if (requestedTab === "partner-alumni" && !showPartnerAlumniTab) {
     redirect(`/events/${eventSlug || id}`);
@@ -246,10 +247,10 @@ export default async function EventDetailPage({
         </div>
       </header>
 
-      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
-        <PublicEventEditionTabs
-          eventSlug={eventSlug}
-          showPartnerAlumniTab={showPartnerAlumniTab}
+      <PublicEventEditionTabs
+        eventSlug={eventSlug}
+        initialTab={initialTab}
+        showPartnerAlumniTab={showPartnerAlumniTab}
           overviewPanel={
             <div className="space-y-6">
               <EventOverviewSummarySection
@@ -305,7 +306,6 @@ export default async function EventDetailPage({
             ) : null
           }
         />
-      </Suspense>
     </section>
   );
 }

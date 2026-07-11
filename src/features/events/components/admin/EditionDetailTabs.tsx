@@ -1,19 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
+import {
+  buildAdminEditionTabHref,
+  parseAdminEditionTab,
+  type AdminEditionTabId,
+} from "@/src/features/events/components/admin/adminEditionTabUrls";
+import { readTabSearchParamFromWindow } from "@/src/features/events/components/detail/instantTabNavigation";
+import { useInstantTabNavigation } from "@/src/features/events/components/detail/useInstantTabNavigation";
 import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/classes";
-
-type EditionDetailTabsProps = {
-  editionId: string;
-  profileWarnings: string[];
-  profilePanel: ReactNode;
-  sponsorsPanel: ReactNode;
-  importsPanel: ReactNode;
-};
 
 const TABS = [
   { id: "profile", label: "Profile" },
@@ -21,41 +18,51 @@ const TABS = [
   { id: "imports", label: "Imports" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
-
-function parseTab(raw: string | null): TabId {
-  if (raw === "sponsors" || raw === "imports") return raw;
-  // Legacy ?tab=organizers (and unknown values) → Profile.
-  return "profile";
-}
+type EditionDetailTabsProps = {
+  editionId: string;
+  initialTab: AdminEditionTabId;
+  profileWarnings: string[];
+  profilePanel: ReactNode;
+  sponsorsPanel: ReactNode;
+  importsPanel: ReactNode;
+};
 
 export function EditionDetailTabs({
   editionId,
+  initialTab,
   profileWarnings,
   profilePanel,
   sponsorsPanel,
   importsPanel,
 }: EditionDetailTabsProps) {
-  const searchParams = useSearchParams();
-  const activeTab = parseTab(searchParams.get("tab"));
+  const readTabFromLocation = useCallback(
+    () => parseAdminEditionTab(readTabSearchParamFromWindow()),
+    [],
+  );
+
+  const { activeTab, handleTabClick } = useInstantTabNavigation({
+    initialTab,
+    readTabFromLocation,
+  });
 
   return (
     <div className="space-y-6">
       <nav className="flex flex-wrap gap-1 border-b border-slate-200 pb-3">
         {TABS.map((tab) => {
-          const href = `/admin/events/editions/${editionId}?tab=${tab.id}`;
+          const href = buildAdminEditionTabHref(editionId, tab.id);
           const active = activeTab === tab.id;
           return (
-            <Link
+            <a
               key={tab.id}
               href={href}
               className={[
                 "rounded-md px-3 py-1.5 text-sm",
                 active ? navItemActiveClass : navItemInactiveClass,
               ].join(" ")}
+              onClick={handleTabClick(tab.id, href)}
             >
               {tab.label}
-            </Link>
+            </a>
           );
         })}
       </nav>

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 
 import { InlineErrorBanner } from "@/src/components/common";
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
+import { parseAdminEditionTab } from "@/src/features/events/components/admin/adminEditionTabUrls";
 import { EditionOrganizersPanel } from "@/src/features/organizers/components/admin/EditionOrganizersPanel";
 import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
@@ -32,6 +32,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 const ACTIVE_BATCH_STATUSES: readonly SponsorImportBatchStatus[] = [
@@ -65,8 +66,9 @@ function editionProfileWarnings(edition: {
   return messages;
 }
 
-export default async function AdminEventEditionDetailPage({ params }: PageProps) {
+export default async function AdminEventEditionDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { tab: requestedTab } = await searchParams;
   const required = await loadAdminEditionRequired(id);
 
   if (required.loadError) {
@@ -128,6 +130,7 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
     adminEditionPanelErrorMessage(panels.panelErrors, "cities") ??
     adminEditionPanelErrorMessage(panels.panelErrors, "series") ??
     adminEditionPanelErrorMessage(panels.panelErrors, "keywords");
+  const initialTab = parseAdminEditionTab(requestedTab ?? null);
 
   return (
     <section>
@@ -204,9 +207,9 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
         />
       ) : null}
 
-      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
-        <EditionDetailTabs
+      <EditionDetailTabs
           editionId={edition.id}
+          initialTab={initialTab}
           profileWarnings={editionProfileWarnings(edition)}
           profilePanel={
             <div className="space-y-6">
@@ -294,7 +297,6 @@ export default async function AdminEventEditionDetailPage({ params }: PageProps)
             )
           }
         />
-      </Suspense>
     </section>
   );
 }

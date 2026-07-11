@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 
 import {
   fileTabBarClass,
@@ -12,8 +10,12 @@ import {
   fileTabShellClass,
 } from "@/src/lib/design/classes";
 
+import { readTabSearchParamFromWindow } from "@/src/features/events/components/detail/instantTabNavigation";
+import { useInstantTabNavigation } from "@/src/features/events/components/detail/useInstantTabNavigation";
+
 import {
   buildPublicEditionTabHref,
+  parsePublicEditionTab,
   type PublicEditionTabId,
 } from "./publicEditionTabUrls";
 
@@ -24,10 +26,9 @@ const BASE_TABS = [
   { id: "organizers", label: "Organizers" },
 ] as const;
 
-export type { PublicEditionTabId };
-
 type PublicEventEditionTabsProps = {
   eventSlug: string;
+  initialTab: PublicEditionTabId;
   showPartnerAlumniTab: boolean;
   overviewPanel: ReactNode;
   sponsorsPanel: ReactNode;
@@ -36,19 +37,9 @@ type PublicEventEditionTabsProps = {
   partnerAlumniPanel: ReactNode;
 };
 
-export function parsePublicEditionTab(
-  raw: string | null,
-  showPartnerAlumniTab: boolean,
-): PublicEditionTabId {
-  if (raw === "partner-alumni") {
-    return showPartnerAlumniTab ? "partner-alumni" : "overview";
-  }
-  if (raw === "sponsors" || raw === "venue" || raw === "organizers") return raw;
-  return "overview";
-}
-
 export function PublicEventEditionTabs({
   eventSlug,
+  initialTab,
   showPartnerAlumniTab,
   overviewPanel,
   sponsorsPanel,
@@ -56,8 +47,15 @@ export function PublicEventEditionTabs({
   organizersPanel,
   partnerAlumniPanel,
 }: PublicEventEditionTabsProps) {
-  const searchParams = useSearchParams();
-  const activeTab = parsePublicEditionTab(searchParams.get("tab"), showPartnerAlumniTab);
+  const readTabFromLocation = useCallback(
+    () => parsePublicEditionTab(readTabSearchParamFromWindow(), showPartnerAlumniTab),
+    [showPartnerAlumniTab],
+  );
+
+  const { activeTab, handleTabClick } = useInstantTabNavigation({
+    initialTab,
+    readTabFromLocation,
+  });
 
   const tabs: Array<{ id: PublicEditionTabId; label: string }> = [...BASE_TABS];
   if (showPartnerAlumniTab) {
@@ -83,16 +81,17 @@ export function PublicEventEditionTabs({
             const href = buildPublicEditionTabHref(eventSlug, tab.id);
             const active = activeTab === tab.id;
             return (
-              <Link
+              <a
                 key={tab.id}
                 href={href}
                 role="tab"
                 aria-current={active ? "page" : undefined}
                 aria-selected={active}
                 className={fileTabLinkClass(active)}
+                onClick={handleTabClick(tab.id, href)}
               >
                 {tab.label}
-              </Link>
+              </a>
             );
           })}
         </div>
