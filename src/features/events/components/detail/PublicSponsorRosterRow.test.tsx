@@ -57,8 +57,8 @@ describe("PublicSponsorRosterRow", () => {
     });
 
     assert.match(html, /Restricted Co/);
-    assert.match(html, /not publicly displayed in accordance with EventPixels/);
-    assert.match(html, /content policy/);
+    assert.match(html, /This company is not publicly displayed\./);
+    assert.match(html, />R</);
     assert.doesNotMatch(html, /href="\/sponsors\//);
     assert.doesNotMatch(html, /restricted\.example/);
     assert.doesNotMatch(html, /<img\b/);

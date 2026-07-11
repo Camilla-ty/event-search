@@ -102,13 +102,6 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         </div>
       ) : null}
 
-      <CompanyPublicVisibilitySection
-        companyId={company.id}
-        companyName={company.name}
-        restrictedAt={company.restricted_at}
-        canRestrict={isEditable}
-      />
-
       <CompanyAdminForm
         key={`${company.id}:${company.domain ?? ""}:${company.website ?? ""}`}
         mode="edit"
@@ -158,6 +151,13 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         </p>
         <CompanyOrganizerRolesTable organizerRoles={organizerRoles} />
       </div>
+
+      <CompanyPublicVisibilitySection
+        companyId={company.id}
+        companyName={company.name}
+        restrictedAt={company.restricted_at}
+        canRestrict={isEditable}
+      />
     </section>
   );
 }

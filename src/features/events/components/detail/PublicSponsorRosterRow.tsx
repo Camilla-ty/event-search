@@ -4,7 +4,7 @@ import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import {
   isCompanyRestricted,
-  RESTRICTED_COMPANY_PUBLIC_MESSAGE,
+  RESTRICTED_COMPANY_ROSTER_LABEL,
 } from "@/src/lib/companies/companyPublicRestriction";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
@@ -20,17 +20,23 @@ export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps)
   const companyName = company?.name?.trim() || "Unknown sponsor";
   const domain = restricted ? null : company?.domain?.trim() || null;
   const profileHref = company ? buildSponsorProfilePath(company) : null;
+  const logoFields = companyLogoFieldsFromRow(
+    restricted && company
+      ? {
+          name: company.name,
+          domain: null,
+          logo_url: null,
+          logo_source: null,
+          logo_status: null,
+        }
+      : company,
+  );
 
-  const content = restricted ? (
-    <div className="min-w-0">
-      <p className="font-medium text-slate-900">{companyName}</p>
-      <p className="mt-1 text-sm text-slate-600">{RESTRICTED_COMPANY_PUBLIC_MESSAGE}</p>
-    </div>
-  ) : (
+  const content = (
     <div className="flex items-center gap-3">
       {company ? (
         <CompanyLogo
-          company={companyLogoFieldsFromRow(company)}
+          company={logoFields}
           className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5"
           monogramClassName="text-sm font-semibold text-slate-400"
           alt=""
@@ -42,7 +48,11 @@ export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps)
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <p className="truncate font-medium text-slate-900">{companyName}</p>
-        {domain ? (
+        {restricted ? (
+          <p className="truncate text-xs text-slate-500 sm:max-w-[40%] sm:shrink-0 sm:text-right">
+            {RESTRICTED_COMPANY_ROSTER_LABEL}
+          </p>
+        ) : domain ? (
           <p className="truncate text-sm text-slate-500 sm:max-w-[40%] sm:shrink-0 sm:text-right">
             {domain}
           </p>
