@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { importFilterChipClass } from "@/src/lib/design/classes";
@@ -17,12 +16,9 @@ import {
   patchRowDecision,
   runMatching,
 } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
 import type {
-  ImportScope,
   MatchMethodSummary,
   MaterializePreviewSummary,
-  PartnerAlumniImportBatch,
   PartnerAlumniImportRow,
   RowSummary,
 } from "../../client/types";
@@ -51,12 +47,11 @@ import { BulkReviewConfirmModal } from "../BulkReviewConfirmModal";
 import { CreateNewAcknowledgmentModal } from "../CreateNewAcknowledgmentModal";
 import { MatchMethodSummaryCards } from "../MatchMethodSummaryCards";
 import { MaterializePreviewPanel } from "../MaterializePreviewPanel";
+import { usePartnerAlumniImportWizard } from "../PartnerAlumniImportWizardContext";
 import { ReviewRowMatchCell } from "../ReviewRowMatchCell";
 import { RowDecisionDrawer } from "../RowDecisionDrawer";
 
 type ReviewQueueStepProps = {
-  scope: ImportScope;
-  batch: PartnerAlumniImportBatch;
   initialSummary: RowSummary;
   initialMatchMethodSummary: MatchMethodSummary;
   initialMaterializePreview: MaterializePreviewSummary;
@@ -94,14 +89,18 @@ function importStatusMessage(summary: RowSummary, canImport: boolean): string {
 }
 
 export function ReviewQueueStep({
-  scope,
-  batch,
   initialSummary,
   initialMatchMethodSummary,
   initialMaterializePreview,
   initialPendingCreateNewCount,
 }: ReviewQueueStepProps) {
-  const router = useRouter();
+  const {
+    scope,
+    batch,
+    goToStep,
+    updateBatch,
+    markImportComplete,
+  } = usePartnerAlumniImportWizard();
   const mountSummaryRef = useRef(initialSummary);
   const seriesId = scope.seriesId;
   const versionId = scope.versionId;
@@ -447,6 +446,7 @@ export function ReviewQueueStep({
       setError(review.error);
       return;
     }
+    updateBatch(review.batch);
 
     if (pendingCreateNewCount > 0) {
       const ack = await acknowledgeCreateNew(scope, batch.id, pendingCreateNewCount);
@@ -455,6 +455,7 @@ export function ReviewQueueStep({
         setError(ack.error);
         return;
       }
+      updateBatch(ack.batch);
     }
 
     const materialized = await runPartnerAlumniImportMaterialization(scope, batch.id, (msg) =>
@@ -468,7 +469,8 @@ export function ReviewQueueStep({
       return;
     }
 
-    router.push(flowHref(scope, batch.id, "summary"));
+    markImportComplete();
+    goToStep("summary");
   }
 
   async function handleImportClick() {
@@ -488,6 +490,7 @@ export function ReviewQueueStep({
       setCreateNewAckError(ack.error);
       return;
     }
+    updateBatch(ack.batch);
     setCreateNewAckOpen(false);
     await runImportAfterAcks();
   }
@@ -839,7 +842,7 @@ export function ReviewQueueStep({
           </div>
           <Button
             variant="secondary"
-            onClick={() => router.push(flowHref(scope, batch.id, "validation"))}
+            onClick={() => goToStep("validation")}
             disabled={actionLoading}
           >
             Back

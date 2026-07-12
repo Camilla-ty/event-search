@@ -1,0 +1,164 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, it } from "node:test";
+
+import {
+  buildSponsorImportWizardPathname,
+  guardImportStep,
+  parseGuardedImportStep,
+  serializeImportStep,
+} from "@/src/features/sponsor-import/client/useSponsorImportWizardStep";
+import {
+  pushHistoryUrl,
+  readSearchParamsFromWindow,
+  replaceHistoryUrl,
+} from "@/src/lib/navigation/historyUrl";
+import { buildPathWithSearchParams } from "@/src/lib/navigation/urlPath";
+
+describe("guardImportStep", () => {
+  it("blocks draft navigation while batch is still in review", () => {
+    assert.equal(guardImportStep("review", "draft"), "review");
+    assert.equal(guardImportStep("review", "publish"), "review");
+  });
+
+  it("allows publish only after batch status becomes draft", () => {
+    assert.equal(guardImportStep("draft", "publish"), "publish");
+    assert.equal(guardImportStep("draft", "review"), "draft");
+  });
+});
+
+describe("URL synchronization helpers", () => {
+  it("serializes and parses guarded step query params", () => {
+    const params = serializeImportStep("validation");
+    assert.equal(parseGuardedImportStep(params, "uploaded"), "validation");
+    assert.equal(parseGuardedImportStep(params, "review"), "validation");
+  });
+
+  it("builds wizard pathname for history writes", () => {
+    const pathname = buildSponsorImportWizardPathname("batch-123");
+    const href = buildPathWithSearchParams(pathname, serializeImportStep("review"));
+    assert.equal(href, "/admin/sponsor-imports/batch-123?step=review");
+  });
+});
+
+describe("popstate restoration", () => {
+  it("reads guarded step from window search params", () => {
+    const originalWindow = globalThis.window;
+
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        location: { search: "?step=validation" },
+      },
+    });
+
+    try {
+      assert.equal(
+        parseGuardedImportStep(readSearchParamsFromWindow(), "review"),
+        "validation",
+      );
+      assert.equal(
+        parseGuardedImportStep(readSearchParamsFromWindow(), "draft"),
+        "draft",
+      );
+    } finally {
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: originalWindow,
+      });
+    }
+  });
+});
+
+describe("history API writers for wizard steps", () => {
+  it("records pushState for forward step navigation", () => {
+    const calls: Array<{ mode: "push" | "replace"; href: string }> = [];
+    const original = globalThis.history;
+
+    Object.defineProperty(globalThis, "history", {
+      configurable: true,
+      value: {
+        pushState: (_state: unknown, _title: string, url: string | URL | null) => {
+          calls.push({ mode: "push", href: String(url) });
+        },
+        replaceState: (_state: unknown, _title: string, url: string | URL | null) => {
+          calls.push({ mode: "replace", href: String(url) });
+        },
+      },
+    });
+
+    try {
+      pushHistoryUrl("/admin/sponsor-imports/batch-1?step=validation");
+      replaceHistoryUrl("/admin/sponsor-imports/batch-1?step=mapping");
+
+      assert.deepEqual(calls, [
+        { mode: "push", href: "/admin/sponsor-imports/batch-1?step=validation" },
+        { mode: "replace", href: "/admin/sponsor-imports/batch-1?step=mapping" },
+      ]);
+    } finally {
+      Object.defineProperty(globalThis, "history", {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+});
+
+describe("review to draft batch status transition", () => {
+  it("requires draft status before publish step is allowed", () => {
+    assert.equal(guardImportStep("review", "draft"), "review");
+    assert.equal(guardImportStep("draft", "draft"), "draft");
+  });
+});
+
+describe("in-flow step navigation policy", () => {
+  const stepFiles = [
+    "src/features/sponsor-import/components/steps/UploadStep.tsx",
+    "src/features/sponsor-import/components/steps/ColumnMappingStep.tsx",
+    "src/features/sponsor-import/components/steps/ValidationStep.tsx",
+    "src/features/sponsor-import/components/steps/ReviewQueueStep.tsx",
+    "src/features/sponsor-import/components/steps/DraftReviewStep.tsx",
+    "src/features/sponsor-import/components/steps/PublishStep.tsx",
+  ];
+
+  for (const relativePath of stepFiles) {
+    it(`${relativePath} does not use router.push/replace for step navigation`, () => {
+      const source = readFileSync(path.join(process.cwd(), relativePath), "utf8");
+      assert.equal(source.includes("router.push(flowHref"), false);
+      assert.equal(source.includes("router.replace(flowHref"), false);
+      assert.equal(source.includes("router.push(`/admin/sponsor-imports/"), false);
+      assert.equal(source.includes("goToStep("), true);
+    });
+  }
+
+  it("ColumnMappingStep advances to validation via goToStep after mapping save", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/features/sponsor-import/components/steps/ColumnMappingStep.tsx"),
+      "utf8",
+    );
+    assert.match(source, /updateBatch\(result\.batch\)/);
+    assert.match(source, /goToStep\("validation"\)/);
+    assert.equal(source.includes("router.push(flowHref"), false);
+  });
+
+  it("ReviewQueueStep marks import-to-draft complete before entering draft", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/features/sponsor-import/components/steps/ReviewQueueStep.tsx"),
+      "utf8",
+    );
+    assert.match(source, /markImportToDraftComplete\(\)/);
+    assert.match(source, /goToStep\("draft"\)/);
+  });
+});
+
+describe("cold-load redirect remains server-authoritative", () => {
+  it("keeps resolveStepForBatch redirect in batch page loader", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/app/admin/sponsor-imports/[batchId]/page.tsx"),
+      "utf8",
+    );
+    assert.match(source, /resolveStepForBatch\(status, requestedStep\)/);
+    assert.match(source, /redirect\(`\/admin\/sponsor-imports\/\$\{batchId\}\?step=\$\{step\}`\)/);
+  });
+});

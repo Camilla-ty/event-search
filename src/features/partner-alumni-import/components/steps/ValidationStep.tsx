@@ -1,25 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { ImportProgressMessage } from "@/src/features/sponsor-import/components/ImportProgressMessage";
 import { useImportProgressLabel } from "@/src/features/sponsor-import/components/ImportFlowProgress";
 
 import { fetchRows, runValidation } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { ImportScope, PartnerAlumniImportBatch, PartnerAlumniImportRow, RowSummary } from "../../client/types";
+import type { PartnerAlumniImportRow, RowSummary } from "../../client/types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { usePartnerAlumniImportWizard } from "../PartnerAlumniImportWizardContext";
 
 type ValidationStepProps = {
-  scope: ImportScope;
-  batch: PartnerAlumniImportBatch;
   initialSummary: RowSummary;
 };
 
-export function ValidationStep({ scope, batch, initialSummary }: ValidationStepProps) {
-  const router = useRouter();
+export function ValidationStep({ initialSummary }: ValidationStepProps) {
+  const { scope, batch, goToStep, markValidationComplete } = usePartnerAlumniImportWizard();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RowSummary>(initialSummary);
@@ -39,6 +36,7 @@ export function ValidationStep({ scope, batch, initialSummary }: ValidationStepP
         setLoading(false);
         return;
       }
+      markValidationComplete();
       const listed = await fetchRows(scope, batch.id, { page: 1, pageSize: 50 });
       if (cancelled) return;
       if (!listed.ok) {
@@ -54,7 +52,7 @@ export function ValidationStep({ scope, batch, initialSummary }: ValidationStepP
     return () => {
       cancelled = true;
     };
-  }, [batch.id, scope]);
+  }, [batch.id, scope, markValidationComplete]);
 
   const canContinue = summary.blocking_validation_count === 0;
 
@@ -123,13 +121,13 @@ export function ValidationStep({ scope, batch, initialSummary }: ValidationStepP
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          onClick={() => router.push(flowHref(scope, batch.id, "mapping"))}
+          onClick={() => goToStep("mapping")}
           disabled={loading}
         >
           Back
         </Button>
         <Button
-          onClick={() => router.push(flowHref(scope, batch.id, "review"))}
+          onClick={() => goToStep("review")}
           disabled={loading || !canContinue}
         >
           Continue to review →

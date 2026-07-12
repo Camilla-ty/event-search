@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState, type MouseEvent } from "react";
 
 import {
-  pushTabHistoryUrl,
-  shouldInterceptTabAnchorClick,
-} from "@/src/features/events/components/detail/instantTabNavigation";
+  pushHistoryUrl,
+  shouldInterceptInPageAnchorClick,
+} from "@/src/lib/navigation/historyUrl";
 
 type UseInstantTabNavigationOptions<T extends string> = {
   initialTab: T;
@@ -22,7 +22,7 @@ export function useInstantTabNavigation<T extends string>({
     setActiveTab(initialTab);
   }, [initialTab]);
 
-    useEffect(() => {
+  useEffect(() => {
     function handlePopState() {
       setActiveTab(readTabFromLocation());
     }
@@ -33,12 +33,12 @@ export function useInstantTabNavigation<T extends string>({
 
   const selectTab = useCallback((tab: T, href: string) => {
     setActiveTab(tab);
-    pushTabHistoryUrl(href);
+    pushHistoryUrl(href);
   }, []);
 
   const handleTabClick = useCallback(
     (tab: T, href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-      if (!shouldInterceptTabAnchorClick(event)) return;
+      if (!shouldInterceptInPageAnchorClick(event)) return;
       event.preventDefault();
       selectTab(tab, href);
     },

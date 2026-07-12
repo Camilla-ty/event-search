@@ -36,12 +36,6 @@ export default async function SponsorsPage({ searchParams }: SponsorsPageProps) 
   }
 
   return (
-    <SponsorSearchPage
-      rows={data.rows}
-      total={data.total}
-      params={data.params}
-      eventContext={data.eventContext}
-      eventUnknown={data.eventUnknown}
-    />
+    <SponsorSearchPage initial={data} />
   );
 }

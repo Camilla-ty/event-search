@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent, InputHTMLAttributes } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/src/components/common/Button";
 import {
@@ -14,6 +14,8 @@ import {
 export type SearchBarProps = {
   placeholder?: string;
   defaultValue?: string;
+  /** When set, keeps the input aligned with external URL/filter state. */
+  syncValue?: string;
   onSearch?: (value: string) => void;
   ariaLabel?: string;
   inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">;
@@ -28,6 +30,7 @@ const defaultInputClass =
 export function SearchBar({
   placeholder = "Search...",
   defaultValue = "",
+  syncValue,
   onSearch,
   ariaLabel = "Search",
   inputProps,
@@ -37,6 +40,12 @@ export function SearchBar({
 }: SearchBarProps) {
   const [value, setValue] = useState(defaultValue);
   const isToolbar = variant === "toolbar";
+
+  useEffect(() => {
+    if (syncValue !== undefined) {
+      setValue(syncValue);
+    }
+  }, [syncValue]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

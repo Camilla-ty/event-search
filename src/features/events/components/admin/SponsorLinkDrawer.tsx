@@ -9,6 +9,10 @@ import { AdminCompanySearchMatchHint } from "@/src/features/companies/components
 import { formInputClass } from "@/src/lib/design/classes";
 
 import type { LiveSponsorRow } from "./liveSponsorTypes";
+import type {
+  SponsorCreateSavedPayload,
+  SponsorEditSavedPayload,
+} from "./sponsorLinkDrawerTypes";
 
 const TIER_RANK_MIN = 1;
 const TIER_RANK_MAX = 1000;
@@ -20,14 +24,14 @@ type SponsorLinkDrawerProps =
       mode: "edit";
       row: LiveSponsorRow;
       onClose: () => void;
-      onSaved: () => void;
+      onSaved: (payload: SponsorEditSavedPayload) => void;
     }
   | {
       mode: "create";
       editionId: string;
       attachedCompanyIds: ReadonlySet<string>;
       onClose: () => void;
-      onSaved: () => void;
+      onSaved: (payload: SponsorCreateSavedPayload) => void;
     };
 
 function parseRankInput(raw: string): number | null {
@@ -128,7 +132,7 @@ function TierFields({
 type EditSponsorFormProps = {
   row: LiveSponsorRow;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (payload: SponsorEditSavedPayload) => void;
 };
 
 function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
@@ -184,7 +188,17 @@ function EditSponsorForm({ row, onClose, onSaved }: EditSponsorFormProps) {
         setSaving(false);
         return;
       }
-      onSaved();
+
+      if (payload.tier_rank !== undefined) {
+        onSaved({ kind: "tier" });
+        return;
+      }
+
+      onSaved({
+        kind: "label",
+        linkId: row.id,
+        tier_label: tierLabel.trim() === "" ? null : tierLabel.trim(),
+      });
     } catch {
       setError("Failed to save changes.");
       setSaving(false);
@@ -243,7 +257,7 @@ type AddSponsorFormProps = {
   editionId: string;
   attachedCompanyIds: ReadonlySet<string>;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (payload: SponsorCreateSavedPayload) => void;
 };
 
 function AddSponsorForm({
@@ -331,13 +345,30 @@ function AddSponsorForm({
           tier_label: tierLabel.trim() === "" ? null : tierLabel.trim(),
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        link?: {
+          id: string;
+          tier_rank: number | null;
+          tier_label: string | null;
+          display_order: number | null;
+          company_id: string;
+        };
+      };
+      if (!res.ok || !data.ok || !data.link) {
         setError(data.error ?? "Failed to add sponsor.");
         setSaving(false);
         return;
       }
-      onSaved();
+      onSaved({
+        link: data.link,
+        company: {
+          id: selectedCompany.id,
+          name: selectedCompany.name,
+          domain: selectedCompany.domain,
+        },
+      });
     } catch {
       setError("Failed to add sponsor.");
       setSaving(false);

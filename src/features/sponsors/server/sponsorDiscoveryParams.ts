@@ -118,6 +118,13 @@ export function clampSponsorDiscoveryPage(
 }
 
 export function buildSponsorDiscoveryPath(params: SponsorDiscoveryParams): string {
+  const query = buildSponsorDiscoverySearchParams(params).toString();
+  return query !== "" ? `/sponsors?${query}` : "/sponsors";
+}
+
+export function buildSponsorDiscoverySearchParams(
+  params: SponsorDiscoveryParams,
+): URLSearchParams {
   const search = new URLSearchParams();
 
   if (params.query.trim() !== "") {
@@ -136,8 +143,24 @@ export function buildSponsorDiscoveryPath(params: SponsorDiscoveryParams): strin
     search.set("page", String(params.page));
   }
 
-  const query = search.toString();
-  return query !== "" ? `/sponsors?${query}` : "/sponsors";
+  return search;
+}
+
+/** Stable key for comparing normalized discovery params (order-insensitive where applicable). */
+export function buildSponsorDiscoveryParamsKey(params: SponsorDiscoveryParams): string {
+  return buildSponsorDiscoverySearchParams(params).toString();
+}
+
+export function parseSponsorDiscoveryParamsFromSearchParams(
+  searchParams: URLSearchParams,
+): SponsorDiscoveryParams {
+  return parseSponsorDiscoveryParams({
+    q: searchParams.get("q"),
+    event: searchParams.get("event"),
+    sort: searchParams.get("sort"),
+    page: searchParams.get("page"),
+    pageSize: searchParams.get("page_size"),
+  });
 }
 
 export function parseSponsorDiscoveryParams(

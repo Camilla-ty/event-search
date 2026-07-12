@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "bash -c 'if [ \"$1\" = link3 ]; then exec npx tsx --test src/lib/domain/hostedPlatformWebsite.test.ts src/lib/domain/importWebsiteMatchKey.test.ts src/lib/companies/companyImportMatching.test.ts src/features/partner-alumni-import/server/validateRows.test.ts src/features/sponsor-import/server/validateRows.test.ts src/features/sponsor-import/server/importWebsiteSelection.test.ts; else exec find src -name \"*.test.ts\" -print0 | xargs -0 npx tsx --test; fi' bash",
+    "test": "bash -c 'if [ \"$1\" = link3 ]; then exec npx tsx --test src/lib/domain/hostedPlatformWebsite.test.ts src/lib/domain/importWebsiteMatchKey.test.ts src/lib/companies/companyImportMatching.test.ts src/features/partner-alumni-import/server/validateRows.test.ts src/features/sponsor-import/server/validateRows.test.ts src/features/sponsor-import/server/importWebsiteSelection.test.ts; else exec find src \\( -name \"*.test.ts\" -o -name \"*.test.tsx\" \\) -print0 | xargs -0 npx tsx --test; fi' bash",
+    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=\"$PWD/.playwright-browsers\" playwright test",
     "backfill:companies-logos": "tsx --env-file=.env.local scripts/backfill-companies-logos.ts",
     "backfill:venue-logos-from-url": "tsx --env-file=.env.local scripts/backfill-venue-logos-from-url.ts",
     "migrate:company-logos": "tsx --env-file=.env.local scripts/migrate-company-logos-to-company-id.ts",
@@ -37,12 +38,15 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.10.6",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "happy-dom": "^20.10.6",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { importFilterChipClass } from "@/src/lib/design/classes";
@@ -16,8 +15,7 @@ import {
   patchRowDecision,
   runMatching,
 } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
+import type { RowSummary, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import { hasImportRowMatchReason } from "../../importRowMatchReason";
 import { FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE } from "../../importToDraftClient";
@@ -39,12 +37,12 @@ import {
 } from "../../reviewQueueEligibility";
 import { BulkReviewConfirmModal } from "../BulkReviewConfirmModal";
 import { ImportRowMatchReason } from "../ImportRowMatchReason";
+import { useSponsorImportWizard } from "../SponsorImportWizardContext";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 import { RowDecisionDrawer } from "../RowDecisionDrawer";
 
 type ReviewQueueStepProps = {
-  batch: SponsorImportBatch;
   initialSummary: RowSummary;
 };
 
@@ -122,8 +120,8 @@ function duplicateStatusLabel(row: SponsorImportRow): { primary: string; seconda
   return { primary: "Duplicate", secondary: "needs choice" };
 }
 
-export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps) {
-  const router = useRouter();
+export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
+  const { batch, goToStep, markImportToDraftComplete } = useSponsorImportWizard();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [progressMessage, setProgressMessage] = useState<string | null>(IMPORT_PROGRESS.matching);
@@ -424,7 +422,8 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
         setError(result.error || FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE);
         return;
       }
-      router.push(flowHref(batch.id, "draft"));
+      markImportToDraftComplete();
+      goToStep("draft");
     } finally {
       importToDraftInFlight.current = false;
       setActionLoading(false);
@@ -806,7 +805,7 @@ export function ReviewQueueStep({ batch, initialSummary }: ReviewQueueStepProps)
           </div>
           <Button
             variant="secondary"
-            onClick={() => router.push(flowHref(batch.id, "validation"))}
+            onClick={() => goToStep("validation")}
             disabled={actionLoading}
           >
             Back

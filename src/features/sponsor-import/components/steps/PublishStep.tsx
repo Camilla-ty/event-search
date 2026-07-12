@@ -2,24 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { primaryCtaClass } from "@/src/lib/design/classes";
 
 import { fetchDraftLinks, publishBatch } from "../../client/api";
-import type { DraftDiffSummary, PublishResult, SponsorImportBatch } from "../../client/types";
+import type { DraftDiffSummary, PublishResult } from "../../client/types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { useSponsorImportWizard } from "../SponsorImportWizardContext";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type PublishStepProps = {
-  batch: SponsorImportBatch;
   editionId: string;
 };
 
-export function PublishStep({ batch, editionId }: PublishStepProps) {
-  const router = useRouter();
+export function PublishStep({ editionId }: PublishStepProps) {
+  const { batch, goToStep } = useSponsorImportWizard();
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +119,7 @@ export function PublishStep({ batch, editionId }: PublishStepProps) {
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          onClick={() => router.push(`/admin/sponsor-imports/${batch.id}?step=draft`)}
+          onClick={() => goToStep("draft")}
           disabled={publishing}
         >
           Back

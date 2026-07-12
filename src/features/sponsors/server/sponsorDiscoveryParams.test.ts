@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildSponsorDiscoveryParamsKey,
   buildSponsorDiscoveryPath,
   clampSponsorDiscoveryPage,
   parseSponsorDiscoveryEventSlug,
   parseSponsorDiscoveryPage,
   parseSponsorDiscoveryPageSize,
   parseSponsorDiscoveryParams,
+  parseSponsorDiscoveryParamsFromSearchParams,
   parseSponsorDiscoveryQuery,
   parseSponsorDiscoverySort,
   SPONSOR_DISCOVERY_DEFAULT_SORT,
@@ -156,5 +158,29 @@ describe("buildSponsorDiscoveryPath", () => {
       }),
       "/sponsors?q=acme&event=btc-prague-2026&sort=name&page=2",
     );
+  });
+});
+
+describe("buildSponsorDiscoveryParamsKey", () => {
+  it("matches buildSponsorDiscoverySearchParams output", () => {
+    const params = parseSponsorDiscoveryParams({
+      q: "acme",
+      event: "btc-prague-2026",
+      sort: "name",
+      page: "2",
+    });
+    assert.equal(buildSponsorDiscoveryParamsKey(params), "q=acme&event=btc-prague-2026&sort=name&page=2");
+  });
+});
+
+describe("parseSponsorDiscoveryParamsFromSearchParams", () => {
+  it("parses URL search params through the shared normalizer", () => {
+    const params = parseSponsorDiscoveryParamsFromSearchParams(
+      new URLSearchParams("q=acme&event=btc-prague-2026&sort=name&page=2"),
+    );
+    assert.equal(params.query, "acme");
+    assert.equal(params.eventSlug, "btc-prague-2026");
+    assert.equal(params.sort, "name");
+    assert.equal(params.page, 2);
   });
 });

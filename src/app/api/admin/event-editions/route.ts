@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { buildAdminEditionsCollection } from "@/src/features/events/server/adminEditionsCollection";
 import { createEventEdition } from "@/src/features/events/server/createEventEdition";
-import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
+import { parseEditionsListParams } from "@/src/features/events/server/editionsListParams";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { formatEditionWriteError } from "@/src/lib/errors/editionWriteError";
 import { buildEditionSlug } from "@/src/lib/slugify";
@@ -13,21 +14,24 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
+  const params = parseEditionsListParams(searchParams);
   const seriesId = searchParams.get("seriesId") ?? undefined;
   const yearRaw = searchParams.get("year");
   const year = yearRaw ? Number(yearRaw) : undefined;
   const search = searchParams.get("search") ?? undefined;
 
   try {
-    const editions = await listEventEditionsAdmin({
+    const result = await buildAdminEditionsCollection(params, {
       seriesId,
       year: Number.isInteger(year) ? year : undefined,
-      missingWebsite: searchParams.get("missingWebsite") === "1",
-      missingDates: searchParams.get("missingDates") === "1",
-      missingCity: searchParams.get("missingCity") === "1",
       search,
     });
-    return NextResponse.json({ ok: true, editions });
+    return NextResponse.json({
+      ok: true,
+      editions: result.editions,
+      total: result.total,
+      params: result.params,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

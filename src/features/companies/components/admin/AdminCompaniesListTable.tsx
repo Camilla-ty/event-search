@@ -22,6 +22,7 @@ export type AdminCompaniesListRow = {
 type AdminCompaniesListTableProps = {
   companies: AdminCompaniesListRow[];
   filter: CompanyListFilter;
+  loading?: boolean;
 };
 
 function tableColumnCount(filter: CompanyListFilter): number {
@@ -90,11 +91,20 @@ function AdminCompaniesListTableRow({
   );
 }
 
-export function AdminCompaniesListTable({ companies, filter }: AdminCompaniesListTableProps) {
+export function AdminCompaniesListTable({
+  companies,
+  filter,
+  loading = false,
+}: AdminCompaniesListTableProps) {
   const showWebsite = filter === "needs_logo_review";
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div
+      className={[
+        "overflow-x-auto rounded-xl border border-slate-200 bg-white transition-opacity",
+        loading ? "opacity-60" : "opacity-100",
+      ].join(" ")}
+    >
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>

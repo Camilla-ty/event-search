@@ -1,24 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
-import { flowHref } from "../../client/resumeStep";
-import type { ImportScope, PartnerAlumniImportBatch } from "../../client/types";
+import { usePartnerAlumniImportWizard } from "../PartnerAlumniImportWizardContext";
 import { IMPORT_PROGRESS } from "../../importProgress";
 import { ImportProgressMessage } from "@/src/features/sponsor-import/components/ImportProgressMessage";
 
-type UploadStepProps = {
-  scope: ImportScope;
-  batch: PartnerAlumniImportBatch;
-};
-
-export function UploadStep({ scope, batch }: UploadStepProps) {
-  const router = useRouter();
+export function UploadStep() {
+  const { batch, goToStep } = usePartnerAlumniImportWizard();
 
   useEffect(() => {
-    router.replace(flowHref(scope, batch.id, "mapping"));
-  }, [batch.id, router, scope]);
+    goToStep("mapping", { history: "replace" });
+  }, [goToStep]);
 
   return (
     <div className="space-y-4">

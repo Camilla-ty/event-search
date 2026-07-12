@@ -1,5 +1,12 @@
 # EventPixels — Project documentation
 
+## Architecture
+
+| Document | Description |
+|----------|-------------|
+| [Navigation & data fetching](./architecture/navigation-and-data-fetching.md) | Category A–D policy, shared `src/lib/navigation` utilities, PR checklist, phased rollout |
+| [Side-effect ownership](./architecture/side-effect-ownership.md) | One event / one owner policy, auth refresh provider, audit checklist |
+
 ## Implementation (v1)
 
 | Document | Description |

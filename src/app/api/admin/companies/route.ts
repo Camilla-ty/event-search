@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { listCompaniesAdmin } from "@/src/features/companies/server/companyAdmin";
+import { buildAdminCompaniesCollection } from "@/src/features/companies/server/adminCompaniesCollection";
+import { parseCompaniesListParams } from "@/src/features/companies/server/companiesListParams";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 
 export async function GET(request: Request) {
@@ -8,18 +9,16 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search") ?? undefined;
-  const filterRaw = searchParams.get("filter");
-  const filter =
-    filterRaw === "social_website" ||
-    filterRaw === "missing_logo" ||
-    filterRaw === "needs_logo_review"
-      ? filterRaw
-      : undefined;
+  const params = parseCompaniesListParams(searchParams);
 
   try {
-    const companies = await listCompaniesAdmin({ search, filter });
-    return NextResponse.json({ ok: true, companies });
+    const result = await buildAdminCompaniesCollection(params);
+    return NextResponse.json({
+      ok: true,
+      companies: result.companies,
+      total: result.total,
+      params: result.params,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

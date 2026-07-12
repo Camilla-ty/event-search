@@ -15,6 +15,10 @@ import {
   EditionSponsorsPanel,
   type ActiveImportInfo,
 } from "@/src/features/events/components/admin/EditionSponsorsPanel";
+import {
+  EditionLiveSponsorCountLabel,
+  EditionLiveSponsorCountProvider,
+} from "@/src/features/events/components/admin/EditionLiveSponsorCountContext";
 import { EventEditionForm } from "@/src/features/events/components/admin/EventEditionForm";
 import { buildEditionFormInitialValues } from "@/src/features/events/components/admin/editionFormValues";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
@@ -133,6 +137,7 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
   const initialTab = parseAdminEditionTab(requestedTab ?? null);
 
   return (
+    <EditionLiveSponsorCountProvider initialCount={panels.liveSponsorCount}>
     <section>
       <AdminBreadcrumbs
         items={[
@@ -195,7 +200,9 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
             {edition.slug}
           </Link>
         </span>
-        <span>Live sponsors: {panels.liveSponsorCount}</span>
+        <span>
+          <EditionLiveSponsorCountLabel />
+        </span>
       </div>
 
       <EventsSubNav />
@@ -298,5 +305,6 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
           }
         />
     </section>
+    </EditionLiveSponsorCountProvider>
   );
 }

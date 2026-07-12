@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/src/components/common";
-import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common/states";
+import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common";
 
 import type { SponsorDiscoveryRow } from "./discoveryTypes";
 import { SponsorDiscoveryTable } from "./SponsorDiscoveryTable";
@@ -30,7 +30,10 @@ export function SponsorDiscoveryList({
   eventUnknown = false,
   onReset,
 }: SponsorDiscoveryListProps) {
-  if (loading) {
+  const showInitialSkeleton = loading && rows.length === 0;
+  const dimResults = loading && rows.length > 0;
+
+  if (showInitialSkeleton) {
     return <PageLoadingSkeleton variant="list" />;
   }
 
@@ -56,7 +59,11 @@ export function SponsorDiscoveryList({
   const end = Math.min(start + rows.length, total);
 
   return (
-    <div className="space-y-4">
+    <div
+      className={
+        dimResults ? "space-y-4 opacity-60 transition-opacity duration-200" : "space-y-4"
+      }
+    >
       <SponsorDiscoveryTable rows={rows} showEventTier={showEventTier} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
@@ -67,7 +74,7 @@ export function SponsorDiscoveryList({
           <Button
             variant="ghost"
             size="sm"
-            disabled={normalizedPage === 1}
+            disabled={normalizedPage === 1 || loading}
             onClick={() => onPageChange(normalizedPage - 1)}
           >
             Previous
@@ -78,7 +85,7 @@ export function SponsorDiscoveryList({
           <Button
             variant="ghost"
             size="sm"
-            disabled={normalizedPage === totalPages}
+            disabled={normalizedPage === totalPages || loading}
             onClick={() => onPageChange(normalizedPage + 1)}
           >
             Next

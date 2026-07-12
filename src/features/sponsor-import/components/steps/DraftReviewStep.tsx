@@ -1,24 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { formInputClass } from "@/src/lib/design/classes";
 
 import { acknowledgeReview, fetchDraftLinks, patchDraftLink } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { DraftDiffSummary, DraftLinkRow, SponsorImportBatch } from "../../client/types";
+import type { DraftDiffSummary, DraftLinkRow } from "../../client/types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { useSponsorImportWizard } from "../SponsorImportWizardContext";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 
-type DraftReviewStepProps = {
-  batch: SponsorImportBatch;
-};
-
-export function DraftReviewStep({ batch }: DraftReviewStepProps) {
-  const router = useRouter();
+export function DraftReviewStep() {
+  const { batch, goToStep } = useSponsorImportWizard();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +81,7 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
       setError(result.error);
       return;
     }
-    router.push(flowHref(batch.id, "publish"));
+    goToStep("publish");
   }
 
   return (
@@ -183,7 +178,7 @@ export function DraftReviewStep({ batch }: DraftReviewStepProps) {
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          onClick={() => router.push(flowHref(batch.id, "review"))}
+          onClick={() => goToStep("review")}
           disabled={submitting}
         >
           Back

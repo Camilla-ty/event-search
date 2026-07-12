@@ -1,6 +1,7 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import {
   areEventExplorerTopicSlugsEqual,
+  editionMatchesEventExplorerTopicSlugs,
   normalizeEventExplorerTopics,
 } from "@/src/features/events/lib/eventExplorerQuery";
 
@@ -31,32 +32,11 @@ export function isTopicOptimisticDisplaySufficient(
   return true;
 }
 
-function readEventTopicSlugs(event: Pick<EventRecord, "series_keywords">): Set<string> {
-  const slugs = new Set<string>();
-
-  for (const keyword of event.series_keywords ?? []) {
-    const slug = keyword.slug?.trim();
-    if (slug !== "") {
-      slugs.add(slug);
-    }
-  }
-
-  return slugs;
-}
-
-/**
- * Client-side OR match: event passes when any draft topic slug appears on the
- * edition's series keywords (mirrors server topic union for known topics).
- */
 export function eventMatchesDraftTopicFilter(
   event: Pick<EventRecord, "series_keywords">,
   draftTopics: readonly string[],
 ): boolean {
-  const selectedTopics = normalizeEventExplorerTopics({ topics: draftTopics });
-  if (selectedTopics.length === 0) return true;
-
-  const eventTopicSlugs = readEventTopicSlugs(event);
-  return selectedTopics.some((slug) => eventTopicSlugs.has(slug));
+  return editionMatchesEventExplorerTopicSlugs(event, draftTopics);
 }
 
 export function applyOptimisticTopicDisplayFilter(

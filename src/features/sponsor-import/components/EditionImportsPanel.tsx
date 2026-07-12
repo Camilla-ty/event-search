@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/src/components/common";
 import { primaryCtaClass, secondaryCtaClass } from "@/src/lib/design/classes";
 
+import { applyEditionImportDiscard } from "../client/editionImportsPanelMutations";
 import { defaultStepForBatchStatus, flowHref } from "../client/resumeStep";
 import type { EditionImportContext } from "../server/importUiData";
 import { DiscardImportModal } from "./DiscardImportModal";
@@ -17,15 +17,19 @@ type EditionImportsPanelProps = {
   data: EditionImportContext;
 };
 
-export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
-  const router = useRouter();
+export function EditionImportsPanel({ data: initialData }: EditionImportsPanelProps) {
+  const [panelData, setPanelData] = useState(initialData);
   const [discardOpen, setDiscardOpen] = useState(false);
 
-  const active = data.activeBatch;
+  useEffect(() => {
+    setPanelData(initialData);
+  }, [initialData]);
+
+  const active = panelData.activeBatch;
   const activeId = active && typeof active.id === "string" ? active.id : null;
   const activeStatus = active && typeof active.status === "string" ? active.status : null;
 
-  const tableRows: ImportHistoryRow[] = data.batches.map((b) => ({
+  const tableRows: ImportHistoryRow[] = panelData.batches.map((b) => ({
     id: String(b.id),
     status: String(b.status),
     source_filename: String(b.source_filename),
@@ -37,13 +41,20 @@ export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
     event_edition_id: String(b.event_edition_id),
   }));
 
+  function handleDiscarded() {
+    if (activeId === null) {
+      return;
+    }
+    setPanelData((current) => applyEditionImportDiscard(current, activeId));
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
         <p>
-          <span className="font-medium">{data.editionName}</span> · {data.seriesName}
+          <span className="font-medium">{panelData.editionName}</span> · {panelData.seriesName}
         </p>
-        <p className="mt-1 text-slate-600">Live sponsors: {data.liveSponsorCount}</p>
+        <p className="mt-1 text-slate-600">Live sponsors: {panelData.liveSponsorCount}</p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
@@ -80,7 +91,7 @@ export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
           <div className="space-y-3">
             <p className="text-sm text-slate-600">No import in progress.</p>
             <Link
-              href={`/admin/sponsor-imports/new?editionId=${data.editionId}`}
+              href={`/admin/sponsor-imports/new?editionId=${panelData.editionId}`}
               className={`${primaryCtaClass} h-10`}
             >
               Import sponsors
@@ -103,7 +114,7 @@ export function EditionImportsPanel({ data }: EditionImportsPanelProps) {
           batchId={activeId}
           open={discardOpen}
           onClose={() => setDiscardOpen(false)}
-          onDiscarded={() => router.refresh()}
+          onDiscarded={handleDiscarded}
         />
       ) : null}
     </div>

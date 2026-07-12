@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
@@ -73,7 +72,6 @@ export function SeriesPartnerAlumniPanel({
   initialData,
   initialLoadError = null,
 }: SeriesPartnerAlumniPanelProps) {
-  const router = useRouter();
   const [data, setData] = useState(initialData);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     initialData.selected_version?.id ?? null,
@@ -137,10 +135,6 @@ export function SeriesPartnerAlumniPanel({
       setSelectedVersionId(nextSelectedId);
       syncHeaderFromData(payload, nextSelectedId);
     }
-  }
-
-  function refreshPage() {
-    router.refresh();
   }
 
   const attachedCompanyIds = useMemo(() => {
@@ -238,7 +232,6 @@ export function SeriesPartnerAlumniPanel({
         return;
       }
       applyResponse(json);
-      refreshPage();
     } catch {
       setActionError("Failed to set current version.");
     } finally {
@@ -268,7 +261,6 @@ export function SeriesPartnerAlumniPanel({
         return;
       }
       applyResponse(json);
-      refreshPage();
     } catch {
       setActionError("Failed to reorder roster.");
     } finally {
@@ -592,7 +584,6 @@ export function SeriesPartnerAlumniPanel({
           onImported={(payload) => {
             applyResponse(payload);
             setAction(null);
-            refreshPage();
           }}
         />
       ) : null}
@@ -606,7 +597,6 @@ export function SeriesPartnerAlumniPanel({
           onAdded={(payload) => {
             applyResponse(payload);
             setAction(null);
-            refreshPage();
           }}
         />
       ) : null}
@@ -618,7 +608,6 @@ export function SeriesPartnerAlumniPanel({
           onRemoved={(payload) => {
             applyResponse(payload);
             setAction(null);
-            refreshPage();
           }}
           seriesId={seriesId}
           versionId={selectedVersionId}
@@ -633,7 +622,6 @@ export function SeriesPartnerAlumniPanel({
           onCreated={(payload) => {
             applyResponse(payload);
             setAction(null);
-            refreshPage();
           }}
         />
       ) : null}
@@ -647,7 +635,6 @@ export function SeriesPartnerAlumniPanel({
           onDeleted={(payload) => {
             applyResponse(payload);
             setAction(null);
-            refreshPage();
           }}
         />
       ) : null}

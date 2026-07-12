@@ -12,7 +12,7 @@ type RemoveSponsorModalProps = {
   editionName: string;
   editionYear: number;
   onClose: () => void;
-  onRemoved: () => void;
+  onRemoved: (linkId: string) => void;
 };
 
 export function RemoveSponsorModal({
@@ -41,7 +41,7 @@ export function RemoveSponsorModal({
         setLoading(false);
         return;
       }
-      onRemoved();
+      onRemoved(row.id);
     } catch {
       setError("Failed to remove sponsor.");
       setLoading(false);

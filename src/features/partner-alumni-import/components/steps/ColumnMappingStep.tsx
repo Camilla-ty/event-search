@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { formInputClass } from "@/src/lib/design/classes";
@@ -13,14 +12,11 @@ import { ImportProgressMessage } from "@/src/features/sponsor-import/components/
 import { useImportProgressLabel } from "@/src/features/sponsor-import/components/ImportFlowProgress";
 
 import { saveColumnMapping } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { ImportScope, PartnerAlumniImportBatch } from "../../client/types";
 import type { ColumnMapping } from "../../types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { usePartnerAlumniImportWizard } from "../PartnerAlumniImportWizardContext";
 
 type ColumnMappingStepProps = {
-  scope: ImportScope;
-  batch: PartnerAlumniImportBatch;
   spreadsheetHeaders: string[];
 };
 
@@ -40,8 +36,8 @@ function normalizeMappingValue(stored: string, options: SpreadsheetColumnOption[
   return options[0]?.value ?? trimmed;
 }
 
-export function ColumnMappingStep({ scope, batch, spreadsheetHeaders }: ColumnMappingStepProps) {
-  const router = useRouter();
+export function ColumnMappingStep({ spreadsheetHeaders }: ColumnMappingStepProps) {
+  const { scope, batch, goToStep, updateBatch } = usePartnerAlumniImportWizard();
   const columnOptions = useMemo(
     () => buildSpreadsheetColumnOptions(spreadsheetHeaders),
     [spreadsheetHeaders],
@@ -70,7 +66,8 @@ export function ColumnMappingStep({ scope, batch, spreadsheetHeaders }: ColumnMa
       setError(result.error);
       return;
     }
-    router.push(flowHref(scope, batch.id, "validation"));
+    updateBatch(result.batch);
+    goToStep("validation");
   }
 
   function renderSelect(
@@ -126,7 +123,7 @@ export function ColumnMappingStep({ scope, batch, spreadsheetHeaders }: ColumnMa
       {error ? <InlineErrorBanner message={error} /> : null}
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={() => router.push(flowHref(scope, batch.id, "upload"))}>
+        <Button variant="secondary" onClick={() => goToStep("upload")}>
           Back
         </Button>
         <Button onClick={() => void handleConfirm()} disabled={loading}>

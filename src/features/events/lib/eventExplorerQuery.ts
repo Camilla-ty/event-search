@@ -61,6 +61,8 @@ export type EventExplorerSearchParamsInput = {
 export type EventExplorerFilterOptions = {
   /** When set, only editions whose series_id is in this set match. Null = no topic constraint. */
   topicSeriesIds?: ReadonlySet<string> | null;
+  /** Match selected topic slugs against edition series_keywords (client catalog). */
+  matchTopicsByKeywords?: boolean;
 };
 
 export function normalizeExplorerText(value: string | null | undefined): string {
@@ -123,6 +125,24 @@ export function readExplorerSeriesId(item: { series_id?: unknown }): string {
   if (typeof item.series_id !== "string") return "";
   const trimmed = item.series_id.trim();
   return trimmed !== "" ? trimmed : "";
+}
+
+export function editionMatchesEventExplorerTopicSlugs(
+  item: Pick<EventExplorerMatchable, "series_keywords">,
+  topicSlugs: readonly string[],
+): boolean {
+  const selectedTopics = normalizeEventExplorerTopics({ topics: topicSlugs });
+  if (selectedTopics.length === 0) return true;
+
+  const eventTopicSlugs = new Set<string>();
+  for (const keyword of item.series_keywords ?? []) {
+    const slug = (keyword.slug ?? "").trim();
+    if (slug !== "") {
+      eventTopicSlugs.add(slug);
+    }
+  }
+
+  return selectedTopics.some((slug) => eventTopicSlugs.has(slug));
 }
 
 export function editionMatchesTopicSeriesIds(
@@ -349,6 +369,16 @@ export function buildEventExplorerSearchParams(
   return next;
 }
 
+export function applyEventExplorerQueryChange(
+  filters: EventExplorerFilterState,
+  query: string,
+): EventExplorerFilterState {
+  return {
+    ...filters,
+    query: query.trim(),
+  };
+}
+
 /** Canonical filter-only URL key. Used to compare filter state. */
 export function buildEventExplorerFilterKey(filters: EventExplorerFilterState): string {
   const normalized = normalizeEventExplorerFilters(filters);
@@ -421,9 +451,12 @@ export function matchesEventExplorerFilters(
 
   const regionMatch = editionMatchesEventExplorerRegions(item, normalized.regions);
 
-  const topicSeriesIds =
-    options.topicSeriesIds === undefined ? null : options.topicSeriesIds;
-  const topicMatch = editionMatchesTopicSeriesIds(item, topicSeriesIds);
+  const topicMatch = options.matchTopicsByKeywords
+    ? editionMatchesEventExplorerTopicSlugs(item, normalized.topics)
+    : editionMatchesTopicSeriesIds(
+        item,
+        options.topicSeriesIds === undefined ? null : options.topicSeriesIds,
+      );
 
   const dateMatch = eventOverlapsDateRange(item, normalized.startDate, normalized.endDate);
 

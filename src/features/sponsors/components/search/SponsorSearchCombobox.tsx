@@ -1,10 +1,8 @@
 "use client";
 
 import type { FormEvent, KeyboardEvent } from "react";
-import { useEffect, useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-
-import { parseSponsorDiscoverySuggestQuery } from "@/src/features/sponsors/server/sponsorDiscoverySuggestParams";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { Button } from "@/src/components/common/Button";
 import {
@@ -14,9 +12,12 @@ import {
   SearchSubmitIconButton,
 } from "@/src/components/common/explorer";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
+import { useSponsorDiscoverySearchBridgeConsumer } from "@/src/features/sponsors/client/SponsorDiscoverySearchBridge";
+import { parseSponsorDiscoveryParamsFromSearchParams } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
+import { parseSponsorDiscoverySuggestQuery } from "@/src/features/sponsors/server/sponsorDiscoverySuggestParams";
 import type { SponsorSuggestItem } from "@/src/features/sponsors/server/sponsorDiscoverySuggestTypes";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
-
+import { readSearchParamsFromWindow } from "@/src/lib/navigation/historyUrl";
 import {
   buildSponsorProfilePath,
   buildSponsorSearchUrl,
@@ -26,7 +27,7 @@ import { useSponsorSuggestions } from "./useSponsorSuggestions";
 
 type SponsorSearchComboboxProps = {
   placeholder?: string;
-  /** Synced from `/sponsors?q=` when on the discovery page. */
+  /** Cold-load fallback when the discovery bridge is not registered yet. */
   queryFromUrl?: string;
   ariaLabel?: string;
   className?: string;
@@ -51,21 +52,58 @@ export function SponsorSearchCombobox({
   variant = "default",
 }: SponsorSearchComboboxProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const discoveryBridge = useSponsorDiscoverySearchBridgeConsumer();
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const normalizedQueryFromUrl = parseSponsorDiscoverySuggestQuery(queryFromUrl);
   const isToolbar = variant === "toolbar";
+  const isSponsorDiscoveryPage = pathname === "/sponsors";
+  const [popstateQuery, setPopstateQuery] = useState<string | null>(null);
 
-  const [value, setValue] = useState(normalizedQueryFromUrl);
+  const syncedQuery = useMemo(() => {
+    if (!isSponsorDiscoveryPage) {
+      return parseSponsorDiscoverySuggestQuery(queryFromUrl);
+    }
+    if (popstateQuery !== null) {
+      return popstateQuery;
+    }
+    if (discoveryBridge !== null) {
+      return discoveryBridge.query;
+    }
+    return parseSponsorDiscoverySuggestQuery(queryFromUrl);
+  }, [discoveryBridge, isSponsorDiscoveryPage, popstateQuery, queryFromUrl]);
+
+  const [value, setValue] = useState(syncedQuery);
   const [isFocused, setIsFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [suggestionsEnabled, setSuggestionsEnabled] = useState(false);
 
   useEffect(() => {
-    setValue(normalizedQueryFromUrl);
+    setValue(syncedQuery);
     setActiveIndex(-1);
     setSuggestionsEnabled(false);
-  }, [normalizedQueryFromUrl]);
+  }, [syncedQuery]);
+
+  useEffect(() => {
+    if (!isSponsorDiscoveryPage) {
+      setPopstateQuery(null);
+      return;
+    }
+
+    function handlePopState() {
+      const restored = parseSponsorDiscoveryParamsFromSearchParams(readSearchParamsFromWindow());
+      setPopstateQuery(restored.query);
+    }
+
+    globalThis.addEventListener("popstate", handlePopState);
+    return () => globalThis.removeEventListener("popstate", handlePopState);
+  }, [isSponsorDiscoveryPage]);
+
+  useEffect(() => {
+    if (discoveryBridge !== null) {
+      setPopstateQuery(null);
+    }
+  }, [discoveryBridge?.query, discoveryBridge]);
 
   const { trimmedQuery, eligible, items, total, loading, error, fetched } =
     useSponsorSuggestions(value, { enabled: suggestionsEnabled });
@@ -93,6 +131,10 @@ export function SponsorSearchCombobox({
 
   function navigateToSearchResults(query: string) {
     closeDropdown();
+    if (isSponsorDiscoveryPage && discoveryBridge !== null) {
+      discoveryBridge.submitQuery(query);
+      return;
+    }
     router.push(buildSponsorSearchUrl(query));
   }
 

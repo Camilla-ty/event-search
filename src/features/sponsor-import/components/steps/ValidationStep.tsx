@@ -1,24 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 
 import { fetchRows, runValidation } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { RowSummary, SponsorImportBatch, SponsorImportRow } from "../../client/types";
+import type { RowSummary, SponsorImportRow } from "../../client/types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { useSponsorImportWizard } from "../SponsorImportWizardContext";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type ValidationStepProps = {
-  batch: SponsorImportBatch;
   initialSummary: RowSummary;
 };
 
-export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
-  const router = useRouter();
+export function ValidationStep({ initialSummary }: ValidationStepProps) {
+  const { batch, goToStep } = useSponsorImportWizard();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RowSummary>(initialSummary);
@@ -126,13 +124,13 @@ export function ValidationStep({ batch, initialSummary }: ValidationStepProps) {
       <div className="flex gap-2">
         <Button
           variant="secondary"
-          onClick={() => router.push(flowHref(batch.id, "mapping"))}
+          onClick={() => goToStep("mapping")}
           disabled={loading}
         >
           Back
         </Button>
         <Button
-          onClick={() => router.push(flowHref(batch.id, "review"))}
+          onClick={() => goToStep("review")}
           disabled={loading || !canContinue}
         >
           Continue to review →

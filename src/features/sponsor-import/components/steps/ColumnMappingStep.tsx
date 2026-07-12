@@ -11,15 +11,13 @@ import {
   type SpreadsheetColumnOption,
 } from "../../columnMappingUi";
 import { saveColumnMapping } from "../../client/api";
-import { flowHref } from "../../client/resumeStep";
-import type { SponsorImportBatch } from "../../client/types";
 import type { ColumnMapping } from "../../types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { useSponsorImportWizard } from "../SponsorImportWizardContext";
 import { useImportProgressLabel } from "../ImportFlowProgress";
 import { ImportProgressMessage } from "../ImportProgressMessage";
 
 type ColumnMappingStepProps = {
-  batch: SponsorImportBatch;
   spreadsheetHeaders: string[];
 };
 
@@ -39,8 +37,9 @@ function normalizeMappingValue(stored: string, options: SpreadsheetColumnOption[
   return options[0]?.value ?? trimmed;
 }
 
-export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingStepProps) {
+export function ColumnMappingStep({ spreadsheetHeaders }: ColumnMappingStepProps) {
   const router = useRouter();
+  const { batch, goToStep, updateBatch } = useSponsorImportWizard();
   const columnOptions = useMemo(
     () => buildSpreadsheetColumnOptions(spreadsheetHeaders),
     [spreadsheetHeaders],
@@ -70,7 +69,8 @@ export function ColumnMappingStep({ batch, spreadsheetHeaders }: ColumnMappingSt
       setError(result.error);
       return;
     }
-    router.push(flowHref(batch.id, "validation"));
+    updateBatch(result.batch);
+    goToStep("validation");
   }
 
   function renderSelect(

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { buildAdminVenuesCollection } from "@/src/features/venues/server/adminVenuesCollection";
+import { parseVenuesListParams } from "@/src/features/venues/server/venuesListParams";
 import {
   createVenueAdmin,
-  listVenuesAdmin,
   VenueAdminError,
 } from "@/src/features/venues/server/venueAdmin";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
@@ -13,12 +14,16 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search") ?? undefined;
-  const includeArchived = searchParams.get("includeArchived") === "true";
+  const params = parseVenuesListParams(searchParams);
 
   try {
-    const venues = await listVenuesAdmin({ search, includeArchived });
-    return NextResponse.json({ ok: true, venues });
+    const result = await buildAdminVenuesCollection(params);
+    return NextResponse.json({
+      ok: true,
+      venues: result.venues,
+      total: result.total,
+      params: result.params,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/src/components/common";
 import { primaryCtaClass } from "@/src/lib/design/classes";
 
+import { fetchEditionOrganizers } from "@/src/features/organizers/client/fetchEditionOrganizers";
+import {
+  applyOrganizerCreate,
+  applyOrganizerEdit,
+  applyOrganizerRemove,
+  applyOrganizerReorder,
+  type OrganizerLinkMutationRow,
+} from "@/src/features/organizers/client/organizerRosterMutations";
 import type { EditionOrganizerAdminRow } from "@/src/features/organizers/server/eventOrganizerAdmin";
 
 import { OrganizerLinkDrawer } from "./OrganizerLinkDrawer";
@@ -28,36 +35,82 @@ export function EditionOrganizersPanel({
   editionId,
   editionName,
   editionYear,
-  organizers,
+  organizers: initialOrganizers,
 }: EditionOrganizersPanelProps) {
-  const router = useRouter();
+  const [organizers, setOrganizers] = useState(initialOrganizers);
   const [drawer, setDrawer] = useState<DrawerState>({ kind: "closed" });
   const [removeRow, setRemoveRow] = useState<EditionOrganizerAdminRow | null>(null);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [rosterError, setRosterError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrganizers(initialOrganizers);
+  }, [initialOrganizers]);
 
   const attachedCompanyIds = useMemo(
     () => new Set(organizers.map((row) => row.company_id)),
     [organizers],
   );
 
-  function handleDone() {
+  async function refetchOrganizers(): Promise<boolean> {
+    try {
+      const freshOrganizers = await fetchEditionOrganizers(editionId);
+      setOrganizers(freshOrganizers);
+      setRosterError(null);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function handleOrganizerCreated(payload: {
+    link: OrganizerLinkMutationRow;
+    company: { id: string; name: string; domain: string | null };
+  }) {
+    setOrganizers((current) => applyOrganizerCreate(current, payload.link, payload.company));
     setDrawer({ kind: "closed" });
-    router.refresh();
+    setRosterError(null);
+  }
+
+  function handleOrganizerEdited(payload: { link: OrganizerLinkMutationRow }) {
+    setOrganizers((current) => applyOrganizerEdit(current, payload.link));
+    setDrawer({ kind: "closed" });
+    setRosterError(null);
+  }
+
+  function handleOrganizerRemoved(linkId: string) {
+    setOrganizers((current) => applyOrganizerRemove(current, linkId));
+    setRemoveRow(null);
+    setRosterError(null);
   }
 
   async function handleMove(row: EditionOrganizerAdminRow, direction: "up" | "down") {
     setReorderingId(row.id);
+    setRosterError(null);
     try {
       const res = await fetch(`/api/admin/event-editions/${editionId}/organizers/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ organizer_id: row.id, direction }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        links?: OrganizerLinkMutationRow[];
+      };
+      if (!res.ok || !data.ok || !Array.isArray(data.links)) {
+        const refreshed = await refetchOrganizers();
+        if (!refreshed) {
+          setRosterError(data.error ?? "Failed to reorder organizers.");
+        }
         return;
       }
-      router.refresh();
+      setOrganizers((current) => applyOrganizerReorder(current, data.links!));
+    } catch {
+      const refreshed = await refetchOrganizers();
+      if (!refreshed) {
+        setRosterError("Failed to reorder organizers.");
+      }
     } finally {
       setReorderingId(null);
     }
@@ -78,6 +131,12 @@ export function EditionOrganizersPanel({
           Add organizer
         </button>
       </div>
+
+      {rosterError ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {rosterError}
+        </p>
+      ) : null}
 
       {organizers.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
@@ -172,7 +231,7 @@ export function EditionOrganizersPanel({
           editionId={editionId}
           attachedCompanyIds={attachedCompanyIds}
           onClose={() => setDrawer({ kind: "closed" })}
-          onSaved={handleDone}
+          onSaved={handleOrganizerCreated}
         />
       ) : null}
 
@@ -182,7 +241,7 @@ export function EditionOrganizersPanel({
           editionId={editionId}
           row={drawer.row}
           onClose={() => setDrawer({ kind: "closed" })}
-          onSaved={handleDone}
+          onSaved={handleOrganizerEdited}
         />
       ) : null}
 
@@ -193,10 +252,7 @@ export function EditionOrganizersPanel({
           editionName={editionName}
           editionYear={editionYear}
           onClose={() => setRemoveRow(null)}
-          onRemoved={() => {
-            setRemoveRow(null);
-            router.refresh();
-          }}
+          onRemoved={() => handleOrganizerRemoved(removeRow.id)}
         />
       ) : null}
     </div>

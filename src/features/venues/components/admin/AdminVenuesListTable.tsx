@@ -6,6 +6,7 @@ import { resolveStorageLogoDisplayUrl } from "@/src/lib/storage/resolveStorageLo
 
 type AdminVenuesListTableProps = {
   venues: VenueListItem[];
+  loading?: boolean;
 };
 
 function VenueLogoCell({ logoUrl }: { logoUrl: string | null }) {
@@ -22,9 +23,14 @@ function VenueLogoCell({ logoUrl }: { logoUrl: string | null }) {
   );
 }
 
-export function AdminVenuesListTable({ venues }: AdminVenuesListTableProps) {
+export function AdminVenuesListTable({ venues, loading = false }: AdminVenuesListTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div
+      className={[
+        "overflow-x-auto rounded-xl border border-slate-200 bg-white transition-opacity",
+        loading ? "opacity-60" : "opacity-100",
+      ].join(" ")}
+    >
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>

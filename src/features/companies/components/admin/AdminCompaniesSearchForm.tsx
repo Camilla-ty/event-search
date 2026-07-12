@@ -1,40 +1,34 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 
-import type { CompanyListFilter } from "@/src/features/companies/server/companyAdmin";
 import { formInputClass } from "@/src/lib/design/classes";
 
 type AdminCompaniesSearchFormProps = {
-  filter: CompanyListFilter;
-  initialSearch: string;
+  search: string;
+  onSubmit: (search: string) => void;
+  onClear: () => void;
 };
 
-function buildCompaniesListPath(filter: CompanyListFilter, search: string): string {
-  const params = new URLSearchParams();
-  if (filter !== "all") params.set("filter", filter);
-  const trimmed = search.trim();
-  if (trimmed !== "") params.set("search", trimmed);
-  const query = params.toString();
-  return query ? `/admin/companies?${query}` : "/admin/companies";
-}
-
 export function AdminCompaniesSearchForm({
-  filter,
-  initialSearch,
+  search,
+  onSubmit,
+  onClear,
 }: AdminCompaniesSearchFormProps) {
-  const router = useRouter();
-  const [search, setSearch] = useState(initialSearch);
+  const [draftSearch, setDraftSearch] = useState(search);
+
+  useEffect(() => {
+    setDraftSearch(search);
+  }, [search]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push(buildCompaniesListPath(filter, search));
+    onSubmit(draftSearch);
   }
 
   function handleClear() {
-    setSearch("");
-    router.push(buildCompaniesListPath(filter, ""));
+    setDraftSearch("");
+    onClear();
   }
 
   return (
@@ -43,8 +37,8 @@ export function AdminCompaniesSearchForm({
         <span className="text-sm font-medium text-slate-700">Search</span>
         <input
           type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={draftSearch}
+          onChange={(event) => setDraftSearch(event.target.value)}
           placeholder="Name, domain, or alias…"
           className={formInputClass}
         />
@@ -55,7 +49,7 @@ export function AdminCompaniesSearchForm({
       >
         Search
       </button>
-      {initialSearch.trim() !== "" ? (
+      {search.trim() !== "" ? (
         <button
           type="button"
           onClick={handleClear}

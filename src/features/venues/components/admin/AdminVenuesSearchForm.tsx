@@ -1,39 +1,34 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 
 import { formInputClass } from "@/src/lib/design/classes";
 
 type AdminVenuesSearchFormProps = {
-  initialSearch: string;
-  includeArchived: boolean;
+  search: string;
+  onSubmit: (search: string) => void;
+  onClear: () => void;
 };
 
-function buildVenuesListPath(search: string, includeArchived: boolean): string {
-  const params = new URLSearchParams();
-  const trimmed = search.trim();
-  if (trimmed !== "") params.set("search", trimmed);
-  if (includeArchived) params.set("includeArchived", "true");
-  const query = params.toString();
-  return query ? `/admin/venues?${query}` : "/admin/venues";
-}
-
 export function AdminVenuesSearchForm({
-  initialSearch,
-  includeArchived,
+  search,
+  onSubmit,
+  onClear,
 }: AdminVenuesSearchFormProps) {
-  const router = useRouter();
-  const [search, setSearch] = useState(initialSearch);
+  const [draftSearch, setDraftSearch] = useState(search);
+
+  useEffect(() => {
+    setDraftSearch(search);
+  }, [search]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push(buildVenuesListPath(search, includeArchived));
+    onSubmit(draftSearch);
   }
 
   function handleClear() {
-    setSearch("");
-    router.push(buildVenuesListPath("", includeArchived));
+    setDraftSearch("");
+    onClear();
   }
 
   return (
@@ -42,8 +37,8 @@ export function AdminVenuesSearchForm({
         <span className="text-sm font-medium text-slate-700">Search</span>
         <input
           type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={draftSearch}
+          onChange={(event) => setDraftSearch(event.target.value)}
           placeholder="Name, slug, or city…"
           className={formInputClass}
         />
@@ -54,7 +49,7 @@ export function AdminVenuesSearchForm({
       >
         Search
       </button>
-      {initialSearch.trim() !== "" ? (
+      {search.trim() !== "" ? (
         <button
           type="button"
           onClick={handleClear}

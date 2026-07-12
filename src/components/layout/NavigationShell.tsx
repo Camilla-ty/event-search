@@ -134,21 +134,6 @@ export function SessionControls({
     setSession(initial);
   }, [initial]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-        router.refresh();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [router]);
-
   async function handleSignOut() {
     setIsSigningOut(true);
     try {
@@ -164,7 +149,6 @@ export function SessionControls({
       if (mode === "admin") {
         router.replace("/login");
       }
-      router.refresh();
     } finally {
       setIsSigningOut(false);
     }

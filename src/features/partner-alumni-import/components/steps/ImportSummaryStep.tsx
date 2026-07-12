@@ -9,22 +9,17 @@ import { ImportProgressMessage } from "@/src/features/sponsor-import/components/
 import { useImportProgressLabel } from "@/src/features/sponsor-import/components/ImportFlowProgress";
 
 import { fetchImportSummary, reportCsvUrl } from "../../client/api";
-import type { ImportCompletionSummary, ImportScope, PartnerAlumniImportBatch } from "../../client/types";
+import type { ImportCompletionSummary } from "../../client/types";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { usePartnerAlumniImportWizard } from "../PartnerAlumniImportWizardContext";
 
 type ImportSummaryStepProps = {
-  scope: ImportScope;
-  batch: PartnerAlumniImportBatch;
   seriesName: string;
   versionLabel: string;
 };
 
-export function ImportSummaryStep({
-  scope,
-  batch,
-  seriesName,
-  versionLabel,
-}: ImportSummaryStepProps) {
+export function ImportSummaryStep({ seriesName, versionLabel }: ImportSummaryStepProps) {
+  const { scope, batch } = usePartnerAlumniImportWizard();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportCompletionSummary | null>(null);

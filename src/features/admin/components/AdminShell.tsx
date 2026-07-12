@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { AuthSessionRefreshProvider } from "@/src/components/auth/AuthSessionRefreshProvider";
 import { BrandWordmark } from "@/src/components/layout/BrandWordmark";
 import { SessionControls } from "@/src/components/layout/NavigationShell";
 import { SidebarNavItem } from "@/src/components/layout/SidebarNavItem";
@@ -28,9 +29,10 @@ export function AdminShell({ session, adminEmail, children }: AdminShellProps) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-surface-page">
-      <div className="lg:flex">
-        <aside className="border-b border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:w-[280px] lg:border-b-0 lg:border-r">
+    <AuthSessionRefreshProvider serverSession={session}>
+      <div className="min-h-screen bg-surface-page">
+        <div className="lg:flex">
+          <aside className="border-b border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:w-[280px] lg:border-b-0 lg:border-r">
           <div className="flex h-full flex-col px-4 py-5">
             <div className="mb-6 px-1">
               <BrandWordmark href="/admin" subtitle="Admin" compact />
@@ -72,7 +74,8 @@ export function AdminShell({ session, adminEmail, children }: AdminShellProps) {
             <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
         </div>
+        </div>
       </div>
-    </div>
+    </AuthSessionRefreshProvider>
   );
 }

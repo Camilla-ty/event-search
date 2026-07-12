@@ -9,9 +9,19 @@ import { AdminCompanySearchMatchHint } from "@/src/features/companies/components
 import { formInputClass } from "@/src/lib/design/classes";
 
 import type { EditionOrganizerAdminRow } from "@/src/features/organizers/server/eventOrganizerAdmin";
+import type { OrganizerLinkMutationRow } from "@/src/features/organizers/client/organizerRosterMutations";
 
 const ROLE_LABEL_MAX_LENGTH = 80;
 const SEARCH_MIN_CHARS = 2;
+
+type OrganizerCreateSavedPayload = {
+  link: OrganizerLinkMutationRow;
+  company: CompanyOption;
+};
+
+type OrganizerEditSavedPayload = {
+  link: OrganizerLinkMutationRow;
+};
 
 type OrganizerLinkDrawerProps =
   | {
@@ -19,14 +29,14 @@ type OrganizerLinkDrawerProps =
       editionId: string;
       row: EditionOrganizerAdminRow;
       onClose: () => void;
-      onSaved: () => void;
+      onSaved: (payload: OrganizerEditSavedPayload) => void;
     }
   | {
       mode: "create";
       editionId: string;
       attachedCompanyIds: ReadonlySet<string>;
       onClose: () => void;
-      onSaved: () => void;
+      onSaved: (payload: OrganizerCreateSavedPayload) => void;
     };
 
 type CompanyOption = {
@@ -62,7 +72,7 @@ type EditOrganizerFormProps = {
   editionId: string;
   row: EditionOrganizerAdminRow;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (payload: OrganizerEditSavedPayload) => void;
 };
 
 function EditOrganizerForm({ editionId, row, onClose, onSaved }: EditOrganizerFormProps) {
@@ -98,13 +108,17 @@ function EditOrganizerForm({ editionId, row, onClose, onSaved }: EditOrganizerFo
           body: JSON.stringify({ role_label: trimmed }),
         },
       );
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        link?: OrganizerLinkMutationRow;
+      };
+      if (!res.ok || !data.ok || !data.link) {
         setError(data.error ?? "Failed to save changes.");
         setSaving(false);
         return;
       }
-      onSaved();
+      onSaved({ link: data.link });
     } catch {
       setError("Failed to save changes.");
       setSaving(false);
@@ -157,7 +171,7 @@ type AddOrganizerFormProps = {
   editionId: string;
   attachedCompanyIds: ReadonlySet<string>;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (payload: OrganizerCreateSavedPayload) => void;
 };
 
 function AddOrganizerForm({
@@ -239,13 +253,17 @@ function AddOrganizerForm({
           role_label: trimmedRole,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!res.ok || !data.ok) {
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        link?: OrganizerLinkMutationRow;
+      };
+      if (!res.ok || !data.ok || !data.link) {
         setError(data.error ?? "Failed to add organizer.");
         setSaving(false);
         return;
       }
-      onSaved();
+      onSaved({ link: data.link, company: selectedCompany });
     } catch {
       setError("Failed to add organizer.");
       setSaving(false);

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { WarningBanner } from "@/src/features/admin/components/WarningBanner";
+import { fetchEditionLiveSponsors } from "@/src/features/events/client/fetchEditionLiveSponsors";
 import {
   defaultStepForBatchStatus,
   flowHref,
@@ -15,11 +15,18 @@ import { EditionLiveSponsorsQARoster } from "./EditionLiveSponsorsQARoster";
 import { EditionSponsorNote } from "@/src/features/events/components/detail/EditionSponsorNote";
 import type { SponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { EditionSponsorsQAHeader } from "./EditionSponsorsQAHeader";
+import { useEditionLiveSponsorCount } from "./EditionLiveSponsorCountContext";
 import { CompanyLogoDrawer } from "./CompanyLogoDrawer";
 import {
   countDistinctTiers,
   filterSponsorsBySearch,
 } from "./liveSponsorQaUtils";
+import {
+  applySponsorCreate,
+  applySponsorLabelEdit,
+  applySponsorRemove,
+  applyRefetchedRoster,
+} from "./liveSponsorRosterMutations";
 import {
   applyTierDisplayOrder,
   computeMoveOrderedLinkIdsForSponsors,
@@ -34,6 +41,10 @@ import {
 } from "./LiveSponsorOrderSaveBar";
 import { RemoveSponsorModal } from "./RemoveSponsorModal";
 import { SponsorLinkDrawer } from "./SponsorLinkDrawer";
+import type {
+  SponsorCreateSavedPayload,
+  SponsorEditSavedPayload,
+} from "./sponsorLinkDrawerTypes";
 
 const ORDER_SAVE_CONFIRM_MS = 2500;
 
@@ -84,7 +95,7 @@ export function EditionSponsorsPanel({
   activeImport,
   sponsorNoteType = null,
 }: EditionSponsorsPanelProps) {
-  const router = useRouter();
+  const { setLiveSponsorCount } = useEditionLiveSponsorCount();
   const [action, setAction] = useState<PanelAction>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -160,6 +171,32 @@ export function EditionSponsorsPanel({
     }
   }
 
+  function syncLiveSponsorCount(count: number) {
+    setLiveSponsorCount(count);
+  }
+
+  function applyRosterPair(next: { savedRoster: LiveSponsorRow[]; draftRoster: LiveSponsorRow[] }) {
+    setSavedRoster(next.savedRoster);
+    setDraftRoster(next.draftRoster);
+    syncLiveSponsorCount(next.draftRoster.length);
+  }
+
+  async function refetchSponsorsAndSyncRoster(): Promise<boolean> {
+    try {
+      const data = await fetchEditionLiveSponsors(editionId);
+      const next = applyRefetchedRoster(
+        data.sponsors,
+        savedRosterRef.current,
+        draftRosterRef.current,
+      );
+      applyRosterPair(next);
+      syncLiveSponsorCount(data.count);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function discardUnsavedOrderChanges() {
     setDraftRoster(savedRoster);
     setSaveError(null);
@@ -173,9 +210,45 @@ export function EditionSponsorsPanel({
     return window.confirm(UNSAVED_ORDER_CONFIRM_MESSAGE);
   }
 
-  function handleDone() {
+  function closePanelAction() {
     setAction(null);
-    router.refresh();
+  }
+
+  function handleSponsorCreated(payload: SponsorCreateSavedPayload) {
+    const nextRoster = applySponsorCreate(
+      savedRosterRef.current,
+      payload.link,
+      payload.company,
+    );
+    applyRosterPair({ savedRoster: nextRoster, draftRoster: nextRoster });
+    closePanelAction();
+  }
+
+  function handleSponsorRemoved(linkId: string) {
+    const nextRoster = applySponsorRemove(savedRosterRef.current, linkId);
+    applyRosterPair({ savedRoster: nextRoster, draftRoster: nextRoster });
+    closePanelAction();
+  }
+
+  async function handleSponsorEdited(payload: SponsorEditSavedPayload) {
+    if (payload.kind === "tier") {
+      closePanelAction();
+      const refreshed = await refetchSponsorsAndSyncRoster();
+      if (!refreshed) {
+        setSaveError(
+          "Sponsor saved but the roster could not be refreshed. Review the roster or reload the page.",
+        );
+      }
+      return;
+    }
+
+    const nextRoster = applySponsorLabelEdit(
+      savedRosterRef.current,
+      payload.linkId,
+      payload.tier_label,
+    );
+    applyRosterPair({ savedRoster: nextRoster, draftRoster: nextRoster });
+    closePanelAction();
   }
 
   function handleLocalReorderTier(tierRank: number | null, orderedLinkIds: readonly string[]) {
@@ -210,7 +283,7 @@ export function EditionSponsorsPanel({
             data.error ??
               "Failed to save order. Some tiers may have been saved — review the roster and try again.",
           );
-          router.refresh();
+          await refetchSponsorsAndSyncRoster();
           return;
         }
       }
@@ -221,7 +294,7 @@ export function EditionSponsorsPanel({
       setSaveError(
         "Failed to save order. Some tiers may have been saved — review the roster and try again.",
       );
-      router.refresh();
+      await refetchSponsorsAndSyncRoster();
     } finally {
       setIsSaving(false);
     }
@@ -325,7 +398,7 @@ export function EditionSponsorsPanel({
           mode="edit"
           row={action.row}
           onClose={() => setAction(null)}
-          onSaved={handleDone}
+          onSaved={(payload) => void handleSponsorEdited(payload)}
         />
       ) : null}
 
@@ -335,7 +408,7 @@ export function EditionSponsorsPanel({
           editionId={editionId}
           attachedCompanyIds={attachedCompanyIds}
           onClose={() => setAction(null)}
-          onSaved={handleDone}
+          onSaved={handleSponsorCreated}
         />
       ) : null}
 
@@ -345,7 +418,7 @@ export function EditionSponsorsPanel({
           editionName={editionName}
           editionYear={editionYear}
           onClose={() => setAction(null)}
-          onRemoved={handleDone}
+          onRemoved={handleSponsorRemoved}
         />
       ) : null}
       </div>

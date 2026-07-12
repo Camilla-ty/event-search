@@ -38,8 +38,9 @@ export type EventExplorerActiveTopic = {
 };
 
 export type EventExplorerData = {
-  editions: Awaited<ReturnType<typeof getEventEditions>>;
-  total: number;
+  /** Full public catalog with keywords and sponsor counts (client-filterable). */
+  catalog: Awaited<ReturnType<typeof getEventEditions>>;
+  filteredCount: number;
   filters: {
     query: string;
     regions: string[];
@@ -170,16 +171,16 @@ export async function getEventExplorerData(
     topicSeriesIds,
   });
   const sponsorCountsByEditionId = await getSponsorCountsByEditionIds(
-    filtered.map((edition) => String(edition.id)),
+    editionsWithKeywords.map((edition) => String(edition.id)),
   );
-  const editionsWithSponsorCounts = filtered.map((edition) => ({
+  const catalog = editionsWithKeywords.map((edition) => ({
     ...edition,
     sponsor_count: readSponsorCountForEdition(sponsorCountsByEditionId, String(edition.id)),
   }));
 
   return {
-    editions: editionsWithSponsorCounts,
-    total: filtered.length,
+    catalog,
+    filteredCount: filtered.length,
     filters: normalizedFilters,
     filterFacets,
     activeTopic,

@@ -7,9 +7,8 @@ import type { MarketingNavSession } from "@/src/lib/auth/marketingSession";
 
 import { AdminShell } from "@/src/features/admin/components/AdminShell";
 
-import { BrowseMobileHeader } from "./BrowseMobileHeader";
-import { GlobalSearchBar } from "./GlobalSearchBar";
-import { MobilePrimaryNav } from "./MobilePrimaryNav";
+import { BrowseMarketingChrome } from "./BrowseMarketingChrome";
+import { MarketingBrowseAuthBoundary } from "./MarketingBrowseAuthBoundary";
 import { NavigationShell } from "./NavigationShell";
 import { PublicMobileDesktopNotice } from "./PublicMobileDesktopNotice";
 import { SkipLink } from "./SkipLink";
@@ -57,18 +56,15 @@ export function LayoutShell({
     return (
       <div className={tokens.shell}>
         <SkipLink />
-        <NavigationShell mode={mode} session={session} />
-        <div className={tokens.contentColumn}>
-          <BrowseMobileHeader mode={mode} session={session} />
-          <MobilePrimaryNav />
-          <header className={tokens.searchHeader}>
-            <GlobalSearchBar />
-          </header>
-          <main id="main-content" className={tokens.main}>
-            <div className={tokens.page}>{children}</div>
-          </main>
-          <PublicMobileDesktopNotice />
-        </div>
+        <MarketingBrowseAuthBoundary session={session}>
+          <NavigationShell mode={mode} session={session} />
+          <div className={tokens.contentColumn}>
+            <BrowseMarketingChrome mode={mode} session={session}>
+              {children}
+            </BrowseMarketingChrome>
+            <PublicMobileDesktopNotice />
+          </div>
+        </MarketingBrowseAuthBoundary>
       </div>
     );
   }
