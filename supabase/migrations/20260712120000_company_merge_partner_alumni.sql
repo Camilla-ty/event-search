@@ -1044,3 +1044,17 @@ $$;
 
 
 REVOKE ALL ON FUNCTION public.merge_companies(uuid, uuid, uuid, jsonb, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.merge_companies(uuid, uuid, uuid, jsonb, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.merge_companies(uuid, uuid, uuid, jsonb, text) TO service_role;
+
+REVOKE ALL ON FUNCTION public._company_merge_duplicate_has_dependencies(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._company_merge_duplicate_has_dependencies(uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._company_merge_duplicate_has_dependencies(uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public._company_merge_build_preview(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._company_merge_build_preview(uuid, uuid) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._company_merge_build_preview(uuid, uuid) TO service_role;
+
+REVOKE ALL ON FUNCTION public._company_merge_process_partner_alumni(uuid, uuid, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public._company_merge_process_partner_alumni(uuid, uuid, jsonb) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._company_merge_process_partner_alumni(uuid, uuid, jsonb) TO service_role;
