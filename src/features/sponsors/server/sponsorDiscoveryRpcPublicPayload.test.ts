@@ -92,4 +92,27 @@ describe("sponsorDiscoveryRpcPublicPayload", () => {
     const suggestItems = mapSponsorDiscoverySuggestItems(mapped.rows);
     assert.equal(suggestItems[0]?.domain, "acme.com");
   });
+
+  it("rejects alias-domain list keys on public RPC rows", () => {
+    assert.throws(
+      () =>
+        assertSponsorDiscoveryRpcPublicRowShape({
+          id: "1",
+          name: "Acme",
+          slug: "acme",
+          verified_domains: ["legacy-acme.com"],
+        }),
+      /Unexpected RPC row keys present: verified_domains/,
+    );
+    assert.throws(
+      () =>
+        assertSponsorDiscoveryRpcPublicRowShape({
+          id: "1",
+          name: "Acme",
+          slug: "acme",
+          company_domains: ["legacy-acme.com"],
+        }),
+      /Unexpected RPC row keys present: company_domains/,
+    );
+  });
 });

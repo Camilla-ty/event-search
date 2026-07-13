@@ -10,6 +10,8 @@ export type CompanyIdentitySearchFields = {
   domain: string | null;
   website: string | null;
   aliases: readonly string[];
+  /** Verified alias domains from company_domains (admin search only; never public). */
+  verified_domains?: readonly string[];
 };
 
 export type CompanyIdentityMatchKind =
@@ -61,6 +63,25 @@ function fieldContainsQuery(field: string, queryKey: string): boolean {
 
 function fieldStartsWithQuery(field: string, queryKey: string): boolean {
   return field !== "" && field.startsWith(queryKey);
+}
+
+function scoreDomainKeyMatch(
+  domainKey: string,
+  queryKey: string,
+): CompanyIdentityMatchScore | null {
+  if (domainKey === "") return null;
+
+  if (domainKey === queryKey) {
+    return { score: SCORE_BY_KIND.exact_domain, match_kind: "exact_domain" };
+  }
+  if (fieldStartsWithQuery(domainKey, queryKey)) {
+    return { score: SCORE_BY_KIND.domain_prefix, match_kind: "domain_prefix" };
+  }
+  if (fieldContainsQuery(domainKey, queryKey)) {
+    return { score: SCORE_BY_KIND.domain_substring, match_kind: "domain_substring" };
+  }
+
+  return null;
 }
 
 function scoreAliasMatch(
@@ -149,23 +170,13 @@ export function scoreCompanyIdentityMatch(
 
   let best: CompanyIdentityMatchScore | null = null;
 
-  if (domainKey !== "") {
-    if (domainKey === queryKey) {
-      best = pickHigherScore(best, {
-        score: SCORE_BY_KIND.exact_domain,
-        match_kind: "exact_domain",
-      });
-    } else if (fieldStartsWithQuery(domainKey, queryKey)) {
-      best = pickHigherScore(best, {
-        score: SCORE_BY_KIND.domain_prefix,
-        match_kind: "domain_prefix",
-      });
-    } else if (fieldContainsQuery(domainKey, queryKey)) {
-      best = pickHigherScore(best, {
-        score: SCORE_BY_KIND.domain_substring,
-        match_kind: "domain_substring",
-      });
-    }
+  best = pickHigherScore(best, scoreDomainKeyMatch(domainKey, queryKey));
+
+  for (const verifiedDomain of company.verified_domains ?? []) {
+    best = pickHigherScore(
+      best,
+      scoreDomainKeyMatch(normalizeField(verifiedDomain), queryKey),
+    );
   }
 
   if (nameKey !== "") {

@@ -104,4 +104,38 @@ describe("companyIdentitySearch", () => {
     assert.equal(ranked[0]?.company.name, "Keel Infrastructure");
     assert.equal(ranked[0]?.matched_alias, "Bitfarms");
   });
+
+  it("matches non-primary verified domain from company_domains", () => {
+    const withAliasDomain = company({
+      id: "alias-domain-id",
+      name: "Acme Holdings",
+      slug: "acme-holdings",
+      domain: "acme.com",
+      website: "https://acme.com",
+      aliases: [],
+      verified_domains: ["legacy-acme.com"],
+    });
+
+    assert.equal(companyMatchesAdminSearch(withAliasDomain, "legacy-acme.com"), true);
+    assert.equal(
+      scoreCompanyIdentityMatch(withAliasDomain, "legacy-acme.com")?.match_kind,
+      "exact_domain",
+    );
+  });
+
+  it("matches primary companies.domain before weaker verified-domain substring hits", () => {
+    const primary = company({
+      id: "primary-id",
+      name: "Acme",
+      slug: "acme",
+      domain: "acme.com",
+      website: "https://acme.com",
+      aliases: [],
+      verified_domains: ["shop.acme.com"],
+    });
+
+    const ranked = rankCompanySearchHits([primary], "acme.com");
+    assert.equal(ranked.length, 1);
+    assert.equal(ranked[0]?.match_kind, "exact_domain");
+  });
 });

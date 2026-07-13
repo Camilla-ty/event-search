@@ -6,6 +6,7 @@ import {
 } from "@/src/lib/companies/companyIdentitySearch";
 import { parseCompanyAliasesFromRow } from "@/src/lib/companies/companyAliases";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 
 import type { CompanyAdminRow } from "./companyAdmin";
 
@@ -85,7 +86,65 @@ async function fetchAliasSearchCandidates(
   return matches;
 }
 
-function mergeCompaniesById(companies: readonly CompanyAdminRow[]): CompanyAdminRow[] {
+async function fetchCompanyDomainSearchCandidates(
+  term: string,
+  excludeIds: ReadonlySet<string>,
+): Promise<{
+  companies: CompanyAdminRow[];
+  verifiedDomainsByCompanyId: Map<string, string[]>;
+}> {
+  const supabase = createAdminClient();
+  const domainRows = await fetchAllPaginatedSupabaseRows<{
+    company_id: unknown;
+    domain: unknown;
+  }>(async ({ from, to }) =>
+    supabase
+      .from("company_domains")
+      .select("company_id, domain")
+      .ilike("domain", `%${term}%`)
+      .range(from, to),
+  );
+
+  const verifiedDomainsByCompanyId = new Map<string, string[]>();
+  const companyIds: string[] = [];
+
+  for (const row of domainRows) {
+    const companyId = String(row.company_id);
+    if (excludeIds.has(companyId)) continue;
+
+    const domain = typeof row.domain === "string" ? row.domain.trim() : "";
+    if (domain === "") continue;
+
+    if (!verifiedDomainsByCompanyId.has(companyId)) {
+      companyIds.push(companyId);
+    }
+
+    const existing = verifiedDomainsByCompanyId.get(companyId) ?? [];
+    if (!existing.includes(domain)) {
+      existing.push(domain);
+      verifiedDomainsByCompanyId.set(companyId, existing);
+    }
+  }
+
+  if (companyIds.length === 0) {
+    return { companies: [], verifiedDomainsByCompanyId };
+  }
+
+  const { data, error } = await supabase
+    .from("companies")
+    .select(COMPANY_ADMIN_SEARCH_SELECT)
+    .eq("status", "active")
+    .in("id", companyIds);
+
+  if (error) throw new Error(error.message);
+
+  return {
+    companies: (data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>)),
+    verifiedDomainsByCompanyId,
+  };
+}
+
+export function mergeCompaniesById(companies: readonly CompanyAdminRow[]): CompanyAdminRow[] {
   const byId = new Map<string, CompanyAdminRow>();
   for (const company of companies) {
     byId.set(company.id, company);
@@ -93,7 +152,17 @@ function mergeCompaniesById(companies: readonly CompanyAdminRow[]): CompanyAdmin
   return Array.from(byId.values());
 }
 
-/** Shared admin company identity search: name, aliases, domain, slug, website. */
+export function attachVerifiedDomainsForAdminSearch<T extends CompanyAdminRow>(
+  companies: readonly T[],
+  verifiedDomainsByCompanyId: ReadonlyMap<string, readonly string[]>,
+): (T & { verified_domains: readonly string[] })[] {
+  return companies.map((company) => ({
+    ...company,
+    verified_domains: verifiedDomainsByCompanyId.get(company.id) ?? [],
+  }));
+}
+
+/** Shared admin company identity search: name, aliases, domain, slug, website, company_domains. */
 export async function searchCompaniesAdmin(
   options: SearchCompaniesAdminOptions,
 ): Promise<AdminCompanySearchHit[]> {
@@ -105,12 +174,26 @@ export async function searchCompaniesAdmin(
   const primaryMatches = await fetchPrimarySearchCandidates(query);
   const primaryIds = new Set(primaryMatches.map((company) => company.id));
   const aliasMatches = await fetchAliasSearchCandidates(query, primaryIds);
-  const candidates = mergeCompaniesById([...primaryMatches, ...aliasMatches]);
+  const candidateIds = new Set([
+    ...primaryIds,
+    ...aliasMatches.map((company) => company.id),
+  ]);
+  const { companies: domainMatches, verifiedDomainsByCompanyId } =
+    await fetchCompanyDomainSearchCandidates(query, candidateIds);
+  const candidates = mergeCompaniesById([
+    ...primaryMatches,
+    ...aliasMatches,
+    ...domainMatches,
+  ]);
 
   const excludeIds = new Set(options.excludeIds ?? []);
   const filteredCandidates = candidates.filter((company) => !excludeIds.has(company.id));
+  const candidatesForRanking = attachVerifiedDomainsForAdminSearch(
+    filteredCandidates,
+    verifiedDomainsByCompanyId,
+  );
 
-  let ranked = rankCompanySearchHits(filteredCandidates, query).map((hit) => ({
+  let ranked = rankCompanySearchHits(candidatesForRanking, query).map((hit) => ({
     ...hit.company,
     matched_alias: hit.matched_alias,
   }));
