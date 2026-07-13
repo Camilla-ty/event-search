@@ -1,14 +1,13 @@
 import type {
-  SponsorDiscoveryEventContext,
-  SponsorDiscoveryEventTier,
+  SponsorDiscoveryInternalEventContext,
+  SponsorDiscoveryInternalResult,
+  SponsorDiscoveryInternalRow,
   SponsorDiscoveryParams,
-  SponsorDiscoveryResult,
-  SponsorDiscoveryRow,
   SponsorDiscoverySort,
 } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
-type SponsorDiscoveryRpcRow = Omit<SponsorDiscoveryRow, "location_label">;
+type SponsorDiscoveryRpcRow = SponsorDiscoveryInternalRow;
 
 function readString(raw: unknown): string | null {
   return typeof raw === "string" ? raw : null;
@@ -50,7 +49,7 @@ function readSort(raw: unknown): SponsorDiscoverySort {
 function parseEventTier(
   rawRank: unknown,
   rawLabel: unknown,
-): SponsorDiscoveryEventTier {
+): SponsorDiscoveryInternalRow["event_tier"] {
   return {
     tier_rank: readInteger(rawRank),
     tier_label: readNullableString(rawLabel),
@@ -98,7 +97,7 @@ function parseEventContext(
   raw: unknown,
   params: SponsorDiscoveryParams,
   eventUnknown: boolean,
-): SponsorDiscoveryEventContext | null {
+): SponsorDiscoveryInternalEventContext | null {
   if (params.eventSlug === null) {
     return null;
   }
@@ -130,7 +129,7 @@ function parseEventContext(
 export function mapSponsorDiscoveryRpcResponse(
   raw: unknown,
   params: SponsorDiscoveryParams,
-): SponsorDiscoveryResult {
+): SponsorDiscoveryInternalResult {
   if (raw === null || typeof raw !== "object") {
     return {
       rows: [],
@@ -144,15 +143,12 @@ export function mapSponsorDiscoveryRpcResponse(
   const payload = raw as Record<string, unknown>;
   const eventUnknown = readBoolean(payload.event_unknown);
   const rowsRaw = Array.isArray(payload.rows) ? payload.rows : [];
-  const rows: SponsorDiscoveryRow[] = [];
+  const rows: SponsorDiscoveryInternalRow[] = [];
 
   for (const rowRaw of rowsRaw) {
     const parsed = parseRpcRow(rowRaw, params, eventUnknown);
     if (parsed === null) continue;
-    rows.push({
-      ...parsed,
-      location_label: null,
-    });
+    rows.push(parsed);
   }
 
   const total = readInteger(payload.total) ?? 0;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { mapSponsorDiscoverySuggestItems } from "@/src/features/sponsors/server/mapSponsorDiscoverySuggestItems";
-import type { SponsorDiscoveryRow } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
+import type { SponsorDiscoveryInternalRow } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
 import {
   emptySponsorSuggestResult,
   isSponsorDiscoverySuggestQueryEligible,
@@ -54,7 +54,7 @@ describe("emptySponsorSuggestResult", () => {
 
 describe("mapSponsorDiscoverySuggestItems", () => {
   it("maps discovery rows to slim suggest items", () => {
-    const rows: SponsorDiscoveryRow[] = [
+    const rows: SponsorDiscoveryInternalRow[] = [
       {
         id: "company-1",
         slug: "ckma",
@@ -65,7 +65,6 @@ describe("mapSponsorDiscoverySuggestItems", () => {
         logo_source: null,
         logo_status: null,
         short_description: "Example",
-        location_label: null,
         sponsored_edition_count: 3,
         latest_activity_at: "2026-01-01",
         event_tier: null,
@@ -84,7 +83,7 @@ describe("mapSponsorDiscoverySuggestItems", () => {
   });
 
   it("skips rows missing required identity fields", () => {
-    const rows: SponsorDiscoveryRow[] = [
+    const rows: SponsorDiscoveryInternalRow[] = [
       {
         id: "",
         slug: "ckma",
@@ -95,7 +94,6 @@ describe("mapSponsorDiscoverySuggestItems", () => {
         logo_source: null,
         logo_status: null,
         short_description: null,
-        location_label: null,
         sponsored_edition_count: 1,
         latest_activity_at: null,
         event_tier: null,

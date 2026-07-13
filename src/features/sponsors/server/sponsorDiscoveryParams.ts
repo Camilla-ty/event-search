@@ -6,7 +6,7 @@ import type {
 
 export const SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE = 20;
 export const SPONSOR_DISCOVERY_MIN_PAGE_SIZE = 1;
-export const SPONSOR_DISCOVERY_MAX_PAGE_SIZE = 100;
+export const SPONSOR_DISCOVERY_MAX_PAGE_SIZE = 50;
 export const SPONSOR_DISCOVERY_MIN_PAGE = 1;
 export const SPONSOR_DISCOVERY_MAX_PAGE = 9999;
 export const SPONSOR_DISCOVERY_MAX_QUERY_LENGTH = 200;
@@ -74,27 +74,29 @@ export function parseSponsorDiscoveryPage(raw: string | number | null | undefine
   return SPONSOR_DISCOVERY_MIN_PAGE;
 }
 
+function clampSponsorDiscoveryPageSize(value: number): number {
+  if (value < SPONSOR_DISCOVERY_MIN_PAGE_SIZE) {
+    return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
+  }
+  if (value > SPONSOR_DISCOVERY_MAX_PAGE_SIZE) {
+    return SPONSOR_DISCOVERY_MAX_PAGE_SIZE;
+  }
+  return value;
+}
+
 export function parseSponsorDiscoveryPageSize(
   raw: string | number | null | undefined,
 ): number {
   if (typeof raw === "number" && Number.isFinite(raw)) {
-    const value = Math.floor(raw);
-    if (value >= SPONSOR_DISCOVERY_MIN_PAGE_SIZE && value <= SPONSOR_DISCOVERY_MAX_PAGE_SIZE) {
-      return value;
-    }
-    return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
+    return clampSponsorDiscoveryPageSize(Math.floor(raw));
   }
 
   if (typeof raw === "string") {
     const trimmed = raw.trim();
     if (trimmed === "") return SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE;
     const parsed = Number.parseInt(trimmed, 10);
-    if (
-      Number.isFinite(parsed) &&
-      parsed >= SPONSOR_DISCOVERY_MIN_PAGE_SIZE &&
-      parsed <= SPONSOR_DISCOVERY_MAX_PAGE_SIZE
-    ) {
-      return parsed;
+    if (Number.isFinite(parsed)) {
+      return clampSponsorDiscoveryPageSize(parsed);
     }
   }
 

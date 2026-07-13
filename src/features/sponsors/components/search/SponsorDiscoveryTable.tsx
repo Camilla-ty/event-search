@@ -6,16 +6,8 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
-import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 import type { SponsorDiscoveryRow } from "./discoveryTypes";
-
-function publicTierLabel(raw: string | null | undefined): string | null {
-  if (typeof raw !== "string") return null;
-  const trimmed = raw.trim();
-  return trimmed !== "" ? trimmed : null;
-}
 
 function SponsoredEditionCount({ count }: { count: number }) {
   const value = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
@@ -37,15 +29,8 @@ type SponsorDiscoveryTableRowProps = {
 function SponsorDiscoveryTableRow({ row, showEventTier }: SponsorDiscoveryTableRowProps) {
   const router = useRouter();
   const companyName = row.name.trim() !== "" ? row.name.trim() : "Unknown Sponsor";
-  const profileHref = buildSponsorProfilePath({ slug: row.slug, id: row.id });
-  const websiteDisplay = formatPublicCompanyWebsite({
-    website: row.website,
-    domain: row.domain,
-  });
-  const tierLabel =
-    showEventTier && row.event_tier !== null
-      ? publicTierLabel(row.event_tier.tier_label)
-      : null;
+  const profileHref = row.href;
+  const tierLabel = showEventTier ? row.event_tier_label : null;
 
   function navigateToProfile() {
     if (profileHref) {
@@ -88,8 +73,8 @@ function SponsorDiscoveryTableRow({ row, showEventTier }: SponsorDiscoveryTableR
         {companyName}
       </td>
       <td className="max-w-xs px-4 py-3 align-middle text-sm text-slate-500">
-        {websiteDisplay ? (
-          <span className="block truncate">{websiteDisplay.label}</span>
+        {row.website_label ? (
+          <span className="block truncate">{row.website_label}</span>
         ) : (
           "—"
         )}

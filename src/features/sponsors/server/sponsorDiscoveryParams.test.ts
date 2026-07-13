@@ -14,6 +14,7 @@ import {
   parseSponsorDiscoverySort,
   SPONSOR_DISCOVERY_DEFAULT_SORT,
   SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE,
+  SPONSOR_DISCOVERY_MAX_PAGE_SIZE,
   SPONSOR_DISCOVERY_MAX_QUERY_LENGTH,
   sponsorDiscoveryTotalPages,
 } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
@@ -82,9 +83,15 @@ describe("parseSponsorDiscoveryPageSize", () => {
     assert.equal(parseSponsorDiscoveryPageSize(0), SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE);
   });
 
-  it("clamps to max page size", () => {
-    assert.equal(parseSponsorDiscoveryPageSize(500), SPONSOR_DISCOVERY_DEFAULT_PAGE_SIZE);
-    assert.equal(parseSponsorDiscoveryPageSize("100"), 100);
+  it("clamps values above the maximum to 50", () => {
+    assert.equal(parseSponsorDiscoveryPageSize(500), SPONSOR_DISCOVERY_MAX_PAGE_SIZE);
+    assert.equal(parseSponsorDiscoveryPageSize("100"), SPONSOR_DISCOVERY_MAX_PAGE_SIZE);
+    assert.equal(parseSponsorDiscoveryPageSize(51), SPONSOR_DISCOVERY_MAX_PAGE_SIZE);
+  });
+
+  it("accepts values within the allowed range", () => {
+    assert.equal(parseSponsorDiscoveryPageSize(50), 50);
+    assert.equal(parseSponsorDiscoveryPageSize("20"), 20);
   });
 });
 

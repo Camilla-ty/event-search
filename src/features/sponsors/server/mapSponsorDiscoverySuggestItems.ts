@@ -1,8 +1,8 @@
-import type { SponsorDiscoveryRow } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
+import type { SponsorDiscoveryInternalRow } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
 import type { SponsorSuggestItem } from "@/src/features/sponsors/server/sponsorDiscoverySuggestTypes";
 
 export function mapSponsorDiscoverySuggestItems(
-  rows: readonly SponsorDiscoveryRow[],
+  rows: readonly SponsorDiscoveryInternalRow[],
 ): SponsorSuggestItem[] {
   const items: SponsorSuggestItem[] = [];
 

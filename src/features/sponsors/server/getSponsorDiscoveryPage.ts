@@ -1,20 +1,20 @@
+import { mapSponsorDiscoveryPublicResult } from "@/src/features/sponsors/server/mapSponsorDiscoveryPublicRow";
 import { mapSponsorDiscoveryRpcResponse } from "@/src/features/sponsors/server/mapSponsorDiscoveryRpcResponse";
 import {
   clampSponsorDiscoveryPage,
   parseSponsorDiscoveryParams,
 } from "@/src/features/sponsors/server/sponsorDiscoveryParams";
 import type {
+  SponsorDiscoveryInternalResult,
   SponsorDiscoveryParams,
   SponsorDiscoveryResult,
   SponsorDiscoverySearchInput,
 } from "@/src/features/sponsors/server/sponsorDiscoveryTypes";
-import { getCompaniesByIds } from "@/src/lib/queries/companies";
-import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { createClient } from "@/src/lib/supabase/server";
 
-async function fetchSponsorDiscoveryPage(
+async function fetchSponsorDiscoveryPageInternal(
   params: SponsorDiscoveryParams,
-): Promise<SponsorDiscoveryResult> {
+): Promise<SponsorDiscoveryInternalResult> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("sponsor_discovery_page", {
@@ -29,34 +29,14 @@ async function fetchSponsorDiscoveryPage(
     throw new Error(error.message);
   }
 
-  const mapped = mapSponsorDiscoveryRpcResponse(data, params);
-  if (mapped.rows.length === 0) {
-    return mapped;
-  }
-
-  const companyIds = mapped.rows.map((row) => row.id);
-  const companies = await getCompaniesByIds(companyIds);
-  const locationByCompanyId = new Map<string, string | null>(
-    companies.map((company) => [
-      company.id,
-      formatLocationFromCityEmbed(company.cities) || null,
-    ]),
-  );
-
-  return {
-    ...mapped,
-    rows: mapped.rows.map((row) => ({
-      ...row,
-      location_label: locationByCompanyId.get(row.id) ?? null,
-    })),
-  };
+  return mapSponsorDiscoveryRpcResponse(data, params);
 }
 
 export async function getSponsorDiscoveryPage(
   input: SponsorDiscoverySearchInput,
 ): Promise<SponsorDiscoveryResult> {
   const params = parseSponsorDiscoveryParams(input);
-  const result = await fetchSponsorDiscoveryPage(params);
+  const result = mapSponsorDiscoveryPublicResult(await fetchSponsorDiscoveryPageInternal(params));
 
   const shouldClampPage =
     result.total > 0 &&
@@ -82,7 +62,9 @@ export async function getSponsorDiscoveryPage(
     ...params,
     page: clampedPage,
   };
-  const clampedResult = await fetchSponsorDiscoveryPage(clampedParams);
+  const clampedResult = mapSponsorDiscoveryPublicResult(
+    await fetchSponsorDiscoveryPageInternal(clampedParams),
+  );
 
   return {
     ...clampedResult,
