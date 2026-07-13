@@ -41,6 +41,8 @@ describe("mapSponsorDiscoveryRpcResponse", () => {
     assert.equal(result.eventContext, null);
     assert.equal(result.rows.length, 1);
     assert.equal(result.rows[0]?.name, "Acme Corp");
+    assert.equal(result.rows[0]?.domain, "acme.com");
+    assert.equal(result.rows[0]?.website, "https://acme.com");
     assert.equal(result.rows[0]?.event_tier, null);
   });
 

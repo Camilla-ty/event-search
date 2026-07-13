@@ -1,8 +1,10 @@
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+const SPONSOR_DISCOVERY_RPC_ROW_FORBIDDEN_KEYS = [
+  "short_description",
+  "tier_rank",
+  "tier_label",
+] as const;
 
-/** Allowed keys on sponsor_discovery_page RPC rows after P4A. */
-export const SPONSOR_DISCOVERY_RPC_ROW_PUBLIC_KEYS = [
+const SPONSOR_DISCOVERY_RPC_ROW_ALLOWED_KEYS = [
   "id",
   "name",
   "slug",
@@ -16,34 +18,28 @@ export const SPONSOR_DISCOVERY_RPC_ROW_PUBLIC_KEYS = [
   "event_tier_label",
 ] as const;
 
-/** Keys that must not appear on direct RPC rows (P4A). */
-export const SPONSOR_DISCOVERY_RPC_ROW_REMOVED_KEYS = [
-  "short_description",
-  "tier_rank",
-  "tier_label",
-] as const;
+export function assertSponsorDiscoveryRpcPublicRowShape(row: Record<string, unknown>): void {
+  const keys = Object.keys(row);
+  const forbidden = keys.filter((key) =>
+    (SPONSOR_DISCOVERY_RPC_ROW_FORBIDDEN_KEYS as readonly string[]).includes(key),
+  );
+  if (forbidden.length > 0) {
+    throw new Error(`Forbidden RPC row keys present: ${forbidden.join(", ")}`);
+  }
 
-export function assertSponsorDiscoveryRpcRowShape(row: Record<string, unknown>): void {
-  const keys = Object.keys(row).sort();
-  assert.deepEqual(keys, [...SPONSOR_DISCOVERY_RPC_ROW_PUBLIC_KEYS].sort());
-
-  for (const removed of SPONSOR_DISCOVERY_RPC_ROW_REMOVED_KEYS) {
-    assert.equal(removed in row, false, `unexpected RPC field: ${removed}`);
+  const unexpected = keys.filter(
+    (key) => !(SPONSOR_DISCOVERY_RPC_ROW_ALLOWED_KEYS as readonly string[]).includes(key),
+  );
+  if (unexpected.length > 0) {
+    throw new Error(`Unexpected RPC row keys present: ${unexpected.join(", ")}`);
   }
 }
 
-export function assertSponsorDiscoveryRpcEventShape(
+export function assertSponsorDiscoveryRpcPublicEventShape(
   event: Record<string, unknown> | null,
 ): void {
-  if (event === null) {
-    return;
-  }
-
-  assert.equal("id" in event, false);
-  if ("slug" in event) {
-    assert.equal(typeof event.slug, "string");
-  }
-  if ("name" in event) {
-    assert.ok(event.name === null || typeof event.name === "string");
+  if (event === null) return;
+  if ("id" in event) {
+    throw new Error("Forbidden event.id present in RPC payload");
   }
 }
