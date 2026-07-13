@@ -46,13 +46,15 @@ function readSort(raw: unknown): SponsorDiscoverySort {
   return "activity";
 }
 
-function parseEventTier(
-  rawRank: unknown,
-  rawLabel: unknown,
-): SponsorDiscoveryInternalRow["event_tier"] {
+function parseEventTierLabel(rawLabel: unknown): SponsorDiscoveryInternalRow["event_tier"] {
+  const label = readNullableString(rawLabel)?.trim() ?? "";
+  if (label === "") {
+    return null;
+  }
+
   return {
-    tier_rank: readInteger(rawRank),
-    tier_label: readNullableString(rawLabel),
+    tier_rank: null,
+    tier_label: label,
   };
 }
 
@@ -88,7 +90,7 @@ function parseRpcRow(
     sponsored_edition_count: sponsoredEditionCount,
     latest_activity_at: readNullableString(row.latest_activity_at),
     event_tier: hasEventFilter
-      ? parseEventTier(row.tier_rank, row.tier_label)
+      ? parseEventTierLabel(row.event_tier_label ?? row.tier_label)
       : null,
   };
 }
@@ -120,10 +122,9 @@ function parseEventContext(
 
   const event = raw as Record<string, unknown>;
   const slug = readString(event.slug)?.trim() ?? params.eventSlug;
-  const id = readString(event.id)?.trim() ?? null;
   const name = readNullableString(event.name);
 
-  return { slug, id, name };
+  return { slug, id: null, name };
 }
 
 export function mapSponsorDiscoveryRpcResponse(

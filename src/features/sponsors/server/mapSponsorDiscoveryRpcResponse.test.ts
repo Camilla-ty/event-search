@@ -21,11 +21,9 @@ describe("mapSponsorDiscoveryRpcResponse", () => {
             logo_url: null,
             logo_source: "none",
             logo_status: "skipped",
-            short_description: "Example sponsor",
             sponsored_edition_count: 3,
             latest_activity_at: "2026-05-01",
-            tier_rank: null,
-            tier_label: null,
+            event_tier_label: null,
           },
         ],
         total: 1,
@@ -59,11 +57,9 @@ describe("mapSponsorDiscoveryRpcResponse", () => {
             logo_url: null,
             logo_source: null,
             logo_status: null,
-            short_description: null,
             sponsored_edition_count: 1,
             latest_activity_at: "2026-05-01",
-            tier_rank: 1,
-            tier_label: "Gold Sponsor",
+            event_tier_label: "Gold Sponsor",
           },
         ],
         total: 1,
@@ -72,7 +68,6 @@ describe("mapSponsorDiscoveryRpcResponse", () => {
         sort: "tier",
         event_unknown: false,
         event: {
-          id: "22222222-2222-4222-8222-222222222222",
           slug: "btc-prague-2026",
           name: "BTC Prague 2026",
         },
@@ -82,12 +77,12 @@ describe("mapSponsorDiscoveryRpcResponse", () => {
 
     assert.equal(result.eventUnknown, false);
     assert.deepEqual(result.eventContext, {
-      id: "22222222-2222-4222-8222-222222222222",
+      id: null,
       slug: "btc-prague-2026",
       name: "BTC Prague 2026",
     });
     assert.deepEqual(result.rows[0]?.event_tier, {
-      tier_rank: 1,
+      tier_rank: null,
       tier_label: "Gold Sponsor",
     });
   });
