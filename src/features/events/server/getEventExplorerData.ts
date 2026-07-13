@@ -102,7 +102,7 @@ export function mergeTopicSeriesResolutions(
   };
 }
 
-async function resolveTopicFilters(topicSlugs: readonly string[]): Promise<{
+export async function resolveTopicFilters(topicSlugs: readonly string[]): Promise<{
   activeTopic: EventExplorerActiveTopic | null;
   topicUnknown: boolean;
   topicSeriesIds: Set<string> | null;

@@ -271,8 +271,8 @@ describe("GlobalSearchBar bridge dependency policy", () => {
   });
 });
 
-describe("EventExplorerPage filter equality policy", () => {
-  it("uses a module-scoped equals callback for useUrlSyncedState", () => {
+describe("EventExplorerPage filter bridge policy", () => {
+  it("publishes collection filters to the global search bridge", () => {
     const source = readFileSync(
       path.join(
         process.cwd(),
@@ -281,8 +281,7 @@ describe("EventExplorerPage filter equality policy", () => {
       "utf8",
     );
 
-    assert.match(source, /function eventExplorerFiltersEqual/);
-    assert.match(source, /equals: eventExplorerFiltersEqual/);
-    assert.doesNotMatch(source, /equals: \(left, right\)/);
+    assert.match(source, /useEventExplorerFilterBridgePublisher/);
+    assert.match(source, /params\.filters, setFilters/);
   });
 });

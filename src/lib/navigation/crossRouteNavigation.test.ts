@@ -82,15 +82,16 @@ describe("event result card navigation", () => {
       "utf8",
     );
 
-    assert.match(source, /<Link href=\{href\}/);
+    assert.match(source, /<Link href=\{event\.href\}/);
     assert.equal(source.includes("preventDefault"), false);
-    assert.match(source, /buildEventDetailPath/);
+    assert.doesNotMatch(source, /buildEventDetailPath/);
   });
 });
 
 describe("collection hooks use window pathname ownership", () => {
   const hookFiles = [
     "src/features/sponsors/client/useSponsorDiscoveryCollection.ts",
+    "src/features/events/client/useEventExplorerCollection.ts",
     "src/features/companies/client/useAdminCompaniesCollection.ts",
     "src/features/venues/client/useAdminVenuesCollection.ts",
     "src/features/events/client/useAdminEditionsCollection.ts",
@@ -108,14 +109,15 @@ describe("collection hooks use window pathname ownership", () => {
 });
 
 describe("same-page optimizations remain intact", () => {
-  it("Event Explorer still uses useUrlSyncedState for filter URL sync", () => {
+  it("Event Explorer still uses targeted fetch without router navigation", () => {
     const source = readFileSync(
       path.join(process.cwd(), "src/features/events/components/explorer/EventExplorerPage.tsx"),
       "utf8",
     );
 
-    assert.match(source, /useUrlSyncedState/);
-    assert.match(source, /history: "replace"/);
+    assert.match(source, /useEventExplorerCollection/);
+    assert.equal(source.includes("useRouter"), false);
+    assert.equal(source.includes("router.push"), false);
   });
 
   it("Sponsor discovery still uses targeted fetch", () => {

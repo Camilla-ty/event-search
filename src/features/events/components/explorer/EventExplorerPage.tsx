@@ -1,42 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import {
   ExplorerResultsToolbar,
   MobileFilterDrawer,
   PageHeader,
 } from "@/src/components/common/explorer";
-import type { EventExplorerFilterFacets } from "@/src/features/events/lib/eventExplorerFilterFacets";
-import {
-  buildEventExplorerClientFilterFacets,
-  buildEventExplorerDisplayEvents,
-} from "@/src/features/events/lib/eventExplorerClient";
+import { useEventExplorerCollection } from "@/src/features/events/client/useEventExplorerCollection";
+import { useEventExplorerFilterBridgePublisher } from "@/src/features/events/client/EventExplorerFilterBridge";
 import { toggleCountrySelection } from "@/src/features/events/lib/filterPanelCountries";
 import { toggleTopicSelection } from "@/src/features/events/lib/filterPanelTopics";
-import {
-  buildEventExplorerFilterKey,
-  buildEventExplorerSearchParams,
-  DEFAULT_EVENT_EXPLORER_FILTERS,
-  parseEventExplorerFiltersFromSearchParams,
-} from "@/src/features/events/lib/eventExplorerQuery";
-import {
-  DEFAULT_EVENT_EXPLORER_SORT_MODE,
-  type EventExplorerSortMode,
-} from "@/src/features/events/lib/eventExplorerOrdering";
+import type { EventExplorerSortMode } from "@/src/features/events/lib/eventExplorerOrdering";
 import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
-import { useUrlSyncedState } from "@/src/lib/navigation/useUrlSyncedState";
-
-import { useEventExplorerFilterBridgePublisher } from "@/src/features/events/client/EventExplorerFilterBridge";
+import type { EventExplorerPageResult } from "@/src/features/events/server/eventExplorerTypes";
 
 import { ActiveTopicFilters } from "./ActiveTopicFilters";
 import { EventGrid } from "./EventGrid";
 import { FilterPanel } from "./FilterPanel";
-import type { EventFilters, EventRecord } from "./types";
 
 const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
   { value: "recommended", label: "Recommended" },
@@ -46,63 +30,32 @@ const EVENT_SORT_OPTIONS: { value: EventExplorerSortMode; label: string }[] = [
   { value: "name", label: "Event Name" },
 ];
 
-function eventExplorerFiltersEqual(left: EventFilters, right: EventFilters): boolean {
-  return buildEventExplorerFilterKey(left) === buildEventExplorerFilterKey(right);
-}
-
 type EventExplorerPageProps = {
-  catalog: EventRecord[];
-  initialFilters: EventFilters;
-  initialFilterFacets: EventExplorerFilterFacets;
+  initial: EventExplorerPageResult;
 };
 
-export function EventExplorerPage({
-  catalog,
-  initialFilters,
-  initialFilterFacets,
-}: EventExplorerPageProps) {
-  const pathname = usePathname();
-  const [filters, setFilters] = useUrlSyncedState({
-    initial: initialFilters,
-    pathname,
-    parse: parseEventExplorerFiltersFromSearchParams,
-    serialize: buildEventExplorerSearchParams,
-    equals: eventExplorerFiltersEqual,
-    history: "replace",
-  });
-  useEventExplorerFilterBridgePublisher(filters, setFilters);
-  const [sort, setSort] = useState<EventExplorerSortMode>(DEFAULT_EVENT_EXPLORER_SORT_MODE);
-  const [page, setPage] = useState(1);
+export function EventExplorerPage({ initial }: EventExplorerPageProps) {
+  const {
+    rows,
+    total,
+    facets,
+    params,
+    isLoading,
+    setFilters,
+    setSort,
+    setPage,
+    resetAll,
+  } = useEventExplorerCollection(initial);
+  useEventExplorerFilterBridgePublisher(params.filters, setFilters);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const filterKey = useMemo(() => buildEventExplorerFilterKey(filters), [filters]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filterKey]);
-
-  const filterFacets = useMemo(() => {
-    const next = buildEventExplorerClientFilterFacets(catalog, filters);
-    if (catalog.length === 0) {
-      return initialFilterFacets;
-    }
-    return next;
-  }, [catalog, filters, initialFilterFacets]);
-
-  const sortedEvents = useMemo(
-    () => buildEventExplorerDisplayEvents(catalog, filters, sort),
-    [catalog, filters, sort],
-  );
-
   function handleReset() {
-    setFilters({ ...DEFAULT_EVENT_EXPLORER_FILTERS });
-    setSort(DEFAULT_EVENT_EXPLORER_SORT_MODE);
-    setPage(1);
+    resetAll();
   }
 
   function handleClearAllFilters() {
     setFilters({
-      ...filters,
+      ...params.filters,
       topics: [],
       regions: [],
     });
@@ -110,15 +63,15 @@ export function EventExplorerPage({
 
   function handleRemoveTopic(slug: string) {
     setFilters({
-      ...filters,
-      topics: toggleTopicSelection(filters.topics, slug, false),
+      ...params.filters,
+      topics: toggleTopicSelection(params.filters.topics, slug, false),
     });
   }
 
   function handleRemoveCountry(country: string) {
     setFilters({
-      ...filters,
-      regions: toggleCountrySelection(filters.regions, country, false),
+      ...params.filters,
+      regions: toggleCountrySelection(params.filters.regions, country, false),
     });
   }
 
@@ -132,9 +85,9 @@ export function EventExplorerPage({
       <div className={explorerPageGridClass}>
         <div className="hidden md:block">
           <FilterPanel
-            filters={filters}
-            countryOptions={filterFacets.countries}
-            topicOptions={filterFacets.topics}
+            filters={params.filters}
+            countryOptions={facets.countries}
+            topicOptions={facets.topics}
             onChange={setFilters}
             onReset={handleReset}
             className={explorerFilterStickyClass}
@@ -143,26 +96,28 @@ export function EventExplorerPage({
 
         <div className="space-y-4">
           <ActiveTopicFilters
-            topics={filters.topics}
-            topicOptions={filterFacets.topics}
-            regions={filters.regions}
-            countryOptions={filterFacets.countries}
+            topics={params.filters.topics}
+            topicOptions={facets.topics}
+            regions={params.filters.regions}
+            countryOptions={facets.countries}
             onRemoveTopic={handleRemoveTopic}
             onRemoveCountry={handleRemoveCountry}
             onClearAll={handleClearAllFilters}
           />
           <ExplorerResultsToolbar
-            total={sortedEvents.length}
+            total={total}
             entityLabel="events"
-            sort={sort}
+            sort={params.sort}
             sortOptions={EVENT_SORT_OPTIONS}
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
           />
           <EventGrid
-            events={sortedEvents}
-            loading={false}
-            page={page}
+            rows={rows}
+            total={total}
+            page={params.page}
+            pageSize={initial.page_size}
+            loading={isLoading}
             onPageChange={setPage}
             onReset={handleReset}
           />
@@ -174,9 +129,9 @@ export function EventExplorerPage({
         onClose={() => setMobileFiltersOpen(false)}
       >
         <FilterPanel
-          filters={filters}
-          countryOptions={filterFacets.countries}
-          topicOptions={filterFacets.topics}
+          filters={params.filters}
+          countryOptions={facets.countries}
+          topicOptions={facets.topics}
           onChange={setFilters}
           onReset={handleReset}
         />

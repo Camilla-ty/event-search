@@ -227,6 +227,6 @@ describe("EventExplorerPage navigation policy", () => {
     assert.doesNotMatch(source, /useRouter/);
     assert.doesNotMatch(source, /router\.(replace|push|refresh)/);
     assert.doesNotMatch(source, /useSearchParams/);
-    assert.match(source, /useUrlSyncedState/);
+    assert.match(source, /useEventExplorerCollection/);
   });
 });

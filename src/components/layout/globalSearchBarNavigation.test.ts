@@ -77,8 +77,8 @@ describe("Event Explorer bridge wiring", () => {
       ),
       "utf8",
     );
-    assert.match(source, /useEventExplorerFilterBridgePublisher\(filters, setFilters\)/);
-    assert.match(source, /useUrlSyncedState/);
+    assert.match(source, /useEventExplorerFilterBridgePublisher\(params\.filters, setFilters\)/);
+    assert.match(source, /useEventExplorerCollection/);
   });
 
   it("BrowseMarketingChrome provides the bridge around GlobalSearchBar", () => {

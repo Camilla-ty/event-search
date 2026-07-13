@@ -1,9 +1,8 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
-import { mapEditionToEventRecord } from "@/src/features/events/lib/mapEditionToEventRecord";
-import { parseEventExplorerFiltersFromSearchParams } from "@/src/features/events/lib/eventExplorerQuery";
-import { getEventExplorerData } from "@/src/features/events/server/getEventExplorerData";
+import { getEventExplorerPage } from "@/src/features/events/server/getEventExplorerPage";
+import { buildEventExplorerPath } from "@/src/features/events/server/eventExplorerParams";
 import { createPageMetadata } from "@/src/lib/metadata/site";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +22,8 @@ type EventsPageProps = {
     start?: string;
     end?: string;
     topic?: string | string[];
+    sort?: string;
+    page?: string;
   }>;
 };
 
@@ -37,6 +38,8 @@ function toEventExplorerSearchParams(
     ["type", raw.type],
     ["start", raw.start],
     ["end", raw.end],
+    ["sort", raw.sort],
+    ["page", raw.page],
   ];
 
   for (const [key, value] of entries) {
@@ -60,27 +63,20 @@ function toEventExplorerSearchParams(
 
 export default async function EventsPageRoute({ searchParams }: EventsPageProps) {
   const raw = await searchParams;
-  const filters = parseEventExplorerFiltersFromSearchParams(toEventExplorerSearchParams(raw));
-  const data = await getEventExplorerData({
-    query: filters.query,
-    regions: filters.regions,
-    startDate: filters.startDate,
-    endDate: filters.endDate,
-    topics: filters.topics,
+  const urlParams = toEventExplorerSearchParams(raw);
+  const data = await getEventExplorerPage({
+    q: urlParams.get("q"),
+    regions: urlParams.getAll("region"),
+    start: urlParams.get("start"),
+    end: urlParams.get("end"),
+    topics: urlParams.getAll("topic"),
+    sort: urlParams.get("sort"),
+    page: urlParams.get("page"),
   });
-  const catalog = (data.catalog ?? []).map((edition) => mapEditionToEventRecord(edition));
 
-  return (
-    <EventExplorerPage
-      catalog={catalog}
-      initialFilters={{
-        query: data.filters.query ?? "",
-        regions: data.filters.regions ?? [],
-        startDate: data.filters.startDate ?? "",
-        endDate: data.filters.endDate ?? "",
-        topics: data.filters.topics ?? [],
-      }}
-      initialFilterFacets={data.filterFacets}
-    />
-  );
+  if (data.pageWasClamped) {
+    redirect(buildEventExplorerPath(data.params));
+  }
+
+  return <EventExplorerPage initial={data} />;
 }

@@ -4,15 +4,8 @@ import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
-import {
-  buildEventCardKeywordPreview,
-  type EventCardKeywordPreview,
-} from "@/src/features/events/lib/eventCardKeywordPreview";
-import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
-
-import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
-
-import type { EventRecord } from "./types";
+import type { EventCardKeywordPreview } from "@/src/features/events/lib/eventCardKeywordPreview";
+import type { EventExplorerRow } from "@/src/features/events/server/eventExplorerTypes";
 
 const cardSurfaceClass =
   "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
@@ -88,20 +81,33 @@ function EventCardMetaBlock({ children, withDivider = false }: EventCardMetaBloc
   );
 }
 
+function keywordPreviewFromRow(event: EventExplorerRow): EventCardKeywordPreview | null {
+  if (!event.keyword_preview) {
+    return null;
+  }
+
+  return {
+    visibleKeywords: event.keyword_preview.visible.map((label, index) => ({
+      key: `${event.id}-kw-${index}`,
+      label,
+    })),
+    overflowCount: event.keyword_preview.overflow_count,
+  };
+}
+
 type EventCardContentProps = {
-  event: EventRecord;
-  location: string;
-  keywordPreview: ReturnType<typeof buildEventCardKeywordPreview>;
+  event: EventExplorerRow;
+  keywordPreview: EventCardKeywordPreview | null;
 };
 
-function EventCardContent({ event, location, keywordPreview }: EventCardContentProps) {
+function EventCardContent({ event, keywordPreview }: EventCardContentProps) {
   const dateLabel = formatDateRange(event.start_date, event.end_date);
-  const locationLabel = location || "Location not set";
+  const locationLabel = event.location_label || "Location not set";
 
   return (
     <div className="flex items-start gap-4">
       <SeriesLogo
-        series={event.event_series}
+        series={event.series}
         fallbackName={event.name}
         className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
         monogramClassName="text-lg font-semibold text-slate-400"
@@ -109,14 +115,14 @@ function EventCardContent({ event, location, keywordPreview }: EventCardContentP
       <div className="min-w-0 flex-1 space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-3">
           <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900">
-            {event.name ?? "Untitled Event"}
+            {event.name}
           </h3>
           {keywordPreview ? <EventCardKeywordBadges keywordPreview={keywordPreview} /> : null}
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <EventCardMetaBlock>
-            <EventCardSponsorCount count={event.sponsor_count ?? 0} />
+            <EventCardSponsorCount count={event.sponsor_count} />
           </EventCardMetaBlock>
           <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
           <EventCardMetaBlock withDivider>
@@ -128,18 +134,11 @@ function EventCardContent({ event, location, keywordPreview }: EventCardContentP
   );
 }
 
-export function EventCard({ event }: { event: EventRecord }) {
-  const location = formatLocationLabel({
-    city: event.cities?.name,
-    state: event.cities?.states?.name,
-    country: event.cities?.countries?.name,
-  });
-  const keywordPreview = buildEventCardKeywordPreview(event.series_keywords);
-  const href = buildEventDetailPath(event);
-  const eventName = event.name?.trim() || "Untitled Event";
-  const contentProps = { event, location, keywordPreview };
+export function EventCard({ event }: { event: EventExplorerRow }) {
+  const keywordPreview = keywordPreviewFromRow(event);
+  const contentProps = { event, keywordPreview };
 
-  if (!href) {
+  if (!event.href) {
     return (
       <article className={cardSurfaceClass}>
         <EventCardContent {...contentProps} />
@@ -148,7 +147,7 @@ export function EventCard({ event }: { event: EventRecord }) {
   }
 
   return (
-    <Link href={href} className={cardInteractiveClass} aria-label={`View ${eventName}`}>
+    <Link href={event.href} className={cardInteractiveClass} aria-label={`View ${event.name}`}>
       <EventCardContent {...contentProps} />
     </Link>
   );
