@@ -13,6 +13,7 @@ import {
   AdminCompaniesFilterChips,
   companyListFilterLabel,
 } from "./AdminCompaniesFilterChips";
+import { AdminCompaniesListSkeleton } from "./AdminCompaniesListSkeleton";
 import { AdminCompaniesListTable } from "./AdminCompaniesListTable";
 import { AdminCompaniesSearchForm } from "./AdminCompaniesSearchForm";
 
@@ -46,6 +47,9 @@ export function AdminCompaniesPage({ initial }: AdminCompaniesPageProps) {
     clearSearch,
   } = useAdminCompaniesCollection(initial);
 
+  const showInitialSkeleton = isLoading && companies.length === 0;
+  const showRefreshingState = isLoading && companies.length > 0;
+
   return (
     <section>
       <AdminBreadcrumbs
@@ -75,15 +79,17 @@ export function AdminCompaniesPage({ initial }: AdminCompaniesPageProps) {
       />
 
       {error !== null ? <InlineErrorBanner message={error} /> : null}
-      {isLoading && companies.length > 0 ? (
-        <LoadingStatus message="Updating results…" />
-      ) : null}
+      {showRefreshingState ? <LoadingStatus message="Updating results…" /> : null}
 
-      <AdminCompaniesListTable
-        companies={companies}
-        filter={params.filter}
-        loading={isLoading && companies.length > 0}
-      />
+      {showInitialSkeleton ? (
+        <AdminCompaniesListSkeleton filter={params.filter} />
+      ) : (
+        <AdminCompaniesListTable
+          companies={companies}
+          filter={params.filter}
+          loading={showRefreshingState}
+        />
+      )}
     </section>
   );
 }

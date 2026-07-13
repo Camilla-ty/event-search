@@ -250,7 +250,7 @@ async function main() {
   logSection("7. anon/authenticated cannot SELECT company_domains");
   const { error: anonSelectError } = await anon.from("company_domains").select("id").limit(1);
   const { error: authSelectError } = await service.auth.getSession().then(async () => {
-    const authed = createClient(url, anonKey, {
+    const authed = createClient(url!, anonKey!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     return authed.from("company_domains").select("id").limit(1);
