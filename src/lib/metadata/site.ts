@@ -5,19 +5,43 @@ import { BRAND_LOGO_WORDMARK_SRC, BRAND_NAME } from "@/src/lib/design/brand";
 export const SITE_DESCRIPTION =
   "Event industry intelligence platform for discovering, analyzing, and searching events, sponsors, and companies.";
 
+/** Stable public origin for canonical / Open Graph / sitemap URLs. */
+export const PRODUCTION_SITE_ORIGIN = "https://app.eventpx.com";
+
 const DEFAULT_OG_IMAGE_PATH = BRAND_LOGO_WORDMARK_SRC;
 
-/** Resolves canonical site URL for metadataBase and absolute OG URLs. */
-export function getSiteUrl(): URL {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+function isVercelDeploymentHostname(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  return host === "vercel.app" || host.endsWith(".vercel.app");
+}
+
+/**
+ * Resolves the site origin for metadataBase, canonical links, and OG URLs.
+ * Never uses VERCEL_URL / *.vercel.app preview hosts — those must not appear in
+ * public metadata.
+ */
+export function getSiteUrl(
+  env: NodeJS.ProcessEnv = process.env,
+): URL {
+  const explicit = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (explicit) {
-    return new URL(explicit.endsWith("/") ? explicit : `${explicit}/`);
+    const candidate = new URL(explicit.endsWith("/") ? explicit : `${explicit}/`);
+    if (!isVercelDeploymentHostname(candidate.hostname)) {
+      return candidate;
+    }
   }
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) {
-    return new URL(`https://${vercel.replace(/^https?:\/\//, "")}/`);
+
+  const isLocalDev =
+    env.NODE_ENV === "development" &&
+    env.VERCEL !== "1" &&
+    env.VERCEL_ENV !== "preview" &&
+    env.VERCEL_ENV !== "production";
+
+  if (isLocalDev) {
+    return new URL("http://localhost:3000/");
   }
-  return new URL("http://localhost:3000/");
+
+  return new URL(`${PRODUCTION_SITE_ORIGIN}/`);
 }
 
 export const siteMetadataBase = getSiteUrl();
@@ -65,13 +89,14 @@ export function createPageMetadata({
   description = SITE_DESCRIPTION,
   path,
 }: PageMetadataInput): Metadata {
+  const metadataBase = getSiteUrl();
   const canonicalPath = path ?? "/";
-  const url = new URL(canonicalPath.replace(/^\//, ""), siteMetadataBase).toString();
+  const url = new URL(canonicalPath.replace(/^\//, ""), metadataBase).toString();
 
   return {
     title,
     description,
-    alternates: path ? { canonical: url } : undefined,
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
