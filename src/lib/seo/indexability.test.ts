@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   eventCollectionHasFilterOrSearchParams,
+  getBitcoinAsiaHubIndexability,
   getCollectionIndexability,
   getCompanyIndexability,
   getEventEditionIndexability,
@@ -13,6 +14,75 @@ import {
   sponsorCollectionHasFilterOrSearchParams,
 } from "@/src/lib/seo/indexability";
 import { resolveMergedSeriesSuccessorWithLoader } from "@/src/lib/seo/resolveSeriesPublicAccess";
+
+describe("getBitcoinAsiaHubIndexability", () => {
+  it("indexes when the public-value gate passes", () => {
+    const decision = getBitcoinAsiaHubIndexability({
+      indexableEventCount: 3,
+      distinctSponsorCount: 5,
+    });
+    assert.equal(decision.indexable, true);
+    assert.equal(decision.includeInSitemap, true);
+    assert.deepEqual(decision.robots, { index: true, follow: true });
+  });
+
+  it("noindexes when indexable events are below the gate", () => {
+    const decision = getBitcoinAsiaHubIndexability({
+      indexableEventCount: 2,
+      distinctSponsorCount: 769,
+    });
+    assert.equal(decision.indexable, false);
+    assert.equal(decision.includeInSitemap, false);
+    assert.deepEqual(decision.robots, { index: false, follow: true });
+  });
+
+  it("noindexes when distinct sponsors are below the gate", () => {
+    const decision = getBitcoinAsiaHubIndexability({
+      indexableEventCount: 7,
+      distinctSponsorCount: 4,
+    });
+    assert.equal(decision.indexable, false);
+    assert.equal(decision.includeInSitemap, false);
+  });
+
+  it("uses inclusive boundary values at the gate thresholds", () => {
+    assert.equal(
+      getBitcoinAsiaHubIndexability({
+        indexableEventCount: 3,
+        distinctSponsorCount: 5,
+      }).indexable,
+      true,
+    );
+    assert.equal(
+      getBitcoinAsiaHubIndexability({
+        indexableEventCount: 3,
+        distinctSponsorCount: 4,
+      }).indexable,
+      false,
+    );
+    assert.equal(
+      getBitcoinAsiaHubIndexability({
+        indexableEventCount: 2,
+        distinctSponsorCount: 5,
+      }).indexable,
+      false,
+    );
+    assert.equal(
+      getBitcoinAsiaHubIndexability({
+        indexableEventCount: 0,
+        distinctSponsorCount: 0,
+      }).indexable,
+      false,
+    );
+    assert.equal(
+      getBitcoinAsiaHubIndexability({
+        indexableEventCount: 100,
+        distinctSponsorCount: 100,
+      }).indexable,
+      true,
+    );
+  });
+});
 
 describe("getCompanyIndexability", () => {
   it("noindexes and excludes 0 sponsored editions", () => {

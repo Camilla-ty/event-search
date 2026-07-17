@@ -9,7 +9,8 @@ async function main() {
   const editions = entries.filter(
     (entry) =>
       entry.url.startsWith(`${base}/events/`) &&
-      !entry.url.startsWith(`${base}/events/series/`),
+      !entry.url.startsWith(`${base}/events/series/`) &&
+      !entry.url.includes("/events/topics/"),
   );
   const series = entries.filter((entry) =>
     entry.url.startsWith(`${base}/events/series/`),
@@ -26,6 +27,9 @@ async function main() {
   const staticEntries = entries.filter((entry) =>
     [`${base}/`, `${base}/events`, `${base}/sponsors`].includes(entry.url),
   );
+  const topicRegionHubs = entries.filter((entry) =>
+    entry.url.includes("/events/topics/") && entry.url.includes("/regions/"),
+  );
 
   console.log("entry_count", entries.length);
   console.log("counts", {
@@ -35,6 +39,7 @@ async function main() {
     sponsors: sponsors.length,
     topics: topics.length,
     research: research.length,
+    topicRegionHubs: topicRegionHubs.length,
   });
   console.log(
     "with_lastmod",

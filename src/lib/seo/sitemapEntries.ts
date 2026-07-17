@@ -2,12 +2,15 @@ import type { MetadataRoute } from "next";
 
 import { PRODUCTION_SITE_ORIGIN } from "@/src/lib/metadata/site";
 import {
+  getBitcoinAsiaHubIndexability,
   getCompanyIndexability,
   getEventEditionIndexability,
   getSeriesIndexability,
   getTopicIndexability,
   normalizeSeriesLifecycle,
 } from "@/src/lib/seo/indexability";
+import { BITCOIN_ASIA_HUB_PATH } from "@/src/features/events/lib/bitcoinAsiaHub";
+import { getBitcoinAsiaHubPageData } from "@/src/features/events/server/bitcoinAsiaHubPublic";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createClient } from "@supabase/supabase-js";
 
@@ -296,4 +299,23 @@ export function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
     { url: absoluteUrl("/events") },
     { url: absoluteUrl("/sponsors") },
   ];
+}
+
+/**
+ * IR4 MVP: include Bitcoin × Asia only when the same public-value gate as the
+ * route passes (via getBitcoinAsiaHubPageData → getBitcoinAsiaHubIndexability).
+ */
+export async function fetchBitcoinAsiaHubSitemapEntries(): Promise<
+  MetadataRoute.Sitemap
+> {
+  const data = await getBitcoinAsiaHubPageData();
+  if (!data) return [];
+
+  const decision = getBitcoinAsiaHubIndexability({
+    indexableEventCount: data.facts.indexableEventCount,
+    distinctSponsorCount: data.facts.distinctSponsorCount,
+  });
+  if (!decision.includeInSitemap) return [];
+
+  return [{ url: absoluteUrl(BITCOIN_ASIA_HUB_PATH) }];
 }

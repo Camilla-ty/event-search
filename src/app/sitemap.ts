@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import {
   buildStaticSitemapEntries,
+  fetchBitcoinAsiaHubSitemapEntries,
   fetchPublicCompanySitemapEntries,
   fetchPublicEventEditionSitemapEntries,
   fetchPublicEventSeriesSitemapEntries,
@@ -13,18 +14,20 @@ export const revalidate = 3600;
 
 /**
  * IR1: sitemap membership ⇔ indexable under indexability-policy.
- * Research routes intentionally omitted (no public routes yet — IR4).
+ * IR4 MVP: Bitcoin × Asia included only when the hub public-value gate passes.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [editions, series, sponsors, topics] = await Promise.all([
+  const [editions, series, sponsors, topics, bitcoinAsiaHub] = await Promise.all([
     fetchPublicEventEditionSitemapEntries(),
     fetchPublicEventSeriesSitemapEntries(),
     fetchPublicCompanySitemapEntries(),
     fetchPublicTopicSitemapEntries(),
+    fetchBitcoinAsiaHubSitemapEntries(),
   ]);
 
   return [
     ...buildStaticSitemapEntries(),
+    ...bitcoinAsiaHub,
     ...editions,
     ...series,
     ...sponsors,

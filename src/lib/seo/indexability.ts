@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { bitcoinAsiaHubPassesGate } from "@/src/features/events/lib/bitcoinAsiaHub";
+
 /**
  * Shared IR1 public-value / indexability decisions.
  * Source of truth for generateMetadata, redirects, and sitemap inclusion.
@@ -100,6 +102,18 @@ export function getSeriesIndexability(input: {
 /** Topic hubs that resolve publicly are indexable (IR1). */
 export function getTopicIndexability(): IndexabilityDecision {
   return INDEXABLE;
+}
+
+/**
+ * Bitcoin × Asia hub gate (IR4 MVP).
+ * Shared source of truth with route availability and sitemap inclusion:
+ * uses `bitcoinAsiaHubPassesGate` (≥3 indexable events ∧ ≥5 non-restricted sponsors).
+ */
+export function getBitcoinAsiaHubIndexability(input: {
+  indexableEventCount: number;
+  distinctSponsorCount: number;
+}): IndexabilityDecision {
+  return bitcoinAsiaHubPassesGate(input) ? INDEXABLE : NOINDEX_FOLLOW;
 }
 
 /**

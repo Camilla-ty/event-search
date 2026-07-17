@@ -163,60 +163,70 @@ Make event pages earn indexing through **visible, factual** content derived from
 
 ### Goal
 
-Make sponsor/company public pages the strongest organic and shareable expression of EventPixels’ core product: **sponsor intelligence**.
+Make sponsor/company public pages and **Sponsor Discovery** (`/sponsors`) the strongest organic expression of EventPixels’ core product: **sponsor intelligence** for sales-team research.
 
 ### Scope
 
 - Prefer sponsor routes in prioritization, QA, and health metrics over peripheral catalog polish.
-- S1-quality sponsor metadata preference order (foundation): public short description → domain/website label → generic—**do not** depend on non-existent `industry` column.
-- Surface **core public facts** on sponsor pages: public sponsorship counts / history signals that Protection already allows anonymously (decision 4). Do **not** expose gated full history in metadata or above-the-fold claims.
+- Sponsor metadata preference order: **domain/website → sponsored edition count → generic** (IR3A — shipped; no `industry` or removed description columns).
+- Surface **core public facts** on sponsor pages: public sponsorship counts that Protection allows anonymously (decision 4). Do **not** expose gated full history in metadata or above-the-fold claims.
+- Treat `/sponsors` discovery (sort by count, search, event scope) as the canonical browse surface for sponsor activity — **not** a separate global “most active sponsors” research URL.
 - Ensure sponsor pages that fail the public-value gate are not indexed and not in the sitemap.
 - Align series/event cross-links so sponsor intelligence remains discoverable from events (internal linking), without leaking restricted companies.
 
-**Out of scope for IR3:** Full AI company bios (→ IR7); changing Protection gating rules.
+**Out of scope for IR3:** Full AI company bios (→ IR7); changing Protection gating rules; **IR3B Most Active Sponsors research page** (cancelled — see `docs/plans/ir3-revised-plan.md`).
 
 ### Dependencies
 
 - IR1 indexability rules.
 - Protection / anon sponsor profile contracts.
-- Confirmed public fields: name, slug, logo, short description / website, public stats.
+- Confirmed public fields: name, slug, logo, website/domain, public stats.
 
 ### Acceptance criteria
 
-- [ ] Sponsor metadata preference order uses real public fields only (no dead `industry` dependency).
-- [ ] Public-safe sponsor count / history facts appear as visible page content where policy allows.
-- [ ] Restricted sponsors remain non-indexable and absent from sitemap.
+- [x] Sponsor metadata preference order uses real public fields only (IR3A).
+- [x] Public-safe sponsor count appears as visible page content where policy allows (IR1/IR2).
+- [x] Restricted sponsors remain non-indexable and absent from sitemap (IR1).
+- [ ] `/sponsors` remains the canonical sponsor browse; no duplicate leaderboard research URL shipped.
 - [ ] QA priority list for SEO spot-checks is sponsor-first, then high-sponsor-count events.
 
 ---
 
-## Phase IR4 — Topic pages and research pages
+## Phase IR4 — Topic, geo, and lens hubs (strategic SEO)
 
 ### Goal
 
-Treat topic hubs and research-oriented public pages as **strategic SEO assets** (decision 6), with the same indexability discipline as events and sponsors.
+Ship **indexable hub pages** that answer real search intent — geo + topic events, topic sponsors, regional sponsors — without duplicating Sponsor Discovery or inventing thin leaderboard URLs.
+
+**Primary intents (product-confirmed):**
+
+- “crypto events in singapore”, “bitcoin events in asia” → **geo + topic event hubs**
+- “who sponsors {topic}” / topic-driven sponsor demand → **topic sponsor lens** on or alongside `/topics/{slug}`
+- Sales-team sponsor research → **profiles + `/sponsors`** (IR3); hubs route into those sinks
+
+**Cancelled:** IR3B `/research/sponsors/most-active` (low unique value vs `/sponsors?sort=count`; not an approved destination). See `docs/plans/ir3-revised-plan.md`.
 
 ### Scope
 
-- Inventory existing `/topics/[slug]` (and any research routes) against the public-value gate.
-- Define metadata templates for topic/research pages (title, description, canonical).
-- Ensure pages with real topical/research content are indexable and **included in the sitemap** when they pass the gate.
-- Empty or stub topic/research shells: `noindex` + excluded from sitemap.
-- Internal links from events/series/sponsors to relevant topic/research pages where relationships exist.
-- Product decision: what “research page” means in v1 (dedicated routes vs edition research signals vs future editorial). Lock before build.
+- Strengthen `/topics/{slug}` (factual summaries, metadata, sponsor module).
+- Define clean canonical URLs for high-intent **topic + region** event combinations (not noindex filter URLs).
+- Optional region sponsor hubs where roster gates pass.
+- Metadata templates + sitemap inclusion only for published hubs that pass the public-value gate.
+- Internal links: topic hubs ↔ events ↔ sponsor profiles; no gated history on anon surfaces.
 
 ### Dependencies
 
 - IR1 gate + sitemap policy.
-- Existing topic data model and public topic hub routes.
-- Product definition of research page inventory.
+- Topic keyword model, event location fields, `company_sponsor_stats` / topic joins.
+- `docs/plans/ir3-revised-plan.md` page-type priorities (Types A–D).
 
 ### Acceptance criteria
 
-- [ ] Topic (and agreed research) pages have explicit metadata templates.
-- [ ] Qualifying topic/research URLs appear in sitemap; stubs do not.
-- [ ] Soft-empty topic/research pages are `noindex`.
-- [ ] At least one documented internal-linking pattern from events or series to topics.
+- [ ] No `/research/sponsors/most-active` or equivalent global leaderboard URL.
+- [ ] At least one topic hub ships with sponsor-intelligence module or lens.
+- [ ] Geo + topic event hub pattern documented with minimum edition gate.
+- [ ] Qualifying hub URLs in sitemap; filter URLs remain `noindex`.
+- [ ] Internal-linking pattern from events/series to topic hubs documented.
 
 ---
 
@@ -350,7 +360,7 @@ summaries      SEO (primary)    assets
 | Exact v1 thresholds for “sponsor count &gt; 0” vs “dates or location only” on events | IR1 | Affects how many editions stay indexable |
 | Whether sponsors without sponsorship signal stay indexable | IR1 / IR3 | Foundation optional quality filter |
 | Merged entity: 301 vs canonical-to-successor vs `noindex` | IR1 | Gap audit: missing today |
-| Definition and URL inventory of “research pages” | IR4 | Strategic but under-specified in code/docs |
+| Topic/geo hub URL patterns and roster gates | IR4 | See `docs/plans/ir3-revised-plan.md`; IR3B cancelled |
 | Auth pages: robots `Disallow` vs meta `noindex` only | IR1 | Foundation left open |
 | Whether curated copy replaces or sits beside factual auto-summary | IR7 | Document when IR2 ships |
 
@@ -364,6 +374,7 @@ summaries      SEO (primary)    assets
 | `docs/plans/seo-gap-audit.md` | Implementation gaps as of 2026-07-15 |
 | `docs/plans/seo-copy-examples.md` | Metadata copy illustrations |
 | `docs/audits/seo-documents-inventory.md` | Doc inventory |
+| `docs/plans/ir3-revised-plan.md` | IR3B cancellation; revised page-type priorities |
 | `docs/plans/protection-v1.md` | Public data / restriction constraints |
 
 ---
@@ -373,3 +384,4 @@ summaries      SEO (primary)    assets
 | Date | Note |
 |------|------|
 | 2026-07-16 | Initial implementation roadmap from foundation, gap audit, copy examples + seven confirmed product decisions |
+| 2026-07-17 | IR3B (Most Active Sponsors research page) cancelled; IR3 scoped to profiles + discovery; IR4 redefined as topic/geo lens hubs (`ir3-revised-plan.md`) |
