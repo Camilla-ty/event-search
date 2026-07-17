@@ -83,6 +83,44 @@ describe("Partner Alumni bulk matching", () => {
     assert.equal(previewStatus(decision), "review");
     assert.equal(decision.match_method, "exact_name");
   });
+
+  it("excludes merged tombstone company_domains from domain conflicts (Aptos)", () => {
+    const APTOS_ID = "84374a2c-45cb-4ea5-aae3-75c5af47430b";
+    const MERGED_TOMBSTONE_ID = "295ba537-ec49-424d-91a7-bdbb816b15fa";
+
+    // loadImportMatchContext filters companies to status=active; stale tombstone
+    // company_domains rows are then dropped because their company_id is absent.
+    const matchContext = buildImportMatchContext(
+      [
+        {
+          id: APTOS_ID,
+          name: "Aptos",
+          domain: "aptosnetwork.com",
+          website: "https://aptosnetwork.com/",
+          aliases: ["Aptos Foundation"],
+        },
+      ],
+      [
+        { company_id: APTOS_ID, domain: "aptosfoundation.org" },
+        { company_id: MERGED_TOMBSTONE_ID, domain: "aptosnetwork.com" },
+      ],
+    );
+
+    const decision = matchImportRowIdentity(
+      {
+        normalized_domain: "aptosnetwork.com",
+        normalized_website: "https://aptosnetwork.com/",
+        normalized_company_name: "Aptos",
+      },
+      matchContext,
+    );
+
+    assert.equal(previewStatus(decision), "matched");
+    assert.equal(decision.match_method, "domain");
+    assert.equal(decision.match_confidence, "high");
+    assert.equal(decision.proposed_company_id, APTOS_ID);
+    assert.equal(decision.conflict_type, null);
+  });
 });
 
 describe("Partner Alumni bulk matching integration", { skip: !process.env.SUPABASE_SERVICE_ROLE_KEY }, () => {

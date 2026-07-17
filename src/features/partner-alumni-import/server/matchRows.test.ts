@@ -92,4 +92,47 @@ describe("partner alumni matchRows", () => {
     assert.equal(result.proposed_company_id, COINGECKO_ID);
     assert.equal(result.conflict_type, null);
   });
+
+  it("excludes merged tombstone company_domains from domain conflicts (Aptos)", async () => {
+    const APTOS_ID = "84374a2c-45cb-4ea5-aae3-75c5af47430b";
+    const MERGED_TOMBSTONE_ID = "295ba537-ec49-424d-91a7-bdbb816b15fa";
+
+    // loadMatchContext filters companies to status=active; stale tombstone
+    // company_domains rows are then dropped because their company_id is absent.
+    const context = buildImportMatchContextFromDirectory(
+      [
+        {
+          id: APTOS_ID,
+          name: "Aptos",
+          domain: "aptosnetwork.com",
+          website: "https://aptosnetwork.com/",
+          aliases: ["Aptos Foundation"],
+        },
+      ],
+      [
+        { company_id: APTOS_ID, domain: "aptosfoundation.org" },
+        { company_id: MERGED_TOMBSTONE_ID, domain: "aptosnetwork.com" },
+      ],
+    );
+
+    const result = await matchRow(
+      {
+        id: "row-5",
+        status: "needs_review",
+        normalized_domain: "aptosnetwork.com",
+        normalized_website: "https://aptosnetwork.com/",
+        normalized_company_name: "Aptos",
+        mapped_display_order: 1,
+        has_blocking_validation: false,
+      },
+      context,
+      new Map(),
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "domain");
+    assert.equal(result.match_confidence, "high");
+    assert.equal(result.proposed_company_id, APTOS_ID);
+    assert.equal(result.conflict_type, null);
+  });
 });

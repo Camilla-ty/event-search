@@ -168,7 +168,11 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
 
   const [companies, companyDomains] = await Promise.all([
     fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(async ({ from, to }) =>
-      supabase.from("companies").select("id, name, domain, website, aliases").range(from, to),
+      supabase
+        .from("companies")
+        .select("id, name, domain, website, aliases")
+        .eq("status", "active")
+        .range(from, to),
     ),
     fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(async ({ from, to }) =>
       supabase.from("company_domains").select("company_id, domain").range(from, to),
