@@ -211,6 +211,58 @@ describe("resolveCompanyWebsiteIdentity", () => {
     }
   });
 
+  it("allows bare platform-owner roots as domain identity keys", () => {
+    for (const [url, domain] of [
+      ["https://coingecko.com/", "coingecko.com"],
+      ["https://www.coingecko.com", "coingecko.com"],
+      ["https://coinmarketcap.com/", "coinmarketcap.com"],
+      ["https://www.coinmarketcap.com/", "coinmarketcap.com"],
+      ["coingecko.com", "coingecko.com"],
+      ["coinmarketcap.com", "coinmarketcap.com"],
+    ] as const) {
+      assert.deepEqual(
+        resolveCompanyWebsiteIdentity(url),
+        { status: "domain", domain },
+        `expected domain identity for ${url}`,
+      );
+    }
+  });
+
+  it("keeps CoinGecko and CoinMarketCap listing paths as no_identity", () => {
+    for (const url of [
+      "https://www.coingecko.com/en/coins/bitcoin",
+      "https://coingecko.com/coins/ethereum",
+      "https://coinmarketcap.com/currencies/bitcoin/",
+      "https://www.coinmarketcap.com/currencies/example-token",
+      "https://coinmarketcap.com/abc",
+    ]) {
+      assert.deepEqual(
+        resolveCompanyWebsiteIdentity(url),
+        { status: "no_identity" },
+        `expected no_identity for ${url}`,
+      );
+    }
+  });
+
+  it("admin save identity derivation preserves platform-owner bare domains", () => {
+    // Mirrors updateCompanyAdmin / createCompany website → domain assignment.
+    function domainFromWebsite(website: string): string | null {
+      const identity = resolveCompanyWebsiteIdentity(website);
+      if (identity.status === "unparseable") {
+        throw new Error("Invalid company website");
+      }
+      return identity.status === "domain" ? identity.domain : null;
+    }
+
+    assert.equal(domainFromWebsite("https://www.coingecko.com/"), "coingecko.com");
+    assert.equal(domainFromWebsite("https://coinmarketcap.com/"), "coinmarketcap.com");
+    assert.equal(
+      domainFromWebsite("https://coinmarketcap.com/currencies/bitcoin/"),
+      null,
+    );
+    assert.equal(domainFromWebsite("https://www.coingecko.com/en/coins/bitcoin"), null);
+  });
+
   it("treats bare social hosts as no_identity but keeps path-aware handles", () => {
     for (const bare of [
       "https://x.com",

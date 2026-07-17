@@ -259,6 +259,13 @@ function simulateSetCompanyPrimaryDomainRpc(
   }
 
   if (domainRow.is_primary) {
+    const primaryDomain = domainRow.domain.trim();
+    const needsRepair =
+      company.domain !== primaryDomain || company.website !== primaryDomain;
+    if (needsRepair) {
+      company.website = primaryDomain;
+      company.domain = primaryDomain;
+    }
     return {
       data: {
         status: "already_primary",
@@ -518,6 +525,69 @@ describe("setCompanyPrimaryDomainWithClient", () => {
     assert.equal(state.companies[0]?.domain, "studentsforlibertycz.cz");
     assert.equal(state.companies[0]?.website, "studentsforlibertycz.cz");
     assert.equal(state.companyDomains.find((row) => row.is_primary)?.id, PRIMARY_ROW_ID);
+  });
+
+  it("already_primary repairs null companies.domain from the primary row", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: null,
+          website: "https://coinmarketcap.com/",
+        },
+      ],
+      companyDomains: [
+        {
+          id: PRIMARY_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "coinmarketcap.com",
+          is_primary: true,
+        },
+      ],
+    };
+
+    const result = await setCompanyPrimaryDomainWithClient(
+      createSetPrimaryMockSupabase(state) as never,
+      BITLIFI_ID,
+      PRIMARY_ROW_ID,
+    );
+
+    assert.equal(result.status, "already_primary");
+    assert.equal(result.domain, "coinmarketcap.com");
+    assert.equal(result.website, "coinmarketcap.com");
+    assert.equal(state.companies[0]?.domain, "coinmarketcap.com");
+    assert.equal(state.companies[0]?.website, "coinmarketcap.com");
+    assert.equal(state.companyDomains.find((row) => row.is_primary)?.id, PRIMARY_ROW_ID);
+  });
+
+  it("already_primary repairs mismatched companies.domain from the primary row", async () => {
+    const state: SetPrimaryMockState = {
+      companies: [
+        {
+          id: BITLIFI_ID,
+          domain: "old.example",
+          website: "https://old.example/",
+        },
+      ],
+      companyDomains: [
+        {
+          id: PRIMARY_ROW_ID,
+          company_id: BITLIFI_ID,
+          domain: "coingecko.com",
+          is_primary: true,
+        },
+      ],
+    };
+
+    const result = await setCompanyPrimaryDomainWithClient(
+      createSetPrimaryMockSupabase(state) as never,
+      BITLIFI_ID,
+      PRIMARY_ROW_ID,
+    );
+
+    assert.equal(result.status, "already_primary");
+    assert.equal(state.companies[0]?.domain, "coingecko.com");
+    assert.equal(state.companies[0]?.website, "coingecko.com");
   });
 });
 

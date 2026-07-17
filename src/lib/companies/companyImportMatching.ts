@@ -1,7 +1,6 @@
 import { normalizeCompanyNameKey } from "@/src/lib/companies/companyAliases";
-import { isBarePlatformOwnerMatchHost } from "@/src/lib/domain/barePlatformOwnerMatchHosts";
 import {
-  bareNoIdentityHost,
+  barePlatformOwnerRootHost,
   importWebsiteMatchKey,
 } from "@/src/lib/domain/importWebsiteMatchKey";
 
@@ -203,7 +202,7 @@ function matchByWebsite(
 }
 
 /**
- * Bare/root no_identity URL on an allowlisted platform host whose primary domain
+ * Bare/root URL on an allowlisted platform host whose primary domain
  * is owned by exactly one catalog company, with exact name or alias agreement.
  */
 function matchByBarePlatformOwnerPrimaryDomain(
@@ -216,8 +215,8 @@ function matchByBarePlatformOwnerPrimaryDomain(
   const website = row.normalized_website?.trim() ?? "";
   if (website === "") return null;
 
-  const host = bareNoIdentityHost(website);
-  if (!host || !isBarePlatformOwnerMatchHost(host)) {
+  const host = barePlatformOwnerRootHost(website);
+  if (!host) {
     return null;
   }
 

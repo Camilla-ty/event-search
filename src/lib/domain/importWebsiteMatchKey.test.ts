@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   bareNoIdentityHost,
+  barePlatformOwnerRootHost,
   importWebsiteMatchKey,
   normalizeWebsiteClusterKey,
 } from "./importWebsiteMatchKey";
@@ -56,10 +57,15 @@ describe("importWebsiteMatchKey", () => {
 });
 
 describe("bareNoIdentityHost", () => {
-  it("returns the host for bare allowlisted platform URLs", () => {
-    assert.equal(bareNoIdentityHost("https://www.coingecko.com/"), "coingecko.com");
-    assert.equal(bareNoIdentityHost("https://coingecko.com"), "coingecko.com");
-    assert.equal(bareNoIdentityHost("https://www.coinmarketcap.com/"), "coinmarketcap.com");
+  it("returns null for bare platform-owner roots (they are domain identities)", () => {
+    assert.equal(bareNoIdentityHost("https://www.coingecko.com/"), null);
+    assert.equal(bareNoIdentityHost("https://coingecko.com"), null);
+    assert.equal(bareNoIdentityHost("https://www.coinmarketcap.com/"), null);
+  });
+
+  it("returns the host for other bare no_identity multi-tenant URLs", () => {
+    assert.equal(bareNoIdentityHost("https://discord.com/"), "discord.com");
+    assert.equal(bareNoIdentityHost("https://www.crunchbase.com/"), "crunchbase.com");
   });
 
   it("returns null for path-bearing no_identity URLs", () => {
@@ -82,6 +88,30 @@ describe("bareNoIdentityHost", () => {
     assert.equal(bareNoIdentityHost("https://x.com"), "x.com");
     assert.equal(bareNoIdentityHost("https://www.medium.com/"), "medium.com");
     assert.equal(bareNoIdentityHost("https://discord.com"), "discord.com");
+  });
+});
+
+describe("barePlatformOwnerRootHost", () => {
+  it("returns the host for bare CoinGecko and CoinMarketCap roots", () => {
+    assert.equal(barePlatformOwnerRootHost("https://www.coingecko.com/"), "coingecko.com");
+    assert.equal(barePlatformOwnerRootHost("https://coingecko.com"), "coingecko.com");
+    assert.equal(
+      barePlatformOwnerRootHost("https://www.coinmarketcap.com/"),
+      "coinmarketcap.com",
+    );
+  });
+
+  it("returns null for listing paths and unrelated hosts", () => {
+    assert.equal(
+      barePlatformOwnerRootHost("https://www.coingecko.com/en/coins/bitcoin"),
+      null,
+    );
+    assert.equal(
+      barePlatformOwnerRootHost("https://coinmarketcap.com/currencies/bitcoin/"),
+      null,
+    );
+    assert.equal(barePlatformOwnerRootHost("https://discord.com/"), null);
+    assert.equal(barePlatformOwnerRootHost("https://acme.com/"), null);
   });
 });
 

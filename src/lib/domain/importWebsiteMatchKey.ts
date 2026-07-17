@@ -1,3 +1,4 @@
+import { isBarePlatformOwnerMatchHost } from "./barePlatformOwnerMatchHosts";
 import { resolveCompanyWebsiteIdentity } from "./hostedPlatformWebsite";
 
 function parseWebsiteHostPath(website: string): { host: string; path: string } | null {
@@ -62,6 +63,17 @@ export function bareNoIdentityHost(website: string): string | null {
     return null;
   }
 
+  return parsed.host;
+}
+
+/**
+ * Bare/root host for allowlisted platform-owner URLs (CoinGecko, CoinMarketCap).
+ * Works whether the root resolves as domain identity or legacy no_identity.
+ */
+export function barePlatformOwnerRootHost(website: string): string | null {
+  const parsed = parseWebsiteHostPath(website);
+  if (!parsed || parsed.path !== "") return null;
+  if (!isBarePlatformOwnerMatchHost(parsed.host)) return null;
   return parsed.host;
 }
 

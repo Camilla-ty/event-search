@@ -21,6 +21,7 @@ import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPagina
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
+import { syncCompanyPrimaryDomainWithClient } from "./syncCompanyPrimaryDomain";
 
 const COMPANY_ADMIN_SELECT =
   "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at";
@@ -345,6 +346,12 @@ export async function updateCompanyAdmin(
 
   if (error) throw new Error(error.message);
 
+  const company = mapCompanyAdminRow(data as Record<string, unknown>);
+
+  if (input.website !== undefined) {
+    await syncCompanyPrimaryDomainWithClient(supabase, id, company.domain);
+  }
+
   if (persistedLogoUrl) {
     scheduleCompanyLogoCleanupAfterPersist({
       companyId: id,
@@ -352,7 +359,7 @@ export async function updateCompanyAdmin(
     });
   }
 
-  return { company: mapCompanyAdminRow(data as Record<string, unknown>), warnings };
+  return { company, warnings };
 }
 
 export type UploadCompanyLogoFileInput = {

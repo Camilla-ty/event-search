@@ -1,3 +1,5 @@
+import { isBarePlatformOwnerMatchHost } from "./barePlatformOwnerMatchHosts";
+
 export type CompanyLogoReviewFields = {
   website?: string | null;
   logo_url?: string | null;
@@ -216,6 +218,17 @@ function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
   }
 }
 
+/**
+ * Bare/root URL on an allowlisted platform-owner host (CoinGecko, CoinMarketCap).
+ * These hosts are otherwise always no_identity (token listing pages), but the
+ * platform company itself may use the bare host as `companies.domain`.
+ */
+function isBarePlatformOwnerRootUrl(host: string, pathname: string): boolean {
+  if (!isBarePlatformOwnerMatchHost(host)) return false;
+  const path = normalizePathname(pathname);
+  return path === "" || path === "/";
+}
+
 /** True when the website URL points at a known social / link-aggregator platform page. */
 export function isSocialPlatformWebsite(website: string): boolean {
   const parsed = parseWebsiteUrl(website);
@@ -269,6 +282,12 @@ export function resolveCompanyWebsiteIdentity(website: string): CompanyWebsiteId
   if (parsed) {
     const host = normalizeHost(parsed.hostname);
     if (!host) return { status: "unparseable" };
+
+    // Platform-owner exception: bare/root CoinGecko/CoinMarketCap URLs may be
+    // the platform company's identity key. Listing paths stay no_identity.
+    if (isBarePlatformOwnerRootUrl(host, parsed.pathname)) {
+      return { status: "domain", domain: host };
+    }
 
     if (matchesNonIdentityPlatform(host, parsed.pathname)) {
       return { status: "no_identity" };

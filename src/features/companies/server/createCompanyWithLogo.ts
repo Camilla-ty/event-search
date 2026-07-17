@@ -11,6 +11,7 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { companyLogoMetadataPatch } from "./companyLogoMetadata";
 import { ingestCompanyLogoByDomain } from "./companyLogoIngest";
 import { scheduleCompanyLogoCleanupAfterPersist } from "./companyLogoStorage";
+import { syncCompanyPrimaryDomainWithClient } from "./syncCompanyPrimaryDomain";
 
 export { normalizeDomainFromWebsite };
 
@@ -82,7 +83,9 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
     throw new Error(insertError.message);
   }
 
-  return inserted as CompanyRow;
+  const company = inserted as CompanyRow;
+  await syncCompanyPrimaryDomainWithClient(supabase, company.id, company.domain);
+  return company;
 }
 
 export async function applyManualCompanyLogoStorage(
