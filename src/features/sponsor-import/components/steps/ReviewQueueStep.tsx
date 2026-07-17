@@ -147,6 +147,8 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
 
   useImportProgressLabel(Boolean(progressMessage), progressMessage);
 
+  const batchAlreadyDraft = shouldSkipImportToDraftMaterialization(batch.status);
+
   const loadRowsForFilter = useCallback(
     async (activeFilter: FilterKey) => {
       const listed = await fetchRows(batch.id, {
@@ -282,8 +284,6 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
     summary.needs_review === 0 &&
     summary.pending_duplicate_count === 0 &&
     summary.blocking_validation_count === 0;
-
-  const batchAlreadyDraft = shouldSkipImportToDraftMaterialization(batch.status);
 
   function toggleRow(id: string) {
     setSelectedIds((prev) => {
