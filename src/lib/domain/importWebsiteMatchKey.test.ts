@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  bareNoIdentityHost,
   importWebsiteMatchKey,
   normalizeWebsiteClusterKey,
 } from "./importWebsiteMatchKey";
@@ -51,6 +52,36 @@ describe("importWebsiteMatchKey", () => {
   it("rejects corporate domain identities", () => {
     assert.equal(importWebsiteMatchKey("https://www.sorare.com"), null);
     assert.equal(importWebsiteMatchKey("https://acme.com/about"), null);
+  });
+});
+
+describe("bareNoIdentityHost", () => {
+  it("returns the host for bare allowlisted platform URLs", () => {
+    assert.equal(bareNoIdentityHost("https://www.coingecko.com/"), "coingecko.com");
+    assert.equal(bareNoIdentityHost("https://coingecko.com"), "coingecko.com");
+    assert.equal(bareNoIdentityHost("https://www.coinmarketcap.com/"), "coinmarketcap.com");
+  });
+
+  it("returns null for path-bearing no_identity URLs", () => {
+    assert.equal(
+      bareNoIdentityHost("https://www.coingecko.com/en/coins/bitcoin"),
+      null,
+    );
+    assert.equal(
+      bareNoIdentityHost("https://www.crunchbase.com/organization/acme"),
+      null,
+    );
+  });
+
+  it("returns null for identity-domain URLs", () => {
+    assert.equal(bareNoIdentityHost("https://www.acme.com/"), null);
+    assert.equal(bareNoIdentityHost("https://acme.com/about"), null);
+  });
+
+  it("returns the host for other bare no_identity URLs regardless of allowlist", () => {
+    assert.equal(bareNoIdentityHost("https://x.com"), "x.com");
+    assert.equal(bareNoIdentityHost("https://www.medium.com/"), "medium.com");
+    assert.equal(bareNoIdentityHost("https://discord.com"), "discord.com");
   });
 });
 

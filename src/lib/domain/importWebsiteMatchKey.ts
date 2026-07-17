@@ -46,6 +46,26 @@ export function normalizeWebsiteClusterKey(website: string): string {
 }
 
 /**
+ * Bare host of a no_identity URL with an empty/root path.
+ * Returns null for identity domains, path-bearing URLs, and unparseable input.
+ */
+export function bareNoIdentityHost(website: string): string | null {
+  const trimmed = website.trim();
+  if (trimmed === "") return null;
+
+  if (resolveCompanyWebsiteIdentity(trimmed).status !== "no_identity") {
+    return null;
+  }
+
+  const parsed = parseWebsiteHostPath(trimmed);
+  if (!parsed || parsed.path !== "") {
+    return null;
+  }
+
+  return parsed.host;
+}
+
+/**
  * Canonical import matching key for no_identity company websites.
  * Returns null for domain identities, unparseable input, and bare multi-tenant hosts.
  */

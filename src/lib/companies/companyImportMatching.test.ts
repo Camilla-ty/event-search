@@ -607,3 +607,237 @@ describe("companyImportMatching", () => {
     assert.equal(result.proposed_company_id, "sorare-id");
   });
 });
+
+describe("bare platform owner primary-domain fallback", () => {
+  const COINGECKO_ID = "2d81d427-ad48-4e4f-8217-95fc50487f2a";
+
+  function coingeckoContext(overrides: Partial<ImportMatchCompany> = {}) {
+    return buildImportMatchContext(
+      [
+        company({
+          id: COINGECKO_ID,
+          name: "CoinGecko",
+          domain: "coingecko.com",
+          website: "https://www.coingecko.com/",
+          aliases: ["CG"],
+          ...overrides,
+        }),
+      ],
+      [
+        { company_id: COINGECKO_ID, domain: "coingecko.com" },
+        { company_id: COINGECKO_ID, domain: "coingecko" },
+      ],
+    );
+  }
+
+  it("auto_ready on bare CoinGecko URL with exact company name", () => {
+    for (const website of ["https://www.coingecko.com/", "https://coingecko.com"]) {
+      const result = matchImportRowIdentity(
+        {
+          normalized_domain: null,
+          normalized_website: website,
+          normalized_company_name: "CoinGecko",
+        },
+        coingeckoContext(),
+      );
+
+      assert.equal(result.status, "auto_ready", website);
+      assert.equal(result.match_method, "domain", website);
+      assert.equal(result.match_confidence, "high", website);
+      assert.equal(result.proposed_company_id, COINGECKO_ID, website);
+      assert.equal(result.conflict_type, null, website);
+    }
+  });
+
+  it("auto_ready on bare CoinGecko URL with exact alias", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CG",
+      },
+      coingeckoContext(),
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "alias");
+    assert.equal(result.proposed_company_id, COINGECKO_ID);
+  });
+
+  it("falls through on bare CoinGecko URL with mismatched name", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "SomeToken",
+      },
+      coingeckoContext(),
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, null);
+    assert.equal(result.proposed_company_id, null);
+    assert.equal(result.conflict_type, null);
+  });
+
+  it("falls through on bare CoinGecko URL with empty name", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "",
+      },
+      coingeckoContext(),
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, null);
+    assert.equal(result.proposed_company_id, null);
+  });
+
+  it("does not apply fallback to path-bearing CoinGecko listing URLs", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/en/coins/bitcoin",
+        normalized_company_name: "CoinGecko",
+      },
+      coingeckoContext(),
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, COINGECKO_ID);
+  });
+
+  it("does not apply fallback when host is only in company_domains", () => {
+    const context = buildImportMatchContext(
+      [company({ id: COINGECKO_ID, name: "CoinGecko", domain: null, aliases: [] })],
+      [{ company_id: COINGECKO_ID, domain: "coingecko.com" }],
+    );
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CoinGecko",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, COINGECKO_ID);
+  });
+
+  it("falls through when multiple companies share the primary domain", () => {
+    const context = buildImportMatchContext([
+      company({ id: "a", name: "CoinGecko", domain: "coingecko.com", aliases: [] }),
+      company({ id: "b", name: "CoinGecko Clone", domain: "coingecko.com", aliases: [] }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CoinGecko",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "a");
+    assert.equal(result.conflict_type, null);
+  });
+
+  it("does not apply fallback for bare x.com URLs", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "x-owner",
+        name: "X Corp",
+        domain: "x.com",
+        website: "https://x.com",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://x.com",
+        normalized_company_name: "X Corp",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "x-owner");
+  });
+
+  it("does not apply fallback for bare medium.com URLs", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "medium-owner",
+        name: "Medium",
+        domain: "medium.com",
+        website: "https://medium.com",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.medium.com/",
+        normalized_company_name: "Medium",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, "medium-owner");
+  });
+
+  it("auto_ready on bare CoinMarketCap URL with exact company name", () => {
+    const context = buildImportMatchContext([
+      company({
+        id: "cmc-id",
+        name: "CoinMarketCap",
+        domain: "coinmarketcap.com",
+        website: "https://coinmarketcap.com/",
+        aliases: [],
+      }),
+    ]);
+
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coinmarketcap.com/",
+        normalized_company_name: "CoinMarketCap",
+      },
+      context,
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "domain");
+    assert.equal(result.proposed_company_id, "cmc-id");
+  });
+
+  it("prefers normal domain matching when normalized_domain is present", () => {
+    const result = matchImportRowIdentity(
+      {
+        normalized_domain: "coingecko.com",
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CoinGecko",
+      },
+      coingeckoContext(),
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "domain");
+    assert.equal(result.proposed_company_id, COINGECKO_ID);
+  });
+});

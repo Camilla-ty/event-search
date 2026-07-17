@@ -1,5 +1,9 @@
 import { normalizeCompanyNameKey } from "@/src/lib/companies/companyAliases";
-import { importWebsiteMatchKey } from "@/src/lib/domain/importWebsiteMatchKey";
+import { isBarePlatformOwnerMatchHost } from "@/src/lib/domain/barePlatformOwnerMatchHosts";
+import {
+  bareNoIdentityHost,
+  importWebsiteMatchKey,
+} from "@/src/lib/domain/importWebsiteMatchKey";
 
 export type ImportMatchCompany = {
   id: string;
@@ -17,6 +21,8 @@ export type ImportMatchCompanyDomain = {
 
 export type ImportMatchContext = {
   companiesByDomain: ReadonlyMap<string, readonly ImportMatchCompany[]>;
+  /** Primary companies.domain only — not company_domains. Used for bare platform-owner fallback. */
+  companiesByPrimaryDomain: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByWebsite: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByExactName: ReadonlyMap<string, readonly ImportMatchCompany[]>;
   companiesByExactAlias: ReadonlyMap<string, readonly ImportMatchCompany[]>;
@@ -196,6 +202,51 @@ function matchByWebsite(
   });
 }
 
+/**
+ * Bare/root no_identity URL on an allowlisted platform host whose primary domain
+ * is owned by exactly one catalog company, with exact name or alias agreement.
+ */
+function matchByBarePlatformOwnerPrimaryDomain(
+  row: ImportMatchableRow,
+  context: ImportMatchContext,
+): ImportMatchDecision | null {
+  const domain = row.normalized_domain?.trim().toLowerCase() ?? "";
+  if (domain !== "") return null;
+
+  const website = row.normalized_website?.trim() ?? "";
+  if (website === "") return null;
+
+  const host = bareNoIdentityHost(website);
+  if (!host || !isBarePlatformOwnerMatchHost(host)) {
+    return null;
+  }
+
+  const candidates = context.companiesByPrimaryDomain.get(host) ?? [];
+  if (candidates.length !== 1) {
+    return null;
+  }
+
+  const candidate = candidates[0];
+  if (!candidate) {
+    return null;
+  }
+
+  const rowName = row.normalized_company_name?.trim() ?? "";
+  if (rowName === "") {
+    return null;
+  }
+
+  if (exactNameMatches(rowName, candidate.name)) {
+    return autoReady(candidate.id, "domain");
+  }
+
+  if (findExactAliasOnCompany(rowName, candidate) !== null) {
+    return autoReady(candidate.id, "alias");
+  }
+
+  return null;
+}
+
 function matchByExactName(
   rowName: string,
   context: ImportMatchContext,
@@ -255,6 +306,11 @@ export function matchImportRowIdentity(
     return websiteDecision;
   }
 
+  const barePlatformOwnerDecision = matchByBarePlatformOwnerPrimaryDomain(row, context);
+  if (barePlatformOwnerDecision !== null) {
+    return barePlatformOwnerDecision;
+  }
+
   if (rowName !== "") {
     const nameDecision = matchByExactName(rowName, context);
     if (nameDecision !== null) {
@@ -302,6 +358,7 @@ export function buildImportMatchContext(
 ): ImportMatchContext {
   const companiesById = new Map(companies.map((company) => [company.id, company]));
   const companiesByDomain = new Map<string, ImportMatchCompany[]>();
+  const companiesByPrimaryDomain = new Map<string, ImportMatchCompany[]>();
   const companiesByWebsite = new Map<string, ImportMatchCompany[]>();
   const companiesByExactName = new Map<string, ImportMatchCompany[]>();
   const companiesByExactAlias = new Map<string, ImportMatchCompany[]>();
@@ -310,6 +367,7 @@ export function buildImportMatchContext(
     const domain = company.domain?.trim().toLowerCase() ?? "";
     if (domain !== "") {
       addDomainCandidate(companiesByDomain, domain, company);
+      addDomainCandidate(companiesByPrimaryDomain, domain, company);
     }
 
     const website = company.website?.trim() ?? "";
@@ -348,6 +406,7 @@ export function buildImportMatchContext(
 
   return {
     companiesByDomain,
+    companiesByPrimaryDomain,
     companiesByWebsite,
     companiesByExactName,
     companiesByExactAlias,

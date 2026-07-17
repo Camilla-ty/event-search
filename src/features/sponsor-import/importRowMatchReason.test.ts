@@ -55,6 +55,19 @@ describe("resolveImportRowMatchReason", () => {
     );
   });
 
+  it("returns domain match for bare platform-owner fallback rows", () => {
+    assert.deepEqual(
+      resolveImportRowMatchReason(
+        baseRow({
+          match_method: "domain",
+          normalized_domain: null,
+          normalized_website: "https://www.coingecko.com/",
+        }),
+      ),
+      { kind: "domain", domain: "coingecko.com" },
+    );
+  });
+
   it("returns website match with normalized website", () => {
     assert.deepEqual(
       resolveImportRowMatchReason(

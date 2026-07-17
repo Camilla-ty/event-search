@@ -1,3 +1,6 @@
+import { bareNoIdentityHost } from "@/src/lib/domain/importWebsiteMatchKey";
+import { isBarePlatformOwnerMatchHost } from "@/src/lib/domain/barePlatformOwnerMatchHosts";
+
 import { resolveRowCompanyName, resolveRowDomain } from "./reviewQueueEligibility";
 import type { SponsorImportRow } from "./client/types";
 
@@ -20,6 +23,25 @@ export type ImportRowMatchReasonView = {
   alias?: string;
   importName?: string;
 };
+
+function resolveImportRowMatchDomain(row: SponsorImportRow): string {
+  const fromNormalized = resolveRowDomain(row);
+  if (fromNormalized !== "") {
+    return fromNormalized;
+  }
+
+  const website = resolveRowWebsite(row);
+  if (website === "") {
+    return "";
+  }
+
+  const host = bareNoIdentityHost(website);
+  if (host && isBarePlatformOwnerMatchHost(host)) {
+    return host;
+  }
+
+  return "";
+}
 
 export function getImportRowMatchedAlias(row: SponsorImportRow): string | null {
   if (row.match_method !== "alias") {
@@ -48,7 +70,7 @@ export function resolveImportRowMatchReason(
   }
 
   if (row.match_method === "domain") {
-    const domain = resolveRowDomain(row);
+    const domain = resolveImportRowMatchDomain(row);
     if (domain === "") {
       return { kind: "domain" };
     }

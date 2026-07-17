@@ -26,6 +26,65 @@ function previewStatus(decision: ReturnType<typeof matchImportRowIdentity>): str
   return "create_new";
 }
 
+describe("Partner Alumni bulk matching", () => {
+  it("previews bare CoinGecko URL as matched when primary domain owner agrees", () => {
+    const COINGECKO_ID = "2d81d427-ad48-4e4f-8217-95fc50487f2a";
+    const matchContext = buildImportMatchContext(
+      [
+        {
+          id: COINGECKO_ID,
+          name: "CoinGecko",
+          domain: "coingecko.com",
+          website: "https://www.coingecko.com/",
+          aliases: [],
+        },
+      ],
+      [{ company_id: COINGECKO_ID, domain: "coingecko.com" }],
+    );
+
+    const decision = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CoinGecko",
+      },
+      matchContext,
+    );
+
+    assert.equal(previewStatus(decision), "matched");
+    assert.equal(decision.match_method, "domain");
+    assert.equal(decision.match_confidence, "high");
+    assert.equal(decision.proposed_company_id, COINGECKO_ID);
+  });
+
+  it("does not preview bare x.com as matched via platform-owner fallback", () => {
+    const matchContext = buildImportMatchContext(
+      [
+        {
+          id: "x-owner",
+          name: "X Corp",
+          domain: "x.com",
+          website: "https://x.com",
+          aliases: [],
+        },
+      ],
+      [],
+    );
+
+    const decision = matchImportRowIdentity(
+      {
+        normalized_domain: null,
+        normalized_website: "https://x.com",
+        normalized_company_name: "X Corp",
+      },
+      matchContext,
+    );
+
+    assert.equal(previewStatus(decision), "review");
+    assert.equal(decision.match_method, "exact_name");
+  });
+});
+
 describe("Partner Alumni bulk matching integration", { skip: !process.env.SUPABASE_SERVICE_ROLE_KEY }, () => {
   it("loads full directory and matches MoonPay by exact name", async () => {
     const supabase = createAdminClient();

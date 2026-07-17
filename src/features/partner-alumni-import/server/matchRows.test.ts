@@ -56,4 +56,40 @@ describe("partner alumni matchRows", () => {
     assert.equal(result.match_method, null);
     assert.equal(result.proposed_company_id, null);
   });
+
+  it("auto-readies bare CoinGecko URL via platform-owner fallback", async () => {
+    const COINGECKO_ID = "2d81d427-ad48-4e4f-8217-95fc50487f2a";
+    const context = buildImportMatchContextFromDirectory(
+      [
+        {
+          id: COINGECKO_ID,
+          name: "CoinGecko",
+          domain: "coingecko.com",
+          website: "https://www.coingecko.com/",
+          aliases: [],
+        },
+      ],
+      [{ company_id: COINGECKO_ID, domain: "coingecko.com" }],
+    );
+
+    const result = await matchRow(
+      {
+        id: "row-162",
+        status: "needs_review",
+        normalized_domain: null,
+        normalized_website: "https://www.coingecko.com/",
+        normalized_company_name: "CoinGecko",
+        mapped_display_order: 1,
+        has_blocking_validation: false,
+      },
+      context,
+      new Map(),
+    );
+
+    assert.equal(result.status, "auto_ready");
+    assert.equal(result.match_method, "domain");
+    assert.equal(result.match_confidence, "high");
+    assert.equal(result.proposed_company_id, COINGECKO_ID);
+    assert.equal(result.conflict_type, null);
+  });
 });
