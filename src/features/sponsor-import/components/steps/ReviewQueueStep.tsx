@@ -15,6 +15,10 @@ import {
   patchRowDecision,
   runMatching,
 } from "../../client/api";
+import {
+  shouldShowImportToDraftButton,
+  shouldSkipImportToDraftMaterialization,
+} from "../../client/importDraftNavigation";
 import type { RowSummary, SponsorImportRow } from "../../client/types";
 import { SPONSOR_IMPORT_MAX_ROWS } from "../../types";
 import { hasImportRowMatchReason } from "../../importRowMatchReason";
@@ -121,7 +125,7 @@ function duplicateStatusLabel(row: SponsorImportRow): { primary: string; seconda
 }
 
 export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
-  const { batch, goToStep, markImportToDraftComplete } = useSponsorImportWizard();
+  const { batch, goToStep, openDraftStep } = useSponsorImportWizard();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [progressMessage, setProgressMessage] = useState<string | null>(IMPORT_PROGRESS.matching);
@@ -170,6 +174,14 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
   }, [filter, loadRowsForFilter]);
 
   useEffect(() => {
+    if (batchAlreadyDraft) {
+      openDraftStep();
+    }
+  }, [batchAlreadyDraft, openDraftStep]);
+
+  useEffect(() => {
+    if (batchAlreadyDraft) return;
+
     let cancelled = false;
 
     async function init() {
@@ -200,7 +212,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
       cancelled = true;
       setProgressMessage(null);
     };
-  }, [batch.id, loadRowsForFilter]);
+  }, [batch.id, batchAlreadyDraft, loadRowsForFilter]);
 
   useEffect(() => {
     if (skipFilterReload.current) return;
@@ -265,10 +277,13 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
   const showStep1 = canBulkAccept || acceptedDomainMatchCount !== null;
   const step1Collapsed = !canBulkAccept && acceptedDomainMatchCount !== null;
   const canImportToDraft =
+    shouldShowImportToDraftButton(batch.status) &&
     summary.auto_ready === 0 &&
     summary.needs_review === 0 &&
     summary.pending_duplicate_count === 0 &&
     summary.blocking_validation_count === 0;
+
+  const batchAlreadyDraft = shouldSkipImportToDraftMaterialization(batch.status);
 
   function toggleRow(id: string) {
     setSelectedIds((prev) => {
@@ -386,10 +401,16 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
     if (importToDraftInFlight.current) return;
     importToDraftInFlight.current = true;
     setActionLoading(true);
-    setProgressMessage(IMPORT_PROGRESS.materializingCompanies);
     setError(null);
 
     try {
+      if (shouldSkipImportToDraftMaterialization(batch.status)) {
+        openDraftStep();
+        return;
+      }
+
+      setProgressMessage(IMPORT_PROGRESS.materializingCompanies);
+
       const materialized = await runCompanyMaterialization(
         (cursor) =>
           materializeCompaniesChunk(batch.id, cursor === undefined ? {} : { cursor }),
@@ -422,8 +443,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
         setError(result.error || FINALIZE_IMPORT_TO_DRAFT_FAILED_MESSAGE);
         return;
       }
-      markImportToDraftComplete();
-      goToStep("draft");
+      openDraftStep();
     } finally {
       importToDraftInFlight.current = false;
       setActionLoading(false);
@@ -810,13 +830,19 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           >
             Back
           </Button>
-          <Button
-            onClick={() => void handleImportToDraft()}
-            disabled={!canImportToDraft || actionLoading || loading}
-            aria-busy={importToDraftInProgress}
-          >
-            Import to draft →
-          </Button>
+          {batchAlreadyDraft ? (
+            <Button onClick={() => openDraftStep()} disabled={actionLoading}>
+              Open draft →
+            </Button>
+          ) : (
+            <Button
+              onClick={() => void handleImportToDraft()}
+              disabled={!canImportToDraft || actionLoading || loading}
+              aria-busy={importToDraftInProgress}
+            >
+              Import to draft →
+            </Button>
+          )}
         </div>
       </div>
 

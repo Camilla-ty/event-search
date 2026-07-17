@@ -142,13 +142,13 @@ describe("in-flow step navigation policy", () => {
     assert.equal(source.includes("router.push(flowHref"), false);
   });
 
-  it("ReviewQueueStep marks import-to-draft complete before entering draft", () => {
+  it("ReviewQueueStep opens draft via router navigation after finalize", () => {
     const source = readFileSync(
       path.join(process.cwd(), "src/features/sponsor-import/components/steps/ReviewQueueStep.tsx"),
       "utf8",
     );
-    assert.match(source, /markImportToDraftComplete\(\)/);
-    assert.match(source, /goToStep\("draft"\)/);
+    assert.match(source, /openDraftStep\(\)/);
+    assert.doesNotMatch(source, /goToStep\("draft"\)/);
   });
 });
 

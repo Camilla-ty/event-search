@@ -1133,12 +1133,52 @@ async function recoverStaleImportToDraftPhase(
   return recoverStaleImportProcessingPhase(batchId, batch);
 }
 
+export async function buildCompletedDraftLinksMaterializationResult(
+  batchId: string,
+): Promise<MaterializeDraftLinksChunkResult> {
+  const supabase = createAdminClient();
+  const { count: totalResolved, error: totalError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved");
+
+  if (totalError) throw new Error(totalError.message);
+
+  const { count: linked, error: linkedError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "resolved")
+    .not("draft_link_id", "is", null);
+
+  if (linkedError) throw new Error(linkedError.message);
+
+  const total = totalResolved ?? 0;
+  const linkedTotal = linked ?? 0;
+
+  return {
+    examined_count: 0,
+    skipped_count: 0,
+    links_created: 0,
+    links_updated: 0,
+    rows_linked: 0,
+    total_resolved_rows: total,
+    rows_with_draft_link: linkedTotal,
+    done: true,
+    next_cursor: null,
+  };
+}
+
 async function executeRunMaterializeCompaniesChunk(
   batchId: string,
   actorId: string,
   options: { cursor?: number; limit?: number } = {},
 ): Promise<MaterializeCompaniesChunkResult> {
   let batch = await getBatchRow(batchId);
+  if (batch.status === "draft") {
+    return buildCompletedCompanyMaterializationResult(batchId);
+  }
   assertBatchStatus(batch, ["review"]);
 
   if (await recoverStaleImportProcessingPhase(batchId, batch)) {
@@ -1275,7 +1315,7 @@ async function isCompanyMaterializationComplete(batchId: string): Promise<boolea
   return (count ?? 0) === 0;
 }
 
-async function buildCompletedCompanyMaterializationResult(
+export async function buildCompletedCompanyMaterializationResult(
   batchId: string,
 ): Promise<MaterializeCompaniesChunkResult> {
   const supabase = createAdminClient();
@@ -1365,6 +1405,9 @@ async function executeRunMaterializeDraftLinksChunk(
   options: { cursor?: number; limit?: number } = {},
 ): Promise<MaterializeDraftLinksChunkResult> {
   let batch = await getBatchRow(batchId);
+  if (batch.status === "draft") {
+    return buildCompletedDraftLinksMaterializationResult(batchId);
+  }
   assertBatchStatus(batch, ["review"]);
 
   if (await recoverStaleImportProcessingPhase(batchId, batch)) {

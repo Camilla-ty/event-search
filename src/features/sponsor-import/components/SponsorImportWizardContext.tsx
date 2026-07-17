@@ -8,6 +8,7 @@ import type { SponsorImportBatch } from "../client/types";
 type SponsorImportWizardContextValue = {
   batch: SponsorImportBatch;
   goToStep: (requested: ImportStep) => void;
+  openDraftStep: () => void;
   updateBatch: (batch: SponsorImportBatch) => void;
   markImportToDraftComplete: () => void;
 };

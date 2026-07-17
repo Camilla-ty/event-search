@@ -1,7 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { shouldRedirectReviewToDraft } from "../client/importDraftNavigation";
+import { flowHref } from "../client/resumeStep";
 
 import type { ImportStep } from "../client/types";
 import type { RowSummary, SponsorImportBatch } from "../client/types";
@@ -17,6 +20,21 @@ import { PublishStep } from "./steps/PublishStep";
 import { ReviewQueueStep } from "./steps/ReviewQueueStep";
 import { UploadStep } from "./steps/UploadStep";
 import { ValidationStep } from "./steps/ValidationStep";
+
+function OpenDraftFallback({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-6 text-center">
+      <p className="text-sm font-medium text-emerald-950">This import already has a draft.</p>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-3 text-sm font-semibold text-brand-primary hover:underline"
+      >
+        Open draft →
+      </button>
+    </div>
+  );
+}
 
 type EditionContext = {
   id: string;
@@ -72,14 +90,26 @@ function SponsorImportFlowBody({
     }));
   }, []);
 
+  const openDraftStep = useCallback(() => {
+    markImportToDraftComplete();
+    router.replace(flowHref(localBatch.id, "draft"));
+  }, [localBatch.id, markImportToDraftComplete, router]);
+
+  useEffect(() => {
+    if (shouldRedirectReviewToDraft(localBatch.status, activeStep)) {
+      router.replace(flowHref(localBatch.id, "draft"));
+    }
+  }, [activeStep, localBatch.id, localBatch.status, router]);
+
   const wizardContext = useMemo(
     () => ({
       batch: localBatch,
       goToStep,
+      openDraftStep,
       updateBatch,
       markImportToDraftComplete,
     }),
-    [localBatch, goToStep, updateBatch, markImportToDraftComplete],
+    [localBatch, goToStep, openDraftStep, updateBatch, markImportToDraftComplete],
   );
 
   return (
@@ -114,8 +144,11 @@ function SponsorImportFlowBody({
         {activeStep === "validation" ? (
           <ValidationStep initialSummary={summary} />
         ) : null}
-        {activeStep === "review" ? (
+        {activeStep === "review" && localBatch.status !== "draft" ? (
           <ReviewQueueStep initialSummary={summary} />
+        ) : null}
+        {activeStep === "review" && localBatch.status === "draft" ? (
+          <OpenDraftFallback onOpen={openDraftStep} />
         ) : null}
         {activeStep === "draft" ? <DraftReviewStep /> : null}
         {activeStep === "publish" ? <PublishStep editionId={edition.id} /> : null}
