@@ -81,6 +81,8 @@ type PageMetadataInput = {
   title: string;
   description?: string;
   path?: string;
+  /** When omitted, page stays indexable by default (no robots tag). */
+  robots?: Metadata["robots"];
 };
 
 /** Per-route metadata with consistent OG/Twitter and title segment for template. */
@@ -88,6 +90,7 @@ export function createPageMetadata({
   title,
   description = SITE_DESCRIPTION,
   path,
+  robots,
 }: PageMetadataInput): Metadata {
   const metadataBase = getSiteUrl();
   const canonicalPath = path ?? "/";
@@ -97,6 +100,7 @@ export function createPageMetadata({
     title,
     description,
     alternates: { canonical: url },
+    ...(robots !== undefined ? { robots } : {}),
     openGraph: {
       title,
       description,
@@ -109,4 +113,17 @@ export function createPageMetadata({
       images: [DEFAULT_OG_IMAGE_PATH],
     },
   };
+}
+
+/**
+ * Soft-404 / not-found metadata: never indexable; avoid entity-specific
+ * “Event not found” style titles that look like real pages.
+ */
+export function createNotFoundPageMetadata(path: string): Metadata {
+  return createPageMetadata({
+    title: "Not found",
+    description: SITE_DESCRIPTION,
+    path,
+    robots: { index: false, follow: true },
+  });
 }

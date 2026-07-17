@@ -8,9 +8,14 @@ import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * noindex covers every /admin route via layout metadata inheritance —
+ * including sponsor-imports, company merge, and other workflow pages.
+ */
 export const metadata = createPageMetadata({
   title: "Admin",
   path: "/admin",
+  robots: { index: false, follow: false },
 });
 
 export default async function AdminRouteLayout({

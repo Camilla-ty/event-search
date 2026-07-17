@@ -39,6 +39,8 @@ describe("sortPublicEventSeriesByName", () => {
         description: null,
         website_url: null,
         logo_url: null,
+        lifecycle_status: "active",
+        merged_into_series: null,
       },
       {
         id: "1",
@@ -47,6 +49,8 @@ describe("sortPublicEventSeriesByName", () => {
         description: null,
         website_url: null,
         logo_url: null,
+        lifecycle_status: "active",
+        merged_into_series: null,
       },
     ];
 

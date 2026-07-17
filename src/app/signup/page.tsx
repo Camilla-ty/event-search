@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = createPageMetadata({
   title: "Sign up",
   path: "/signup",
+  robots: { index: false, follow: true },
 });
 
 type SignupPageProps = {

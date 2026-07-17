@@ -27,6 +27,12 @@ export type SponsorDetailSeriesGroup = {
 
 export type SponsorDetailSummary = {
   sponsoredEditionCount: number;
+  /**
+   * True when the company_sponsor_stats query failed, so the count is a
+   * fallback 0 rather than an authoritative 0. Consumers must not treat the
+   * count as a signal (e.g. noindex) when this is set.
+   */
+  sponsoredEditionCountUnknown?: boolean;
   /** Set only for authenticated responses. */
   latestActivityAt?: string | null;
 };

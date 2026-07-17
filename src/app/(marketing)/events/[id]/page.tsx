@@ -36,8 +36,15 @@ import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEdit
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
-import { createPageMetadata } from "@/src/lib/metadata/site";
+import {
+  createNotFoundPageMetadata,
+  createPageMetadata,
+} from "@/src/lib/metadata/site";
 import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
+import {
+  getEventEditionIndexability,
+  robotsForIndexability,
+} from "@/src/lib/seo/indexability";
 import { EventPartnerAlumniSection } from "@/src/features/partner-alumni/components/detail/EventPartnerAlumniSection";
 import {
   getPublicPartnerAlumniForSeriesId,
@@ -68,7 +75,7 @@ export async function generateMetadata({
   const { id } = await params;
   const edition = await getEventDetailData(id);
   if (!edition) {
-    return createPageMetadata({ title: "Event not found", path: `/events/${id}` });
+    return createNotFoundPageMetadata(`/events/${id}`);
   }
   const name = edition.name?.trim() || "Event";
   const location = formatLocationFromCityEmbed(edition.cities);
@@ -76,10 +83,18 @@ export async function generateMetadata({
     ? `${name} — ${location}. View sponsors and event intelligence on EventPixels.`
     : `${name}. View sponsors and event intelligence on EventPixels.`;
   const slug = typeof edition.slug === "string" ? edition.slug : id;
+  const editionId =
+    typeof edition.id === "string" && edition.id.trim() !== ""
+      ? edition.id.trim()
+      : null;
+  const sponsorCount =
+    editionId !== null ? await getTotalSponsorCount(editionId) : 0;
+  const decision = getEventEditionIndexability({ sponsorCount });
   return createPageMetadata({
     title: name,
     description,
     path: `/events/${slug}`,
+    robots: robotsForIndexability(decision),
   });
 }
 

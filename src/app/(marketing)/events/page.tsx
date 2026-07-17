@@ -1,17 +1,17 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { EventExplorerPage } from "@/src/features/events/components/explorer/EventExplorerPage";
 import { getEventExplorerPage } from "@/src/features/events/server/getEventExplorerPage";
 import { buildEventExplorerPath } from "@/src/features/events/server/eventExplorerParams";
 import { createPageMetadata } from "@/src/lib/metadata/site";
+import {
+  eventCollectionHasFilterOrSearchParams,
+  getCollectionIndexability,
+  robotsForIndexability,
+} from "@/src/lib/seo/indexability";
 
 export const dynamic = "force-dynamic";
-
-export const metadata = createPageMetadata({
-  title: "Events",
-  description: "Discover and analyze events, sponsors, and opportunities across the industry.",
-  path: "/events",
-});
 
 type EventsPageProps = {
   searchParams: Promise<{
@@ -26,6 +26,23 @@ type EventsPageProps = {
     page?: string;
   }>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: EventsPageProps): Promise<Metadata> {
+  const raw = await searchParams;
+  const decision = getCollectionIndexability({
+    hasFilterOrSearchParams: eventCollectionHasFilterOrSearchParams(raw),
+  });
+
+  return createPageMetadata({
+    title: "Events",
+    description:
+      "Discover and analyze events, sponsors, and opportunities across the industry.",
+    path: "/events",
+    robots: robotsForIndexability(decision),
+  });
+}
 
 function toEventExplorerSearchParams(
   raw: Awaited<EventsPageProps["searchParams"]>,

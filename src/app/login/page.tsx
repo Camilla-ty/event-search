@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = createPageMetadata({
   title: "Log in",
   path: "/login",
+  robots: { index: false, follow: true },
 });
 
 type LoginPageProps = {

@@ -30,9 +30,9 @@ describe("eventLifecycleStatus", () => {
   });
 
   it("does not offer rebranded as an admin option", () => {
-    assert.equal(
-      EVENT_LIFECYCLE_STATUS_OPTIONS.some((option) => option.value === "rebranded"),
-      false,
+    const values: string[] = EVENT_LIFECYCLE_STATUS_OPTIONS.map(
+      (option) => option.value,
     );
+    assert.equal(values.includes("rebranded"), false);
   });
 });

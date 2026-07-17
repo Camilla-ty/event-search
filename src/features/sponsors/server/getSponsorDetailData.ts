@@ -121,18 +121,24 @@ function groupEditionsBySeries(
   );
 }
 
-function buildSummary(
+export function buildSponsorDetailSummary(
   stats: Awaited<ReturnType<typeof getCompanySponsorStats>>,
   isAuthenticated: boolean,
+  options?: { statsUnavailable?: boolean },
 ): SponsorDetailSummary {
   const sponsoredEditionCount = stats?.sponsored_edition_count ?? 0;
+  const unknown = options?.statsUnavailable === true && stats === null;
+
+  const base: SponsorDetailSummary = unknown
+    ? { sponsoredEditionCount, sponsoredEditionCountUnknown: true }
+    : { sponsoredEditionCount };
 
   if (!isAuthenticated) {
-    return { sponsoredEditionCount };
+    return base;
   }
 
   return {
-    sponsoredEditionCount,
+    ...base,
     latestActivityAt: stats?.latest_activity_at ?? null,
   };
 }
@@ -157,14 +163,16 @@ export async function getSponsorDetailData(
   }
 
   let stats: Awaited<ReturnType<typeof getCompanySponsorStats>> = null;
+  let statsUnavailable = false;
   try {
     stats = await getCompanySponsorStats(company.id);
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[sponsors] company stats load failed:", error);
-    }
+    statsUnavailable = true;
+    console.error("[sponsors] company stats load failed:", error);
   }
-  const summary = buildSummary(stats, isAuthenticated);
+  const summary = buildSponsorDetailSummary(stats, isAuthenticated, {
+    statsUnavailable,
+  });
 
   if (!isAuthenticated) {
     return {
