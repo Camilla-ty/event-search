@@ -2,15 +2,21 @@ import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import type { PublicKeywordSummary } from "@/src/features/events/types/keywords";
+import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 
 type SeriesHubHeaderProps = {
   series: PublicEventSeriesSummary;
   topics?: ReadonlyArray<PublicKeywordSummary>;
+  factualSummary?: string | null;
 };
 
-export function SeriesHubHeader({ series, topics = [] }: SeriesHubHeaderProps) {
+export function SeriesHubHeader({
+  series,
+  topics = [],
+  factualSummary = null,
+}: SeriesHubHeaderProps) {
   const websiteDisplay = formatPublicCompanyWebsite({
     website: series.website_url,
     domain: null,
@@ -34,6 +40,9 @@ export function SeriesHubHeader({ series, topics = [] }: SeriesHubHeaderProps) {
             Recurring event brand — browse all editions below.
           </p>
         )}
+        {factualSummary ? (
+          <FactualSummaryParagraph summary={factualSummary} />
+        ) : null}
         {websiteDisplay ? (
           <p className="text-sm">
             <a

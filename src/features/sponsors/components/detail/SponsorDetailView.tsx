@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
+import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
+import { buildCompanySummary } from "@/src/lib/content/factualSummary";
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
@@ -43,6 +45,17 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
   const loginHref =
     profilePath !== null ? buildLoginEntryUrl(profilePath) : buildLoginEntryUrl("/sponsors");
   const hasSponsorships = summary.sponsoredEditionCount > 0;
+  const companyName =
+    typeof company.name === "string" && company.name.trim() !== ""
+      ? company.name.trim()
+      : "Company profile";
+  const factualSummary = buildCompanySummary({
+    name: companyName,
+    website: company.website,
+    domain: company.domain,
+    sponsoredEditionCount: summary.sponsoredEditionCount,
+    sponsoredEditionCountUnknown: summary.sponsoredEditionCountUnknown === true,
+  });
 
   return (
     <section className="space-y-8">
@@ -63,11 +76,10 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
             <Badge variant="neutral">Sponsor</Badge>
             {company.industry ? <Badge variant="success">{company.industry}</Badge> : null}
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {typeof company.name === "string" && company.name.trim() !== ""
-              ? company.name.trim()
-              : "Company profile"}
-          </h1>
+          <h1 className="text-2xl font-semibold text-slate-900">{companyName}</h1>
+          {factualSummary ? (
+            <FactualSummaryParagraph summary={factualSummary} />
+          ) : null}
           {company.short_description ? (
             <p className="text-sm text-slate-600">{company.short_description}</p>
           ) : null}

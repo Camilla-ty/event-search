@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
+import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
 import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
 import { EventOverviewSummarySection } from "@/src/features/events/components/detail/EventOverviewSummarySection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
@@ -33,6 +34,11 @@ import { getTotalSponsorCount } from "@/src/lib/queries/companies";
 import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
+import {
+  buildEventEditionSummary,
+  countDistinctSponsorshipTiers,
+  formatSummaryDateRange,
+} from "@/src/lib/content/factualSummary";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
@@ -79,9 +85,14 @@ export async function generateMetadata({
   }
   const name = edition.name?.trim() || "Event";
   const location = formatLocationFromCityEmbed(edition.cities);
-  const description = location
-    ? `${name} — ${location}. View sponsors and event intelligence on EventPixels.`
-    : `${name}. View sponsors and event intelligence on EventPixels.`;
+  const dateRange = formatSummaryDateRange(edition.start_date, edition.end_date);
+  const description = [
+    location ? `${name} — ${location}` : name,
+    dateRange,
+    "Sponsors and event intelligence on EventPixels.",
+  ]
+    .filter((part): part is string => typeof part === "string" && part.trim() !== "")
+    .join(". ");
   const slug = typeof edition.slug === "string" ? edition.slug : id;
   const editionId =
     typeof edition.id === "string" && edition.id.trim() !== ""
@@ -179,6 +190,21 @@ export default async function EventDetailPage({
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
   const eventDisplayName = edition.name?.trim() || "Event";
+  const rawSponsors = (edition.event_sponsors ?? []) as EventSponsorRow[];
+  const sponsorshipTierCount = countDistinctSponsorshipTiers(rawSponsors);
+  const publicVenueName =
+    venue && !venue.archived_at ? venue.name : null;
+  const factualSummary = buildEventEditionSummary({
+    name: eventDisplayName,
+    seriesName: seriesBrandLabel,
+    startDate: typeof edition.start_date === "string" ? edition.start_date : null,
+    endDate: typeof edition.end_date === "string" ? edition.end_date : null,
+    locationLabel: cityLabel || null,
+    venueName: publicVenueName,
+    sponsorCount: totalSponsorCount,
+    sponsorshipTierCount,
+    lastReviewedAt,
+  });
 
   return (
     <section className="space-y-6">
@@ -261,6 +287,12 @@ export default async function EventDetailPage({
           </div>
         </div>
       </header>
+
+      {factualSummary ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <FactualSummaryParagraph summary={factualSummary} />
+        </div>
+      ) : null}
 
       <PublicEventEditionTabs
         eventSlug={eventSlug}

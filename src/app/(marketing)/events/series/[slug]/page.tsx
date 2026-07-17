@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SeriesEditionsList } from "@/src/features/events/components/series/SeriesEditionsList";
 import { SeriesHubHeader } from "@/src/features/events/components/series/SeriesHubHeader";
 import { getSeriesHubData } from "@/src/features/events/server/getSeriesHubData";
+import { buildEventSeriesSummary } from "@/src/lib/content/factualSummary";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   createNotFoundPageMetadata,
@@ -86,13 +87,30 @@ export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
     notFound();
   }
 
+  const factualSummary = buildEventSeriesSummary({
+    name: data.series.name,
+    lifecycleStatus: data.series.lifecycle_status,
+    editions: data.editions.map((edition) => ({
+      name: edition.name,
+      year: edition.year,
+      startDate: edition.start_date,
+      endDate: edition.end_date,
+      locationLabel: edition.locationLabel,
+    })),
+    topics: data.topics.map((topic) => topic.name),
+  });
+
   return (
     <section className="space-y-6">
       <Link href="/events" className={`text-sm ${brandLinkClass}`}>
         ← Back to Events
       </Link>
 
-      <SeriesHubHeader series={data.series} topics={data.topics} />
+      <SeriesHubHeader
+        series={data.series}
+        topics={data.topics}
+        factualSummary={factualSummary}
+      />
       <SeriesEditionsList editions={data.editions} />
     </section>
   );
