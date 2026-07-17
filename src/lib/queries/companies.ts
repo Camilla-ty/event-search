@@ -35,8 +35,6 @@ export const COMPANY_PUBLIC_COLUMNS = `
   logo_status,
   logo_fetched_at,
   logo_fetch_error,
-  short_description,
-  description,
   city_id,
   created_at,
   restricted_at
@@ -62,8 +60,6 @@ export type CompanyPublicRow = {
   logo_status: string | null;
   logo_fetched_at: string | null;
   logo_fetch_error: string | null;
-  short_description: string | null;
-  description: string | null;
   city_id: string | null;
   created_at: string | null;
   restricted_at?: string | null;

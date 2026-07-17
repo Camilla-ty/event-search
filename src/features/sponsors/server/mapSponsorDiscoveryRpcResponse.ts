@@ -86,7 +86,6 @@ function parseRpcRow(
     logo_url: mapPublicLogoUrl(readNullableString(row.logo_url)),
     logo_source: readNullableString(row.logo_source),
     logo_status: readNullableString(row.logo_status),
-    short_description: readNullableString(row.short_description),
     sponsored_edition_count: sponsoredEditionCount,
     latest_activity_at: readNullableString(row.latest_activity_at),
     event_tier: hasEventFilter

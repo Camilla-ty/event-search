@@ -9,8 +9,6 @@ export type CompanyMergeSnapshot = {
   logo_url: string | null;
   logo_source: string | null;
   logo_status: string | null;
-  short_description: string | null;
-  description: string | null;
   city_id: string | null;
   aliases: string[];
   created_at: string | null;
@@ -66,8 +64,6 @@ export type DraftLinkConflictStrategy = "keep_canonical_draft" | "keep_duplicate
 
 export type FieldSource = "canonical" | "duplicate";
 
-export type TextFieldStrategy = FieldSource | "longer" | "non_empty";
-
 export type LogoFieldStrategy = FieldSource | "best_available";
 
 export type CompanyMergeFieldResolutions = {
@@ -75,8 +71,6 @@ export type CompanyMergeFieldResolutions = {
   domain: FieldSource | "non_empty";
   website: FieldSource | "non_empty";
   logo: LogoFieldStrategy;
-  short_description: TextFieldStrategy;
-  description: TextFieldStrategy;
 };
 
 export type CompanyMergeResolutions = {
@@ -194,8 +188,6 @@ function mapCompanyMergeSnapshot(raw: unknown): CompanyMergeSnapshot {
     logo_url: readNullableString(raw.logo_url),
     logo_source: readNullableString(raw.logo_source),
     logo_status: readNullableString(raw.logo_status),
-    short_description: readNullableString(raw.short_description),
-    description: readNullableString(raw.description),
     city_id: readNullableString(raw.city_id),
     aliases: readStringArray(raw.aliases),
     created_at: readNullableString(raw.created_at),
@@ -405,8 +397,6 @@ export function defaultCompanyMergeFieldResolutions(): CompanyMergeFieldResoluti
     domain: "canonical",
     website: "canonical",
     logo: "best_available",
-    short_description: "longer",
-    description: "longer",
   };
 }
 

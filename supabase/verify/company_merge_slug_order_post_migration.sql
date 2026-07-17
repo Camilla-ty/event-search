@@ -77,9 +77,7 @@ BEGIN
         'slug', 'duplicate',
         'domain', 'canonical',
         'website', 'canonical',
-        'logo', 'best_available',
-        'short_description', 'longer',
-        'description', 'longer'
+        'logo', 'best_available'
       )
     ),
     'slug-order-verify'

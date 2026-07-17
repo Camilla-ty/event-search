@@ -56,3 +56,6 @@ supabase/.temp/
 
 # Script run artifacts (audit/cleanup JSONL backups — generated locally)
 scripts/artifacts/
+
+# local audit snapshots (third-party copy; do not commit)
+/docs/audits/company-description-curated-snapshot-*.csv

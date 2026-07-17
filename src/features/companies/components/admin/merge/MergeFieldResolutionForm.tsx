@@ -62,26 +62,6 @@ const FIELD_CONFIGS: FieldConfig[] = [
       { value: "best_available", label: "Best available logo" },
     ],
   },
-  {
-    key: "short_description",
-    label: "Short description",
-    buildOptions: (canonicalName, duplicateName) => [
-      { value: "canonical", label: `Keep ${canonicalName} text` },
-      { value: "duplicate", label: `Use ${duplicateName} text` },
-      { value: "longer", label: "Prefer longer text" },
-      { value: "non_empty", label: "Prefer non-empty text" },
-    ],
-  },
-  {
-    key: "description",
-    label: "Description",
-    buildOptions: (canonicalName, duplicateName) => [
-      { value: "canonical", label: `Keep ${canonicalName} text` },
-      { value: "duplicate", label: `Use ${duplicateName} text` },
-      { value: "longer", label: "Prefer longer text" },
-      { value: "non_empty", label: "Prefer non-empty text" },
-    ],
-  },
 ];
 
 export function MergeFieldResolutionForm({

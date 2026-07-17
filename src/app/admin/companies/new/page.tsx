@@ -31,8 +31,6 @@ export default async function NewCompanyAdminPage() {
           city_id: "",
           logo_url: "",
           aliases: [],
-          short_description: "",
-          description: "",
         }}
       />
     </section>

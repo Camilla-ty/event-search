@@ -21,8 +21,6 @@ function adminCompany(
     logo_status: null,
     logo_fetched_at: null,
     logo_fetch_error: null,
-    short_description: null,
-    description: null,
     city_id: null,
     created_at: null,
     aliases: [],

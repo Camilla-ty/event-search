@@ -12,7 +12,6 @@ import {
   type LogoFieldStrategy,
   type OrganizerConflictStrategy,
   type SponsorshipConflictStrategy,
-  type TextFieldStrategy,
 } from "@/src/features/companies/server/companyMerge";
 
 const UUID_REGEX =
@@ -38,8 +37,6 @@ const DRAFT_LINK_STRATEGIES = new Set<DraftLinkConflictStrategy>([
 const FIELD_SOURCES = new Set(["canonical", "duplicate"]);
 
 const DOMAIN_WEBSITE_STRATEGIES = new Set(["canonical", "duplicate", "non_empty"]);
-
-const TEXT_FIELD_STRATEGIES = new Set(["canonical", "duplicate", "longer", "non_empty"]);
 
 const LOGO_STRATEGIES = new Set(["canonical", "duplicate", "best_available"]);
 
@@ -136,8 +133,6 @@ function parseFieldResolutions(raw: unknown): CompanyMergeFieldResolutions {
   const domain = readStringField(raw, "domain");
   const website = readStringField(raw, "website");
   const logo = readStringField(raw, "logo");
-  const shortDescription = readStringField(raw, "short_description");
-  const description = readStringField(raw, "description");
 
   if (slug === null || !FIELD_SOURCES.has(slug)) {
     throw new CompanyMergeAdminHttpError(
@@ -163,18 +158,6 @@ function parseFieldResolutions(raw: unknown): CompanyMergeFieldResolutions {
       "field_resolutions.logo must be 'canonical', 'duplicate', or 'best_available'.",
     );
   }
-  if (shortDescription === null || !TEXT_FIELD_STRATEGIES.has(shortDescription)) {
-    throw new CompanyMergeAdminHttpError(
-      400,
-      "field_resolutions.short_description must be 'canonical', 'duplicate', 'longer', or 'non_empty'.",
-    );
-  }
-  if (description === null || !TEXT_FIELD_STRATEGIES.has(description)) {
-    throw new CompanyMergeAdminHttpError(
-      400,
-      "field_resolutions.description must be 'canonical', 'duplicate', 'longer', or 'non_empty'.",
-    );
-  }
 
   const slugSource: CompanyMergeFieldResolutions["slug"] =
     slug === "canonical" ? "canonical" : "duplicate";
@@ -196,30 +179,12 @@ function parseFieldResolutions(raw: unknown): CompanyMergeFieldResolutions {
       : logo === "duplicate"
         ? "duplicate"
         : "best_available";
-  const shortDescriptionStrategy: TextFieldStrategy =
-    shortDescription === "canonical"
-      ? "canonical"
-      : shortDescription === "duplicate"
-        ? "duplicate"
-        : shortDescription === "non_empty"
-          ? "non_empty"
-          : "longer";
-  const descriptionStrategy: TextFieldStrategy =
-    description === "canonical"
-      ? "canonical"
-      : description === "duplicate"
-        ? "duplicate"
-        : description === "non_empty"
-          ? "non_empty"
-          : "longer";
 
   return {
     slug: slugSource,
     domain: domainStrategy,
     website: websiteStrategy,
     logo: logoStrategy,
-    short_description: shortDescriptionStrategy,
-    description: descriptionStrategy,
   };
 }
 

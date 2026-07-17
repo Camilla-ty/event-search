@@ -29,20 +29,7 @@ export type CompanyRow = {
   logo_url: string | null;
   logo_source: string | null;
   logo_status: string | null;
-  short_description?: string | null;
-  description?: string | null;
 };
-
-function buildShortDescription(name: string) {
-  return `${name} partner profile`;
-}
-
-function buildDescription(name: string, website: string | null) {
-  if (website) {
-    return `Auto-generated profile for ${name} (${website}).`;
-  }
-  return `Auto-generated profile for ${name}.`;
-}
 
 /**
  * Insert a company row. Logo fetch/upload is a separate non-blocking step (`enrichCompanyLogo`).
@@ -82,17 +69,13 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyR
     logo_status: logoMeta.logo_status,
     logo_fetched_at: null,
     logo_fetch_error: null,
-    short_description: buildShortDescription(trimmedName),
-    description: buildDescription(trimmedName, hasWebsite ? trimmedWebsite : null),
   };
 
   const { data: inserted, error: insertError } = await supabase
     .schema("public")
     .from("companies")
     .insert(insertPayload)
-    .select(
-      "id, name, slug, domain, logo_url, logo_source, logo_status, short_description, description",
-    )
+    .select("id, name, slug, domain, logo_url, logo_source, logo_status")
     .single();
 
   if (insertError) {
@@ -113,9 +96,7 @@ export async function applyManualCompanyLogoStorage(
     .from("companies")
     .update(patch)
     .eq("id", companyId)
-    .select(
-      "id, name, slug, domain, logo_url, logo_source, logo_status, short_description, description",
-    )
+    .select("id, name, slug, domain, logo_url, logo_source, logo_status")
     .single();
 
   if (error) {

@@ -48,7 +48,6 @@ export type SponsorDiscoveryInternalRow = {
   logo_url: string | null;
   logo_source: string | null;
   logo_status: string | null;
-  short_description: string | null;
   sponsored_edition_count: number;
   latest_activity_at: string | null;
   event_tier: SponsorDiscoveryEventTier | null;

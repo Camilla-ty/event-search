@@ -40,8 +40,6 @@ type PatchCompanyBody = {
   website?: string;
   logo_url?: string | null;
   aliases?: string[];
-  short_description?: string | null;
-  description?: string | null;
   city_id?: string | null;
 };
 
@@ -82,8 +80,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (logo && !isValidHttpUrl(logo)) errors.push("logo_url must be a valid URL");
     else patch.logo_url = logo;
   }
-  if (body.short_description !== undefined) patch.short_description = body.short_description;
-  if (body.description !== undefined) patch.description = body.description;
   if (body.city_id !== undefined) {
     patch.city_id =
       typeof body.city_id === "string" && body.city_id.trim() !== ""

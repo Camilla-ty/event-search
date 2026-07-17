@@ -16,7 +16,6 @@ function baseRow(
     logo_url: null,
     logo_source: null,
     logo_status: null,
-    short_description: null,
     sponsored_edition_count: 2,
     latest_activity_at: "2026-05-01",
     event_tier: null,

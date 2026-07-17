@@ -28,8 +28,6 @@ type CompanyFormValues = {
   city_id: string;
   logo_url: string;
   aliases: string[];
-  short_description: string;
-  description: string;
 };
 
 type CompanyAdminFormProps = {
@@ -217,8 +215,6 @@ export function CompanyAdminForm({
         city_id: values.city_id.trim() || null,
         logo_url: values.logo_url.trim() || null,
         aliases: aliasesForSave,
-        short_description: values.short_description.trim() || null,
-        description: values.description.trim() || null,
       }),
     });
     return (await response.json()) as ApiResponse;
@@ -337,26 +333,6 @@ export function CompanyAdminForm({
                 disabled={fieldsDisabled}
               />
             </div>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Short description</span>
-              <input
-                type="text"
-                value={values.short_description}
-                onChange={(e) => updateField("short_description", e.target.value)}
-                disabled={fieldsDisabled}
-                className={formInputClass}
-              />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Description</span>
-              <textarea
-                value={values.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                disabled={fieldsDisabled}
-                rows={4}
-                className={formInputClass}
-              />
-            </label>
           </>
         ) : null}
 

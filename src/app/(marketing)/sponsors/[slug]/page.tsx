@@ -11,6 +11,7 @@ import {
   getCompanyIndexability,
   robotsForIndexability,
 } from "@/src/lib/seo/indexability";
+import { buildSponsorMetadataDescription } from "@/src/lib/seo/sponsorMetadata";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,14 @@ export async function generateMetadata({
   }
 
   const name = data.company.name?.trim() || "Sponsor";
-  const industry = data.company.industry?.trim();
-  const description = industry
-    ? `${name} — ${industry}. Company and sponsor intelligence on EventPixels.`
-    : `${name}. Company and sponsor intelligence on EventPixels.`;
+  const description = buildSponsorMetadataDescription({
+    name,
+    website: data.company.website,
+    domain: data.company.domain,
+    sponsoredEditionCount: data.summary.sponsoredEditionCount,
+    sponsoredEditionCountUnknown:
+      data.summary.sponsoredEditionCountUnknown === true,
+  });
   const profileSlug = data.company.slug?.trim() || slug;
   const decision = getCompanyIndexability({
     restricted: false,
@@ -50,7 +55,9 @@ export async function generateMetadata({
   });
 }
 
-export default async function SponsorDetailPage({ params }: SponsorDetailPageProps) {
+export default async function SponsorDetailPage({
+  params,
+}: SponsorDetailPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
   const {

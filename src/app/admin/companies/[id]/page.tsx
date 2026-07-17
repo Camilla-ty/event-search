@@ -117,8 +117,6 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           city_id: company.city_id ?? "",
           logo_url: company.logo_url ?? "",
           aliases: [...company.aliases],
-          short_description: company.short_description ?? "",
-          description: company.description ?? "",
         }}
         initialLogoMetadata={{
           logo_url: company.logo_url ?? "",

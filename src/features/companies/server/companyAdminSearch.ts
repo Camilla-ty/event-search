@@ -11,7 +11,7 @@ import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPagina
 import type { CompanyAdminRow } from "./companyAdmin";
 
 const COMPANY_ADMIN_SEARCH_SELECT =
-  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, short_description, description, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at";
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at";
 
 function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
   return {
@@ -25,8 +25,6 @@ function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
     logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
     logo_fetched_at: typeof row.logo_fetched_at === "string" ? row.logo_fetched_at : null,
     logo_fetch_error: typeof row.logo_fetch_error === "string" ? row.logo_fetch_error : null,
-    short_description: typeof row.short_description === "string" ? row.short_description : null,
-    description: typeof row.description === "string" ? row.description : null,
     city_id: typeof row.city_id === "string" ? row.city_id : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
     aliases: parseCompanyAliasesFromRow(row.aliases),

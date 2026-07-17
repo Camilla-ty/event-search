@@ -66,9 +66,7 @@ BEGIN
         'slug', 'canonical',
         'domain', 'duplicate',
         'website', 'canonical',
-        'logo', 'best_available',
-        'short_description', 'longer',
-        'description', 'longer'
+        'logo', 'best_available'
       )
     ),
     'domain-order-verify'

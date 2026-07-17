@@ -80,9 +80,6 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
           {factualSummary ? (
             <FactualSummaryParagraph summary={factualSummary} />
           ) : null}
-          {company.short_description ? (
-            <p className="text-sm text-slate-600">{company.short_description}</p>
-          ) : null}
           <dl className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
             {locationLabel ? (
               <div>
@@ -112,13 +109,6 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
           </dl>
         </div>
       </header>
-
-      {company.description && company.description.trim() !== "" ? (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">About</h2>
-          <p className="mt-2 text-sm text-slate-600">{company.description.trim()}</p>
-        </section>
-      ) : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Sponsorship history</h2>

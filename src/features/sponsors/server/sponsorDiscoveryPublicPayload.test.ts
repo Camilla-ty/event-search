@@ -31,7 +31,6 @@ function internalFixture(): SponsorDiscoveryInternalResult {
         logo_url: null,
         logo_source: null,
         logo_status: null,
-        short_description: "Hidden",
         sponsored_edition_count: 4,
         latest_activity_at: "2026-05-01",
         event_tier: { tier_rank: 1, tier_label: "Gold Sponsor" },
