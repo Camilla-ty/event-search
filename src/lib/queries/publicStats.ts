@@ -3,13 +3,16 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 export type PublicStats = {
   events: number;
   sponsors: number;
-  sponsorships: number;
+  organizers: number;
   eventCities: number;
 };
 
 async function exactCount(
   supabase: ReturnType<typeof createAdminClient>,
-  table: "event_editions" | "companies" | "event_sponsors",
+  table:
+    | "event_editions"
+    | "companies"
+    | "event_edition_organizers",
 ): Promise<number> {
   const { count, error } = await supabase
     .from(table)
@@ -42,12 +45,12 @@ async function distinctEventCityCount(
 export async function getPublicStats(): Promise<PublicStats> {
   const supabase = createAdminClient();
 
-  const [events, sponsors, sponsorships, eventCities] = await Promise.all([
+  const [events, sponsors, organizers, eventCities] = await Promise.all([
     exactCount(supabase, "event_editions"),
     exactCount(supabase, "companies"),
-    exactCount(supabase, "event_sponsors"),
+    exactCount(supabase, "event_edition_organizers"),
     distinctEventCityCount(supabase),
   ]);
 
-  return { events, sponsors, sponsorships, eventCities };
+  return { events, sponsors, organizers, eventCities };
 }
