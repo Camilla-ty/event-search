@@ -14,7 +14,7 @@ import { createClient } from "@/src/lib/supabase/server";
 export type { PublicKeywordSummary };
 
 const EVENT_SERIES_PUBLIC_SELECT =
-  "id, name, slug, description, website_url, logo_url";
+  "id, name, slug, website_url, logo_url";
 
 export type TopicHubData = {
   topic: PublicKeywordSummary;

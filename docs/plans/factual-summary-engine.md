@@ -61,7 +61,6 @@ Only these fields feed the engine. All are already loaded by existing public loa
 | `lifecycle_status` | active \| discontinued \| merged \| null | null/blank ⇒ active; merged series never render a summary (redirect/tombstone per IR1) |
 | `editions[]` | array | Count, min/max year, next upcoming edition (name + start date), most recent past edition |
 | `topics[]` (public keywords) | array | Names only, as stored |
-| `description` | string \| null | **Not consumed** — curated copy renders separately; engine output stays purely structural |
 
 ### 3.3 Company (`getSponsorDetailData`, `company_sponsor_stats`)
 

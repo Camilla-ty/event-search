@@ -24,7 +24,6 @@ export function TopicSeriesList({ series }: TopicSeriesListProps) {
       <ul className="mt-4 divide-y divide-slate-100">
         {series.map((item) => {
           const href = buildSeriesHubPath(item);
-          const description = item.description?.trim() ?? "";
 
           return (
             <li
@@ -40,9 +39,6 @@ export function TopicSeriesList({ series }: TopicSeriesListProps) {
                 />
                 <div className="min-w-0">
                   <p className="font-medium text-slate-900">{item.name}</p>
-                  {description !== "" ? (
-                    <p className="line-clamp-2 text-xs text-slate-500">{description}</p>
-                  ) : null}
                 </div>
               </div>
               {href ? (

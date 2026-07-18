@@ -8,7 +8,6 @@ export type PublicEventSeriesSummary = {
   id: string;
   slug: string;
   name: string;
-  description: string | null;
   website_url: string | null;
   logo_url: string | null;
   lifecycle_status: string | null;

@@ -30,7 +30,6 @@ export default async function AdminCreateEventSeriesPage() {
         initial={{
           name: "",
           slug: "",
-          description: "",
           website_url: "",
           logo_url: "",
           lifecycle_status: "",

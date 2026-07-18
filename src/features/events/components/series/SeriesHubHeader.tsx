@@ -33,16 +33,13 @@ export function SeriesHubHeader({
 
       <div className="min-w-0 space-y-3">
         <h1 className="text-2xl font-semibold text-slate-900">{series.name}</h1>
-        {series.description ? (
-          <p className="text-sm text-slate-600">{series.description}</p>
+        {factualSummary ? (
+          <FactualSummaryParagraph summary={factualSummary} />
         ) : (
           <p className="text-sm text-slate-500">
             Recurring event brand — browse all editions below.
           </p>
         )}
-        {factualSummary ? (
-          <FactualSummaryParagraph summary={factualSummary} />
-        ) : null}
         {websiteDisplay ? (
           <p className="text-sm">
             <a

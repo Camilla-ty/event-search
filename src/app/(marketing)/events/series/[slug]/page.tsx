@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/metadata/site";
 import { robotsForIndexability } from "@/src/lib/seo/indexability";
 import { resolveSeriesPublicAccess } from "@/src/lib/seo/resolveSeriesPublicAccess";
+import { buildSeriesMetadataDescription } from "@/src/lib/seo/seriesMetadata";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +33,41 @@ export async function generateMetadata({
   if (access.kind === "redirect") {
     return createPageMetadata({
       title: access.fromSeries.name,
-      description: `${access.fromSeries.name} — all events and editions on EventPixels.`,
+      description: buildSeriesMetadataDescription({
+        name: access.fromSeries.name,
+        lifecycleStatus: "merged",
+      }),
       path: `/events/series/${access.fromSeries.slug}`,
       robots: robotsForIndexability(access.indexability),
     });
   }
 
-  const series = access.series;
-  const description =
-    series.description?.trim() ||
-    `${series.name} — all events and editions on EventPixels.`;
+  if (access.kind === "tombstone") {
+    return createPageMetadata({
+      title: access.series.name,
+      description: buildSeriesMetadataDescription({
+        name: access.series.name,
+        lifecycleStatus: "merged",
+      }),
+      path: `/events/series/${access.series.slug}`,
+      robots: robotsForIndexability(access.indexability),
+    });
+  }
+
+  const data = await getSeriesHubData(slug);
+  const series = data?.series ?? access.series;
+  const description = buildSeriesMetadataDescription({
+    name: series.name,
+    lifecycleStatus: series.lifecycle_status,
+    editions: (data?.editions ?? []).map((edition) => ({
+      name: edition.name,
+      year: edition.year,
+      startDate: edition.start_date,
+      endDate: edition.end_date,
+      locationLabel: edition.locationLabel,
+    })),
+    topics: (data?.topics ?? []).map((topic) => topic.name),
+  });
 
   return createPageMetadata({
     title: series.name,

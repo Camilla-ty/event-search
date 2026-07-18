@@ -39,7 +39,6 @@ export async function GET(_request: Request, context: RouteContext) {
 type PatchSeriesBody = {
   name?: string;
   slug?: string;
-  description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
   keyword_ids?: string[];
@@ -80,7 +79,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!slug) errors.push("slug cannot be empty");
     else patch.slug = slug;
   }
-  if (body.description !== undefined) patch.description = body.description;
   if (body.website_url !== undefined) {
     const website = body.website_url?.trim() || null;
     if (website && !isValidHttpUrl(website)) errors.push("website_url must be a valid URL");

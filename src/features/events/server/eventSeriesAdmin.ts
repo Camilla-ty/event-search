@@ -12,7 +12,6 @@ const EVENT_SERIES_ADMIN_SELECT = `
   id,
   name,
   slug,
-  description,
   website_url,
   logo_url,
   lifecycle_status,
@@ -31,7 +30,6 @@ export type EventSeriesRow = {
   id: string;
   name: string;
   slug: string;
-  description: string | null;
   website_url: string | null;
   logo_url: string | null;
   lifecycle_status: string | null;
@@ -43,7 +41,6 @@ export type EventSeriesRow = {
 export type CreateEventSeriesInput = {
   name: string;
   slug: string;
-  description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
   lifecycle_status?: string | null;
@@ -53,7 +50,6 @@ export type CreateEventSeriesInput = {
 export type UpdateEventSeriesInput = {
   name?: string;
   slug?: string;
-  description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
   lifecycle_status?: string | null;
@@ -81,7 +77,6 @@ function mapEventSeriesRow(raw: Record<string, unknown>): EventSeriesRow {
     id: String(raw.id),
     name: typeof raw.name === "string" ? raw.name : "",
     slug: typeof raw.slug === "string" ? raw.slug : "",
-    description: typeof raw.description === "string" ? raw.description : null,
     website_url: typeof raw.website_url === "string" ? raw.website_url : null,
     logo_url: typeof raw.logo_url === "string" ? raw.logo_url : null,
     lifecycle_status: typeof raw.lifecycle_status === "string" ? raw.lifecycle_status : null,
@@ -154,7 +149,6 @@ export async function createEventSeries(
   const payload = {
     name: input.name.trim(),
     slug: input.slug.trim(),
-    description: input.description?.trim() || null,
     website_url: input.website_url?.trim() || null,
     logo_url: input.logo_url?.trim() || null,
     lifecycle_status: input.lifecycle_status?.trim() || null,
@@ -180,9 +174,6 @@ export async function updateEventSeries(
 
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.slug !== undefined) patch.slug = input.slug.trim();
-  if (input.description !== undefined) {
-    patch.description = input.description?.trim() || null;
-  }
   if (input.website_url !== undefined) {
     patch.website_url = input.website_url?.trim() || null;
   }

@@ -42,7 +42,6 @@ export function mapPublicEventSeries(raw: unknown): PublicEventSeriesSummary | n
     id,
     slug: slug !== "" ? slug : id,
     name,
-    description: typeof row.description === "string" ? row.description : null,
     website_url: typeof row.website_url === "string" ? row.website_url : null,
     logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     lifecycle_status:

@@ -28,7 +28,6 @@ const ALLOWED_LOGO_UPLOAD_MIME_TYPES = [
 type SeriesFormValues = {
   name: string;
   slug: string;
-  description: string;
   website_url: string;
   logo_url: string;
   lifecycle_status: string;
@@ -134,7 +133,6 @@ export function EventSeriesForm({
     const base = {
       name: values.name,
       slug: effectiveSlug,
-      description: values.description.trim() || null,
       website_url: values.website_url.trim() || null,
       lifecycle_status: lifecycleStatus,
       merged_into_series_id: mergedIntoSeriesId,
@@ -339,17 +337,6 @@ export function EventSeriesForm({
               updateField("slug", e.target.value);
             }}
             disabled={fieldsDisabled}
-            className={formInputClass}
-          />
-        </label>
-
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-700">Description</span>
-          <textarea
-            value={values.description}
-            onChange={(e) => updateField("description", e.target.value)}
-            disabled={fieldsDisabled}
-            rows={3}
             className={formInputClass}
           />
         </label>

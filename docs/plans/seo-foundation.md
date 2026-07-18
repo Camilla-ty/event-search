@@ -118,9 +118,10 @@ Fallbacks when fields missing: omit empty segments; always keep a one-sentence p
 **Title:** `{seriesName}`  
 **Description preference order**
 
-1. Curated `series.description` (trimmed, length-capped ~150–160 chars for SERP).
-2. Fallback: `{seriesName} — event editions, sponsors, and series intelligence on EventPixels.`
-3. Optional enrichment: edition count / latest year when cheap to compute.
+1. Length-capped factual series summary from `buildEventSeriesSummary` / `buildSeriesMetadataDescription` (~150–160 chars for SERP).
+2. Fallback: `{seriesName} — all events and editions on EventPixels.`
+
+Public body copy uses the same factual summary engine (no curated or AI-generated `event_series.description` column).
 
 **Canonical strategy**
 

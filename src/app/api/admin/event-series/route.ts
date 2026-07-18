@@ -32,7 +32,6 @@ export async function GET(request: Request) {
 type CreateSeriesBody = {
   name?: string;
   slug?: string;
-  description?: string | null;
   website_url?: string | null;
   logo_url?: string | null;
   keyword_ids?: string[];
@@ -84,7 +83,6 @@ export async function POST(request: Request) {
     let series = await createEventSeries({
       name,
       slug,
-      description: body.description ?? null,
       website_url: website,
       logo_url: null,
       lifecycle_status: lifecycle.data.lifecycle_status,

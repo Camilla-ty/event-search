@@ -157,7 +157,6 @@ flowchart TD
 |-------|-----------|----------|----------|-------|
 | Name | `event_series.name` | **Yes** | Yes | Unique |
 | Slug | `event_series.slug` | **Yes** | Yes | Auto from name; preview |
-| Description | `event_series.description` | No | Yes | Textarea |
 | Website URL | `event_series.website_url` | No | Yes | Optional marketing link |
 | Logo URL | `event_series.logo_url` | No | Edit only | Manual paste only — event logos are manual-only |
 
@@ -243,8 +242,8 @@ Read-only table — no create/edit in phase 1.
 | Slug | `companies.slug` | Yes | Unique; **editable with warnings** (slug change modal) |
 | City | `companies.city_id` | Yes | |
 | Logo URL | `companies.logo_url` | Yes | |
-| Short description | `companies.short_description` | Yes | |
-| Description | `companies.description` | Yes | |
+| Short description | — | — | Removed; public copy uses factual summary / structured fields |
+| Description | — | — | Removed (see company description removal) |
 
 **Read-only:** Domain (derived; show for context) · sponsor link count · created date.
 
