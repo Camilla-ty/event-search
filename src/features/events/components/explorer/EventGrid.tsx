@@ -1,11 +1,12 @@
 "use client";
 
 import { Button } from "@/src/components/common";
-import { NoResultsState, PageLoadingSkeleton } from "@/src/components/common/states";
+import { NoResultsState } from "@/src/components/common/states";
 import type { EventExplorerRow } from "@/src/features/events/server/eventExplorerTypes";
 import { eventExplorerTotalPages } from "@/src/features/events/server/eventExplorerParams";
 
 import { EventCard } from "./EventCard";
+import { EventCardSkeletonList } from "./EventCardSkeleton";
 
 type EventGridProps = {
   rows: EventExplorerRow[];
@@ -27,7 +28,7 @@ export function EventGrid({
   onReset,
 }: EventGridProps) {
   if (loading) {
-    return <PageLoadingSkeleton variant="list" />;
+    return <EventCardSkeletonList />;
   }
 
   if (total === 0) {
