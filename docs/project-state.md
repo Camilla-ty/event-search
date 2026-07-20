@@ -99,7 +99,7 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 | **Edition `last_reviewed_at` automation** | Meaningful profile + live roster + qualifying import publish set `now()`; create stays NULL; manual-only research saves preserved; reorder/move excluded | Feeds Event Explorer **Recommended** / **Recently Reviewed** sort signals |
 | API routes + service role; manual validation; hand-rolled UI | Existing codebase conventions; build is the gate. |
 
-**Other sources:** schema in `supabase/migrations/`; phase design docs in `docs/` for detail beyond this file.
+**Other sources:** schema in `supabase/migrations/`; phase design docs in `docs/` for detail beyond this file; recurring engineering reviews and the live [Findings Register](./health/findings-register.md) under [`docs/health/`](./health/README.md).
 
 ## 6. Operations
 

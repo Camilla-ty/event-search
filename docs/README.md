@@ -1,5 +1,14 @@
 # EventPixels — Project documentation
 
+## Engineering Health Check
+
+| Document | Description |
+|----------|-------------|
+| [Engineering Health Check](./health/README.md) | Recurring monthly/quarterly engineering reviews; operating rules, cadence, and finding lifecycle |
+| [Findings Register](./health/findings-register.md) | **Live work queue** — outstanding Findings only (`Open` / `In Progress` / `Deferred`) |
+
+Immutable review reports live under `docs/health/<review-type>/`; the baseline is [Architecture Audit 2026-07](./health/architecture/2026-07-architecture.md).
+
 ## Architecture
 
 | Document | Description |
