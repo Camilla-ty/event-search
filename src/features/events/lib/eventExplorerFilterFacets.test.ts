@@ -9,11 +9,10 @@ import {
   getEventExplorerFacetEditions,
 } from "@/src/features/events/lib/eventExplorerFilterFacets";
 
-function makeEdition(
-  overrides: Partial<EventExplorerMatchable> & { series_id?: string },
-): EventExplorerMatchable & { series_id?: string } {
+function makeEdition(overrides: Partial<EventExplorerMatchable>): EventExplorerMatchable {
   return {
     name: overrides.name ?? "Sample Event",
+    series_id: overrides.series_id ?? null,
     event_series: overrides.event_series ?? { name: "Sample Series" },
     cities: overrides.cities ?? {
       name: "Singapore",

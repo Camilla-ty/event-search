@@ -347,6 +347,7 @@ describe("isEventExplorerFiltersApplying regions", () => {
 describe("matchesEventExplorerFilters regions", () => {
   const singaporeEvent = {
     name: "TOKEN2049 Singapore",
+    series_id: null,
     event_series: { name: "TOKEN2049" },
     cities: { countries: { name: "Singapore" } },
     start_date: "2026-06-15",
@@ -354,6 +355,7 @@ describe("matchesEventExplorerFilters regions", () => {
   };
   const japanEvent = {
     name: "WebX Tokyo",
+    series_id: null,
     event_series: { name: "WebX" },
     cities: { countries: { name: "Japan" } },
     start_date: "2026-08-01",
@@ -361,6 +363,7 @@ describe("matchesEventExplorerFilters regions", () => {
   };
   const ukEvent = {
     name: "FinTech Week",
+    series_id: null,
     event_series: { name: "FinTech Week" },
     cities: { countries: { name: "United Kingdom" } },
     start_date: "2026-07-01",
@@ -460,6 +463,7 @@ describe("matchesEventExplorerFilters q search", () => {
   it("matches event series names in q", () => {
     const item = {
       name: "Singapore Edition",
+      series_id: null,
       event_series: { name: "TOKEN2049" },
       cities: { countries: { name: "Singapore" } },
       start_date: "2026-06-15",
@@ -477,6 +481,7 @@ describe("matchesEventExplorerFilters q search", () => {
   it("does not filter by legacy industry URL values", () => {
     const item = {
       name: "Singapore Edition",
+      series_id: null,
       event_series: { name: "TOKEN2049" },
       cities: { countries: { name: "Singapore" } },
       start_date: "2026-06-15",

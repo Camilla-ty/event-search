@@ -8,6 +8,7 @@ import { performance } from "node:perf_hooks";
 import {
   normalizeEventExplorerFilters,
   readExplorerSeriesId,
+  type EventExplorerMatchable,
 } from "@/src/features/events/lib/eventExplorerQuery";
 import {
   buildEventExplorerFilterFacetsFromEditions,
@@ -212,7 +213,10 @@ async function main() {
     catalogRecords.map((event) => ({ id: event.id, sponsor_count: event.sponsor_count ?? 0 })),
   );
 
-  const facets = buildEventExplorerFilterFacetsFromEditions(catalog, catalog);
+  const facets = buildEventExplorerFilterFacetsFromEditions(
+    catalog as unknown as EventExplorerMatchable[],
+    catalog as unknown as EventExplorerMatchable[],
+  );
   const facetsBytes = byteSize(facets);
 
   console.log("Full catalog (proposed client payload)");
@@ -231,7 +235,15 @@ async function main() {
   for (const scenario of SCENARIOS) {
     const filters = normalizeEventExplorerFilters(scenario.filters);
     const topicSeriesIds = await resolveTopicSeriesIds(filters.topics);
-    const filtered = applyEventExplorerFilters(catalog, filters, { topicSeriesIds });
+    // `catalog` is built from loosely-typed `Record<string, unknown>` rows (see
+    // buildCatalogWithCounts); it carries series_id at runtime but the spread-based
+    // inference above doesn't preserve it statically. This is a manual benchmarking
+    // script only, not part of the app or test suite.
+    const filtered = applyEventExplorerFilters(
+      catalog as unknown as EventExplorerMatchable[],
+      filters,
+      { topicSeriesIds },
+    );
     const records = filtered.map((edition) => mapToClientRecord(edition));
     console.log(
       `  ${scenario.label.padEnd(28)} count=${String(records.length).padStart(4)}  ${formatKb(byteSize(records))}`,

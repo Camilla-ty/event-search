@@ -12,6 +12,7 @@ import {
 function eventWithTopics(id: string, slugs: string[]): EventRecord {
   return {
     id,
+    series_id: null,
     series_keywords: slugs.map((slug) => ({ id: slug, name: slug, slug })),
   };
 }

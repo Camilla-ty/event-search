@@ -16,7 +16,8 @@ export type EventExplorerMatchable = {
   website_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
-  series_id?: string | null;
+  /** Required (not optional) so topic-filter matching cannot silently receive items with no series id. */
+  series_id: string | null;
   event_series?: {
     name?: string | null;
     website_url?: string | null;
@@ -213,7 +214,7 @@ export function buildNormalizedRegionNameSet(regions: readonly string[]): Set<st
 
 /** True when the edition country matches any selected region (OR), or when none are selected. */
 export function editionMatchesEventExplorerRegions(
-  item: EventExplorerMatchable,
+  item: Pick<EventExplorerMatchable, "cities">,
   regions: readonly string[],
 ): boolean {
   const regionNames = buildNormalizedRegionNameSet(regions);

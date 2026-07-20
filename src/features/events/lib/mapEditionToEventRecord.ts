@@ -1,7 +1,9 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import { readExplorerSeriesId } from "@/src/features/events/lib/eventExplorerQuery";
 
 type EditionLike = {
   id: unknown;
+  series_id?: unknown;
   slug?: string | null;
   name?: string | null;
   website_url?: string | null;
@@ -23,8 +25,11 @@ type EditionLike = {
 };
 
 export function mapEditionToEventRecord(edition: EditionLike): EventRecord {
+  const seriesId = readExplorerSeriesId(edition);
+
   return {
     id: String(edition.id),
+    series_id: seriesId !== "" ? seriesId : null,
     slug: edition.slug ?? null,
     name: edition.name ?? null,
     website_url: edition.website_url ?? null,

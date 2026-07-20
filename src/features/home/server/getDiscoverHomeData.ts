@@ -20,6 +20,9 @@ export type DiscoverHomeData = {
 function mapEditionToEventRecord(edition: PublicEditionSummary): EventRecord {
   return {
     id: edition.id,
+    // PublicEditionSummary does not carry series_id; this calendar preview never
+    // filters by topic, so there is no series to propagate here.
+    series_id: null,
     slug: edition.slug,
     name: edition.name,
     start_date: edition.start_date,

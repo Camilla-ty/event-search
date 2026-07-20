@@ -17,6 +17,7 @@ import {
 function event(input: Partial<EventRecord> & { id: string }): EventRecord {
   return {
     name: input.name ?? input.id,
+    series_id: input.series_id ?? null,
     website_url: input.website_url ?? null,
     sponsor_count: input.sponsor_count ?? 0,
     last_reviewed_at: input.last_reviewed_at ?? null,

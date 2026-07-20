@@ -21,6 +21,7 @@ describe("DEFAULT_EVENT_EXPLORER_SORT_MODE", () => {
 function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): EventRecord {
   return {
     id: overrides.id,
+    series_id: overrides.series_id ?? null,
     slug: overrides.slug ?? null,
     name: overrides.name ?? "Sample Event",
     website_url: overrides.website_url ?? null,

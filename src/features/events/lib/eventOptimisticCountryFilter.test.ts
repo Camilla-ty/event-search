@@ -16,6 +16,7 @@ import {
 function eventWithCountry(id: string, country: string): EventRecord {
   return {
     id,
+    series_id: null,
     cities: {
       name: country,
       countries: { name: country },
@@ -171,16 +172,19 @@ describe("topic behavior still passes with country optimistic filtering", () => 
     const events = [
       {
         id: "bitcoin-us",
+        series_id: null,
         series_keywords: [{ id: "bitcoin", name: "Bitcoin", slug: "bitcoin" }],
         cities: { countries: { name: "United States" } },
       },
       {
         id: "bitcoin-uk",
+        series_id: null,
         series_keywords: [{ id: "bitcoin", name: "Bitcoin", slug: "bitcoin" }],
         cities: { countries: { name: "United Kingdom" } },
       },
       {
         id: "ai-us",
+        series_id: null,
         series_keywords: [{ id: "ai", name: "AI", slug: "ai" }],
         cities: { countries: { name: "United States" } },
       },

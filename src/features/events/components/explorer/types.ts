@@ -6,6 +6,8 @@ export type EventSeriesKeywordSummary = {
 
 export type EventRecord = {
   id: string;
+  /** Owning event series id. Required so topic-filter matching (which keys off this field) cannot silently no-op. */
+  series_id: string | null;
   slug?: string | null;
   name?: string | null;
   website_url?: string | null;

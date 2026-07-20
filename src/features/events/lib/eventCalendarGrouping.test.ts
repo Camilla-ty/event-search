@@ -16,6 +16,7 @@ function makeEvent(
 ): EventRecord {
   return {
     id,
+    series_id: null,
     slug: id,
     name: `Event ${id}`,
     start_date,
