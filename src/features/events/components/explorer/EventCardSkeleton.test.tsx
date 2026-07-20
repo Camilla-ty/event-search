@@ -93,13 +93,14 @@ describe("EventGrid loading state", () => {
 
     assert.match(html, /aria-label="Loading events"/);
     assert.equal(countMatches(html, /data-skeleton="event-card"/g), 6);
+    assert.match(html, /data-pagination="loading"/);
     assert.doesNotMatch(html, /Bitcoin Las Vegas 2026/);
     assert.doesNotMatch(html, /href="\/events\//);
     assert.doesNotMatch(html, /View Bitcoin/);
     assert.doesNotMatch(html, /aria-label="Loading list"/);
   });
 
-  it("wires EventGrid loading to EventCardSkeletonList", () => {
+  it("wires EventGrid loading to EventCardSkeletonList with pagination placeholder", () => {
     const source = readFileSync(
       path.join(
         process.cwd(),
@@ -109,7 +110,7 @@ describe("EventGrid loading state", () => {
     );
 
     assert.match(source, /EventCardSkeletonList/);
-    assert.match(source, /if \(loading\) \{\s*return <EventCardSkeletonList \/>;/);
+    assert.match(source, /EventGridPaginationPlaceholder/);
     assert.doesNotMatch(source, /PageLoadingSkeleton/);
   });
 });

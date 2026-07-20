@@ -115,6 +115,7 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
             sortOptions={EVENT_SORT_OPTIONS}
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
+            isLoading={isLoading}
           />
           {error !== null ? (
             <div

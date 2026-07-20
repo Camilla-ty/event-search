@@ -13,6 +13,8 @@ type ExplorerResultsToolbarProps<T extends string> = {
   onSortChange: (value: T) => void;
   onOpenFilters?: () => void;
   showSort?: boolean;
+  /** When true, replaces the result count with a pending status (stable layout). */
+  isLoading?: boolean;
 };
 
 export function ExplorerResultsToolbar<T extends string>({
@@ -23,12 +25,23 @@ export function ExplorerResultsToolbar<T extends string>({
   onSortChange,
   onOpenFilters,
   showSort = true,
+  isLoading = false,
 }: ExplorerResultsToolbarProps<T>) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-sm text-slate-600">
-        <span className="font-semibold text-slate-900">{total.toLocaleString()}</span>{" "}
-        {entityLabel} found
+      <p
+        className="text-sm text-slate-600"
+        role={isLoading ? "status" : undefined}
+        aria-live={isLoading ? "polite" : undefined}
+      >
+        {isLoading ? (
+          <span className="font-semibold text-slate-900">Updating results…</span>
+        ) : (
+          <>
+            <span className="font-semibold text-slate-900">{total.toLocaleString()}</span>{" "}
+            {entityLabel} found
+          </>
+        )}
       </p>
 
       <div className="flex items-center gap-2">
