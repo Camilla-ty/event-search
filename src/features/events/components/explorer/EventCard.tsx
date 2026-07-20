@@ -147,7 +147,12 @@ export function EventCard({ event }: { event: EventExplorerRow }) {
   }
 
   return (
-    <Link href={event.href} className={cardInteractiveClass} aria-label={`View ${event.name}`}>
+    <Link
+      href={event.href}
+      prefetch={false}
+      className={cardInteractiveClass}
+      aria-label={`View ${event.name}`}
+    >
       <EventCardContent {...contentProps} />
     </Link>
   );
