@@ -48,6 +48,8 @@ How to use:
 <!--
 - NEW Findings: full write-up here (this is the canonical description). Then add a row to findings-register.md with a new ID.
 - EXISTING Findings: reference by ID with only the delta / new evidence — do not restate.
+- Before creating a NEW Finding, search ALL prefixes. If the same root cause is owned by
+  another audit (see audit-catalog.md), reference that existing Finding instead of duplicating it.
 - Only promote an observation to a Finding if it passes the memory-value test:
   "Will we likely need to remember this in a future review cycle?"
 -->

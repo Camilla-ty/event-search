@@ -10,6 +10,7 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 - **Inclusion:** memory-value test — a Finding exists only if we will likely need to remember it in a future review cycle. Severity is *not* the gate.
 - **IDs:** `<PREFIX>-NNN`, permanent, never reused or renumbered. Reuse the same ID for the same root cause for its entire life (including reopening after resolution). Prefix encodes the review type (`ARC` = Architecture, `SEC` = Security, `PERF` = Performance, `DB` = Database, `PROD` = Product, `DEAD` = Dead Code, `ROAD` = Roadmap, `SEO`, `SCALE`, `DQ`).
+- **Cross-audit ownership:** every root cause has one primary owner per [`audit-catalog.md`](./audit-catalog.md). Before adding a Finding, search all prefixes; reference an existing Finding for the same root cause instead of duplicating it across audits.
 - **Severity / Effort:** descriptive metadata only (Critical/High/Medium/Low · Small/Medium/Large). No composite scores or grades.
 - **Source / links:** each row links to the immutable report section where the Finding was first described; add plan / ADR / migration / PR / commit links as work progresses.
 

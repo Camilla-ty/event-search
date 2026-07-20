@@ -1,6 +1,6 @@
 # Engineering Health Check
 
-**Status:** Active
+**Status:** Active — Framework v1.0
 **Date:** 2026-07-20
 **Scope:** Recurring engineering reviews of this repository and the long-term knowledge they produce.
 
@@ -22,6 +22,13 @@ The Engineering Health Check preserves long-term engineering knowledge with mini
 | **Report template** | [`_templates/report-template.md`](./_templates/report-template.md) | One shared template for every review. |
 
 Review-type folders are created **lazily** — only when that review first runs.
+
+**Core governance documents.** Two documents are authoritative, and every review — and every generated Health Check prompt — must follow them:
+
+| Document | Authority |
+|---|---|
+| [`README.md`](./README.md) (this file) | Operating rules: lifecycle, cadence, naming, workflows, and Finding rules. |
+| [`audit-catalog.md`](./audit-catalog.md) | **Ownership authority** — which audit primarily owns each engineering topic, and how overlapping discoveries are handled. |
 
 ---
 
@@ -81,6 +88,15 @@ Severity and Effort are recorded on a Finding as **descriptive metadata** for pr
 - Decision test: *"If we fixed the other Finding, would this one disappear?"* If yes, it is the same Finding.
 - **Reopening:** a resolved Finding that reappears is re-added to the register under its **original ID** (look it up in the immutable report or Git history).
 
+### 5a. Cross-audit ownership (applies across all prefixes)
+
+Root-cause de-duplication applies across *every* audit type, not only within a single prefix. Every engineering problem has **one primary owner**.
+
+- **Ownership is defined by [`audit-catalog.md`](./audit-catalog.md)**, which is authoritative for every ownership decision.
+- **Before creating a new Finding, search all existing Finding prefixes** (`ARC`, `SEC`, `DB`, `PERF`, `PROD`, `DEAD`, `ROAD`, `SEO`, `SCALE`, `DQ`) for the same root cause.
+- If the same root cause already exists under another audit, **reference that existing Finding — never create a duplicate**. A non-owning audit may discuss the issue from its own perspective in its report's Observations, citing the existing ID.
+- The **primary owner** records and maintains the Finding. Existing IDs are **never renumbered** when ownership is clarified — ownership is expressed by cross-reference, not by re-issuing IDs.
+
 ---
 
 ## 6. Finding lifecycle — three live statuses, and a Resolved exit
@@ -113,12 +129,18 @@ The register therefore reflects only outstanding work. There is **no separate ar
 
 Each report contains: a header block, a 5–10 line **Executive summary**, a **Since last cycle** delta by ID (omitted on baseline reports), **Findings** (full write-ups for new Findings; ID-reference + delta for existing ones), and untracked **Observations**.
 
-**Baseline vs comparison:** the first report of each review type is `Baseline: true` and has no *Since last cycle* section. Every later report is `Baseline: false` and includes the delta.
+**Baseline vs recurring detection (automatic, shared by every review).** Each review determines its own mode with no prompt-specific logic, by checking whether a prior report already exists in its review folder:
+
+- **No prior report → Baseline Review:** `Baseline: true`, no *Since last cycle* section, allocate the first IDs for that prefix.
+- **A prior report exists → Recurring Review:** `Baseline: false`, reconcile existing Findings first, and include the *Since last cycle* delta by ID.
+
+This detection is part of the shared workflow (Step 0 below); reviews inherit it and never hard-code a baseline flag.
 
 ---
 
 ## 8. Monthly workflow
 
+0. **Determine mode automatically** — check the review's folder for a prior report and resolve Baseline vs Recurring (see §7). A Baseline run skips step 1.
 1. **Reconcile the register first** — for each open Finding of this review type, decide: still Open / In Progress / Deferred / **Resolved (remove row)** / Reopened.
 2. **Run the review** and capture observations.
 3. **Apply the memory-value test** to each observation → Finding (Open) or report-only narrative.
@@ -146,6 +168,7 @@ Same mechanics, plus:
 7. Deferred is time-boxed, not a parking lot — every Deferred carries a reason and is revisited each quarter.
 8. Under-track by default: when in doubt, it is an observation, not a Finding.
 9. Create review-type folders lazily — do not scaffold empty ones.
+10. **One problem, one owner across all audits.** [`audit-catalog.md`](./audit-catalog.md) is authoritative for ownership; before filing a Finding, search all prefixes and reference an existing Finding for the same root cause instead of duplicating it.
 
 ---
 
@@ -154,3 +177,4 @@ Same mechanics, plus:
 | Date | Note |
 |------|------|
 | 2026-07-20 | System established. Baseline Architecture Audit preserved as `architecture/2026-07-architecture.md`; register seeded with outstanding architecture Findings. |
+| 2026-07-20 | **Framework v1.0.** Added cross-audit Finding ownership (§5a, governance rule 10) with `audit-catalog.md` as ownership authority; moved automatic Baseline-vs-Recurring detection into the shared workflow (§7, §8 step 0); referenced `audit-catalog.md` as a core governance document (§1). |
