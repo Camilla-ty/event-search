@@ -11,6 +11,7 @@ import {
 } from "@/src/lib/design/classes";
 
 import { readTabSearchParamFromWindow } from "@/src/features/events/components/detail/instantTabNavigation";
+import { PublicEditionTabNavigationProvider } from "@/src/features/events/components/detail/PublicEditionTabNavigation";
 import { useInstantTabNavigation } from "@/src/features/events/components/detail/useInstantTabNavigation";
 
 import {
@@ -52,7 +53,7 @@ export function PublicEventEditionTabs({
     [showPartnerAlumniTab],
   );
 
-  const { activeTab, handleTabClick } = useInstantTabNavigation({
+  const { activeTab, handleTabClick, selectTab } = useInstantTabNavigation({
     initialTab,
     readTabFromLocation,
   });
@@ -74,30 +75,32 @@ export function PublicEventEditionTabs({
             : partnerAlumniPanel;
 
   return (
-    <div className={fileTabShellClass}>
-      <nav aria-label="Event edition sections" className={fileTabBarClass} role="tablist">
-        <div className={fileTabScrollRowClass}>
-          {tabs.map((tab) => {
-            const href = buildPublicEditionTabHref(eventSlug, tab.id);
-            const active = activeTab === tab.id;
-            return (
-              <a
-                key={tab.id}
-                href={href}
-                role="tab"
-                aria-current={active ? "page" : undefined}
-                aria-selected={active}
-                className={fileTabLinkClass(active)}
-                onClick={handleTabClick(tab.id, href)}
-              >
-                {tab.label}
-              </a>
-            );
-          })}
-        </div>
-      </nav>
+    <PublicEditionTabNavigationProvider selectTab={selectTab}>
+      <div className={fileTabShellClass}>
+        <nav aria-label="Event edition sections" className={fileTabBarClass} role="tablist">
+          <div className={fileTabScrollRowClass}>
+            {tabs.map((tab) => {
+              const href = buildPublicEditionTabHref(eventSlug, tab.id);
+              const active = activeTab === tab.id;
+              return (
+                <a
+                  key={tab.id}
+                  href={href}
+                  role="tab"
+                  aria-current={active ? "page" : undefined}
+                  aria-selected={active}
+                  className={fileTabLinkClass(active)}
+                  onClick={handleTabClick(tab.id, href)}
+                >
+                  {tab.label}
+                </a>
+              );
+            })}
+          </div>
+        </nav>
 
-      <div className={fileTabPanelClass}>{activePanel}</div>
-    </div>
+        <div className={fileTabPanelClass}>{activePanel}</div>
+      </div>
+    </PublicEditionTabNavigationProvider>
   );
 }

@@ -14,7 +14,7 @@ import { brandLinkClass } from "@/src/lib/design/classes";
 
 import { EventStatusHelpPopover } from "./EventStatusHelpPopover";
 import { MetadataRow } from "./MetadataRow";
-import { buildPublicEditionTabHref } from "./publicEditionTabUrls";
+import { PublicEditionInPageTabLink } from "./PublicEditionTabNavigation";
 import type { EventSponsorRow } from "./types";
 
 const SPONSOR_PREVIEW_LIMIT = 5;
@@ -62,8 +62,6 @@ export function EventOverviewSummarySection({
     )
     .slice(0, SPONSOR_PREVIEW_LIMIT);
   const overflowCount = Math.max(0, totalSponsorCount - previewSponsors.length);
-  const venueTabHref = buildPublicEditionTabHref(eventSlug, "venue");
-  const sponsorsTabHref = buildPublicEditionTabHref(eventSlug, "sponsors");
 
   return (
     <section
@@ -93,9 +91,13 @@ export function EventOverviewSummarySection({
           <div className="py-3 first:pt-0 last:pb-0">
             <MetadataRow label="Venue">
               {venue ? (
-                <Link href={venueTabHref} className={`font-medium ${brandLinkClass}`}>
+                <PublicEditionInPageTabLink
+                  eventSlug={eventSlug}
+                  tab="venue"
+                  className={`font-medium ${brandLinkClass}`}
+                >
                   {venue.name}
-                </Link>
+                </PublicEditionInPageTabLink>
               ) : (
                 <p>Venue details are unavailable.</p>
               )}
@@ -107,8 +109,9 @@ export function EventOverviewSummarySection({
           <MetadataRow label="Sponsors">
             {hasSponsorData ? (
               previewSponsors.length > 0 ? (
-                <Link
-                  href={sponsorsTabHref}
+                <PublicEditionInPageTabLink
+                  eventSlug={eventSlug}
+                  tab="sponsors"
                   aria-label={`View all ${totalSponsorCount.toLocaleString()} sponsors`}
                   className="inline-flex flex-wrap items-center gap-3 rounded-lg transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
                 >
@@ -134,7 +137,7 @@ export function EventOverviewSummarySection({
                       +{overflowCount.toLocaleString()}
                     </Badge>
                   ) : null}
-                </Link>
+                </PublicEditionInPageTabLink>
               ) : (
                 <p className="text-slate-500">Sponsor data not yet available.</p>
               )

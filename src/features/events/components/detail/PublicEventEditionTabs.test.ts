@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -129,6 +130,15 @@ describe("PublicEventEditionTabs", () => {
     };
 
     assert.equal(shouldInterceptTabAnchorClick(event), false);
+  });
+
+  it("wraps panels in PublicEditionTabNavigationProvider for shared selectTab", () => {
+    const source = readFileSync(
+      new URL("./PublicEventEditionTabs.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(source, /PublicEditionTabNavigationProvider/);
+    assert.match(source, /selectTab=\{selectTab\}/);
   });
 
   it("falls back safely when partner alumni is hidden", () => {
