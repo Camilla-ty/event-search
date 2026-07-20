@@ -49,6 +49,7 @@ export type UseEventExplorerCollectionResult = EventExplorerCollectionState & {
   setPage: (page: number) => void;
   setQuery: (query: string) => void;
   resetAll: () => void;
+  retry: () => void;
 };
 
 function buildExplorerHref(pathname: string, params: EventExplorerParams): string {
@@ -76,6 +77,10 @@ export function useEventExplorerCollection(
   const suppressFetchRef = useRef(true);
   const suppressUrlRef = useRef(false);
   const ownerPathnameRef = useRef(pathname);
+  /** Full params from the most recently successful fetch (or the initial SSR load). */
+  const lastSuccessfulParamsRef = useRef<EventExplorerParams>(initial.params);
+  /** Params that produced the most recent non-abort failure, for the Retry action. */
+  const lastFailedParamsRef = useRef<EventExplorerParams | null>(null);
 
   const initialParamsKey = buildEventExplorerParamsKey(initial.params);
 
@@ -83,6 +88,8 @@ export function useEventExplorerCollection(
     suppressFetchRef.current = true;
     suppressUrlRef.current = true;
     lastFetchedParamsKeyRef.current = initialParamsKey;
+    lastSuccessfulParamsRef.current = initial.params;
+    lastFailedParamsRef.current = null;
     setParams(initial.params);
     setCollection({
       rows: initial.rows,
@@ -170,6 +177,8 @@ export function useEventExplorerCollection(
         const resultKey = buildEventExplorerParamsKey(result.params);
         lastFetchedParamsKeyRef.current = resultKey;
         suppressFetchRef.current = true;
+        lastSuccessfulParamsRef.current = result.params;
+        lastFailedParamsRef.current = null;
 
         setCollection({
           rows: result.rows,
@@ -191,6 +200,11 @@ export function useEventExplorerCollection(
         const message =
           fetchError instanceof Error ? fetchError.message : "Failed to load events.";
         setError(message);
+
+        // Keep rows as-is; restore the full params (filters + sort + page) so the
+        // dropdown and URL fall back in sync with what is actually rendered.
+        lastFailedParamsRef.current = params;
+        setParams(lastSuccessfulParamsRef.current);
       })
       .finally(() => {
         if (shouldApplyEventExplorerFetchResult(requestId, requestIdRef.current)) {
@@ -229,6 +243,13 @@ export function useEventExplorerCollection(
     setParams(applyEventExplorerReset());
   }, []);
 
+  const retry = useCallback(() => {
+    const target = lastFailedParamsRef.current;
+    if (target !== null) {
+      setParams(target);
+    }
+  }, []);
+
   return {
     rows: collection.rows,
     total: collection.total,
@@ -243,5 +264,6 @@ export function useEventExplorerCollection(
     setPage,
     setQuery,
     resetAll,
+    retry,
   };
 }

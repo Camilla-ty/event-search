@@ -7,6 +7,7 @@ import {
   MobileFilterDrawer,
   PageHeader,
 } from "@/src/components/common/explorer";
+import { Button } from "@/src/components/common";
 import { useEventExplorerCollection } from "@/src/features/events/client/useEventExplorerCollection";
 import { useEventExplorerFilterBridgePublisher } from "@/src/features/events/client/EventExplorerFilterBridge";
 import { toggleCountrySelection } from "@/src/features/events/lib/filterPanelCountries";
@@ -16,6 +17,7 @@ import {
   explorerFilterStickyClass,
   explorerPageGridClass,
 } from "@/src/lib/layout/explorerLayout";
+import { feedbackWarningClass } from "@/src/lib/design/classes";
 import type { EventExplorerPageResult } from "@/src/features/events/server/eventExplorerTypes";
 
 import { ActiveTopicFilters } from "./ActiveTopicFilters";
@@ -41,10 +43,12 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
     facets,
     params,
     isLoading,
+    error,
     setFilters,
     setSort,
     setPage,
     resetAll,
+    retry,
   } = useEventExplorerCollection(initial);
   useEventExplorerFilterBridgePublisher(params.filters, setFilters);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -112,6 +116,20 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
           />
+          {error !== null ? (
+            <div
+              role="alert"
+              className={`flex flex-wrap items-center justify-between gap-3 ${feedbackWarningClass}`}
+            >
+              <span>
+                We couldn&apos;t load the latest results. Still showing the previous
+                results.
+              </span>
+              <Button variant="ghost" size="sm" onClick={retry}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
           <EventGrid
             rows={rows}
             total={total}
