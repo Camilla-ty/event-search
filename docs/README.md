@@ -1,5 +1,11 @@
 # EventPixels — Project documentation
 
+## Product language
+
+| Document | Description |
+|----------|-------------|
+| [Terminology](./terminology.md) | Source of truth for internal model names and user-facing **Event Brand** / **Event** terminology |
+
 ## Engineering Health Check
 
 | Document | Description |
