@@ -17,7 +17,7 @@ export function DiscoverCalendarUpcomingSection({
 }: DiscoverCalendarUpcomingSectionProps) {
   return (
     <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-      <div className="space-y-3 lg:col-span-5">
+      <div className="flex h-full flex-col space-y-3 lg:col-span-5">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-slate-900">Event Calendar</h2>
           <p className="text-sm text-slate-600">Browse events by month.</p>
@@ -25,7 +25,7 @@ export function DiscoverCalendarUpcomingSection({
         <DiscoverCalendarPreview events={calendarEvents} />
       </div>
 
-      <div className="lg:col-span-7">
+      <div className="flex h-full flex-col lg:col-span-7">
         <DiscoverEventModule
           title="Upcoming Events"
           description="Events with upcoming or in-progress dates."
@@ -33,6 +33,7 @@ export function DiscoverCalendarUpcomingSection({
           emptyMessage="No upcoming events with scheduled dates."
           emptyActionHref={upcomingViewAllHref}
           isEmpty={upcoming.length === 0}
+          fillHeight
         >
           <DiscoverEditionList editions={upcoming} variant="compact" />
         </DiscoverEventModule>

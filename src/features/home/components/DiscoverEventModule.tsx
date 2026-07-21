@@ -12,6 +12,7 @@ type DiscoverEventModuleProps = {
   emptyActionHref: string;
   emptyActionLabel?: string;
   isEmpty: boolean;
+  fillHeight?: boolean;
   children: ReactNode;
 };
 
@@ -24,10 +25,11 @@ export function DiscoverEventModule({
   emptyActionHref,
   emptyActionLabel = "Browse all events",
   isEmpty,
+  fillHeight = false,
   children,
 }: DiscoverEventModuleProps) {
   return (
-    <section className="space-y-3">
+    <section className={`space-y-3 ${fillHeight ? "flex h-full flex-1 flex-col" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-slate-900">{title}</h2>

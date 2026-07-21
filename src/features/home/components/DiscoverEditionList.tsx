@@ -31,7 +31,7 @@ export function mapDiscoverEditionToEventCardModel(
 export function DiscoverEditionList({ editions, variant }: DiscoverEditionListProps) {
   const listClassName =
     variant === "compact"
-      ? "divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm"
+      ? "flex-1 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm"
       : "space-y-3";
 
   return (

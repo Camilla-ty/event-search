@@ -18,6 +18,7 @@ type EventCalendarGridProps = {
   eventsByDay: EventsByDay<EventRecord>;
   variant?: EventCalendarDayCellVariant;
   roundedBottom?: boolean;
+  stretch?: boolean;
 };
 
 export function EventCalendarGrid({
@@ -25,6 +26,7 @@ export function EventCalendarGrid({
   eventsByDay,
   variant = "default",
   roundedBottom = true,
+  stretch = false,
 }: EventCalendarGridProps) {
   const gridDays = listGridDays(bounds.gridStart, bounds.gridEnd);
 
@@ -32,7 +34,7 @@ export function EventCalendarGrid({
     <div
       className={`overflow-hidden border border-t-0 border-slate-200 bg-white ${
         roundedBottom ? "rounded-b-xl" : ""
-      }`}
+      } ${stretch ? "flex min-h-0 flex-1 flex-col" : ""}`}
     >
       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
         {WEEKDAY_LABELS.map((label) => (
@@ -45,7 +47,7 @@ export function EventCalendarGrid({
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div className={`grid grid-cols-7 ${stretch ? "flex-1 auto-rows-fr" : ""}`}>
         {gridDays.map((isoDate) => (
           <EventCalendarDayCell
             key={isoDate}

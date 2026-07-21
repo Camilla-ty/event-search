@@ -66,6 +66,7 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.equal(html.includes("Sponsors"), false);
+    assert.match(html, /flex-1 divide-y divide-slate-100/);
     assert.match(html, /divide-y divide-slate-100 rounded-xl border border-slate-200/);
   });
 
@@ -82,6 +83,7 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /Las Vegas, Nevada/);
     assert.match(html, /space-y-3/);
     assert.match(html, /rounded-xl border border-slate-200 bg-white p-4 shadow-sm/);
+    assert.equal(html.includes("flex-1 divide-y"), false);
     assert.equal(html.includes("divide-y divide-slate-100"), false);
     assert.equal(html.includes("Bitcoin Conference"), false);
   });
