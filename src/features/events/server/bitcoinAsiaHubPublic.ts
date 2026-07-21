@@ -11,7 +11,7 @@ import {
 } from "@/src/features/events/lib/bitcoinAsiaHub";
 import { mapKeywordRow } from "@/src/features/events/server/mapKeywordRow";
 import { readSeriesIdsFromKeywordLinks } from "@/src/features/events/server/topicHubPublic";
-import { formatSummaryDateRange } from "@/src/lib/content/factualSummary";
+import { formatPublicEventDateRange } from "@/src/lib/date/formatPublicEventDateRange";
 import { formatLocationLabel } from "@/src/lib/location/formatLocationLabel";
 import { EVENT_EDITION_LIST_SELECT } from "@/src/lib/queries/events";
 import {
@@ -214,7 +214,7 @@ export async function getBitcoinAsiaHubPageData(): Promise<BitcoinAsiaHubPageDat
       year: edition.year,
       startDate: edition.start_date,
       endDate: edition.end_date,
-      dateLabel: formatSummaryDateRange(edition.start_date, edition.end_date),
+      dateLabel: formatPublicEventDateRange(edition.start_date, edition.end_date),
       locationLabel: edition.locationLabel,
       countryName: edition.countryName,
       seriesName: edition.seriesName,

@@ -68,7 +68,7 @@ describe("shared EventCard foundation", () => {
 
     assert.match(html, /1/);
     assert.match(html, /Sponsor/);
-    assert.match(html, /2026-04-27 - 2026-04-29/);
+    assert.match(html, /April 27 – April 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
   });
 
@@ -138,7 +138,7 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /text-sm text-slate-600 md:flex-1/);
     assert.match(html, /md:border-l md:border-slate-200 md:px-4/);
     assert.match(html, /Bitcoin Conference/);
-    assert.match(html, /2026-04-27 - 2026-04-29/);
+    assert.match(html, /April 27 – April 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.match(html, /hover:bg-brand-primary-muted\/30/);

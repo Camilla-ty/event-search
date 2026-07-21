@@ -1,3 +1,5 @@
+import { formatPublicEventDateRange } from "@/src/lib/date/formatPublicEventDateRange";
+
 /**
  * EventPixels Factual Summary Engine (IR2).
  * Pure, server-safe text assembly from public structured fields only.
@@ -118,37 +120,13 @@ function formatLongDateFromKey(key: string): string | null {
   return `${monthName} ${parts.day}, ${parts.year}`;
 }
 
-/**
- * Human-readable range for summaries, e.g. "September 16–17, 2026".
- * Uses an en dash between days/months.
- */
+/** Human-readable public event date range for summary and metadata copy. */
 export function formatSummaryDateRange(
   startDate: string | null | undefined,
   endDate: string | null | undefined,
 ): string | null {
-  const startKey = parseDateOnlyKey(startDate);
-  const endKey = parseDateOnlyKey(endDate) ?? startKey;
-  if (!startKey) return null;
-
-  const start = partsFromDateKey(startKey);
-  const end = endKey ? partsFromDateKey(endKey) : null;
-  if (!start) return null;
-
-  if (!end || startKey === endKey) {
-    return formatLongDateFromKey(startKey);
-  }
-
-  const startMonth = MONTH_NAMES[start.month - 1];
-  const endMonth = MONTH_NAMES[end.month - 1];
-  if (!startMonth || !endMonth) return null;
-
-  if (start.year === end.year && start.month === end.month) {
-    return `${startMonth} ${start.day}–${end.day}, ${start.year}`;
-  }
-  if (start.year === end.year) {
-    return `${startMonth} ${start.day} – ${endMonth} ${end.day}, ${start.year}`;
-  }
-  return `${startMonth} ${start.day}, ${start.year} – ${endMonth} ${end.day}, ${end.year}`;
+  if (typeof startDate !== "string" || startDate.trim() === "") return null;
+  return formatPublicEventDateRange(startDate, endDate);
 }
 
 export function formatSummaryReviewedDate(

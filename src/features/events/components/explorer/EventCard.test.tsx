@@ -81,7 +81,7 @@ describe("EventCard", () => {
 
     assert.match(html, /3/);
     assert.match(html, /Sponsors/);
-    assert.match(html, /2026-04-27 - 2026-04-29/);
+    assert.match(html, /April 27 – April 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.match(html, /Bitcoin/);
     assert.match(html, /Payments/);

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
+import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
@@ -11,13 +12,6 @@ import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
-
-function formatDateRange(start?: string | null, end?: string | null) {
-  if (!start && !end) return "Date TBC";
-  if (!start) return end ?? "Date TBC";
-  if (!end || end === start) return start;
-  return `${start} - ${end}`;
-}
 
 function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
@@ -150,7 +144,7 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
                         const hrefId = edition.slug ?? edition.id;
                         const year =
                           typeof edition.year === "number" ? edition.year : null;
-                        const dateRange = formatDateRange(
+                        const dateRange = formatEventDateRange(
                           edition.start_date,
                           edition.end_date,
                         );

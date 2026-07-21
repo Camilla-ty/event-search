@@ -47,10 +47,10 @@ function assertNoBannedWording(text: string) {
 }
 
 describe("formatSummaryDateRange", () => {
-  it("formats same-month ranges with an en dash", () => {
+  it("uses the canonical public event date range", () => {
     assert.equal(
       formatSummaryDateRange("2026-09-16", "2026-09-17"),
-      "September 16–17, 2026",
+      "September 16 – September 17, 2026",
     );
   });
 
@@ -146,7 +146,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "Avalanche Summit New York 2026 is an event edition in the Avalanche Summit series. It will take place on September 16–17, 2026 in New York, United States. 34 sponsors are recorded for this edition across 4 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 2, 2026.",
+      "Avalanche Summit New York 2026 is an event edition in the Avalanche Summit series. It will take place on September 16 – September 17, 2026 in New York, United States. 34 sponsors are recorded for this edition across 4 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 2, 2026.",
     );
     assertNoBannedWording(summary!);
   });
@@ -164,7 +164,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "Devcon 8 is an event edition in the Devcon series. It will take place on November 3–6, 2026 in Mumbai, India. 12 sponsors are recorded for this edition on EventPixels.",
+      "Devcon 8 is an event edition in the Devcon series. It will take place on November 3 – November 6, 2026 in Mumbai, India. 12 sponsors are recorded for this edition on EventPixels.",
     );
   });
 
@@ -183,7 +183,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "ETHGlobal Lisbon 2026 is an event edition in the ETHGlobal series. It is taking place July 16–18, 2026 in Lisbon, Portugal. 21 sponsors are recorded for this edition across 3 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 14, 2026.",
+      "ETHGlobal Lisbon 2026 is an event edition in the ETHGlobal series. It is taking place July 16 – July 18, 2026 in Lisbon, Portugal. 21 sponsors are recorded for this edition across 3 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 14, 2026.",
     );
   });
 
@@ -203,7 +203,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "BTC Prague 2026 is an event edition in the BTC Prague series. It took place on June 11–13, 2026 in Prague, Czech Republic. The venue was PVA EXPO Praha. 81 sponsors are recorded for this edition across 6 sponsorship tiers on EventPixels. Sponsor information was last reviewed on June 20, 2026.",
+      "BTC Prague 2026 is an event edition in the BTC Prague series. It took place on June 11 – June 13, 2026 in Prague, Czech Republic. The venue was PVA EXPO Praha. 81 sponsors are recorded for this edition across 6 sponsorship tiers on EventPixels. Sponsor information was last reviewed on June 20, 2026.",
     );
   });
 
@@ -292,7 +292,7 @@ describe("buildEventSeriesSummary", () => {
 
     assert.equal(
       summary,
-      "Bitcoin Conference is an event series on EventPixels. 4 editions are recorded, from 2024 to 2027. The next recorded edition, Bitcoin Hong Kong 2027, will take place on January 12–14, 2027 in Hong Kong. The series is associated with the topics Bitcoin and Payments.",
+      "Bitcoin Conference is an event series on EventPixels. 4 editions are recorded, from 2024 to 2027. The next recorded edition, Bitcoin Hong Kong 2027, will take place on January 12 – January 14, 2027 in Hong Kong. The series is associated with the topics Bitcoin and Payments.",
     );
     assertNoBannedWording(summary!);
   });
