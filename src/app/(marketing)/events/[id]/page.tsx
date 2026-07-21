@@ -19,8 +19,6 @@ import { parsePublicEditionTab } from "@/src/features/events/components/detail/p
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import { RelatedEditionsSection } from "@/src/features/events/components/detail/RelatedEditionsSection";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
-import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
-import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
 import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
 import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import { getEventDetailData } from "@/src/features/events/server/getEventDetailData";
@@ -35,8 +33,13 @@ import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType"
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import {
+  PUBLIC_SPONSOR_TIER_PAGE_SIZE,
+  countTiersFromPublicSponsorSummaries,
+  getInitialPublicSponsorTierOnePage,
+  getPublicSponsorTierSummaries,
+} from "@/src/features/events/server/publicSponsorRoster";
+import {
   buildEventEditionSummary,
-  countDistinctSponsorshipTiers,
   formatSummaryDateRange,
 } from "@/src/lib/content/factualSummary";
 import { brandLinkClass } from "@/src/lib/design/classes";
@@ -137,6 +140,8 @@ export default async function EventDetailPage({
   const seriesHubHref = series ? buildSeriesHubPath(series) : null;
   const eventSlug = typeof edition.slug === "string" ? edition.slug : id;
 
+  const isAuthenticated = user !== null;
+
   const [relatedEditions, topics, totalSponsorCount, partnerAlumni] = await Promise.all([
     seriesId !== null && editionId !== null
       ? getRelatedEditions({
@@ -153,6 +158,32 @@ export default async function EventDetailPage({
       : Promise.resolve(null),
   ]);
 
+  const [sponsorTierSummaries, tier1PageResult] = await Promise.all([
+    editionId !== null
+      ? getPublicSponsorTierSummaries(editionId, {
+          isAuthenticated,
+          totalSponsorCount,
+        })
+      : Promise.resolve({
+          editionId: "",
+          totalSponsorCount: 0,
+          tiers: [],
+        }),
+    editionId !== null
+      ? getInitialPublicSponsorTierOnePage(editionId)
+      : Promise.resolve({
+          editionId: "",
+          tierRank: 1,
+          tierLabel: null,
+          page: 1,
+          pageSize: PUBLIC_SPONSOR_TIER_PAGE_SIZE,
+          totalInTier: 0,
+          totalPages: 1,
+          hasMore: false,
+          rows: [],
+        }),
+  ]);
+
   const showPartnerAlumniTab = shouldShowPublicPartnerAlumniTab(partnerAlumni);
   const initialTab = parsePublicEditionTab(requestedTab ?? null, showPartnerAlumniTab);
 
@@ -160,10 +191,8 @@ export default async function EventDetailPage({
     redirect(`/events/${eventSlug || id}`);
   }
 
-  const sponsors = filterDisplayableSponsors(
-    (edition.event_sponsors ?? []) as EventSponsorRow[],
-  );
-  const isAuthenticated = user !== null;
+  // Phase 1: Tier 1 page 1 only — no Tier 2+ identities in RSC props.
+  const sponsors = tier1PageResult.rows;
   const cityLabel = formatLocationFromCityEmbed(edition.cities) || "";
   const venue = mapPublicVenueFromEditionRow(editionRecord);
   const organizers = mapPublicOrganizersFromEditionRow(editionRecord);
@@ -190,8 +219,8 @@ export default async function EventDetailPage({
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
   const eventDisplayName = edition.name?.trim() || "Event";
-  const rawSponsors = (edition.event_sponsors ?? []) as EventSponsorRow[];
-  const sponsorshipTierCount = countDistinctSponsorshipTiers(rawSponsors);
+  const sponsorshipTierCount =
+    countTiersFromPublicSponsorSummaries(sponsorTierSummaries);
   const publicVenueName =
     venue && !venue.archived_at ? venue.name : null;
   const factualSummary = buildEventEditionSummary({
@@ -325,7 +354,8 @@ export default async function EventDetailPage({
           sponsorsPanel={
             <EventSponsorsSection
               embedded
-              sponsors={sponsors}
+              tierSummaries={sponsorTierSummaries}
+              initialTier1Page={tier1PageResult}
               isAuthenticated={isAuthenticated}
               totalSponsorCount={totalSponsorCount}
               sponsorNoteType={sponsorNoteType}

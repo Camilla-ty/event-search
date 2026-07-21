@@ -65,9 +65,10 @@ export function groupSponsorsByTier<T extends TierGroupableSponsorLink>(
 
 export function publicTierSectionTitle<T extends TierGroupableSponsorLink>(
   group: SponsorTierGroup<T>,
+  totalCount = group.sponsors.length,
 ): string {
   const label = group.tierLabel ?? "Untitled tier";
-  const count = group.sponsors.length;
+  const count = Math.max(0, Math.trunc(totalCount));
   const sponsorWord = count === 1 ? "sponsor" : "sponsors";
   return `${label} · ${count} ${sponsorWord}`;
 }

@@ -6,14 +6,18 @@ import { usePathname } from "next/navigation";
 import { buildSignupEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import type { SponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { secondaryCtaClass } from "@/src/lib/design/classes";
+import type {
+  PublicSponsorTierPageResult,
+  PublicSponsorTierSummary,
+} from "@/src/features/events/server/publicSponsorRoster";
 
 import { EditionSponsorNote } from "./EditionSponsorNote";
 import { EditionSectionSurface } from "./EditionSectionSurface";
 import { PublicSponsorTierGroupedRoster } from "./PublicSponsorTierGroupedRoster";
-import type { EventSponsorRow } from "./types";
 
 type EventSponsorsSectionProps = {
-  sponsors: EventSponsorRow[];
+  tierSummaries: PublicSponsorTierSummary;
+  initialTier1Page: PublicSponsorTierPageResult;
   isAuthenticated: boolean;
   totalSponsorCount?: number;
   embedded?: boolean;
@@ -21,7 +25,8 @@ type EventSponsorsSectionProps = {
 };
 
 export function EventSponsorsSection({
-  sponsors,
+  tierSummaries,
+  initialTier1Page,
   isAuthenticated,
   totalSponsorCount,
   embedded = false,
@@ -29,19 +34,30 @@ export function EventSponsorsSection({
 }: EventSponsorsSectionProps) {
   const pathname = usePathname();
   const signupHref = buildSignupEntryUrl(pathname);
+  const sponsors = initialTier1Page.rows;
+  const effectiveTotalSponsorCount =
+    totalSponsorCount ?? tierSummaries.totalSponsorCount;
   const showSponsorNote =
-    (totalSponsorCount ?? 0) === 0 && sponsorNoteType !== null && sponsorNoteType !== undefined;
+    effectiveTotalSponsorCount === 0 &&
+    sponsorNoteType !== null &&
+    sponsorNoteType !== undefined;
 
   return (
     <EditionSectionSurface embedded={embedded}>
       <h2 className="mb-4 text-lg font-semibold text-slate-900">
-        Sponsors{totalSponsorCount != null && totalSponsorCount > 0 ? ` (${totalSponsorCount})` : ""}
+        Sponsors
+        {effectiveTotalSponsorCount > 0
+          ? ` (${effectiveTotalSponsorCount})`
+          : ""}
       </h2>
 
       {showSponsorNote ? (
         <EditionSponsorNote sponsorNoteType={sponsorNoteType} />
       ) : (
-        <PublicSponsorTierGroupedRoster sponsors={sponsors} />
+        <PublicSponsorTierGroupedRoster
+          sponsors={sponsors}
+          tierSummaries={tierSummaries.tiers}
+        />
       )}
 
       {!isAuthenticated ? (

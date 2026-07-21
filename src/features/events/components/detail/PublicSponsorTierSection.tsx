@@ -6,13 +6,17 @@ import type { EventSponsorRow } from "./types";
 
 type PublicSponsorTierSectionProps = {
   group: SponsorTierGroup<EventSponsorRow>;
+  totalCount?: number;
 };
 
-export function PublicSponsorTierSection({ group }: PublicSponsorTierSectionProps) {
+export function PublicSponsorTierSection({
+  group,
+  totalCount,
+}: PublicSponsorTierSectionProps) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white">
       <header className="border-b border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold tracking-tight text-slate-800">
-        {publicTierSectionTitle(group)}
+        {publicTierSectionTitle(group, totalCount)}
       </header>
       <ul>
         {group.sponsors.map((sponsor) => (
