@@ -8,6 +8,9 @@ import {
   buildPublicSponsorTierSummariesFromLinks,
   clampPublicSponsorTierPageSize,
   countTiersFromPublicSponsorSummaries,
+  getPublicSponsorTierPage,
+  parsePublicSponsorTierPage,
+  parsePublicSponsorTierRank,
 } from "@/src/features/events/server/publicSponsorRoster";
 import { publicTierSectionTitle } from "@/src/features/events/lib/groupSponsorsByTier";
 
@@ -88,6 +91,80 @@ describe("publicSponsorRoster Phase 1 helpers", () => {
   });
 });
 
+describe("publicSponsorRoster Phase 3 helpers", () => {
+  it("parses tier ranks as positive integers only", () => {
+    assert.equal(parsePublicSponsorTierRank(1), 1);
+    assert.equal(parsePublicSponsorTierRank("2"), 2);
+    assert.equal(parsePublicSponsorTierRank(" 3 "), 3);
+    assert.equal(parsePublicSponsorTierRank(0), null);
+    assert.equal(parsePublicSponsorTierRank(-1), null);
+    assert.equal(parsePublicSponsorTierRank(1.5), null);
+    assert.equal(parsePublicSponsorTierRank("nope"), null);
+    assert.equal(parsePublicSponsorTierRank(null), null);
+    assert.equal(parsePublicSponsorTierRank(undefined), null);
+  });
+
+  it("parses pages with a default of 1 and rejects invalid input", () => {
+    assert.equal(parsePublicSponsorTierPage(undefined), 1);
+    assert.equal(parsePublicSponsorTierPage(null), 1);
+    assert.equal(parsePublicSponsorTierPage(""), 1);
+    assert.equal(parsePublicSponsorTierPage("3"), 3);
+    assert.equal(parsePublicSponsorTierPage(2), 2);
+    assert.equal(parsePublicSponsorTierPage(0), null);
+    assert.equal(parsePublicSponsorTierPage(-2), null);
+    assert.equal(parsePublicSponsorTierPage("abc"), null);
+    assert.equal(parsePublicSponsorTierPage(1.5), null);
+  });
+
+  it("rejects anonymous Tier 2+ requests with 401 before any query", async () => {
+    const result = await getPublicSponsorTierPage("edition-1", {
+      tierRank: 2,
+      user: null,
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      status: 401,
+      error: "Authentication required.",
+    });
+  });
+
+  it("rejects invalid tier_rank and page with 400 before any query", async () => {
+    const badTier = await getPublicSponsorTierPage("edition-1", {
+      tierRank: 0,
+      user: null,
+    });
+    assert.equal(badTier.ok, false);
+    if (!badTier.ok) assert.equal(badTier.status, 400);
+
+    const badPage = await getPublicSponsorTierPage("edition-1", {
+      tierRank: 2,
+      page: -1,
+      user: null,
+    });
+    assert.equal(badPage.ok, false);
+    if (!badPage.ok) assert.equal(badPage.status, 400);
+  });
+});
+
+describe("Phase 3 sponsors API route contracts", () => {
+  const routeSource = readFileSync(
+    path.join(process.cwd(), "src/app/api/events/[id]/sponsors/route.ts"),
+    "utf8",
+  );
+
+  it("sends Cache-Control: no-store on all responses", () => {
+    assert.match(routeSource, /Cache-Control.*no-store/);
+  });
+
+  it("gates anonymous Tier 2+ requests and resolves edition by id or slug", () => {
+    assert.match(routeSource, /tierRank !== 1 && user === null/);
+    assert.match(routeSource, /resolvePublicSponsorEditionId/);
+    assert.match(routeSource, /getPublicSponsorTierPage/);
+    assert.doesNotMatch(routeSource, /createAdminClient/);
+  });
+});
+
 describe("Phase 1 SSR wiring contracts", () => {
   it("getEventDetailData no longer loads the full event_sponsors roster", () => {
     const source = readFileSync(
@@ -130,7 +207,7 @@ describe("Phase 1 SSR wiring contracts", () => {
     assert.match(pageSource, /initialTier1Page=\{tier1PageResult\}/);
     assert.match(sectionSource, /tierSummaries:\s*PublicSponsorTierSummary/);
     assert.match(sectionSource, /initialTier1Page:\s*PublicSponsorTierPageResult/);
-    assert.match(sectionSource, /initialTier1Page\.rows/);
+    assert.match(sectionSource, /initialTier1Page=\{initialTier1Page\}/);
     assert.doesNotMatch(sectionSource, /sponsors:\s*EventSponsorRow\[\]/);
   });
 

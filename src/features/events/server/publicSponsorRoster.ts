@@ -1,3 +1,5 @@
+import type { User } from "@supabase/supabase-js";
+
 import type { EventSponsorRow } from "@/src/features/events/components/detail/types";
 import { filterDisplayableSponsors } from "@/src/features/events/components/detail/eventSponsorUtils";
 import {
@@ -68,6 +70,29 @@ export function clampPublicSponsorTierPageSize(
 ): typeof PUBLIC_SPONSOR_TIER_PAGE_SIZE {
   void requested;
   return PUBLIC_SPONSOR_TIER_PAGE_SIZE;
+}
+
+export function parsePublicSponsorTierRank(raw: unknown): number | null {
+  const parsed =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && raw.trim() !== ""
+        ? Number(raw.trim())
+        : Number.NaN;
+  if (!Number.isInteger(parsed)) return null;
+  return parsed >= 1 ? parsed : null;
+}
+
+export function parsePublicSponsorTierPage(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === "") return 1;
+  const parsed =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string"
+        ? Number(raw.trim())
+        : Number.NaN;
+  if (!Number.isInteger(parsed)) return null;
+  return parsed >= 1 ? parsed : null;
 }
 
 function trimLabel(raw: string | null | undefined): string | null {
@@ -193,31 +218,64 @@ export async function getPublicSponsorTierSummaries(
 }
 
 /**
- * Initial SSR payload for Tier 1 only. Later tiers/pages remain Phase 3+ work.
- * Uses the session client so existing RLS remains defense in depth.
+ * Resolve a public edition identifier (UUID or slug) to the edition UUID.
+ * Session client; only `id` is selected.
  */
-export async function getInitialPublicSponsorTierOnePage(
-  editionId: string,
-): Promise<PublicSponsorTierPageResult> {
-  const editionKey = normalizeEditionIdForPublicSponsors(editionId);
-  const tierRank = 1;
-  const page = 1;
-  const pageSize = clampPublicSponsorTierPageSize();
+export async function resolvePublicSponsorEditionId(
+  editionIdOrSlug: string,
+): Promise<string | null> {
+  const key = normalizeEditionIdForPublicSponsors(editionIdOrSlug);
+  if (key === "") return null;
 
-  if (editionKey === "") {
-    return {
-      editionId: editionKey,
-      tierRank,
-      tierLabel: null,
-      page,
-      pageSize,
-      totalInTier: 0,
-      totalPages: 1,
-      hasMore: false,
-      rows: [],
-    };
+  const supabase = await createClient();
+  const column = isUuidString(key) ? "id" : "slug";
+  const { data, error } = await supabase
+    .from("event_editions")
+    .select("id")
+    .eq(column, key)
+    .maybeSingle();
+
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[events] public sponsor edition lookup failed:", error);
+    }
+    return null;
   }
 
+  return typeof data?.id === "string" && data.id !== "" ? data.id : null;
+}
+
+function emptyTierPage(
+  editionId: string,
+  tierRank: number,
+  page: number,
+  totalInTier = 0,
+): PublicSponsorTierPageResult {
+  const pageSize = clampPublicSponsorTierPageSize();
+  const totalPages = Math.max(1, Math.ceil(totalInTier / pageSize));
+  return {
+    editionId,
+    tierRank,
+    tierLabel: null,
+    page,
+    pageSize,
+    totalInTier,
+    totalPages,
+    hasMore: page < totalPages,
+    rows: [],
+  };
+}
+
+/**
+ * One tier, one page, session client (RLS stays as defense in depth).
+ * Callers are responsible for the anonymous Tier 2+ gate.
+ */
+async function queryPublicSponsorTierPage(
+  editionKey: string,
+  tierRank: number,
+  page: number,
+): Promise<PublicSponsorTierPageResult> {
+  const pageSize = clampPublicSponsorTierPageSize();
   const supabase = await createClient();
 
   const { count, error: countError } = await supabase
@@ -230,22 +288,12 @@ export async function getInitialPublicSponsorTierOnePage(
     if (process.env.NODE_ENV === "development") {
       console.error("[events] public sponsor tier count failed:", countError);
     }
-    return {
-      editionId: editionKey,
-      tierRank,
-      tierLabel: null,
-      page,
-      pageSize,
-      totalInTier: 0,
-      totalPages: 1,
-      hasMore: false,
-      rows: [],
-    };
+    return emptyTierPage(editionKey, tierRank, page);
   }
 
   const totalInTier = typeof count === "number" && Number.isFinite(count) ? count : 0;
   const totalPages = Math.max(1, Math.ceil(totalInTier / pageSize));
-  const from = 0;
+  const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   const { data: links, error } = await supabase
@@ -262,17 +310,7 @@ export async function getInitialPublicSponsorTierOnePage(
     if (process.env.NODE_ENV === "development") {
       console.error("[events] public sponsor tier page failed:", error);
     }
-    return {
-      editionId: editionKey,
-      tierRank,
-      tierLabel: null,
-      page,
-      pageSize,
-      totalInTier,
-      totalPages,
-      hasMore: page < totalPages,
-      rows: [],
-    };
+    return emptyTierPage(editionKey, tierRank, page, totalInTier);
   }
 
   const list = (links ?? []) as SponsorLinkRow[];
@@ -296,4 +334,52 @@ export async function getInitialPublicSponsorTierOnePage(
     hasMore: page < totalPages,
     rows,
   };
+}
+
+/**
+ * Initial SSR payload for Tier 1 only. Later tiers load via the sponsors API.
+ */
+export async function getInitialPublicSponsorTierOnePage(
+  editionId: string,
+): Promise<PublicSponsorTierPageResult> {
+  const editionKey = normalizeEditionIdForPublicSponsors(editionId);
+  if (editionKey === "") {
+    return emptyTierPage(editionKey, 1, 1);
+  }
+  return queryPublicSponsorTierPage(editionKey, 1, 1);
+}
+
+export type GetPublicSponsorTierPageOptions = {
+  tierRank: number;
+  page?: number;
+  user: User | null;
+};
+
+export type PublicSponsorTierPageOutcome =
+  | { ok: true; data: PublicSponsorTierPageResult }
+  | { ok: false; status: 400 | 401; error: string };
+
+/**
+ * API-facing tier page loader (ADR-003 §3.2): anonymous requests may only read
+ * Tier 1; the session client keeps RLS as defense in depth.
+ */
+export async function getPublicSponsorTierPage(
+  editionId: string,
+  options: GetPublicSponsorTierPageOptions,
+): Promise<PublicSponsorTierPageOutcome> {
+  const editionKey = normalizeEditionIdForPublicSponsors(editionId);
+  const tierRank = parsePublicSponsorTierRank(options.tierRank);
+  const page = parsePublicSponsorTierPage(options.page ?? 1);
+
+  if (editionKey === "" || tierRank === null) {
+    return { ok: false, status: 400, error: "Invalid tier_rank." };
+  }
+  if (page === null) {
+    return { ok: false, status: 400, error: "Invalid page." };
+  }
+  if (tierRank !== 1 && options.user === null) {
+    return { ok: false, status: 401, error: "Authentication required." };
+  }
+
+  return { ok: true, data: await queryPublicSponsorTierPage(editionKey, tierRank, page) };
 }

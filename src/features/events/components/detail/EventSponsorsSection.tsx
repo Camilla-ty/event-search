@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { buildSignupEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
+import {
+  buildLoginEntryUrl,
+  buildSignupEntryUrl,
+} from "@/src/lib/auth/buildAuthEntryUrl";
 import type { SponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { secondaryCtaClass } from "@/src/lib/design/classes";
 import type {
@@ -34,7 +37,7 @@ export function EventSponsorsSection({
 }: EventSponsorsSectionProps) {
   const pathname = usePathname();
   const signupHref = buildSignupEntryUrl(pathname);
-  const sponsors = initialTier1Page.rows;
+  const loginHref = buildLoginEntryUrl(pathname);
   const effectiveTotalSponsorCount =
     totalSponsorCount ?? tierSummaries.totalSponsorCount;
   const showSponsorNote =
@@ -55,8 +58,13 @@ export function EventSponsorsSection({
         <EditionSponsorNote sponsorNoteType={sponsorNoteType} />
       ) : (
         <PublicSponsorTierGroupedRoster
-          sponsors={sponsors}
+          key={tierSummaries.editionId}
+          editionId={tierSummaries.editionId}
+          initialTier1Page={initialTier1Page}
           tierSummaries={tierSummaries.tiers}
+          isAuthenticated={isAuthenticated}
+          loginHref={loginHref}
+          signupHref={signupHref}
         />
       )}
 
@@ -67,6 +75,7 @@ export function EventSponsorsSection({
           </p>
           <Link
             href={signupHref}
+            prefetch={false}
             className={`${secondaryCtaClass} mt-3 inline-flex h-10 w-full`}
           >
             Sign up
