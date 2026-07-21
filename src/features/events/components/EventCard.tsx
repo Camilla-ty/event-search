@@ -179,7 +179,7 @@ function EventCardCompactContent({ event }: { event: EventCardModel }) {
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <EventCardMetaBlock>{dateLabel}</EventCardMetaBlock>
           <EventCardMetaBlock withDivider>
-            <span className="line-clamp-2">{locationLabel}</span>
+            <span className="line-clamp-2 md:text-right">{locationLabel}</span>
           </EventCardMetaBlock>
         </div>
       </div>

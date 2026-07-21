@@ -112,6 +112,7 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /lg:max-w-\[50%\]/);
     assert.equal(html.includes("md:max-w-[55%]"), false);
     assert.equal(html.includes("md:w-1/2"), false);
+    assert.equal(html.includes("md:text-right"), false);
   });
 
   it("renders compact cards with topics, date, and location but no series text", () => {
@@ -153,6 +154,7 @@ describe("shared EventCard foundation", () => {
     assert.equal(html.includes("md:max-w-[55%]"), false);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
+    assert.match(html, /line-clamp-2 md:text-right/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.match(html, /hover:bg-brand-primary-muted\/30/);
     assert.match(html, /focus-visible:ring-2 focus-visible:ring-brand-primary\/30/);
