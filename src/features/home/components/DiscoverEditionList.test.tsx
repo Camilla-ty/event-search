@@ -34,7 +34,15 @@ describe("DiscoverEditionList", () => {
     const html = renderToStaticMarkup(
       <DiscoverEditionList
         editions={[
-          edition(),
+          edition({
+            topicPreview: {
+              visibleKeywords: [
+                { key: "kw-1", label: "Bitcoin" },
+                { key: "kw-2", label: "Payments" },
+              ],
+              overflowCount: 2,
+            },
+          }),
           edition({
             id: "evt-2",
             slug: "bitcoin-asia-2026",
@@ -61,7 +69,8 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /md:border-l md:border-slate-200 md:px-4/);
     assert.equal(html.includes("Bitcoin Conference"), false);
     assert.match(html, /Bitcoin/);
-    assert.match(html, /\+1/);
+    assert.match(html, /Payments/);
+    assert.match(html, /\+2/);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
@@ -72,12 +81,29 @@ describe("DiscoverEditionList", () => {
 
   it("renders Recently Added as Explorer-style full cards", () => {
     const html = renderToStaticMarkup(
-      <DiscoverEditionList editions={[edition({ sponsorCount: 12 })]} variant="full" />,
+      <DiscoverEditionList
+        editions={[
+          edition({
+            sponsorCount: 12,
+            topicPreview: {
+              visibleKeywords: [
+                { key: "kw-1", label: "Bitcoin" },
+                { key: "kw-2", label: "Payments" },
+                { key: "kw-3", label: "Web3" },
+              ],
+              overflowCount: 1,
+            },
+          }),
+        ]}
+        variant="full"
+      />,
     );
 
     assert.match(html, /12/);
     assert.match(html, /Sponsors/);
     assert.match(html, /Bitcoin/);
+    assert.match(html, /Payments/);
+    assert.match(html, /Web3/);
     assert.match(html, /\+1/);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);

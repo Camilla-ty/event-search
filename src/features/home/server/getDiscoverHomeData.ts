@@ -88,18 +88,22 @@ export async function getDiscoverHomeData(options?: {
     getSponsorCountsByEditionIds(recentlyAdded.map((edition) => edition.id)),
   ]);
 
-  const withTopicPreview = (edition: PublicEditionSummary): DiscoverEditionSummary => {
+  const withTopicPreview = (
+    edition: PublicEditionSummary,
+    maxVisibleKeywords = 3,
+  ): DiscoverEditionSummary => {
     const seriesId = seriesIdByEditionId.get(edition.id) ?? "";
     return {
       ...edition,
       topicPreview: buildEventCardKeywordPreview(
         seriesId === "" ? [] : keywordsBySeriesId.get(seriesId),
+        maxVisibleKeywords,
       ),
     };
   };
 
   return {
-    upcoming: upcoming.map(withTopicPreview),
+    upcoming: upcoming.map((edition) => withTopicPreview(edition, 2)),
     recentlyAdded: recentlyAdded.map((edition) => ({
       ...withTopicPreview(edition),
       sponsorCount: readSponsorCountForEdition(sponsorCountsByEditionId, edition.id),

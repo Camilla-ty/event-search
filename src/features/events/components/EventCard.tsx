@@ -68,7 +68,7 @@ function EventCardKeywordBadges({
 }: EventCardKeywordBadgesProps) {
   const widthClass =
     layout === "compact"
-      ? "md:max-w-[55%] lg:max-w-[55%]"
+      ? "md:w-[45%] md:max-w-[45%] md:shrink-0"
       : "md:max-w-[45%] lg:max-w-[50%]";
 
   return (
@@ -161,7 +161,11 @@ function EventCardCompactContent({ event }: { event: EventCardModel }) {
       />
       <div className="min-w-0 flex-1 space-y-3">
         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-3">
-          <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900">
+          <h3
+            className={`line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900 ${
+              event.topicPreview ? "md:w-1/2 md:flex-none" : ""
+            }`}
+          >
             {event.name}
           </h3>
           {event.topicPreview ? (

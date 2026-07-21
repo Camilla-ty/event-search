@@ -26,6 +26,25 @@ describe("buildEventCardKeywordPreview", () => {
     assert.equal(buildEventCardKeywordPreview(undefined), null);
   });
 
+  it("supports a two-keyword preview with the existing overflow count", () => {
+    const preview = buildEventCardKeywordPreview(
+      [
+        { id: "1", name: "DeFi", slug: "defi" },
+        { id: "2", name: "Web3", slug: "web3" },
+        { id: "3", name: "NFTs", slug: "nfts" },
+        { id: "4", name: "Gaming", slug: "gaming" },
+      ],
+      2,
+    );
+
+    assert.ok(preview);
+    assert.deepEqual(
+      preview.visibleKeywords.map((keyword) => keyword.label),
+      ["DeFi", "Web3"],
+    );
+    assert.equal(preview.overflowCount, 2);
+  });
+
   it("deduplicates keywords by id", () => {
     const preview = buildEventCardKeywordPreview([
       { id: "1", name: "DeFi", slug: "defi" },
