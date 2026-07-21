@@ -1,8 +1,8 @@
-import { secondaryCtaClass } from "@/src/lib/design/classes";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import {
   addMonthsToMonthKey,
   formatCalendarMonthLabel,
-  getCurrentMonthKey,
 } from "@/src/features/events/lib/eventCalendarGrouping";
 
 type EventCalendarHeaderProps = {
@@ -10,46 +10,41 @@ type EventCalendarHeaderProps = {
   onMonthChange: (month: string) => void;
 };
 
-const navButtonClass = `${secondaryCtaClass} h-9 px-3`;
+const navButtonClass =
+  "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2";
 
 export function EventCalendarHeader({ month, onMonthChange }: EventCalendarHeaderProps) {
   const previousMonth = addMonthsToMonthKey(month, -1);
   const nextMonth = addMonthsToMonthKey(month, 1);
-  const todayMonth = getCurrentMonthKey();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className={navButtonClass}
-          disabled={previousMonth === null}
-          onClick={() => {
-            if (previousMonth !== null) onMonthChange(previousMonth);
-          }}
-        >
-          Previous month
-        </button>
-        <button
-          type="button"
-          className={navButtonClass}
-          disabled={nextMonth === null}
-          onClick={() => {
-            if (nextMonth !== null) onMonthChange(nextMonth);
-          }}
-        >
-          Next month
-        </button>
-      </div>
+    <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3 rounded-t-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <button
+        type="button"
+        aria-label="Previous month"
+        className={navButtonClass}
+        disabled={previousMonth === null}
+        onClick={() => {
+          if (previousMonth !== null) onMonthChange(previousMonth);
+        }}
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden />
+      </button>
 
-      <p className="text-lg font-semibold text-slate-900">{formatCalendarMonthLabel(month)}</p>
+      <p className="text-center text-lg font-semibold text-slate-900">
+        {formatCalendarMonthLabel(month)}
+      </p>
 
       <button
         type="button"
+        aria-label="Next month"
         className={navButtonClass}
-        onClick={() => onMonthChange(todayMonth)}
+        disabled={nextMonth === null}
+        onClick={() => {
+          if (nextMonth !== null) onMonthChange(nextMonth);
+        }}
       >
-        Today
+        <ChevronRight className="h-4 w-4" aria-hidden />
       </button>
     </div>
   );
