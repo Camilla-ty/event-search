@@ -14,7 +14,7 @@ export function SeriesEditionsList({ editions }: SeriesEditionsListProps) {
   if (editions.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-        No public editions are listed for this event brand yet.
+        No public events are listed for this event brand yet.
       </p>
     );
   }

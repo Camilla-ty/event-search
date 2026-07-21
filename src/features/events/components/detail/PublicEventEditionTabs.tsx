@@ -77,7 +77,7 @@ export function PublicEventEditionTabs({
   return (
     <PublicEditionTabNavigationProvider selectTab={selectTab}>
       <div className={fileTabShellClass}>
-        <nav aria-label="Event edition sections" className={fileTabBarClass} role="tablist">
+        <nav aria-label="Event sections" className={fileTabBarClass} role="tablist">
           <div className={fileTabScrollRowClass}>
             {tabs.map((tab) => {
               const href = buildPublicEditionTabHref(eventSlug, tab.id);

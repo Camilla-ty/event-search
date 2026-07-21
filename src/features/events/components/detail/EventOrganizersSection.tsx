@@ -33,7 +33,7 @@ function EventOrganizersEmptyState({ embedded = false }: { embedded?: boolean })
     <EditionSectionSurface embedded={embedded}>
       <h2 className="text-lg font-semibold text-slate-900">Organizers</h2>
       <p className="mt-3 text-sm text-slate-600">
-        No organizers are listed for this edition yet.
+        No organizers are listed for this event yet.
       </p>
     </EditionSectionSurface>
   );

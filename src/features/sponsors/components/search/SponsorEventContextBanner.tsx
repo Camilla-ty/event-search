@@ -24,7 +24,7 @@ export function SponsorEventContextBanner({
         role="status"
       >
         <p className="text-amber-950">
-          <span className="font-medium">Unknown event edition:</span>{" "}
+          <span className="font-medium">Unknown event:</span>{" "}
           <span className="font-medium">{slugLabel}</span>. No sponsors match this filter.
         </p>
         <button type="button" onClick={onClear} className={brandLinkClass}>

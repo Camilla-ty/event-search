@@ -147,5 +147,6 @@ describe("Sponsor detail auth exposure", () => {
     assert.match(source, /formatSponsoredEditionCount\(summary\.sponsoredEditionCount\)/);
     assert.match(source, /Sign in to view full sponsorship history/);
     assert.match(source, /eventSeriesGroups\.map/);
+    assert.match(source, /pluralize\(editionCount, "event", "events"\)/);
   });
 });

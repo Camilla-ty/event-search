@@ -134,7 +134,7 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
                     <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm text-slate-900">
                       <span className="font-medium">{group.series.name}</span>
                       <span className="text-xs font-normal text-slate-500">
-                        {editionCount} {pluralize(editionCount, "edition", "editions")}
+                        {editionCount} {pluralize(editionCount, "event", "events")}
                       </span>
                     </summary>
 

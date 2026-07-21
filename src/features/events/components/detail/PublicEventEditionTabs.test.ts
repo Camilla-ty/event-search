@@ -56,6 +56,7 @@ describe("PublicEventEditionTabs", () => {
     assert.doesNotMatch(html, /data-panel="overview"/);
     assert.match(html, /href="\/events\/demo-event\?tab=sponsors"/);
     assert.match(html, /aria-selected="true"/);
+    assert.match(html, /aria-label="Event sections"/);
     assert.match(html, />Sponsors<\/a>/);
   });
 

@@ -32,7 +32,7 @@ describe("sponsorNoteDisplayMessage", () => {
     );
     assert.match(
       sponsorNoteDisplayMessage("virtual_covid"),
-      /COVID-19 virtual edition/i,
+      /COVID-19 virtual event/i,
     );
   });
 });

@@ -156,7 +156,7 @@ export function EventVenueEmptyState({
           Venue
         </h2>
         <p className="mt-6 text-base text-slate-700">
-          Venue not specified for this edition.
+          Venue not specified for this event.
           {cityLabel ? ` City-level location: ${cityLabel}.` : ""}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-500">

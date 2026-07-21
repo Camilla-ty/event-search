@@ -101,7 +101,7 @@ export function BitcoinAsiaHubView({ data }: BitcoinAsiaHubViewProps) {
                     </p>
                     {event.seriesName ? (
                       <p className="text-sm text-slate-600">
-                        Series:{" "}
+                        Event brand:{" "}
                         {seriesHref ? (
                           <Link href={seriesHref} className={brandLinkClass}>
                             {event.seriesName}

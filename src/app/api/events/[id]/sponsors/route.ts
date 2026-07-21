@@ -46,7 +46,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const editionId = await resolvePublicSponsorEditionId(id);
     if (editionId === null) {
-      return errorResponse(404, "Edition not found.");
+      return errorResponse(404, "Event not found.");
     }
 
     const result = await getPublicSponsorTierPage(editionId, {

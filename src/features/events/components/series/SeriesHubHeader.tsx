@@ -37,7 +37,7 @@ export function SeriesHubHeader({
           <FactualSummaryParagraph summary={factualSummary} />
         ) : (
           <p className="text-sm text-slate-500">
-            Recurring event brand — browse all editions below.
+            Recurring event brand — browse all events below.
           </p>
         )}
         {websiteDisplay ? (

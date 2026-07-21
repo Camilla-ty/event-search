@@ -17,7 +17,7 @@ const SPONSOR_NOTE_DISPLAY_MESSAGES: Record<SponsorNoteType, string> = {
   upcoming_pending:
     "Sponsor list is expected to be finalized after the event concludes.",
   virtual_covid:
-    "COVID-19 virtual edition. Official website does not provide a sponsor list.",
+    "COVID-19 virtual event. The official website does not provide a sponsor list.",
 };
 
 export function isSponsorNoteType(value: string): value is SponsorNoteType {

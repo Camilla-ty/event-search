@@ -75,7 +75,7 @@ describe("EventVenueEmptyState", () => {
     );
 
     assert.match(html, /<h2[^>]*>Venue<\/h2>/);
-    assert.match(html, /Venue not specified for this edition/);
+    assert.match(html, /Venue not specified for this event/);
     assert.match(html, /City-level location: Las Vegas, Nevada/);
     assert.match(html, /Overview tab/);
   });

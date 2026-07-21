@@ -20,7 +20,7 @@ export function TopicHubHeader({ topic }: TopicHubHeaderProps) {
           </p>
           <h1 className="text-2xl font-semibold text-slate-900">{topic.name}</h1>
           <p className="max-w-2xl text-sm text-slate-600">
-            Event brands and editions tagged with this topic on EventPixels.
+            Event brands and events tagged with this topic on EventPixels.
           </p>
         </div>
         <Link href={viewAllEventsHref} className={`shrink-0 text-sm ${brandLinkClass}`}>

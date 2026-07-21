@@ -9,7 +9,7 @@ describe("EventOrganizersSection", () => {
   it("renders empty state when no organizers", () => {
     const html = renderToStaticMarkup(<EventOrganizersSection organizers={[]} />);
     assert.match(html, /<h2[^>]*>Organizers<\/h2>/);
-    assert.match(html, /No organizers are listed for this edition yet/);
+    assert.match(html, /No organizers are listed for this event yet/);
   });
 
   it("renders organizer list when links exist", () => {
