@@ -108,6 +108,9 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /Bitcoin/);
     assert.match(html, /Web3/);
     assert.match(html, /\+2/);
+    assert.match(html, /md:max-w-\[45%\]/);
+    assert.match(html, /lg:max-w-\[50%\]/);
+    assert.equal(html.includes("md:max-w-[55%]"), false);
   });
 
   it("renders compact cards with topics, date, and location but no series text", () => {
@@ -144,6 +147,9 @@ describe("shared EventCard foundation", () => {
     assert.equal(html.includes("Bitcoin Conference"), false);
     assert.match(html, /Payments/);
     assert.match(html, /\+2/);
+    assert.match(html, /md:max-w-\[55%\]/);
+    assert.match(html, /lg:max-w-\[55%\]/);
+    assert.equal(html.includes("md:max-w-[45%]"), false);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);

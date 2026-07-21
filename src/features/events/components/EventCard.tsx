@@ -59,11 +59,20 @@ function EventCardSponsorCount({ count }: { count: number }) {
 
 type EventCardKeywordBadgesProps = {
   keywordPreview: EventCardKeywordPreview;
+  layout?: "full" | "compact";
 };
 
-function EventCardKeywordBadges({ keywordPreview }: EventCardKeywordBadgesProps) {
+function EventCardKeywordBadges({
+  keywordPreview,
+  layout = "full",
+}: EventCardKeywordBadgesProps) {
+  const widthClass =
+    layout === "compact"
+      ? "md:max-w-[55%] lg:max-w-[55%]"
+      : "md:max-w-[45%] lg:max-w-[50%]";
+
   return (
-    <div className="flex flex-wrap gap-1.5 md:max-w-[45%] md:justify-end lg:max-w-[50%]">
+    <div className={`flex flex-wrap gap-1.5 md:justify-end ${widthClass}`}>
       {keywordPreview.visibleKeywords.map((keyword) => (
         <Badge
           key={keyword.key}
@@ -156,7 +165,10 @@ function EventCardCompactContent({ event }: { event: EventCardModel }) {
             {event.name}
           </h3>
           {event.topicPreview ? (
-            <EventCardKeywordBadges keywordPreview={event.topicPreview} />
+            <EventCardKeywordBadges
+              keywordPreview={event.topicPreview}
+              layout="compact"
+            />
           ) : null}
         </div>
 
