@@ -77,14 +77,20 @@ describe("useUrlSyncedState ownership", () => {
 
 describe("event result card navigation", () => {
   it("EventCard uses Next.js Link without preventDefault", () => {
-    const source = readFileSync(
+    const sharedSource = readFileSync(
+      path.join(process.cwd(), "src/features/events/components/EventCard.tsx"),
+      "utf8",
+    );
+    const adapterSource = readFileSync(
       path.join(process.cwd(), "src/features/events/components/explorer/EventCard.tsx"),
       "utf8",
     );
 
-    assert.match(source, /<Link href=\{event\.href\}/);
-    assert.equal(source.includes("preventDefault"), false);
-    assert.doesNotMatch(source, /buildEventDetailPath/);
+    assert.match(sharedSource, /<Link[\s\S]*?href=\{event\.href\}/);
+    assert.equal(sharedSource.includes("preventDefault"), false);
+    assert.doesNotMatch(sharedSource, /buildEventDetailPath/);
+    assert.doesNotMatch(adapterSource, /buildEventDetailPath/);
+    assert.match(adapterSource, /SharedEventCard/);
   });
 });
 
