@@ -3,12 +3,21 @@ import Link from "next/link";
 import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
-import { secondaryCtaClass } from "@/src/lib/design/classes";
 import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
 
 type DiscoverEditionListProps = {
   editions: PublicEditionSummary[];
 };
+
+const editionRowClass =
+  "flex w-full flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between";
+
+const editionRowLinkClass = [
+  editionRowClass,
+  "transition",
+  "hover:bg-brand-primary-muted/30",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
 
 export function DiscoverEditionList({ editions }: DiscoverEditionListProps) {
   return (
@@ -21,35 +30,37 @@ export function DiscoverEditionList({ editions }: DiscoverEditionListProps) {
         if (dateRange !== "Date TBC") metaParts.push(dateRange);
         if (edition.locationLabel !== "") metaParts.push(edition.locationLabel);
 
-        return (
-          <li
-            key={edition.id}
-            className="flex flex-col gap-3 px-4 py-4 first:pt-4 last:pb-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="flex min-w-0 items-start gap-3">
-              <SeriesLogo
-                series={edition.event_series}
-                fallbackName={edition.name}
-                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
-                monogramClassName="text-base font-semibold text-slate-400"
-              />
-              <div className="min-w-0">
-                <p className="line-clamp-1 font-medium text-slate-900">{edition.name}</p>
-                {edition.event_series?.name ? (
-                  <p className="line-clamp-1 text-xs text-slate-500">
-                    {edition.event_series.name}
-                  </p>
-                ) : null}
-                {metaParts.length > 0 ? (
-                  <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
-                ) : null}
-              </div>
+        const content = (
+          <div className="flex min-w-0 items-start gap-3">
+            <SeriesLogo
+              series={edition.event_series}
+              fallbackName={edition.name}
+              className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+              monogramClassName="text-base font-semibold text-slate-400"
+            />
+            <div className="min-w-0">
+              <p className="line-clamp-1 font-medium text-slate-900">{edition.name}</p>
+              {edition.event_series?.name ? (
+                <p className="line-clamp-1 text-xs text-slate-500">
+                  {edition.event_series.name}
+                </p>
+              ) : null}
+              {metaParts.length > 0 ? (
+                <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
+              ) : null}
             </div>
+          </div>
+        );
+
+        return (
+          <li key={edition.id}>
             {href ? (
-              <Link href={href} className={`${secondaryCtaClass} h-9 shrink-0 px-4`}>
-                View event
+              <Link href={href} className={editionRowLinkClass} aria-label={`View ${edition.name}`}>
+                {content}
               </Link>
-            ) : null}
+            ) : (
+              <div className={editionRowClass}>{content}</div>
+            )}
           </li>
         );
       })}
