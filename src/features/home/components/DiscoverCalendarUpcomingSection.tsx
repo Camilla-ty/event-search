@@ -1,13 +1,12 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
-import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
-
 import { DiscoverCalendarPreview } from "@/src/features/home/components/DiscoverCalendarPreview";
 import { DiscoverEditionList } from "@/src/features/home/components/DiscoverEditionList";
 import { DiscoverEventModule } from "@/src/features/home/components/DiscoverEventModule";
+import type { DiscoverEditionSummary } from "@/src/features/home/server/getDiscoverHomeData";
 
 type DiscoverCalendarUpcomingSectionProps = {
   calendarEvents: readonly EventRecord[];
-  upcoming: PublicEditionSummary[];
+  upcoming: DiscoverEditionSummary[];
   upcomingViewAllHref: string;
 };
 
@@ -35,7 +34,7 @@ export function DiscoverCalendarUpcomingSection({
           emptyActionHref={upcomingViewAllHref}
           isEmpty={upcoming.length === 0}
         >
-          <DiscoverEditionList editions={upcoming} />
+          <DiscoverEditionList editions={upcoming} variant="compact" />
         </DiscoverEventModule>
       </div>
     </section>

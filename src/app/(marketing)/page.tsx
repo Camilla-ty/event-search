@@ -40,7 +40,7 @@ export default async function DiscoverPage() {
         emptyActionHref="/events"
         isEmpty={recentlyAdded.length === 0}
       >
-        <DiscoverEditionList editions={recentlyAdded} />
+        <DiscoverEditionList editions={recentlyAdded} variant="full" />
       </DiscoverEventModule>
     </div>
   );

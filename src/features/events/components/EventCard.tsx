@@ -141,13 +141,6 @@ function EventCardFullContent({ event }: { event: EventCardModel }) {
 function EventCardCompactContent({ event }: { event: EventCardModel }) {
   const dateLabel = formatEventDateRange(event.startDate, event.endDate);
   const locationLabel = event.locationLabel || "Location not set";
-  const seriesName = event.series?.name?.trim() ?? "";
-  const primaryMeta =
-    seriesName !== ""
-      ? seriesName
-      : event.year !== null && event.year !== undefined
-        ? String(event.year)
-        : "\u00A0";
 
   return (
     <div className="flex items-start gap-4">
@@ -162,13 +155,13 @@ function EventCardCompactContent({ event }: { event: EventCardModel }) {
           <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900">
             {event.name}
           </h3>
+          {event.topicPreview ? (
+            <EventCardKeywordBadges keywordPreview={event.topicPreview} />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <EventCardMetaBlock>
-            <span className="line-clamp-2">{primaryMeta}</span>
-          </EventCardMetaBlock>
-          <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
+          <EventCardMetaBlock>{dateLabel}</EventCardMetaBlock>
           <EventCardMetaBlock withDivider>
             <span className="line-clamp-2">{locationLabel}</span>
           </EventCardMetaBlock>

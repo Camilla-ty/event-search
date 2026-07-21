@@ -110,7 +110,7 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /\+2/);
   });
 
-  it("renders compact cards with Explorer full-card typography, spacing, and metadata layout", () => {
+  it("renders compact cards with topics, date, and location but no series text", () => {
     const html = renderToStaticMarkup(
       <EventCard
         event={model({
@@ -118,6 +118,10 @@ describe("shared EventCard foundation", () => {
           series: {
             name: "Bitcoin Conference",
             logo_url: null,
+          },
+          topicPreview: {
+            visibleKeywords: [{ key: "kw-1", label: "Payments" }],
+            overflowCount: 2,
           },
         })}
         variant="compact"
@@ -137,7 +141,9 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /flex flex-col gap-2 md:flex-row md:items-center/);
     assert.match(html, /text-sm text-slate-600 md:flex-1/);
     assert.match(html, /md:border-l md:border-slate-200 md:px-4/);
-    assert.match(html, /Bitcoin Conference/);
+    assert.equal(html.includes("Bitcoin Conference"), false);
+    assert.match(html, /Payments/);
+    assert.match(html, /\+2/);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
@@ -145,7 +151,7 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /focus-visible:ring-2 focus-visible:ring-brand-primary\/30/);
   });
 
-  it("omits sponsor count and topic badges from compact cards", () => {
+  it("omits sponsor count but keeps topic badges in compact cards", () => {
     const html = renderToStaticMarkup(
       <EventCard
         event={model({
@@ -161,8 +167,8 @@ describe("shared EventCard foundation", () => {
 
     assert.equal(html.includes("42"), false);
     assert.equal(html.includes("Sponsors"), false);
-    assert.equal(html.includes("Payments"), false);
-    assert.equal(html.includes("+3"), false);
+    assert.match(html, /Payments/);
+    assert.match(html, /\+3/);
   });
 
   it("uses Explorer missing-data fallbacks in compact cards", () => {

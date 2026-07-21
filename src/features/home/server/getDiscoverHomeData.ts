@@ -1,6 +1,11 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import {
+  buildEventCardKeywordPreview,
+  type EventCardKeywordPreview,
+} from "@/src/features/events/lib/eventCardKeywordPreview";
 import { readEventDateRange } from "@/src/features/events/lib/readEventIsoDate";
 import { mapPublicEditionRow } from "@/src/features/events/server/mapPublicEditionRow";
+import { getPublicKeywordsForSeriesIds } from "@/src/features/events/server/seriesKeywordsPublic";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
 import {
   DISCOVER_MODULE_LIMIT,
@@ -10,12 +15,27 @@ import {
   type DiscoverEditionCandidate,
 } from "@/src/features/home/server/discoverEditionSelectors";
 import { getEventEditions } from "@/src/lib/queries/events";
+import {
+  getSponsorCountsByEditionIds,
+  readSponsorCountForEdition,
+} from "@/src/lib/queries/companies";
+
+export type DiscoverEditionSummary = PublicEditionSummary & {
+  topicPreview: EventCardKeywordPreview | null;
+  sponsorCount?: number;
+};
 
 export type DiscoverHomeData = {
-  upcoming: PublicEditionSummary[];
-  recentlyAdded: PublicEditionSummary[];
+  upcoming: DiscoverEditionSummary[];
+  recentlyAdded: DiscoverEditionSummary[];
   calendarEvents: EventRecord[];
 };
+
+function readSeriesId(raw: unknown): string {
+  if (raw === null || typeof raw !== "object") return "";
+  const seriesId = (raw as { series_id?: unknown }).series_id;
+  return typeof seriesId === "string" ? seriesId.trim() : "";
+}
 
 function mapEditionToEventRecord(edition: PublicEditionSummary): EventRecord {
   return {
@@ -39,9 +59,11 @@ export async function getDiscoverHomeData(options?: {
   const rows = (await getEventEditions()) ?? [];
 
   const editions: DiscoverEditionCandidate[] = [];
+  const seriesIdByEditionId = new Map<string, string>();
   for (const row of rows) {
     const mapped = mapPublicEditionRow(row);
     if (!mapped) continue;
+    seriesIdByEditionId.set(mapped.id, readSeriesId(row));
     editions.push({
       ...mapped,
       created_at: readEditionCreatedAt(
@@ -55,10 +77,33 @@ export async function getDiscoverHomeData(options?: {
   const calendarEvents = editions
     .filter((edition) => readEventDateRange(edition) !== null)
     .map(mapEditionToEventRecord);
+  const upcoming = selectUpcomingEditions(editions, { limit });
+  const recentlyAdded = selectRecentlyAddedEditions(editions, { limit });
+  const selectedEditions = [...upcoming, ...recentlyAdded];
+  const selectedSeriesIds = selectedEditions.map(
+    (edition) => seriesIdByEditionId.get(edition.id) ?? "",
+  );
+  const [keywordsBySeriesId, sponsorCountsByEditionId] = await Promise.all([
+    getPublicKeywordsForSeriesIds(selectedSeriesIds),
+    getSponsorCountsByEditionIds(recentlyAdded.map((edition) => edition.id)),
+  ]);
+
+  const withTopicPreview = (edition: PublicEditionSummary): DiscoverEditionSummary => {
+    const seriesId = seriesIdByEditionId.get(edition.id) ?? "";
+    return {
+      ...edition,
+      topicPreview: buildEventCardKeywordPreview(
+        seriesId === "" ? [] : keywordsBySeriesId.get(seriesId),
+      ),
+    };
+  };
 
   return {
-    upcoming: selectUpcomingEditions(editions, { limit }),
-    recentlyAdded: selectRecentlyAddedEditions(editions, { limit }),
+    upcoming: upcoming.map(withTopicPreview),
+    recentlyAdded: recentlyAdded.map((edition) => ({
+      ...withTopicPreview(edition),
+      sponsorCount: readSponsorCountForEdition(sponsorCountsByEditionId, edition.id),
+    })),
     calendarEvents,
   };
 }
