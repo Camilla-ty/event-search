@@ -65,7 +65,7 @@ describe("buildSponsorMetadataDescription", () => {
     );
   });
 
-  it("uses sponsored edition count when domain and website are missing", () => {
+  it("uses sponsored event count when domain and website are missing", () => {
     const description = buildSponsorMetadataDescription({
       name: "Nexus Analytics",
       domain: null,
@@ -74,18 +74,18 @@ describe("buildSponsorMetadataDescription", () => {
     });
     assert.equal(
       description,
-      "Nexus Analytics. Sponsored 1 recorded event edition on EventPixels.",
+      "Nexus Analytics. Sponsored 1 recorded event on EventPixels.",
     );
   });
 
-  it("pluralizes sponsored edition count", () => {
+  it("pluralizes sponsored event count", () => {
     const description = buildSponsorMetadataDescription({
       name: "Acme",
       sponsoredEditionCount: 12,
     });
     assert.equal(
       description,
-      "Acme. Sponsored 12 recorded event editions on EventPixels.",
+      "Acme. Sponsored 12 recorded events on EventPixels.",
     );
   });
 

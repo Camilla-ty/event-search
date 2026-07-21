@@ -38,7 +38,7 @@ export async function generateMetadata({
   const decision = getTopicIndexability();
   return createPageMetadata({
     title: data.topic.name,
-    description: `${data.topic.name} — related event brands and editions on EventPixels.`,
+    description: `${data.topic.name} — related event brands and events on EventPixels.`,
     path: buildTopicHubPath(data.topic.slug) ?? `/topics/${data.topic.slug}`,
     robots: robotsForIndexability(decision),
   });

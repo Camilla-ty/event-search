@@ -46,6 +46,10 @@ function assertNoBannedWording(text: string) {
   }
 }
 
+function assertNoLegacyTerminology(text: string) {
+  assert.doesNotMatch(text, /\bevent (?:series|editions?)\b/i);
+}
+
 describe("formatSummaryDateRange", () => {
   it("uses the canonical public event date range", () => {
     assert.equal(
@@ -146,9 +150,10 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "Avalanche Summit New York 2026 is an event edition in the Avalanche Summit series. It will take place on Sep 16 – Sep 17, 2026 in New York, United States. 34 sponsors are recorded for this edition across 4 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 2, 2026.",
+      "Avalanche Summit New York 2026 is an event from the Avalanche Summit event brand. It will take place on Sep 16 – Sep 17, 2026 in New York, United States. 34 sponsors are recorded for this event across 4 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 2, 2026.",
     );
     assertNoBannedWording(summary!);
+    assertNoLegacyTerminology(summary!);
   });
 
   it("builds a future edition without tiers or last reviewed", () => {
@@ -164,7 +169,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "Devcon 8 is an event edition in the Devcon series. It will take place on Nov 3 – Nov 6, 2026 in Mumbai, India. 12 sponsors are recorded for this edition on EventPixels.",
+      "Devcon 8 is an event from the Devcon event brand. It will take place on Nov 3 – Nov 6, 2026 in Mumbai, India. 12 sponsors are recorded for this event on EventPixels.",
     );
   });
 
@@ -183,7 +188,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "ETHGlobal Lisbon 2026 is an event edition in the ETHGlobal series. It is taking place Jul 16 – Jul 18, 2026 in Lisbon, Portugal. 21 sponsors are recorded for this edition across 3 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 14, 2026.",
+      "ETHGlobal Lisbon 2026 is an event from the ETHGlobal event brand. It is taking place Jul 16 – Jul 18, 2026 in Lisbon, Portugal. 21 sponsors are recorded for this event across 3 sponsorship tiers on EventPixels. Sponsor information was last reviewed on July 14, 2026.",
     );
   });
 
@@ -203,7 +208,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "BTC Prague 2026 is an event edition in the BTC Prague series. It took place on Jun 11 – Jun 13, 2026 in Prague, Czech Republic. The venue was PVA EXPO Praha. 81 sponsors are recorded for this edition across 6 sponsorship tiers on EventPixels. Sponsor information was last reviewed on June 20, 2026.",
+      "BTC Prague 2026 is an event from the BTC Prague event brand. It took place on Jun 11 – Jun 13, 2026 in Prague, Czech Republic. The venue was PVA EXPO Praha. 81 sponsors are recorded for this event across 6 sponsorship tiers on EventPixels. Sponsor information was last reviewed on June 20, 2026.",
     );
   });
 
@@ -218,7 +223,7 @@ describe("buildEventEditionSummary", () => {
 
     assert.equal(
       summary,
-      "WebSummit Rio 2027 is an event edition in the Web Summit series. It is held in Rio de Janeiro, Brazil.",
+      "WebSummit Rio 2027 is an event from the Web Summit event brand. It is held in Rio de Janeiro, Brazil.",
     );
     assert.doesNotMatch(summary!, /sponsor/i);
     assert.doesNotMatch(summary!, /TBD|unknown|0 sponsor/i);
@@ -231,7 +236,7 @@ describe("buildEventEditionSummary", () => {
     });
     assert.equal(
       summary,
-      "Example Conference 2027 is an event edition on EventPixels.",
+      "Example Conference 2027 is an event on EventPixels.",
     );
   });
 
@@ -292,9 +297,10 @@ describe("buildEventSeriesSummary", () => {
 
     assert.equal(
       summary,
-      "Bitcoin Conference is an event series on EventPixels. 4 editions are recorded, from 2024 to 2027. The next recorded edition, Bitcoin Hong Kong 2027, will take place on Jan 12 – Jan 14, 2027 in Hong Kong. The series is associated with the topics Bitcoin and Payments.",
+      "Bitcoin Conference is an event brand on EventPixels. 4 events are recorded, from 2024 to 2027. The next recorded event, Bitcoin Hong Kong 2027, will take place on Jan 12 – Jan 14, 2027 in Hong Kong. The event brand is associated with the topics Bitcoin and Payments.",
     );
     assertNoBannedWording(summary!);
+    assertNoLegacyTerminology(summary!);
   });
 
   it("uses the most recent past edition when none are upcoming", () => {
@@ -313,7 +319,7 @@ describe("buildEventSeriesSummary", () => {
 
     assert.equal(
       summary,
-      "StartmeupHK Festival is an event series on EventPixels. 6 editions are recorded, from 2019 to 2024. The most recent recorded edition, StartmeupHK Festival 2024, took place in 2024 in Hong Kong.",
+      "StartmeupHK Festival is an event brand on EventPixels. 6 events are recorded, from 2019 to 2024. The most recent recorded event, StartmeupHK Festival 2024, took place in 2024 in Hong Kong.",
     );
   });
 
@@ -335,7 +341,7 @@ describe("buildEventSeriesSummary", () => {
 
     assert.equal(
       summary,
-      "Token Forum is an event series marked as discontinued on EventPixels. 3 editions are recorded, from 2021 to 2023. The most recent recorded edition, Token Forum 2023, took place in 2023 in Singapore.",
+      "Token Forum is an event brand marked as discontinued on EventPixels. 3 events are recorded, from 2021 to 2023. The most recent recorded event, Token Forum 2023, took place in 2023 in Singapore.",
     );
   });
 
@@ -347,7 +353,7 @@ describe("buildEventSeriesSummary", () => {
     });
     assert.equal(
       summary,
-      "Nordic Fintech Week is an event series on EventPixels. 1 edition is recorded, in 2026.",
+      "Nordic Fintech Week is an event brand on EventPixels. 1 event is recorded, in 2026.",
     );
   });
 
@@ -372,7 +378,7 @@ describe("buildCompanySummary", () => {
     });
     assert.equal(
       summary,
-      "BitGo is a company profiled on EventPixels; its website is bitgo.com. It has sponsored 23 event editions recorded on EventPixels. The full list of sponsored events is available to logged-in users.",
+      "BitGo is a company profiled on EventPixels; its website is bitgo.com. It has sponsored 23 events recorded on EventPixels. The full list of sponsored events is available to logged-in users.",
     );
     assert.doesNotMatch(summary!, /BTC Prague|Consensus|Bitcoin Conference/i);
     assertNoBannedWording(summary!);
@@ -385,7 +391,7 @@ describe("buildCompanySummary", () => {
     });
     assert.equal(
       summary,
-      "Nexus Analytics is a company profiled on EventPixels. It has sponsored 1 event edition recorded on EventPixels. The full list of sponsored events is available to logged-in users.",
+      "Nexus Analytics is a company profiled on EventPixels. It has sponsored 1 event recorded on EventPixels. The full list of sponsored events is available to logged-in users.",
     );
   });
 
@@ -422,7 +428,7 @@ describe("buildCompanySummary", () => {
       sponsoredEditionCount: 40,
     });
     assert.match(summary!, /its website is fireblocks\.com/);
-    assert.doesNotMatch(summary!, /took place|edition in the/i);
+    assert.doesNotMatch(summary!, /took place|event from the/i);
   });
 });
 
@@ -470,6 +476,7 @@ describe("banned wording corpus", () => {
     for (const text of corpus) {
       assert.ok(text);
       assertNoBannedWording(text);
+      assertNoLegacyTerminology(text);
     }
   });
 });

@@ -9,7 +9,7 @@ import {
 } from "@/src/lib/content/factualSummary";
 import { trimSponsorMetadataDescription } from "@/src/lib/seo/sponsorMetadata";
 
-const FALLBACK_SUFFIX = "all events and editions on EventPixels.";
+const FALLBACK_SUFFIX = "events from this event brand on EventPixels.";
 
 export type SeriesMetadataDescriptionInput = EventSeriesSummaryInput;
 
@@ -21,7 +21,7 @@ export function buildSeriesMetadataDescription(
   input: SeriesMetadataDescriptionInput,
 ): string {
   const name = typeof input.name === "string" ? input.name.trim() : "";
-  const safeName = name !== "" ? name : "Event series";
+  const safeName = name !== "" ? name : "Event brand";
   const summary = buildEventSeriesSummary(input);
   if (summary) {
     return trimSponsorMetadataDescription(summary);

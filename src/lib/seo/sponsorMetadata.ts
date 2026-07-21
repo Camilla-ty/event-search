@@ -74,7 +74,7 @@ export function trimSponsorMetadataDescription(
 }
 
 function formatSponsoredEditionCountPhrase(count: number): string {
-  const noun = count === 1 ? "event edition" : "event editions";
+  const noun = count === 1 ? "event" : "events";
   return `Sponsored ${count} recorded ${noun} on EventPixels.`;
 }
 

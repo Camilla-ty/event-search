@@ -28,9 +28,10 @@ describe("buildSeriesMetadataDescription", () => {
       now: new Date("2026-07-18T00:00:00.000Z"),
     });
 
-    assert.ok(description.startsWith("TOKEN2049 is an event series"));
+    assert.ok(description.startsWith("TOKEN2049 is an event brand"));
     assert.ok(description.length <= 155);
     assert.doesNotMatch(description, /premier|largest|flagship/i);
+    assert.doesNotMatch(description, /\bevent (?:series|editions?)\b/i);
   });
 
   it("falls back to a name template when summary is unavailable", () => {
@@ -41,7 +42,7 @@ describe("buildSeriesMetadataDescription", () => {
 
     assert.equal(
       description,
-      "Merged Brand — all events and editions on EventPixels.",
+      "Merged Brand — events from this event brand on EventPixels.",
     );
   });
 });

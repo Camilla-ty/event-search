@@ -247,9 +247,9 @@ export function buildEventEditionSummary(
   const fragments: string[] = [];
 
   if (seriesName) {
-    fragments.push(`${name} is an event edition in the ${seriesName} series.`);
+    fragments.push(`${name} is an event from the ${seriesName} event brand.`);
   } else {
-    fragments.push(`${name} is an event edition on EventPixels.`);
+    fragments.push(`${name} is an event on EventPixels.`);
   }
 
   if (dateRange) {
@@ -281,7 +281,7 @@ export function buildEventEditionSummary(
         ? ` across ${tierCount} sponsorship ${tierCount === 1 ? "tier" : "tiers"}`
         : "";
     fragments.push(
-      `${sponsorCount} ${sponsorNoun} ${verb} recorded for this edition${tierClause} on EventPixels.`,
+      `${sponsorCount} ${sponsorNoun} ${verb} recorded for this event${tierClause} on EventPixels.`,
     );
   }
 
@@ -310,10 +310,10 @@ export function buildEventSeriesSummary(
 
   if (lifecycle === "discontinued") {
     fragments.push(
-      `${name} is an event series marked as discontinued on EventPixels.`,
+      `${name} is an event brand marked as discontinued on EventPixels.`,
     );
   } else {
-    fragments.push(`${name} is an event series on EventPixels.`);
+    fragments.push(`${name} is an event brand on EventPixels.`);
   }
 
   if (editions.length >= 1) {
@@ -321,7 +321,7 @@ export function buildEventSeriesSummary(
       .map(yearFromEdition)
       .filter((y): y is number => y !== null)
       .sort((a, b) => a - b);
-    const editionNoun = editions.length === 1 ? "edition" : "editions";
+    const editionNoun = editions.length === 1 ? "event" : "events";
     const verb = editions.length === 1 ? "is" : "are";
 
     let span = "";
@@ -358,7 +358,7 @@ export function buildEventSeriesSummary(
       const dateRange = formatSummaryDateRange(next.startDate, next.endDate);
       if (editionName && dateRange) {
         fragments.push(
-          `The next recorded edition, ${editionName}, will take place on ${dateRange}${locationClause(next.locationLabel)}.`,
+          `The next recorded event, ${editionName}, will take place on ${dateRange}${locationClause(next.locationLabel)}.`,
         );
       }
     } else {
@@ -384,7 +384,7 @@ export function buildEventSeriesSummary(
             editions.length === 1 && !latestLocation && years.length <= 1;
           if (!redundant) {
             fragments.push(
-              `The most recent recorded edition, ${editionName}, took place in ${year}${locationClause(latest.locationLabel)}.`,
+              `The most recent recorded event, ${editionName}, took place in ${year}${locationClause(latest.locationLabel)}.`,
             );
           }
         }
@@ -395,7 +395,7 @@ export function buildEventSeriesSummary(
   const topicList = joinTopicNames(topics);
   if (topicList) {
     const topicNoun = topics.filter((t) => trimText(t)).length === 1 ? "topic" : "topics";
-    fragments.push(`The series is associated with the ${topicNoun} ${topicList}.`);
+    fragments.push(`The event brand is associated with the ${topicNoun} ${topicList}.`);
   }
 
   return fragments.join(" ");
@@ -420,7 +420,7 @@ export function buildCompanySummary(input: CompanySummaryInput): string | null {
   }
 
   if (!countUnknown && count >= 1) {
-    const noun = count === 1 ? "event edition" : "event editions";
+    const noun = count === 1 ? "event" : "events";
     fragments.push(
       `It has sponsored ${count} ${noun} recorded on EventPixels.`,
     );
