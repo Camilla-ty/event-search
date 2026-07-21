@@ -16,7 +16,8 @@ type ValidationStepProps = {
 };
 
 export function ValidationStep({ initialSummary }: ValidationStepProps) {
-  const { batch, goToStep } = useSponsorImportWizard();
+  const { batch, goToStep, updateBatch } = useSponsorImportWizard();
+  const [validationBatch] = useState(batch);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<RowSummary>(initialSummary);
@@ -29,14 +30,19 @@ export function ValidationStep({ initialSummary }: ValidationStepProps) {
     async function run() {
       setLoading(true);
       setError(null);
-      const val = await runValidation(batch.id);
+      const val = await runValidation(validationBatch.id);
       if (cancelled) return;
       if (!val.ok) {
         setError(val.error);
         setLoading(false);
         return;
       }
-      const listed = await fetchRows(batch.id, { page: 1, pageSize: 50 });
+      updateBatch({
+        ...validationBatch,
+        status: "review",
+        processing_phase: null,
+      });
+      const listed = await fetchRows(validationBatch.id, { page: 1, pageSize: 50 });
       if (cancelled) return;
       if (!listed.ok) {
         setError(listed.error);
@@ -51,7 +57,7 @@ export function ValidationStep({ initialSummary }: ValidationStepProps) {
     return () => {
       cancelled = true;
     };
-  }, [batch.id]);
+  }, [validationBatch, updateBatch]);
 
   const canContinue = summary.blocking_validation_count === 0;
 

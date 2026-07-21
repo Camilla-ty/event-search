@@ -15,6 +15,7 @@ import {
   replaceHistoryUrl,
 } from "@/src/lib/navigation/historyUrl";
 import { buildPathWithSearchParams } from "@/src/lib/navigation/urlPath";
+import { stepperIndex } from "@/src/features/sponsor-import/client/resumeStep";
 
 describe("guardImportStep", () => {
   it("blocks draft navigation while batch is still in review", () => {
@@ -109,6 +110,34 @@ describe("review to draft batch status transition", () => {
   it("requires draft status before publish step is allowed", () => {
     assert.equal(guardImportStep("review", "draft"), "review");
     assert.equal(guardImportStep("draft", "draft"), "draft");
+  });
+});
+
+describe("upload to validation to review transition", () => {
+  it("updates local status after validation so Review does not resolve back to Upload", () => {
+    const validationStepSource = readFileSync(
+      path.join(process.cwd(), "src/features/sponsor-import/components/steps/ValidationStep.tsx"),
+      "utf8",
+    );
+    const updateBatchIndex = validationStepSource.indexOf("updateBatch({");
+    const reviewNavigationIndex = validationStepSource.indexOf('goToStep("review")');
+
+    assert.ok(updateBatchIndex >= 0);
+    assert.match(
+      validationStepSource.slice(updateBatchIndex),
+      /updateBatch\(\{\s*\.\.\.validationBatch,\s*status: "review",\s*processing_phase: null,\s*\}\)/,
+    );
+    assert.ok(updateBatchIndex < reviewNavigationIndex);
+
+    const visitedSteps = [
+      guardImportStep("uploaded", "upload"),
+      guardImportStep("uploaded", "validation"),
+      guardImportStep("review", "review"),
+    ];
+
+    assert.deepEqual(visitedSteps, ["upload", "validation", "review"]);
+    assert.equal(stepperIndex(visitedSteps.at(-1)!), 2);
+    assert.notEqual(stepperIndex(visitedSteps.at(-1)!), stepperIndex("upload"));
   });
 });
 

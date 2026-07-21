@@ -23,8 +23,8 @@ function sampleRow(): EventExplorerRow {
   };
 }
 
-describe("EventGrid loading pagination", () => {
-  it("reserves a disabled pagination footer while loading", () => {
+describe("EventGrid loading", () => {
+  it("shows the shared PageLoadingSkeleton list while loading", () => {
     const html = renderToStaticMarkup(
       React.createElement(EventGrid, {
         rows: [sampleRow()],
@@ -37,17 +37,16 @@ describe("EventGrid loading pagination", () => {
       }),
     );
 
-    assert.match(html, /aria-label="Loading events"/);
-    assert.match(html, /data-pagination="loading"/);
-    assert.match(html, /Previous/);
-    assert.match(html, /Next/);
-    assert.match(html, /disabled/);
-    assert.doesNotMatch(html, /Showing 1 to 20 of 83/);
-    assert.doesNotMatch(html, /83 events/);
+    assert.match(html, /aria-label="Loading list"/);
+    assert.match(html, /aria-busy="true"/);
+    assert.match(html, /animate-pulse/);
     assert.doesNotMatch(html, /Bitcoin Las Vegas 2026/);
+    assert.doesNotMatch(html, /data-pagination="loading"/);
+    assert.doesNotMatch(html, /Showing 1 to 20 of 83/);
+    assert.doesNotMatch(html, /Updating results/);
   });
 
-  it("shows interactive pagination with totals after loading", () => {
+  it("shows event cards after loading completes", () => {
     const html = renderToStaticMarkup(
       React.createElement(EventGrid, {
         rows: [sampleRow()],
@@ -60,13 +59,20 @@ describe("EventGrid loading pagination", () => {
       }),
     );
 
-    assert.match(html, /Showing 1 to 3 of 3 events/);
     assert.match(html, /Bitcoin Las Vegas 2026/);
-    assert.doesNotMatch(html, /data-pagination="loading"/);
+    assert.match(html, /Showing 1 to 3 of 3 events/);
+    assert.doesNotMatch(html, /aria-label="Loading list"/);
   });
 
-  it("wires EventExplorerPage toolbar loading to isLoading", () => {
-    const source = readFileSync(
+  it("wires EventGrid to PageLoadingSkeleton and does not keep EventCardSkeleton", () => {
+    const gridSource = readFileSync(
+      path.join(
+        process.cwd(),
+        "src/features/events/components/explorer/EventGrid.tsx",
+      ),
+      "utf8",
+    );
+    const pageSource = readFileSync(
       path.join(
         process.cwd(),
         "src/features/events/components/explorer/EventExplorerPage.tsx",
@@ -74,6 +80,10 @@ describe("EventGrid loading pagination", () => {
       "utf8",
     );
 
-    assert.match(source, /isLoading=\{isLoading\}/);
+    assert.match(gridSource, /PageLoadingSkeleton/);
+    assert.match(gridSource, /variant="list"/);
+    assert.doesNotMatch(gridSource, /EventCardSkeleton/);
+    assert.doesNotMatch(pageSource, /isLoading=\{isLoading\}/);
+    assert.doesNotMatch(pageSource, /Updating results/);
   });
 });
