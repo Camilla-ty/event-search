@@ -110,7 +110,7 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /\+2/);
   });
 
-  it("renders compact cards with shared logo, title, interaction, and metadata styling", () => {
+  it("renders compact cards with Explorer full-card typography, spacing, and metadata layout", () => {
     const html = renderToStaticMarkup(
       <EventCard
         event={model({
@@ -127,11 +127,22 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /href="\/events\/bitcoin-las-vegas-2026"/);
     assert.match(html, /aria-label="View Bitcoin Las Vegas 2026"/);
     assert.match(html, /h-14 w-14/);
-    assert.match(html, /text-base font-semibold leading-snug/);
+    assert.match(html, /gap-4/);
+    assert.match(html, /space-y-3/);
+    assert.match(
+      html,
+      /line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900/,
+    );
+    assert.match(html, /flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-3/);
+    assert.match(html, /flex flex-col gap-2 md:flex-row md:items-center/);
+    assert.match(html, /text-sm text-slate-600 md:flex-1/);
+    assert.match(html, /md:border-l md:border-slate-200 md:px-4/);
     assert.match(html, /Bitcoin Conference/);
-    assert.match(html, /2026 · 2026-04-27 - 2026-04-29 · Las Vegas, Nevada/);
+    assert.match(html, /2026-04-27 - 2026-04-29/);
+    assert.match(html, /Las Vegas, Nevada/);
+    assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.match(html, /hover:bg-brand-primary-muted\/30/);
-    assert.match(html, /focus-visible:ring-2/);
+    assert.match(html, /focus-visible:ring-2 focus-visible:ring-brand-primary\/30/);
   });
 
   it("omits sponsor count and topic badges from compact cards", () => {
@@ -148,9 +159,29 @@ describe("shared EventCard foundation", () => {
       />,
     );
 
-    assert.equal(html.includes("42 Sponsors"), false);
+    assert.equal(html.includes("42"), false);
+    assert.equal(html.includes("Sponsors"), false);
     assert.equal(html.includes("Payments"), false);
     assert.equal(html.includes("+3"), false);
+  });
+
+  it("uses Explorer missing-data fallbacks in compact cards", () => {
+    const html = renderToStaticMarkup(
+      <EventCard
+        event={model({
+          href: "/events/untitled",
+          series: null,
+          year: null,
+          startDate: null,
+          endDate: null,
+          locationLabel: "",
+        })}
+        variant="compact"
+      />,
+    );
+
+    assert.match(html, /Date TBC/);
+    assert.match(html, /Location not set/);
   });
 
   it("renders compact cards as non-interactive rows when href is missing", () => {
@@ -161,5 +192,7 @@ describe("shared EventCard foundation", () => {
     assert.equal(html.includes("<a "), false);
     assert.equal(html.includes("<article"), false);
     assert.match(html, /class="block w-full p-4"/);
+    assert.equal(html.includes("rounded-xl border border-slate-200"), false);
+    assert.equal(html.includes("shadow-sm"), false);
   });
 });

@@ -46,10 +46,20 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /aria-label="View Bitcoin Las Vegas 2026"/);
     assert.equal(html.includes("View event"), false);
     assert.match(html, /h-14 w-14/);
-    assert.match(html, /text-base font-semibold leading-snug/);
+    assert.match(html, /gap-4/);
+    assert.match(html, /space-y-3/);
+    assert.match(
+      html,
+      /line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900/,
+    );
+    assert.match(html, /text-sm text-slate-600 md:flex-1/);
+    assert.match(html, /md:border-l md:border-slate-200 md:px-4/);
     assert.match(html, /Bitcoin Conference/);
-    assert.match(html, /2026 · 2026-04-27 - 2026-04-29 · Las Vegas, Nevada/);
+    assert.match(html, /2026-04-27 - 2026-04-29/);
+    assert.match(html, /Las Vegas, Nevada/);
+    assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.equal(html.includes("Sponsors"), false);
+    assert.match(html, /divide-y divide-slate-100 rounded-xl border border-slate-200/);
   });
 
   it("renders a non-interactive row when no event detail href is available", () => {

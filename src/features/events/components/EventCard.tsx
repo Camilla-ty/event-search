@@ -140,10 +140,14 @@ function EventCardFullContent({ event }: { event: EventCardModel }) {
 
 function EventCardCompactContent({ event }: { event: EventCardModel }) {
   const dateLabel = formatEventDateRange(event.startDate, event.endDate);
-  const metaParts: string[] = [];
-  if (event.year !== null && event.year !== undefined) metaParts.push(String(event.year));
-  if (dateLabel !== "Date TBC") metaParts.push(dateLabel);
-  if (event.locationLabel !== "") metaParts.push(event.locationLabel);
+  const locationLabel = event.locationLabel || "Location not set";
+  const seriesName = event.series?.name?.trim() ?? "";
+  const primaryMeta =
+    seriesName !== ""
+      ? seriesName
+      : event.year !== null && event.year !== undefined
+        ? String(event.year)
+        : "\u00A0";
 
   return (
     <div className="flex items-start gap-4">
@@ -153,16 +157,22 @@ function EventCardCompactContent({ event }: { event: EventCardModel }) {
         className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
         monogramClassName="text-lg font-semibold text-slate-400"
       />
-      <div className="min-w-0 flex-1">
-        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-slate-900">
-          {event.name}
-        </h3>
-        {event.series?.name ? (
-          <p className="line-clamp-1 text-xs text-slate-500">{event.series.name}</p>
-        ) : null}
-        {metaParts.length > 0 ? (
-          <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
-        ) : null}
+      <div className="min-w-0 flex-1 space-y-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-3">
+          <h3 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug text-slate-900">
+            {event.name}
+          </h3>
+        </div>
+
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <EventCardMetaBlock>
+            <span className="line-clamp-2">{primaryMeta}</span>
+          </EventCardMetaBlock>
+          <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
+          <EventCardMetaBlock withDivider>
+            <span className="line-clamp-2">{locationLabel}</span>
+          </EventCardMetaBlock>
+        </div>
       </div>
     </div>
   );
