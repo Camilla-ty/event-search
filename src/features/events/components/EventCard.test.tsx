@@ -72,6 +72,16 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /Las Vegas, Nevada/);
   });
 
+  it("uses equal-thirds metadata alignment for full cards by default", () => {
+    const html = renderToStaticMarkup(<EventCard event={model()} />);
+
+    assert.equal(html.match(/md:w-1\/3 md:flex-none/g)?.length, 3);
+    assert.equal(html.match(/md:border-l md:border-slate-200 md:px-4/g)?.length, 2);
+    assert.match(html, /md:gap-0/);
+    assert.match(html, /block md:text-center[^>]*>Apr 27 – Apr 29, 2026/);
+    assert.match(html, /line-clamp-2 md:text-right[^>]*>Las Vegas, Nevada/);
+  });
+
   it("falls back to Location not set and Date TBC when metadata is empty", () => {
     const html = renderToStaticMarkup(
       <EventCard
@@ -112,7 +122,6 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /lg:max-w-\[50%\]/);
     assert.equal(html.includes("md:max-w-[55%]"), false);
     assert.equal(html.includes("md:w-1/2"), false);
-    assert.equal(html.includes("md:text-right"), false);
   });
 
   it("renders compact cards with topics, date, and location but no series text", () => {
@@ -152,6 +161,8 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /md:w-1\/2 md:flex-none/);
     assert.match(html, /md:w-\[45%\] md:max-w-\[45%\] md:shrink-0/);
     assert.equal(html.includes("md:max-w-[55%]"), false);
+    assert.equal(html.includes("md:w-1/3"), false);
+    assert.equal(html.includes("md:gap-0"), false);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
     assert.match(html, /line-clamp-2 md:text-right/);

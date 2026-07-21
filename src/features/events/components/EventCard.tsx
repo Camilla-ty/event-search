@@ -97,12 +97,19 @@ function EventCardKeywordBadges({
 type EventCardMetaBlockProps = {
   children: ReactNode;
   withDivider?: boolean;
+  equalThird?: boolean;
 };
 
-function EventCardMetaBlock({ children, withDivider = false }: EventCardMetaBlockProps) {
+function EventCardMetaBlock({
+  children,
+  withDivider = false,
+  equalThird = false,
+}: EventCardMetaBlockProps) {
   return (
     <div
-      className={`min-w-0 text-sm text-slate-600 md:flex-1 ${
+      className={`min-w-0 text-sm text-slate-600 ${
+        equalThird ? "md:w-1/3 md:flex-none" : "md:flex-1"
+      } ${
         withDivider ? "md:border-l md:border-slate-200 md:px-4" : "md:pr-4"
       }`}
     >
@@ -133,13 +140,15 @@ function EventCardFullContent({ event }: { event: EventCardModel }) {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <EventCardMetaBlock>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-0">
+          <EventCardMetaBlock equalThird>
             <EventCardSponsorCount count={event.sponsorCount ?? 0} />
           </EventCardMetaBlock>
-          <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
-          <EventCardMetaBlock withDivider>
-            <span className="line-clamp-2">{locationLabel}</span>
+          <EventCardMetaBlock withDivider equalThird>
+            <span className="block md:text-center">{dateLabel}</span>
+          </EventCardMetaBlock>
+          <EventCardMetaBlock withDivider equalThird>
+            <span className="line-clamp-2 md:text-right">{locationLabel}</span>
           </EventCardMetaBlock>
         </div>
       </div>

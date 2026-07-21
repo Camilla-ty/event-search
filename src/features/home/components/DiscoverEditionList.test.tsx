@@ -107,6 +107,11 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /\+1/);
     assert.match(html, /Apr 27 – Apr 29, 2026/);
     assert.match(html, /Las Vegas, Nevada/);
+    assert.equal(html.match(/md:w-1\/3 md:flex-none/g)?.length, 3);
+    assert.equal(html.match(/md:border-l md:border-slate-200 md:px-4/g)?.length, 2);
+    assert.match(html, /md:gap-0/);
+    assert.match(html, /block md:text-center/);
+    assert.match(html, /line-clamp-2 md:text-right/);
     assert.match(html, /space-y-3/);
     assert.match(html, /rounded-xl border border-slate-200 bg-white p-4 shadow-sm/);
     assert.equal(html.includes("flex-1 divide-y"), false);

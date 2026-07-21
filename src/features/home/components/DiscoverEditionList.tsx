@@ -38,7 +38,10 @@ export function DiscoverEditionList({ editions, variant }: DiscoverEditionListPr
     <ul className={listClassName}>
       {editions.map((edition) => (
         <li key={edition.id}>
-          <EventCard event={mapDiscoverEditionToEventCardModel(edition)} variant={variant} />
+          <EventCard
+            event={mapDiscoverEditionToEventCardModel(edition)}
+            variant={variant}
+          />
         </li>
       ))}
     </ul>

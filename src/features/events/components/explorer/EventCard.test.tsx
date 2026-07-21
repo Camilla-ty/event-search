@@ -86,5 +86,8 @@ describe("EventCard", () => {
     assert.match(html, /Bitcoin/);
     assert.match(html, /Payments/);
     assert.match(html, /\+1/);
+    assert.equal(html.match(/md:w-1\/3 md:flex-none/g)?.length, 3);
+    assert.match(html, /block md:text-center/);
+    assert.match(html, /line-clamp-2 md:text-right/);
   });
 });
