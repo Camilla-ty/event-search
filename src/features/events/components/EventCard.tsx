@@ -21,17 +21,27 @@ export type EventCardModel = {
   endDate: string | null;
   locationLabel: string;
   series: EventCardSeries | null;
-  sponsorCount: number;
-  topicPreview: EventCardKeywordPreview | null;
+  year?: number | null;
+  sponsorCount?: number;
+  topicPreview?: EventCardKeywordPreview | null;
 };
 
 const cardSurfaceClass =
   "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 
-const cardInteractiveClass = [
+const fullCardInteractiveClass = [
   cardSurfaceClass,
   "block cursor-pointer transition",
   "hover:border-brand-primary/40 hover:bg-brand-primary-muted/30",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
+
+const compactCardSurfaceClass = "block w-full p-4";
+
+const compactCardInteractiveClass = [
+  compactCardSurfaceClass,
+  "cursor-pointer transition",
+  "hover:bg-brand-primary-muted/30",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
 ].join(" ");
 
@@ -92,7 +102,7 @@ function EventCardMetaBlock({ children, withDivider = false }: EventCardMetaBloc
   );
 }
 
-function EventCardContent({ event }: { event: EventCardModel }) {
+function EventCardFullContent({ event }: { event: EventCardModel }) {
   const dateLabel = formatEventDateRange(event.startDate, event.endDate);
   const locationLabel = event.locationLabel || "Location not set";
 
@@ -116,7 +126,7 @@ function EventCardContent({ event }: { event: EventCardModel }) {
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <EventCardMetaBlock>
-            <EventCardSponsorCount count={event.sponsorCount} />
+            <EventCardSponsorCount count={event.sponsorCount ?? 0} />
           </EventCardMetaBlock>
           <EventCardMetaBlock withDivider>{dateLabel}</EventCardMetaBlock>
           <EventCardMetaBlock withDivider>
@@ -128,27 +138,67 @@ function EventCardContent({ event }: { event: EventCardModel }) {
   );
 }
 
+function EventCardCompactContent({ event }: { event: EventCardModel }) {
+  const dateLabel = formatEventDateRange(event.startDate, event.endDate);
+  const metaParts: string[] = [];
+  if (event.year !== null && event.year !== undefined) metaParts.push(String(event.year));
+  if (dateLabel !== "Date TBC") metaParts.push(dateLabel);
+  if (event.locationLabel !== "") metaParts.push(event.locationLabel);
+
+  return (
+    <div className="flex items-start gap-4">
+      <SeriesLogo
+        series={event.series}
+        fallbackName={event.name}
+        className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+        monogramClassName="text-lg font-semibold text-slate-400"
+      />
+      <div className="min-w-0 flex-1">
+        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-slate-900">
+          {event.name}
+        </h3>
+        {event.series?.name ? (
+          <p className="line-clamp-1 text-xs text-slate-500">{event.series.name}</p>
+        ) : null}
+        {metaParts.length > 0 ? (
+          <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export type EventCardVariant = "full" | "compact";
+
 export type EventCardProps = {
   event: EventCardModel;
+  variant?: EventCardVariant;
 };
 
-export function EventCard({ event }: EventCardProps) {
-  if (!event.href) {
-    return (
-      <article className={cardSurfaceClass}>
-        <EventCardContent event={event} />
-      </article>
+export function EventCard({ event, variant = "full" }: EventCardProps) {
+  const content =
+    variant === "compact" ? (
+      <EventCardCompactContent event={event} />
+    ) : (
+      <EventCardFullContent event={event} />
     );
+
+  if (!event.href) {
+    if (variant === "compact") {
+      return <div className={compactCardSurfaceClass}>{content}</div>;
+    }
+
+    return <article className={cardSurfaceClass}>{content}</article>;
   }
 
   return (
     <Link
       href={event.href}
       prefetch={false}
-      className={cardInteractiveClass}
+      className={variant === "compact" ? compactCardInteractiveClass : fullCardInteractiveClass}
       aria-label={`View ${event.name}`}
     >
-      <EventCardContent event={event} />
+      {content}
     </Link>
   );
 }

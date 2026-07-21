@@ -109,4 +109,57 @@ describe("shared EventCard foundation", () => {
     assert.match(html, /Web3/);
     assert.match(html, /\+2/);
   });
+
+  it("renders compact cards with shared logo, title, interaction, and metadata styling", () => {
+    const html = renderToStaticMarkup(
+      <EventCard
+        event={model({
+          year: 2026,
+          series: {
+            name: "Bitcoin Conference",
+            logo_url: null,
+          },
+        })}
+        variant="compact"
+      />,
+    );
+
+    assert.match(html, /href="\/events\/bitcoin-las-vegas-2026"/);
+    assert.match(html, /aria-label="View Bitcoin Las Vegas 2026"/);
+    assert.match(html, /h-14 w-14/);
+    assert.match(html, /text-base font-semibold leading-snug/);
+    assert.match(html, /Bitcoin Conference/);
+    assert.match(html, /2026 · 2026-04-27 - 2026-04-29 · Las Vegas, Nevada/);
+    assert.match(html, /hover:bg-brand-primary-muted\/30/);
+    assert.match(html, /focus-visible:ring-2/);
+  });
+
+  it("omits sponsor count and topic badges from compact cards", () => {
+    const html = renderToStaticMarkup(
+      <EventCard
+        event={model({
+          sponsorCount: 42,
+          topicPreview: {
+            visibleKeywords: [{ key: "kw-1", label: "Payments" }],
+            overflowCount: 3,
+          },
+        })}
+        variant="compact"
+      />,
+    );
+
+    assert.equal(html.includes("42 Sponsors"), false);
+    assert.equal(html.includes("Payments"), false);
+    assert.equal(html.includes("+3"), false);
+  });
+
+  it("renders compact cards as non-interactive rows when href is missing", () => {
+    const html = renderToStaticMarkup(
+      <EventCard event={model({ href: null })} variant="compact" />,
+    );
+
+    assert.equal(html.includes("<a "), false);
+    assert.equal(html.includes("<article"), false);
+    assert.match(html, /class="block w-full p-4"/);
+  });
 });
