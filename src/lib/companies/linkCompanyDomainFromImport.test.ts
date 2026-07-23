@@ -32,6 +32,32 @@ describe("normalizeVerifiedCompanyDomainInput", () => {
     );
   });
 
+  it("rejects Facebook profile and vanity URLs as no_identity", () => {
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput(
+        "https://www.facebook.com/profile.php?id=100068135449341",
+      ),
+      { ok: false, reason: "no_identity" },
+    );
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput("https://www.facebook.com/BrandName"),
+      { ok: false, reason: "no_identity" },
+    );
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput("https://fb.com/acme"),
+      { ok: false, reason: "no_identity" },
+    );
+  });
+
+  it("still accepts LinkedIn company pages as verified domains", () => {
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput(
+        "https://www.linkedin.com/company/atlantic-hpc/",
+      ),
+      { ok: true, domain: "linkedin.com/company/atlantic-hpc" },
+    );
+  });
+
   it("rejects blank input", () => {
     assert.deepEqual(normalizeVerifiedCompanyDomainInput(""), { ok: false, reason: "blank" });
     assert.deepEqual(normalizeVerifiedCompanyDomainInput("   "), { ok: false, reason: "blank" });

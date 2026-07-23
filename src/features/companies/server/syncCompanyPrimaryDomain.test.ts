@@ -40,6 +40,27 @@ describe("planSyncCompanyPrimaryDomain", () => {
     );
   });
 
+  it("does not insert a primary company_domains row when Facebook yields null domain", () => {
+    assert.deepEqual(
+      planSyncCompanyPrimaryDomain({
+        desiredDomain: null,
+        companyDomainRows: [],
+        foreignOwnersOfDesiredDomain: [],
+      }),
+      { action: "noop" },
+    );
+    assert.deepEqual(
+      planSyncCompanyPrimaryDomain({
+        desiredDomain: null,
+        companyDomainRows: [
+          { id: PRIMARY_ID, domain: "facebook.com/profile.php", is_primary: true },
+        ],
+        foreignOwnersOfDesiredDomain: [],
+      }),
+      { action: "demote_all_primary" },
+    );
+  });
+
   it("inserts primary when company has no company_domains rows", () => {
     assert.deepEqual(
       planSyncCompanyPrimaryDomain({

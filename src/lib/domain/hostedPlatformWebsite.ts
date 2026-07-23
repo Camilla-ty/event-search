@@ -74,9 +74,6 @@ function matchesSocialPlatformPath(host: string, pathname: string): boolean {
     case "youtu.be":
     case "x.com":
     case "twitter.com":
-    case "facebook.com":
-    case "fb.com":
-    case "m.facebook.com":
     case "t.me":
     case "telegram.me":
     case "linktr.ee":
@@ -150,9 +147,12 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
   "discordapp.com",
   "discord.gg",
   "reddit.com",
-  // Social (no path-aware identity)
+  // Social (always no_identity — including all Facebook hosts/paths)
   "instagram.com",
   "tiktok.com",
+  "facebook.com",
+  "fb.com",
+  "m.facebook.com",
   // Code hosts
   "github.com",
   "gitlab.com",
@@ -180,9 +180,6 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
 const BARE_HOST_NON_IDENTITY_HOSTS = new Set<string>([
   "x.com",
   "twitter.com",
-  "facebook.com",
-  "fb.com",
-  "m.facebook.com",
   "youtube.com",
   "m.youtube.com",
   "youtu.be",

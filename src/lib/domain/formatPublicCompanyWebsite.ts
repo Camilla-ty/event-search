@@ -43,8 +43,20 @@ export function formatPublicCompanyWebsite(
   }
   if (href === null) return null;
 
-  const label =
+  let label =
     domain !== "" ? domain : normalizeDomainFromWebsite(website !== "" ? website : href);
+
+  // no_identity websites (e.g. Facebook) yield an empty identity key — still show
+  // a host label so the preserved companies.website remains publicly linkable.
+  if (label === "") {
+    try {
+      const parsed = new URL(href);
+      const host = parsed.hostname.trim().toLowerCase().replace(/^www\./, "");
+      label = host;
+    } catch {
+      return null;
+    }
+  }
   if (label === "") return null;
 
   return { href, label };

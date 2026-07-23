@@ -267,7 +267,6 @@ describe("resolveCompanyWebsiteIdentity", () => {
     for (const bare of [
       "https://x.com",
       "https://twitter.com/",
-      "https://www.facebook.com",
       "https://youtube.com/",
     ]) {
       assert.deepEqual(
@@ -285,6 +284,61 @@ describe("resolveCompanyWebsiteIdentity", () => {
       status: "domain",
       domain: "youtube.com/@acme",
     });
+  });
+
+  it("treats all Facebook host variants and paths as no_identity", () => {
+    const profileA =
+      "https://www.facebook.com/profile.php?id=100068135449341";
+    const profileB =
+      "https://www.facebook.com/profile.php?id=999999999999999";
+    const vanity = "https://www.facebook.com/BrandName";
+    const people = "https://www.facebook.com/people/beacontek/61578232785224";
+    const numericish = "https://facebook.com/p/algeria-30-100090103451879";
+    const fbDotCom = "https://fb.com/acme";
+    const mobile = "https://m.facebook.com/profile.php?id=1";
+    const bare = "https://www.facebook.com";
+
+    for (const url of [
+      profileA,
+      profileB,
+      vanity,
+      people,
+      numericish,
+      fbDotCom,
+      mobile,
+      bare,
+    ]) {
+      assert.deepEqual(
+        resolveCompanyWebsiteIdentity(url),
+        { status: "no_identity" },
+        `expected no_identity for ${url}`,
+      );
+      assert.equal(normalizeCompanyIdentityFromWebsite(url), "");
+      assert.equal(isCommunityPlatformWebsite(url), true);
+      assert.equal(isHostedPlatformWebsite(url), false);
+      assert.equal(isSocialPlatformWebsite(url), false);
+      assert.equal(classifyCompanyWebsiteTier(url), 2);
+    }
+
+    // Distinct profile.php?id= values must not collapse into a shared identity key.
+    assert.equal(normalizeCompanyIdentityFromWebsite(profileA), "");
+    assert.equal(normalizeCompanyIdentityFromWebsite(profileB), "");
+    assert.notEqual(
+      normalizeCompanyIdentityFromWebsite(profileA),
+      "facebook.com/profile.php",
+    );
+
+    // create/update derivation: website stays usable; domain identity is null.
+    function domainFromWebsite(website: string): string | null {
+      const identity = resolveCompanyWebsiteIdentity(website);
+      if (identity.status === "unparseable") {
+        throw new Error("Invalid company website");
+      }
+      return identity.status === "domain" ? identity.domain : null;
+    }
+    assert.equal(domainFromWebsite(profileA), null);
+    assert.equal(domainFromWebsite(vanity), null);
+    assert.equal(profileA.includes("100068135449341"), true);
   });
 
   it("keeps publishing subdomains as distinct identities (not collapsed to the root)", () => {

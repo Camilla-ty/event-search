@@ -68,4 +68,15 @@ describe("formatPublicCompanyWebsite", () => {
     assert.equal(result.label, "fireblocks.com");
     assert.equal(result.href, "https://www.fireblocks.com/?utm=campaign");
   });
+
+  it("preserves full Facebook website href with host label when domain is null", () => {
+    const website = "https://www.facebook.com/profile.php?id=100068135449341";
+    const result = formatPublicCompanyWebsite({
+      website,
+      domain: null,
+    });
+    assert.ok(result);
+    assert.equal(result.href, website);
+    assert.equal(result.label, "facebook.com");
+  });
 });
