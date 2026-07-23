@@ -9,7 +9,7 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 ## Conventions (summary)
 
 - **Inclusion:** memory-value test — a Finding exists only if we will likely need to remember it in a future review cycle. Severity is *not* the gate.
-- **IDs:** `<PREFIX>-NNN`, permanent, never reused or renumbered. Reuse the same ID for the same root cause for its entire life (including reopening after resolution). Prefix encodes the review type (`ARC` = Architecture, `SEC` = Security, `PERF` = Performance, `DB` = Database, `PROD` = Product, `DEAD` = Dead Code, `ROAD` = Roadmap, `SEO`, `SCALE`, `DQ`).
+- **IDs:** `<PREFIX>-NNN`, permanent, never reused or renumbered. Reuse the same ID for the same root cause for its entire life (including reopening after resolution). Prefix encodes the review type (`DEP` = Dependency Vulnerability Monitoring, `ARC` = Architecture, `PROD` = Product, `DQ` = Data Quality, `DB` = Database, `SEC` = Security, `PERF` = Performance, `HYG` = Code Hygiene, `ROAD` = Roadmap, `SCALE` = Scalability, `SEO`, `UX`, `DOC` = Documentation).
 - **Cross-audit ownership:** every root cause has one primary owner per [`audit-catalog.md`](./audit-catalog.md). Before adding a Finding, search all prefixes; reference an existing Finding for the same root cause instead of duplicating it across audits.
 - **Severity / Effort:** descriptive metadata only (Critical/High/Medium/Low · Small/Medium/Large). No composite scores or grades.
 - **Source / links:** each row links to the immutable report section where the Finding was first described; add plan / ADR / migration / PR / commit links as work progresses.
@@ -42,6 +42,8 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | ARC-020 | Thin end-to-end coverage (single Playwright spec) | testing | Low–Medium | Medium | Open | 2026-07 | 2026-07 | [Baseline §14.2](./architecture/2026-07-architecture.md) |
 | SEC-002 | Logo uploads trust client MIME and allow public SVG | security / file-upload | Medium | Small | Open | 2026-07 | 2026-07 | [Security 2026-07 §SEC-002](./security/2026-07-security.md) |
 | SEC-003 | SSRF in logo/website ingestion without host allow-listing | security / ssrf | Medium | Medium | Open | 2026-07 | 2026-07 | [Security 2026-07 §SEC-003](./security/2026-07-security.md) |
+| HYG-002 | Unused superseded EditionImportsStub after live imports panel shipped | dead-code / admin | Low | Small | Open | 2026-07 | 2026-07 | [Code Hygiene 2026-07 §HYG-002](./code-hygiene/2026-07-code-hygiene.md) |
+| HYG-003 | Unretired NFT.NYC partner-alumni corruption repair scripts | scripts / one-off | Medium | Small | Open | 2026-07 | 2026-07 | [Code Hygiene 2026-07 §HYG-003](./code-hygiene/2026-07-code-hygiene.md) |
 
 **Security topics owned by Security but tracked under existing IDs (cross-referenced, not duplicated):** `ARC-001` (RLS/service-role bypass), `ARC-007` (rate limiting + input validation), `ARC-009` (RLS/grant regression tests), `ARC-015` (email enumeration), `ARC-016` (security headers), `ARC-017` (middleware auth). See [Security 2026-07](./security/2026-07-security.md).
 
@@ -54,6 +56,7 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | ID | Title | Resolved in | Notes |
 |----|-------|-------------|-------|
 | SEC-001 | No dependency vulnerability scanning | [Security 2026-08](./security/2026-08-security.md) | Closed via GitHub Dependabot alerts + security updates; original write-up [Security 2026-07 §SEC-001](./security/2026-07-security.md) |
+| HYG-001 | Tracked temporary run artifacts and scratch files in git | [Code Hygiene 2026-08](./code-hygiene/2026-08-code-hygiene.md) | Removed tracked `tmp/`/`reports/`/`.tmp-before-phase1` artifacts; archived two logo rollback backups under `scripts/archives/logo-migrations/`; original write-up [Code Hygiene 2026-07 §HYG-001](./code-hygiene/2026-07-code-hygiene.md) |
 
 ---
 
@@ -65,3 +68,6 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-07-20 | Baseline Security Audit (`security/2026-07-security.md`): added `SEC-001`–`SEC-003` (all `Open`). Security-owned topics already tracked under `ARC-001/007/009/015/016/017` were cross-referenced, not duplicated. |
 | 2026-07-21 | Aligned `SEC-001`–`SEC-003` titles and severity/effort with the polished Security 2026-07 report (IDs and Finding set unchanged). |
 | 2026-07-23 | Resolved `SEC-001` (removed from open findings; retired). Closing report: `security/2026-08-security.md`. `SEC-002` and `SEC-003` remain `Open`. |
+| 2026-07-23 | Framework v1.1 prefix legend: added `DEP`, `HYG`, `UX`, `DOC`; replaced `DEAD` (unused) with `HYG` for Code Hygiene. No Finding rows changed. |
+| 2026-07-23 | Baseline Code Hygiene Audit (`code-hygiene/2026-07-code-hygiene.md`): added `HYG-001`–`HYG-003` (all `Open`). Cross-referenced `ARC-005/011/012/020`; did not duplicate import-subsystem duplication (`ARC-011`). |
+| 2026-07-23 | Resolved `HYG-001` (removed from open findings; retired). Closing report: `code-hygiene/2026-08-code-hygiene.md`. `HYG-002` and `HYG-003` remain `Open`. |

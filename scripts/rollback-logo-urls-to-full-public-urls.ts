@@ -5,10 +5,12 @@
  * cannot be deployed quickly enough.
  *
  * Mode A — restore from migration backup (exact pre-migration values):
- *   npm run rollback:logo-urls-to-full-public-urls -- --from-backup reports/backup-logo-urls-before-relative.jsonl
+ *   npm run rollback:logo-urls-to-full-public-urls -- --from-backup
+ *   (uses scripts/archives/logo-migrations/backup-logo-urls-before-relative-2026-07-07T09-55-06-042Z.jsonl)
+ *   npm run rollback:logo-urls-to-full-public-urls -- --from-backup path/to/backup.jsonl
  *
  * Mode B — derive full URLs from current bucket-relative paths:
- *   npm run rollback:logo-urls-to-full-public-urls -- --from-backup
+ *   npm run rollback:logo-urls-to-full-public-urls
  *   (omit --from-backup to scan live rows and expand relative paths)
  *
  * Dry-run (default):
@@ -21,6 +23,7 @@
  * Optional env:
  *   ROLLBACK_LIMIT=10
  *   ROLLBACK_REPORT_PATH=reports/logo-url-rollback.jsonl
+ *   (reports/ is local-only / gitignored — fine for fresh run output)
  */
 
 import { appendFile, mkdir, readFile } from "node:fs/promises";
@@ -318,7 +321,7 @@ async function main() {
 
   if (fromBackup !== null) {
     const defaultBackup =
-      "reports/backup-logo-urls-before-relative-2026-07-07T09-55-06-042Z.jsonl";
+      "scripts/archives/logo-migrations/backup-logo-urls-before-relative-2026-07-07T09-55-06-042Z.jsonl";
     const backupPath =
       fromBackup === ""
         ? defaultBackup

@@ -1,8 +1,8 @@
 /**
  * Clear dead event_editions.logo_url values (set to NULL).
  *
- * Rollback reference:
- *   reports/backup-event-editions-logo-url-2026-06-19T08-41-21-271Z.jsonl
+ * Rollback reference (versioned archive):
+ *   scripts/archives/logo-migrations/backup-event-editions-logo-url-2026-06-19T08-41-21-271Z.jsonl
  *
  * Dry-run default:
  *   npm run cleanup:event-editions-logo-url
@@ -11,7 +11,7 @@
  *   CLEANUP_LIVE=1 npm run cleanup:event-editions-logo-url
  *
  * Optional env:
- *   ROLLBACK_BACKUP_PATH=reports/backup-event-editions-logo-url-....jsonl
+ *   ROLLBACK_BACKUP_PATH=scripts/archives/logo-migrations/backup-event-editions-logo-url-....jsonl
  */
 
 import { readFileSync } from "node:fs";
@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { createBackfillSupabaseClient } from "./backfill/core/supabase";
 
 const DEFAULT_ROLLBACK_BACKUP_PATH =
-  "reports/backup-event-editions-logo-url-2026-06-19T08-41-21-271Z.jsonl";
+  "scripts/archives/logo-migrations/backup-event-editions-logo-url-2026-06-19T08-41-21-271Z.jsonl";
 
 type BackupEditionRow = {
   type: "edition_logo_url";
