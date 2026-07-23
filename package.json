@@ -16,6 +16,8 @@
     "cleanup:hosted-platform-identity": "tsx --env-file=.env.local scripts/cleanup-hosted-platform-identity-pr3a.ts",
     "audit:community-identity": "tsx --env-file=.env.local scripts/audit-community-website-identity.ts",
     "cleanup:community-identity": "tsx --env-file=.env.local scripts/cleanup-community-website-identity.ts",
+    "audit:company-identity-phase1": "tsx --env-file=.env.local scripts/audit-company-identity-drift.ts",
+    "repair:company-identity-phase1": "tsx --env-file=.env.local scripts/repair-company-identity-phase1.ts",
     "audit:event-logo-storage": "tsx --env-file=.env.local scripts/audit-event-logo-storage.ts",
     "cleanup:event-logo-storage": "tsx --env-file=.env.local scripts/cleanup-event-logo-storage.ts",
     "audit:event-editions-logo-url": "tsx --env-file=.env.local scripts/audit-event-editions-logo-url.ts",
