@@ -54,8 +54,13 @@ export function MergeImpactPreview({ loading, error, preview }: MergeImpactPrevi
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <ImpactStat label="Sponsorships to repoint" value={impact.event_sponsors_to_repoint} />
+        <ImpactStat
+          label="Organizers to repoint"
+          value={impact.event_edition_organizers_to_repoint}
+        />
+        <ImpactStat label="Exhibitors to repoint" value={impact.event_exhibitors_to_repoint} />
         <ImpactStat
           label="Import rows (proposed)"
           value={impact.import_rows_proposed_to_repoint}
@@ -133,12 +138,18 @@ export function MergeImpactPreview({ loading, error, preview }: MergeImpactPrevi
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
         {required_resolutions.sponsorship_conflicts.length === 0 &&
+        required_resolutions.organizer_conflicts.length === 0 &&
+        required_resolutions.exhibitor_conflicts.length === 0 &&
         required_resolutions.draft_link_conflicts.length === 0 ? (
           <p>No edition or import batch conflicts detected. Repointing only.</p>
         ) : (
           <p>
-            {required_resolutions.sponsorship_conflicts.length} edition conflict
-            {required_resolutions.sponsorship_conflicts.length === 1 ? "" : "s"} and{" "}
+            {required_resolutions.sponsorship_conflicts.length} sponsorship conflict
+            {required_resolutions.sponsorship_conflicts.length === 1 ? "" : "s"},{" "}
+            {required_resolutions.organizer_conflicts.length} organizer conflict
+            {required_resolutions.organizer_conflicts.length === 1 ? "" : "s"},{" "}
+            {required_resolutions.exhibitor_conflicts.length} exhibitor conflict
+            {required_resolutions.exhibitor_conflicts.length === 1 ? "" : "s"}, and{" "}
             {required_resolutions.draft_link_conflicts.length} draft batch conflict
             {required_resolutions.draft_link_conflicts.length === 1 ? "" : "s"} will need
             resolution before merge can run.

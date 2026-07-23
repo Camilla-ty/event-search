@@ -20,16 +20,9 @@ export type CompanyMergeSnapshot = {
 export type CompanyMergeRequiredResolutions = {
   sponsorship_conflicts: readonly string[];
   organizer_conflicts: readonly string[];
-  /** Field-level exhibitor conflicts that need an admin choice. */
-  exhibitor_conflicts: readonly CompanyMergeExhibitorRequiredConflict[];
+  /** Edition IDs where both companies exhibit (tier choice required). */
+  exhibitor_conflicts: readonly string[];
   draft_link_conflicts: readonly string[];
-};
-
-export type CompanyMergeExhibitorFieldName = "booth_number" | "hall";
-
-export type CompanyMergeExhibitorRequiredConflict = {
-  event_edition_id: string;
-  field: CompanyMergeExhibitorFieldName;
 };
 
 export type CompanyMergePreviewSnapshot = {
@@ -71,8 +64,8 @@ export type SponsorshipConflictStrategy = "keep_canonical" | "keep_duplicate_tie
 
 export type OrganizerConflictStrategy = "keep_canonical" | "keep_duplicate_role";
 
-/** Per-field choice when both companies have different non-empty booth/hall values. */
-export type ExhibitorFieldStrategy = "canonical" | "duplicate";
+/** Same-edition exhibitor conflict: keep canonical tier package or copy duplicate tier. */
+export type ExhibitorConflictStrategy = "keep_canonical" | "keep_duplicate_tier";
 
 export type DraftLinkConflictStrategy = "keep_canonical_draft" | "keep_duplicate_draft";
 
@@ -97,11 +90,9 @@ export type CompanyMergeResolutions = {
     event_edition_id: string;
     strategy: OrganizerConflictStrategy;
   }>;
-  /** One entry per edition that needs at least one booth/hall field choice. */
   exhibitor_conflicts: Array<{
     event_edition_id: string;
-    booth_number?: ExhibitorFieldStrategy;
-    hall?: ExhibitorFieldStrategy;
+    strategy: ExhibitorConflictStrategy;
   }>;
   draft_link_conflicts: Array<{
     batch_id: string;
@@ -227,30 +218,6 @@ function mapCompanyMergeSnapshot(raw: unknown): CompanyMergeSnapshot {
   };
 }
 
-function mapExhibitorRequiredConflicts(raw: unknown): CompanyMergeExhibitorRequiredConflict[] {
-  if (!Array.isArray(raw)) return [];
-  const result: CompanyMergeExhibitorRequiredConflict[] = [];
-  for (const item of raw) {
-    if (typeof item === "string" && item.trim() !== "") {
-      // Legacy edition-id-only shape — ignore (field-level required).
-      continue;
-    }
-    if (!isRecord(item)) continue;
-    const eventEditionId = readString(item.event_edition_id).trim();
-    const field = readString(item.field).trim();
-    if (
-      eventEditionId &&
-      (field === "booth_number" || field === "hall")
-    ) {
-      result.push({
-        event_edition_id: eventEditionId,
-        field,
-      });
-    }
-  }
-  return result;
-}
-
 function mapRequiredResolutions(raw: unknown): CompanyMergeRequiredResolutions {
   if (!isRecord(raw)) {
     return {
@@ -264,7 +231,7 @@ function mapRequiredResolutions(raw: unknown): CompanyMergeRequiredResolutions {
   return {
     sponsorship_conflicts: readStringArray(raw.sponsorship_conflicts),
     organizer_conflicts: readStringArray(raw.organizer_conflicts),
-    exhibitor_conflicts: mapExhibitorRequiredConflicts(raw.exhibitor_conflicts),
+    exhibitor_conflicts: readStringArray(raw.exhibitor_conflicts),
     draft_link_conflicts: readStringArray(raw.draft_link_conflicts),
   };
 }

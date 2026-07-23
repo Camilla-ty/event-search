@@ -9,7 +9,7 @@ import {
   type CompanyMergePreviewSnapshot,
   type CompanyMergeResolutions,
   type DraftLinkConflictStrategy,
-  type ExhibitorFieldStrategy,
+  type ExhibitorConflictStrategy,
   type LogoFieldStrategy,
   type OrganizerConflictStrategy,
   type SponsorshipConflictStrategy,
@@ -37,9 +37,9 @@ const ORGANIZER_STRATEGIES = new Set<OrganizerConflictStrategy>([
   "keep_duplicate_role",
 ]);
 
-const EXHIBITOR_FIELD_STRATEGIES = new Set<ExhibitorFieldStrategy>([
-  "canonical",
-  "duplicate",
+const EXHIBITOR_STRATEGIES = new Set<ExhibitorConflictStrategy>([
+  "keep_canonical",
+  "keep_duplicate_tier",
 ]);
 
 const DRAFT_LINK_STRATEGIES = new Set<DraftLinkConflictStrategy>([
@@ -303,40 +303,25 @@ function parseExhibitorConflicts(raw: unknown): CompanyMergeResolutions["exhibit
       );
     }
     const eventEditionId = readStringField(item, "event_edition_id");
+    const strategy = readStringField(item, "strategy");
+
     if (eventEditionId === null || !isCompanyMergeUuid(eventEditionId)) {
       throw new CompanyMergeAdminHttpError(
         400,
         "Each exhibitor conflict requires a valid event id.",
       );
     }
+    if (strategy === null || !EXHIBITOR_STRATEGIES.has(strategy as ExhibitorConflictStrategy)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        "Each exhibitor_conflicts entry requires strategy 'keep_canonical' or 'keep_duplicate_tier'.",
+      );
+    }
 
-    const entry: CompanyMergeResolutions["exhibitor_conflicts"][number] = {
+    result.push({
       event_edition_id: normalizeCompanyMergeUuid(eventEditionId),
-    };
-
-    if ("booth_number" in item && item.booth_number !== undefined && item.booth_number !== null) {
-      const booth = readStringField(item, "booth_number");
-      if (booth === null || !EXHIBITOR_FIELD_STRATEGIES.has(booth as ExhibitorFieldStrategy)) {
-        throw new CompanyMergeAdminHttpError(
-          400,
-          "exhibitor booth_number strategy must be 'canonical' or 'duplicate'.",
-        );
-      }
-      entry.booth_number = booth as ExhibitorFieldStrategy;
-    }
-
-    if ("hall" in item && item.hall !== undefined && item.hall !== null) {
-      const hall = readStringField(item, "hall");
-      if (hall === null || !EXHIBITOR_FIELD_STRATEGIES.has(hall as ExhibitorFieldStrategy)) {
-        throw new CompanyMergeAdminHttpError(
-          400,
-          "exhibitor hall strategy must be 'canonical' or 'duplicate'.",
-        );
-      }
-      entry.hall = hall as ExhibitorFieldStrategy;
-    }
-
-    result.push(entry);
+      strategy: strategy as ExhibitorConflictStrategy,
+    });
   }
 
   return result;
@@ -471,42 +456,30 @@ export function validateResolutionsAgainstPreview(
     }
   }
 
-  const exhibitorByEdition = new Map<
-    string,
-    { booth_number?: ExhibitorFieldStrategy; hall?: ExhibitorFieldStrategy }
-  >();
+  const exhibitorByEdition = new Map<string, ExhibitorConflictStrategy>();
   for (const entry of resolutions.exhibitor_conflicts) {
-    exhibitorByEdition.set(entry.event_edition_id, {
-      booth_number: entry.booth_number,
-      hall: entry.hall,
-    });
+    exhibitorByEdition.set(entry.event_edition_id, entry.strategy);
   }
 
-  const requiredExhibitorKeys = new Set<string>();
-  for (const required of preview.required_resolutions.exhibitor_conflicts) {
-    const editionId = normalizeCompanyMergeUuid(required.event_edition_id);
-    const key = `${editionId}:${required.field}`;
-    requiredExhibitorKeys.add(key);
-    const entry = exhibitorByEdition.get(editionId);
-    const strategy = required.field === "booth_number" ? entry?.booth_number : entry?.hall;
-    if (!strategy) {
+  for (const editionId of preview.required_resolutions.exhibitor_conflicts) {
+    const normalized = normalizeCompanyMergeUuid(editionId);
+    if (!exhibitorByEdition.has(normalized)) {
       throw new CompanyMergeAdminHttpError(
         409,
-        `Missing exhibitor ${required.field} strategy for event ${editionId}.`,
+        `Missing exhibitor conflict strategy for event ${normalized}.`,
       );
     }
   }
 
-  for (const [editionId, entry] of exhibitorByEdition) {
-    for (const field of ["booth_number", "hall"] as const) {
-      if (entry[field] === undefined) continue;
-      const key = `${editionId}:${field}`;
-      if (!requiredExhibitorKeys.has(key)) {
-        throw new CompanyMergeAdminHttpError(
-          400,
-          `Unexpected exhibitor ${field} strategy for event ${editionId}.`,
-        );
-      }
+  for (const [editionId] of exhibitorByEdition) {
+    const required = preview.required_resolutions.exhibitor_conflicts.map((id) =>
+      normalizeCompanyMergeUuid(id),
+    );
+    if (!required.includes(editionId)) {
+      throw new CompanyMergeAdminHttpError(
+        400,
+        `Unexpected exhibitor conflict strategy for event ${editionId}.`,
+      );
     }
   }
 

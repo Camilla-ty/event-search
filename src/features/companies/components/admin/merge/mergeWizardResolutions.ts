@@ -3,6 +3,7 @@ import {
   type CompanyMergePreviewSnapshot,
   type CompanyMergeResolutions,
   type DraftLinkConflictStrategy,
+  type ExhibitorConflictStrategy,
   type OrganizerConflictStrategy,
   type SponsorshipConflictStrategy,
 } from "@/src/features/companies/server/companyMerge";
@@ -22,6 +23,12 @@ export function buildInitialResolutionsFromPreview(
       strategy: "keep_canonical" satisfies OrganizerConflictStrategy,
     }));
 
+  const exhibitor_conflicts: CompanyMergeResolutions["exhibitor_conflicts"] =
+    preview.required_resolutions.exhibitor_conflicts.map((eventEditionId) => ({
+      event_edition_id: eventEditionId,
+      strategy: "keep_canonical" satisfies ExhibitorConflictStrategy,
+    }));
+
   const draft_link_conflicts: CompanyMergeResolutions["draft_link_conflicts"] =
     preview.required_resolutions.draft_link_conflicts.map((batchId) => ({
       batch_id: batchId,
@@ -32,6 +39,7 @@ export function buildInitialResolutionsFromPreview(
     schema_version: 2,
     sponsorship_conflicts,
     organizer_conflicts,
+    exhibitor_conflicts,
     draft_link_conflicts,
     field_resolutions: defaultCompanyMergeFieldResolutions(),
   };
@@ -45,6 +53,19 @@ export function updateOrganizerStrategy(
   return {
     ...resolutions,
     organizer_conflicts: resolutions.organizer_conflicts.map((entry) =>
+      entry.event_edition_id === eventEditionId ? { ...entry, strategy } : entry,
+    ),
+  };
+}
+
+export function updateExhibitorStrategy(
+  resolutions: CompanyMergeResolutions,
+  eventEditionId: string,
+  strategy: ExhibitorConflictStrategy,
+): CompanyMergeResolutions {
+  return {
+    ...resolutions,
+    exhibitor_conflicts: resolutions.exhibitor_conflicts.map((entry) =>
       entry.event_edition_id === eventEditionId ? { ...entry, strategy } : entry,
     ),
   };

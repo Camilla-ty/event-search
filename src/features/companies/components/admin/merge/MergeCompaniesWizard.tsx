@@ -28,18 +28,17 @@ import {
   buildInitialResolutionsFromPreview,
   executeMergeCompanies,
   updateDraftLinkStrategy,
-  updateExhibitorFieldStrategy,
+  updateExhibitorStrategy,
   updateOrganizerStrategy,
   updateSponsorshipStrategy,
 } from "@/src/features/companies/components/admin/merge/mergeWizardResolutions";
 import { recomputeMergeIdentityBlockerMessages } from "@/src/features/companies/components/admin/merge/mergeIdentityBlockers";
 import type {
-  CompanyMergeExhibitorFieldName,
+  ExhibitorConflictStrategy,
   CompanyMergeFieldResolutions,
   CompanyMergePreviewSnapshot,
   CompanyMergeResolutions,
   DraftLinkConflictStrategy,
-  ExhibitorFieldStrategy,
   OrganizerConflictStrategy,
   SponsorshipConflictStrategy,
 } from "@/src/features/companies/server/companyMerge";
@@ -213,14 +212,13 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
     });
   }
 
-  function handleExhibitorFieldStrategyChange(
+  function handleExhibitorStrategyChange(
     eventEditionId: string,
-    field: CompanyMergeExhibitorFieldName,
-    strategy: ExhibitorFieldStrategy,
+    strategy: ExhibitorConflictStrategy,
   ) {
     setResolutions((current) => {
       if (!current) return current;
-      return updateExhibitorFieldStrategy(current, eventEditionId, field, strategy);
+      return updateExhibitorStrategy(current, eventEditionId, strategy);
     });
   }
 
@@ -439,7 +437,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             resolutions={resolutions}
             canonicalName={canonicalName}
             duplicateName={duplicateName}
-            onFieldStrategyChange={handleExhibitorFieldStrategyChange}
+            onStrategyChange={handleExhibitorStrategyChange}
           />
 
           <MergeDraftLinkConflictsTable
@@ -504,7 +502,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
                 {preview.sponsorship_conflicts.length === 1 ? "" : "s"} resolved
               </li>
               <li>
-                {preview.exhibitor_conflicts.length} exhibitor field conflict
+                {preview.exhibitor_conflicts.length} exhibitor conflict
                 {preview.exhibitor_conflicts.length === 1 ? "" : "s"} resolved
               </li>
               <li>
