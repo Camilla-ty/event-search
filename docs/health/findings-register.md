@@ -40,7 +40,6 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | ARC-018 | N+1 / double-path hydration in `mergeCompaniesOntoEventSponsorLinks` | performance / db | Medium | Small | Open | 2026-07 | 2026-07 | [Baseline §11.3](./architecture/2026-07-architecture.md) |
 | ARC-019 | Manual client server-state (no cache / dedup / retry / abort) | client-state | Low–Medium | Medium | Open | 2026-07 | 2026-07 | [Baseline §9.1, §7.1](./architecture/2026-07-architecture.md) |
 | ARC-020 | Thin end-to-end coverage (single Playwright spec) | testing | Low–Medium | Medium | Open | 2026-07 | 2026-07 | [Baseline §14.2](./architecture/2026-07-architecture.md) |
-| SEC-001 | No dependency vulnerability scanning | security / dependencies | Medium | Small | Open | 2026-07 | 2026-07 | [Security 2026-07 §SEC-001](./security/2026-07-security.md) |
 | SEC-002 | Logo uploads trust client MIME and allow public SVG | security / file-upload | Medium | Small | Open | 2026-07 | 2026-07 | [Security 2026-07 §SEC-002](./security/2026-07-security.md) |
 | SEC-003 | SSRF in logo/website ingestion without host allow-listing | security / ssrf | Medium | Medium | Open | 2026-07 | 2026-07 | [Security 2026-07 §SEC-003](./security/2026-07-security.md) |
 
@@ -52,7 +51,9 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 Permanently used identifiers that must never be reissued. (A retired ID may be *reopened* under its original number if the same root cause reappears.)
 
-_None yet._
+| ID | Title | Resolved in | Notes |
+|----|-------|-------------|-------|
+| SEC-001 | No dependency vulnerability scanning | [Security 2026-08](./security/2026-08-security.md) | Closed via GitHub Dependabot alerts + security updates; original write-up [Security 2026-07 §SEC-001](./security/2026-07-security.md) |
 
 ---
 
@@ -63,3 +64,4 @@ _None yet._
 | 2026-07-20 | Register created and seeded with outstanding architecture Findings (`ARC-001`…`ARC-020`) from the baseline Architecture Audit (`architecture/2026-07-architecture.md`). All `Open`. No new findings generated during setup. |
 | 2026-07-20 | Baseline Security Audit (`security/2026-07-security.md`): added `SEC-001`–`SEC-003` (all `Open`). Security-owned topics already tracked under `ARC-001/007/009/015/016/017` were cross-referenced, not duplicated. |
 | 2026-07-21 | Aligned `SEC-001`–`SEC-003` titles and severity/effort with the polished Security 2026-07 report (IDs and Finding set unchanged). |
+| 2026-07-23 | Resolved `SEC-001` (removed from open findings; retired). Closing report: `security/2026-08-security.md`. `SEC-002` and `SEC-003` remain `Open`. |
