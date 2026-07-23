@@ -15,7 +15,7 @@ Live PostgREST verification proved that **anon** and **authenticated** JWTs coul
 | `company_merge_preview` | `(uuid, uuid)` |
 | `merge_companies` | `(uuid, uuid, uuid, jsonb, text)` |
 | `sponsor_import_publish_batch` | `(uuid, uuid)` |
-| `set_company_primary_domain` | `(uuid, uuid)` |
+| `set_company_primary_domain` | `(uuid, uuid, text)` — current (Company Identity Phase 1: optional `p_website DEFAULT NULL`). Hotfix `20260718120000` remediated the prior `(uuid, uuid)` overload, which was dropped by `20260725120000_set_primary_preserve_website_url`. |
 | `_company_merge_assert_preconditions` | `(uuid, uuid, boolean, uuid)` |
 | `_company_merge_build_preview` | `(uuid, uuid)` |
 | `_company_merge_company_row_json` | `(uuid)` |

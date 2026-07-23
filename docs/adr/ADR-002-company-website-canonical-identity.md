@@ -78,7 +78,8 @@ When more than one URL is known for a company, select the canonical website usin
 
 * Social company pages (when no Tier 1 exists): `linkedin.com/company/...`
 * Startup / token **directories and aggregators**: CoinMarketCap, CoinGecko, Crunchbase, Wellfound, AngelList
-* Community entry points without stable org identity: Discord invites, bare Instagram/TikTok profile URLs, Reddit communities, **all Facebook / FB / m.facebook URLs** (profiles, vanity pages, `/people/…`, numeric paths — never path-aware identity keys)
+* Community entry points without stable org identity: Discord invites, bare Instagram/TikTok profile URLs, Reddit communities
+* Facebook bare hosts / incomplete profile URLs without an account discriminator (`facebook.com`, `facebook.com/profile.php` without numeric `id`)
 * Link-in-bio aggregators: Linktree, Beacons
 
 **Identity key:**
@@ -86,7 +87,7 @@ When more than one URL is known for a company, select the canonical website usin
 | Subcase | Identity key |
 |---------|----------------|
 | Path-stable social **company** page (e.g. LinkedIn `/company/`) | Host + path key allowed (see Tier 3 overlap — classified by **host rules**, not researcher tier) |
-| **Facebook** (`facebook.com`, `www.facebook.com`, `m.facebook.com`, `fb.com`) — any path or query | **`NULL`** (`no_identity`) — full URL stored as website only; do **not** append query parameters into an identity key |
+| **Facebook** account URL (`facebook.com`, `www.facebook.com`, `m.facebook.com`, `fb.com`) with path and/or identity-bearing query | Host + path (+ `profile.php?id=` when present). Tracking params stripped. Example: `facebook.com/profile.php?id=123`. Bare host / `profile.php` without numeric `id` → **`NULL`** (`no_identity`) |
 | **Directory / aggregator / community** listings | **`NULL`** (`no_identity`) — full URL stored as website only |
 
 **Selection rule:** Use Tier 2 **only when no Tier 1 official website is known**. Flag for future upgrade when an official site is discovered. Directory-only records (e.g. CoinMarketCap-only) are **valid sponsor references** but **weak identity** — require manual review on import.
@@ -213,18 +214,18 @@ When both Tier 2 directory and Tier 3 hosted URLs exist, prefer **Tier 3** if it
 
 ---
 
-### 5.3b Facebook-only page (Tier 2 — social reference; no identity)
+### 5.3b Facebook-only page (Tier 2 — social reference; path/query identity)
 
 | Field | Value |
 |-------|-------|
 | Context | Sponsor with **only** a Facebook page or profile URL — no owned domain. |
-| **Canonical website** | Full Facebook URL as entered (e.g. `https://www.facebook.com/profile.php?id=…` or vanity `/BrandName`) |
-| **Identity key** | **`NULL`** (`no_identity`) |
+| **Canonical website** | Full verified Primary URL as entered (e.g. `https://www.facebook.com/profile.php?id=…&utm_source=…` or vanity `/BrandName`) |
+| **Identity key / match key** | `facebook.com/profile.php?id={digits}` or `facebook.com/{path}` — never bare `facebook.com` or `facebook.com/profile.php` without `id` |
 | **Tier** | 2 — Social / community reference |
-| Rationale | Facebook hosts are multi-tenant. Path+query patterns (`/profile.php?id=`) are not stable identity keys; vanity paths must not become `company_domains` either. Distinct profile IDs must never collapse onto `facebook.com/profile.php`. |
-| Import | `community_website` **warning**; `normalized_domain = null`; **needs_review**; no domain auto-accept. |
-| Public profile | Href: full Facebook URL · Label: host display (`facebook.com`) until upgraded |
-| Verified domains | Do **not** add Facebook hosts or paths to `company_domains`. |
+| Rationale | Facebook is multi-tenant; the account discriminator (path and/or `id` query) is the Identity. Tracking query params are dropped from the match key. `companies.website` keeps the full verified URL; `companies.domain` / primary `company_domains.domain` store the normalized Identity. |
+| Import | `normalized_domain` = Identity key; full URL preserved as website. Bare Facebook host → `community_website` warning + null domain. |
+| Public profile | Href: full Facebook website URL · Label from identity display rules |
+| Verified domains | Primary + alias `company_domains` rows use the normalized Identity (not the raw website string). |
 
 ---
 
@@ -405,6 +406,7 @@ This policy does **not**:
 |------|--------|
 | 2026-06-25 | Initial proposed policy — website tiers, selection rules, import/admin behavior, five reference examples |
 | 2026-07-23 | Facebook hosts (`facebook.com`, `fb.com`, `m.facebook.com`) always `no_identity`; LinkedIn `/company/` path keys unchanged |
+| 2026-07-23 | Company Identity Phase 1: Facebook path + `profile.php?id=` match keys; Set Primary preserves full `companies.website`; bare Facebook remains `no_identity` |
 
 ---
 

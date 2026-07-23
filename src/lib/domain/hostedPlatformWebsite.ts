@@ -47,12 +47,17 @@ function isHostedPlatformSlug(segment: string): boolean {
 
 /** ADR-002 Tier 2: social / directory reference pages with a stable path (selection tier). */
 function matchesTier2SocialReferencePath(host: string, pathname: string): boolean {
-  const path = normalizePathname(pathname);
+  const pathOnly = pathname.split("?")[0] ?? pathname;
+  const path = normalizePathname(pathOnly);
   if (path === "" || path === "/") return false;
 
   switch (host) {
     case "linkedin.com":
       return path.startsWith("/company/");
+    case "facebook.com":
+    case "fb.com":
+    case "m.facebook.com":
+      return true;
     case "linktr.ee":
     case "linktree.com":
       return true;
@@ -74,6 +79,9 @@ function matchesSocialPlatformPath(host: string, pathname: string): boolean {
     case "youtu.be":
     case "x.com":
     case "twitter.com":
+    case "facebook.com":
+    case "fb.com":
+    case "m.facebook.com":
     case "t.me":
     case "telegram.me":
     case "linktr.ee":
@@ -147,12 +155,9 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
   "discordapp.com",
   "discord.gg",
   "reddit.com",
-  // Social (always no_identity — including all Facebook hosts/paths)
+  // Social (always no_identity)
   "instagram.com",
   "tiktok.com",
-  "facebook.com",
-  "fb.com",
-  "m.facebook.com",
   // Code hosts
   "github.com",
   "gitlab.com",
@@ -180,10 +185,63 @@ const ALWAYS_NON_IDENTITY_HOSTS = new Set<string>([
 const BARE_HOST_NON_IDENTITY_HOSTS = new Set<string>([
   "x.com",
   "twitter.com",
+  "facebook.com",
+  "fb.com",
+  "m.facebook.com",
   "youtube.com",
   "m.youtube.com",
   "youtu.be",
 ]);
+
+function isFacebookHost(host: string): boolean {
+  return host === "facebook.com" || host === "fb.com" || host === "m.facebook.com";
+}
+
+/**
+ * Facebook account identity: preserve path and identity-bearing `id` query.
+ * Tracking params (utm_*, etc.) are dropped. Host variants canonicalize to facebook.com.
+ *
+ * Returns null when this URL is not a Facebook host (caller continues normal resolution).
+ */
+function resolveFacebookWebsiteIdentity(
+  host: string,
+  parsed: URL,
+): CompanyWebsiteIdentity | null {
+  if (!isFacebookHost(host)) return null;
+
+  const path = normalizePathname(parsed.pathname);
+  if (path === "" || path === "/") {
+    return { status: "no_identity" };
+  }
+
+  if (path === "/profile.php") {
+    const id = parsed.searchParams.get("id")?.trim() ?? "";
+    if (!/^\d+$/.test(id)) {
+      return { status: "no_identity" };
+    }
+    return { status: "domain", domain: `facebook.com/profile.php?id=${id}` };
+  }
+
+  // Vanity / people / pages paths — path only (no tracking query).
+  return { status: "domain", domain: `facebook.com${path}` };
+}
+
+/**
+ * HTTPS URL to store as companies.website when promoting a match key to Primary.
+ * Keeps an existing full website when it already normalizes to the same identity.
+ */
+export function primaryWebsiteForIdentityPromotion(
+  existingWebsite: string | null | undefined,
+  matchKey: string,
+): string {
+  const key = matchKey.trim().toLowerCase();
+  const existing = existingWebsite?.trim() ?? "";
+  if (existing !== "" && normalizeCompanyIdentityFromWebsite(existing) === key) {
+    if (/^https?:\/\//i.test(existing)) return existing;
+    return `https://${existing}`;
+  }
+  return `https://${key}`;
+}
 
 function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
   const path = normalizePathname(pathname);
@@ -232,6 +290,10 @@ export function isSocialPlatformWebsite(website: string): boolean {
   if (!parsed) return false;
 
   const host = normalizeHost(parsed.hostname);
+  if (isFacebookHost(host)) {
+    const path = normalizePathname(parsed.pathname);
+    return path !== "" && path !== "/";
+  }
   return matchesSocialPlatformPath(host, parsed.pathname);
 }
 
@@ -251,7 +313,13 @@ export function isHostedPlatformIdentityKey(identity: string): boolean {
   if (slashIndex <= 0) return false;
 
   const host = trimmed.slice(0, slashIndex);
-  const pathname = trimmed.slice(slashIndex);
+  const pathAndQuery = trimmed.slice(slashIndex);
+  const pathname = pathAndQuery.split("?")[0] ?? pathAndQuery;
+
+  if (isFacebookHost(host) || host === "facebook.com") {
+    return pathname !== "" && pathname !== "/";
+  }
+
   return (
     matchesHostedPlatformPath(host, pathname) ||
     isGitHubPagesHost(host) ||
@@ -279,6 +347,10 @@ export function resolveCompanyWebsiteIdentity(website: string): CompanyWebsiteId
   if (parsed) {
     const host = normalizeHost(parsed.hostname);
     if (!host) return { status: "unparseable" };
+
+    // Facebook: path + identity-bearing query (profile.php?id=); never bare host.
+    const facebookIdentity = resolveFacebookWebsiteIdentity(host, parsed);
+    if (facebookIdentity) return facebookIdentity;
 
     // Platform-owner exception: bare/root CoinGecko/CoinMarketCap URLs may be
     // the platform company's identity key. Listing paths stay no_identity.

@@ -65,12 +65,12 @@ describe("validateRow", () => {
     );
   });
 
-  it("flags Facebook profile and vanity URLs as community_website with null domain", () => {
+  it("normalizes Facebook profile and vanity URLs to path/query identity keys", () => {
     const profile = validateRow({
       id: "row-fb-1",
       excel_row_number: 20,
       raw_company_name: "NCUE Blockchain",
-      raw_website: "https://www.facebook.com/profile.php?id=100068135449341",
+      raw_website: "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test",
       raw_tier_rank: 1,
       raw_tier_label: null,
       status: "needs_review",
@@ -85,19 +85,23 @@ describe("validateRow", () => {
       status: "needs_review",
     });
 
-    assert.equal(profile.normalized_website, "https://www.facebook.com/profile.php?id=100068135449341");
-    assert.equal(profile.normalized_domain, null);
-    assert.equal(vanity.normalized_website, "https://www.facebook.com/BrandName");
-    assert.equal(vanity.normalized_domain, null);
-    assert.ok(
-      profile.validation_issues.some(
-        (issue) => issue.type === "community_website" && issue.severity === "warning",
-      ),
+    assert.equal(
+      profile.normalized_website,
+      "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test",
     );
-    assert.ok(
-      vanity.validation_issues.some(
-        (issue) => issue.type === "community_website" && issue.severity === "warning",
-      ),
+    assert.equal(
+      profile.normalized_domain,
+      "facebook.com/profile.php?id=100068135449341",
+    );
+    assert.equal(vanity.normalized_website, "https://www.facebook.com/BrandName");
+    assert.equal(vanity.normalized_domain, "facebook.com/brandname");
+    assert.equal(
+      profile.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+    assert.equal(
+      vanity.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
     );
   });
 

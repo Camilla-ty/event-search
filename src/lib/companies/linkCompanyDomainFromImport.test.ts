@@ -32,19 +32,30 @@ describe("normalizeVerifiedCompanyDomainInput", () => {
     );
   });
 
-  it("rejects Facebook profile and vanity URLs as no_identity", () => {
+  it("accepts Facebook profile and vanity URLs as path/query identity keys", () => {
     assert.deepEqual(
       normalizeVerifiedCompanyDomainInput(
-        "https://www.facebook.com/profile.php?id=100068135449341",
+        "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test",
       ),
-      { ok: false, reason: "no_identity" },
+      { ok: true, domain: "facebook.com/profile.php?id=100068135449341" },
     );
     assert.deepEqual(
       normalizeVerifiedCompanyDomainInput("https://www.facebook.com/BrandName"),
-      { ok: false, reason: "no_identity" },
+      { ok: true, domain: "facebook.com/brandname" },
     );
     assert.deepEqual(
       normalizeVerifiedCompanyDomainInput("https://fb.com/acme"),
+      { ok: true, domain: "facebook.com/acme" },
+    );
+  });
+
+  it("rejects bare Facebook hosts as no_identity", () => {
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput("https://www.facebook.com"),
+      { ok: false, reason: "no_identity" },
+    );
+    assert.deepEqual(
+      normalizeVerifiedCompanyDomainInput("https://www.facebook.com/profile.php"),
       { ok: false, reason: "no_identity" },
     );
   });

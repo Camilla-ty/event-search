@@ -37,25 +37,27 @@ describe("partner alumni validateRow", () => {
     );
   });
 
-  it("treats Facebook profile URLs as community_website with null domain", () => {
+  it("normalizes Facebook profile URLs to path/query identity keys", () => {
     const result = validateRow({
       id: "row-fb",
       excel_row_number: 8,
       raw_company_name: "Facebook-only Org",
-      raw_website: "https://www.facebook.com/profile.php?id=100068135449341",
+      raw_website: "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test",
       raw_display_order: "1",
       status: "needs_review",
     });
 
     assert.equal(
       result.normalized_website,
-      "https://www.facebook.com/profile.php?id=100068135449341",
+      "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test",
     );
-    assert.equal(result.normalized_domain, null);
-    assert.ok(
-      result.validation_issues.some(
-        (issue) => issue.type === "community_website" && issue.severity === "warning",
-      ),
+    assert.equal(
+      result.normalized_domain,
+      "facebook.com/profile.php?id=100068135449341",
+    );
+    assert.equal(
+      result.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
     );
   });
 

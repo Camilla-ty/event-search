@@ -7,6 +7,7 @@ import {
   normalizeVerifiedCompanyDomainInput,
   verifiedCompanyDomainInputErrorMessage,
 } from "@/src/lib/companies/linkCompanyDomainFromImport";
+import { primaryWebsiteForIdentityPromotion } from "@/src/lib/domain/hostedPlatformWebsite";
 
 const COMPANY_DOMAIN_SELECT = "id, company_id, domain, is_primary, created_at";
 
@@ -159,10 +160,42 @@ export async function setCompanyPrimaryDomainWithClient(
   supabase: SupabaseClient,
   companyId: string,
   domainRowId: string,
+  options?: { currentWebsite?: string | null },
 ): Promise<SetCompanyPrimaryDomainResult> {
+  const { data: domainRow, error: domainError } = await supabase
+    .from("company_domains")
+    .select("id, domain")
+    .eq("id", domainRowId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (domainError) {
+    throw new CompanyDomainAdminError(500, domainError.message);
+  }
+  if (!domainRow?.domain) {
+    throw new CompanyDomainAdminError(404, "Domain not found for this company.");
+  }
+
+  let currentWebsite = options?.currentWebsite;
+  if (currentWebsite === undefined) {
+    const { data: company, error: companyError } = await supabase
+      .from("companies")
+      .select("website")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (companyError) {
+      throw new CompanyDomainAdminError(500, companyError.message);
+    }
+    currentWebsite = typeof company?.website === "string" ? company.website : null;
+  }
+
+  const matchKey = String(domainRow.domain);
+  const website = primaryWebsiteForIdentityPromotion(currentWebsite, matchKey);
+
   const { data, error } = await supabase.rpc("set_company_primary_domain", {
     p_company_id: companyId,
     p_company_domain_id: domainRowId,
+    p_website: website,
   });
 
   if (error) {

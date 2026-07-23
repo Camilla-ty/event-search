@@ -9,6 +9,7 @@ import {
   isHostedPlatformWebsite,
   isSocialPlatformWebsite,
   normalizeCompanyIdentityFromWebsite,
+  primaryWebsiteForIdentityPromotion,
   resolveCompanyWebsiteIdentity,
   selectCanonicalCompanyWebsite,
 } from "./hostedPlatformWebsite";
@@ -286,59 +287,84 @@ describe("resolveCompanyWebsiteIdentity", () => {
     });
   });
 
-  it("treats all Facebook host variants and paths as no_identity", () => {
+  it("treats all Facebook host variants and paths with account-preserving identity", () => {
     const profileA =
-      "https://www.facebook.com/profile.php?id=100068135449341";
+      "https://www.facebook.com/profile.php?id=100068135449341&utm_source=test";
     const profileB =
       "https://www.facebook.com/profile.php?id=999999999999999";
     const vanity = "https://www.facebook.com/BrandName";
     const people = "https://www.facebook.com/people/beacontek/61578232785224";
-    const numericish = "https://facebook.com/p/algeria-30-100090103451879";
     const fbDotCom = "https://fb.com/acme";
-    const mobile = "https://m.facebook.com/profile.php?id=1";
+    const mobileProfile =
+      "https://m.facebook.com/profile.php?id=100068135449341";
     const bare = "https://www.facebook.com";
+    const profileNoId = "https://www.facebook.com/profile.php";
 
-    for (const url of [
-      profileA,
-      profileB,
-      vanity,
-      people,
-      numericish,
-      fbDotCom,
-      mobile,
-      bare,
-    ]) {
-      assert.deepEqual(
-        resolveCompanyWebsiteIdentity(url),
-        { status: "no_identity" },
-        `expected no_identity for ${url}`,
-      );
-      assert.equal(normalizeCompanyIdentityFromWebsite(url), "");
-      assert.equal(isCommunityPlatformWebsite(url), true);
-      assert.equal(isHostedPlatformWebsite(url), false);
-      assert.equal(isSocialPlatformWebsite(url), false);
-      assert.equal(classifyCompanyWebsiteTier(url), 2);
-    }
-
-    // Distinct profile.php?id= values must not collapse into a shared identity key.
-    assert.equal(normalizeCompanyIdentityFromWebsite(profileA), "");
-    assert.equal(normalizeCompanyIdentityFromWebsite(profileB), "");
+    assert.deepEqual(resolveCompanyWebsiteIdentity(profileA), {
+      status: "domain",
+      domain: "facebook.com/profile.php?id=100068135449341",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(profileB), {
+      status: "domain",
+      domain: "facebook.com/profile.php?id=999999999999999",
+    });
+    assert.notEqual(
+      normalizeCompanyIdentityFromWebsite(profileA),
+      normalizeCompanyIdentityFromWebsite(profileB),
+    );
     assert.notEqual(
       normalizeCompanyIdentityFromWebsite(profileA),
       "facebook.com/profile.php",
     );
+    assert.notEqual(normalizeCompanyIdentityFromWebsite(profileA), "facebook.com");
 
-    // create/update derivation: website stays usable; domain identity is null.
-    function domainFromWebsite(website: string): string | null {
-      const identity = resolveCompanyWebsiteIdentity(website);
-      if (identity.status === "unparseable") {
-        throw new Error("Invalid company website");
-      }
-      return identity.status === "domain" ? identity.domain : null;
-    }
-    assert.equal(domainFromWebsite(profileA), null);
-    assert.equal(domainFromWebsite(vanity), null);
-    assert.equal(profileA.includes("100068135449341"), true);
+    assert.deepEqual(resolveCompanyWebsiteIdentity(mobileProfile), {
+      status: "domain",
+      domain: "facebook.com/profile.php?id=100068135449341",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(vanity), {
+      status: "domain",
+      domain: "facebook.com/brandname",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(people), {
+      status: "domain",
+      domain: "facebook.com/people/beacontek/61578232785224",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(fbDotCom), {
+      status: "domain",
+      domain: "facebook.com/acme",
+    });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(bare), { status: "no_identity" });
+    assert.deepEqual(resolveCompanyWebsiteIdentity(profileNoId), {
+      status: "no_identity",
+    });
+
+    assert.equal(classifyCompanyWebsiteTier(profileA), 2);
+    assert.equal(isHostedPlatformWebsite(profileA), false);
+    assert.equal(isSocialPlatformWebsite(profileA), true);
+  });
+
+  it("primaryWebsiteForIdentityPromotion keeps a full URL when identity matches", () => {
+    const full =
+      "https://www.facebook.com/profile.php?id=100068135449341&utm_source=x";
+    assert.equal(
+      primaryWebsiteForIdentityPromotion(
+        full,
+        "facebook.com/profile.php?id=100068135449341",
+      ),
+      full,
+    );
+    assert.equal(
+      primaryWebsiteForIdentityPromotion(null, "studentsforliberty.org"),
+      "https://studentsforliberty.org",
+    );
+    assert.equal(
+      primaryWebsiteForIdentityPromotion(
+        "https://old.example",
+        "studentsforliberty.org",
+      ),
+      "https://studentsforliberty.org",
+    );
   });
 
   it("keeps publishing subdomains as distinct identities (not collapsed to the root)", () => {

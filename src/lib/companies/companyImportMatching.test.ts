@@ -213,6 +213,53 @@ describe("companyImportMatching", () => {
     assert.equal(result.proposed_company_id, "bitlifi-id");
   });
 
+  it("still auto_ready on Facebook identity via primary or company_domains alias", () => {
+    const facebookKey = "facebook.com/profile.php?id=100068135449341";
+    const viaPrimary = matchImportRowIdentity(
+      {
+        normalized_domain: facebookKey,
+        normalized_website: "https://www.facebook.com/profile.php?id=100068135449341",
+        normalized_company_name: "NCUE Blockchain",
+      },
+      buildImportMatchContext(
+        [
+          company({
+            id: "fb-co",
+            name: "NCUE Blockchain",
+            domain: facebookKey,
+            aliases: [],
+          }),
+        ],
+        [],
+      ),
+    );
+    assert.equal(viaPrimary.status, "auto_ready");
+    assert.equal(viaPrimary.match_method, "domain");
+    assert.equal(viaPrimary.proposed_company_id, "fb-co");
+
+    const viaAlias = matchImportRowIdentity(
+      {
+        normalized_domain: facebookKey,
+        normalized_website: "https://www.facebook.com/profile.php?id=100068135449341",
+        normalized_company_name: "NCUE Blockchain",
+      },
+      buildImportMatchContext(
+        [
+          company({
+            id: "fb-co",
+            name: "NCUE Blockchain",
+            domain: "ncue.edu.tw",
+            aliases: [],
+          }),
+        ],
+        [{ company_id: "fb-co", domain: facebookKey }],
+      ),
+    );
+    assert.equal(viaAlias.status, "auto_ready");
+    assert.equal(viaAlias.match_method, "domain");
+    assert.equal(viaAlias.proposed_company_id, "fb-co");
+  });
+
   it("still auto_ready on primary companies.domain", () => {
     const context = buildImportMatchContext(
       [
