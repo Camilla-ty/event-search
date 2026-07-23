@@ -65,8 +65,14 @@ BEGIN
       'field_resolutions', jsonb_build_object(
         'slug', 'canonical',
         'domain', 'duplicate',
-        'website', 'canonical',
+        'website', 'duplicate',
         'logo', 'best_available'
+      ),
+      'identity_assertions', jsonb_build_object(
+        'winner_domain', v_winner_domain,
+        'winner_website', 'https://' || v_winner_domain,
+        'website_identity_key', v_winner_domain,
+        'website_identity_status', 'domain'
       )
     ),
     'domain-order-verify'

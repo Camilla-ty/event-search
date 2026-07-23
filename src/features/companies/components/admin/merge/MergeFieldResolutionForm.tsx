@@ -37,16 +37,16 @@ const FIELD_CONFIGS: FieldConfig[] = [
   },
   {
     key: "domain",
-    label: "Domain",
+    label: "Primary Identity (domain)",
     buildOptions: (canonicalName, duplicateName) => [
-      { value: "canonical", label: `Keep ${canonicalName} domain` },
-      { value: "duplicate", label: `Use ${duplicateName} domain` },
-      { value: "non_empty", label: "Prefer non-empty domain" },
+      { value: "canonical", label: `Keep ${canonicalName} Primary Identity` },
+      { value: "duplicate", label: `Use ${duplicateName} Primary Identity` },
+      { value: "non_empty", label: "Prefer non-empty Primary Identity" },
     ],
   },
   {
     key: "website",
-    label: "Website",
+    label: "Website (must match Primary Identity)",
     buildOptions: (canonicalName, duplicateName) => [
       { value: "canonical", label: `Keep ${canonicalName} website` },
       { value: "duplicate", label: `Use ${duplicateName} website` },
@@ -87,7 +87,9 @@ export function MergeFieldResolutionForm({
           Values are applied to the canonical company{" "}
           <span className="font-medium text-slate-900">{canonical.name}</span>.{" "}
           <span className="font-medium text-slate-900">{duplicate.name}</span> will be
-          merged away. Aliases from the duplicate are always merged in.
+          merged away. Aliases from the duplicate are always merged in. Primary
+          Identity selects the Match Key; website must resolve to that same
+          identity.
         </p>
       </div>
 

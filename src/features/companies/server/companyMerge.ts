@@ -20,7 +20,16 @@ export type CompanyMergeSnapshot = {
 export type CompanyMergeRequiredResolutions = {
   sponsorship_conflicts: readonly string[];
   organizer_conflicts: readonly string[];
+  /** Field-level exhibitor conflicts that need an admin choice. */
+  exhibitor_conflicts: readonly CompanyMergeExhibitorRequiredConflict[];
   draft_link_conflicts: readonly string[];
+};
+
+export type CompanyMergeExhibitorFieldName = "booth_number" | "hall";
+
+export type CompanyMergeExhibitorRequiredConflict = {
+  event_edition_id: string;
+  field: CompanyMergeExhibitorFieldName;
 };
 
 export type CompanyMergePreviewSnapshot = {
@@ -35,6 +44,7 @@ export type CompanyMergePreviewSnapshot = {
   impact: {
     event_sponsors_to_repoint: number;
     event_edition_organizers_to_repoint: number;
+    event_exhibitors_to_repoint: number;
     import_rows_proposed_to_repoint: number;
     import_rows_resolved_to_repoint: number;
     draft_links_to_repoint: number;
@@ -42,6 +52,7 @@ export type CompanyMergePreviewSnapshot = {
   };
   sponsorship_conflicts: readonly Record<string, unknown>[];
   organizer_conflicts: readonly Record<string, unknown>[];
+  exhibitor_conflicts: readonly Record<string, unknown>[];
   draft_link_conflicts: readonly Record<string, unknown>[];
   required_resolutions: CompanyMergeRequiredResolutions;
   field_differences: Record<string, unknown>;
@@ -59,6 +70,9 @@ export type CompanyMergePreviewResult = {
 export type SponsorshipConflictStrategy = "keep_canonical" | "keep_duplicate_tier";
 
 export type OrganizerConflictStrategy = "keep_canonical" | "keep_duplicate_role";
+
+/** Per-field choice when both companies have different non-empty booth/hall values. */
+export type ExhibitorFieldStrategy = "canonical" | "duplicate";
 
 export type DraftLinkConflictStrategy = "keep_canonical_draft" | "keep_duplicate_draft";
 
@@ -83,11 +97,24 @@ export type CompanyMergeResolutions = {
     event_edition_id: string;
     strategy: OrganizerConflictStrategy;
   }>;
+  /** One entry per edition that needs at least one booth/hall field choice. */
+  exhibitor_conflicts: Array<{
+    event_edition_id: string;
+    booth_number?: ExhibitorFieldStrategy;
+    hall?: ExhibitorFieldStrategy;
+  }>;
   draft_link_conflicts: Array<{
     batch_id: string;
     strategy: DraftLinkConflictStrategy;
   }>;
   field_resolutions: CompanyMergeFieldResolutions;
+  /** Admin-computed; SQL execute validates against selected website/domain winners. */
+  identity_assertions?: {
+    winner_domain: string | null;
+    winner_website: string | null;
+    website_identity_key: string | null;
+    website_identity_status: "domain" | "no_identity" | "blank" | "unparseable";
+  };
 };
 
 export type CompanyMergeExecutionActions = {
@@ -98,6 +125,9 @@ export type CompanyMergeExecutionActions = {
   event_edition_organizers_repointed: number;
   event_edition_organizers_deleted: number;
   event_edition_organizers_updated: number;
+  event_exhibitors_repointed: number;
+  event_exhibitors_deleted: number;
+  event_exhibitors_updated: number;
   partner_alumni_version_members_repointed: number;
   partner_alumni_version_members_deleted: number;
   partner_alumni_version_members_updated: number;
@@ -197,14 +227,44 @@ function mapCompanyMergeSnapshot(raw: unknown): CompanyMergeSnapshot {
   };
 }
 
+function mapExhibitorRequiredConflicts(raw: unknown): CompanyMergeExhibitorRequiredConflict[] {
+  if (!Array.isArray(raw)) return [];
+  const result: CompanyMergeExhibitorRequiredConflict[] = [];
+  for (const item of raw) {
+    if (typeof item === "string" && item.trim() !== "") {
+      // Legacy edition-id-only shape — ignore (field-level required).
+      continue;
+    }
+    if (!isRecord(item)) continue;
+    const eventEditionId = readString(item.event_edition_id).trim();
+    const field = readString(item.field).trim();
+    if (
+      eventEditionId &&
+      (field === "booth_number" || field === "hall")
+    ) {
+      result.push({
+        event_edition_id: eventEditionId,
+        field,
+      });
+    }
+  }
+  return result;
+}
+
 function mapRequiredResolutions(raw: unknown): CompanyMergeRequiredResolutions {
   if (!isRecord(raw)) {
-    return { sponsorship_conflicts: [], organizer_conflicts: [], draft_link_conflicts: [] };
+    return {
+      sponsorship_conflicts: [],
+      organizer_conflicts: [],
+      exhibitor_conflicts: [],
+      draft_link_conflicts: [],
+    };
   }
 
   return {
     sponsorship_conflicts: readStringArray(raw.sponsorship_conflicts),
     organizer_conflicts: readStringArray(raw.organizer_conflicts),
+    exhibitor_conflicts: mapExhibitorRequiredConflicts(raw.exhibitor_conflicts),
     draft_link_conflicts: readStringArray(raw.draft_link_conflicts),
   };
 }
@@ -242,6 +302,7 @@ function mapCompanyMergePreviewSnapshot(raw: unknown): CompanyMergePreviewSnapsh
       event_edition_organizers_to_repoint: readNumber(
         impactRaw.event_edition_organizers_to_repoint,
       ),
+      event_exhibitors_to_repoint: readNumber(impactRaw.event_exhibitors_to_repoint),
       import_rows_proposed_to_repoint: readNumber(impactRaw.import_rows_proposed_to_repoint),
       import_rows_resolved_to_repoint: readNumber(impactRaw.import_rows_resolved_to_repoint),
       draft_links_to_repoint: readNumber(impactRaw.draft_links_to_repoint),
@@ -251,6 +312,7 @@ function mapCompanyMergePreviewSnapshot(raw: unknown): CompanyMergePreviewSnapsh
     },
     sponsorship_conflicts: readRecordArray(raw.sponsorship_conflicts),
     organizer_conflicts: readRecordArray(raw.organizer_conflicts),
+    exhibitor_conflicts: readRecordArray(raw.exhibitor_conflicts),
     draft_link_conflicts: readRecordArray(raw.draft_link_conflicts),
     required_resolutions: mapRequiredResolutions(raw.required_resolutions),
     field_differences: isRecord(raw.field_differences) ? raw.field_differences : {},
@@ -293,6 +355,9 @@ function mapCompanyMergeExecutionSnapshot(raw: unknown): CompanyMergeExecutionSn
       event_edition_organizers_updated: readNumber(
         actionsRaw.event_edition_organizers_updated,
       ),
+      event_exhibitors_repointed: readNumber(actionsRaw.event_exhibitors_repointed),
+      event_exhibitors_deleted: readNumber(actionsRaw.event_exhibitors_deleted),
+      event_exhibitors_updated: readNumber(actionsRaw.event_exhibitors_updated),
       partner_alumni_version_members_repointed: readNumber(
         actionsRaw.partner_alumni_version_members_repointed,
       ),
@@ -379,6 +444,15 @@ function parseMergeRpcError(message: string): CompanyMergeRpcError {
     "merge_missing_resolution",
     "merge_invalid_resolution",
     "merge_snapshot_failed",
+    "merge_company_domain_third_party",
+    "merge_identity_assertions_required",
+    "merge_identity_assertion_mismatch",
+    "merge_website_unparseable",
+    "merge_website_no_identity_with_primary",
+    "merge_website_identity_without_primary",
+    "merge_website_primary_identity_mismatch",
+    "merge_company_domains_tombstone_not_empty",
+    "merge_company_domains_primary_invariant",
   ] as const;
 
   for (const code of knownCodes) {
@@ -406,29 +480,27 @@ export function defaultCompanyMergeResolutions(): CompanyMergeResolutions {
     schema_version: 2,
     sponsorship_conflicts: [],
     organizer_conflicts: [],
+    exhibitor_conflicts: [],
     draft_link_conflicts: [],
     field_resolutions: defaultCompanyMergeFieldResolutions(),
   };
 }
 
-/** Edition IDs whose organizer links changed during merge (for last_reviewed_at touch). */
-export function collectOrganizerMergeEditionIds(
+function collectMergeAffectedEditionIds(
   execution: CompanyMergeExecutionSnapshot,
+  affectedListKey: string,
+  logKeys: readonly string[],
 ): string[] {
   const repointMap = execution.repoint_map;
   if (!isRecord(repointMap)) return [];
 
-  const fromList = readStringArray(repointMap.event_edition_organizers_affected_edition_ids);
+  const fromList = readStringArray(repointMap[affectedListKey]);
   if (fromList.length > 0) {
     return [...new Set(fromList.map((id) => id.trim().toLowerCase()))];
   }
 
   const ids = new Set<string>();
-  for (const key of [
-    "event_edition_organizers",
-    "event_edition_organizers_deleted",
-    "event_edition_organizers_updated",
-  ] as const) {
+  for (const key of logKeys) {
     for (const entry of readRecordArray(repointMap[key])) {
       const direct = readString(entry.event_edition_id);
       if (direct) ids.add(direct.toLowerCase());
@@ -443,6 +515,28 @@ export function collectOrganizerMergeEditionIds(
   }
 
   return [...ids];
+}
+
+/** Edition IDs whose organizer links changed during merge (for last_reviewed_at touch). */
+export function collectOrganizerMergeEditionIds(
+  execution: CompanyMergeExecutionSnapshot,
+): string[] {
+  return collectMergeAffectedEditionIds(execution, "event_edition_organizers_affected_edition_ids", [
+    "event_edition_organizers",
+    "event_edition_organizers_deleted",
+    "event_edition_organizers_updated",
+  ]);
+}
+
+/** Edition IDs whose exhibitor links changed during merge (for last_reviewed_at touch). */
+export function collectExhibitorMergeEditionIds(
+  execution: CompanyMergeExecutionSnapshot,
+): string[] {
+  return collectMergeAffectedEditionIds(execution, "event_exhibitors_affected_edition_ids", [
+    "event_exhibitors",
+    "event_exhibitors_deleted",
+    "event_exhibitors_updated",
+  ]);
 }
 
 /** Read-only merge impact preview (no writes). */

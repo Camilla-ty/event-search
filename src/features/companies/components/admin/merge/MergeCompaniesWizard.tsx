@@ -8,6 +8,7 @@ import { MergeCanonicalSelector } from "@/src/features/companies/components/admi
 import { MergeConfirmDialog } from "@/src/features/companies/components/admin/merge/MergeConfirmDialog";
 import { MergeCompanyPicker } from "@/src/features/companies/components/admin/merge/MergeCompanyPicker";
 import { MergeDraftLinkConflictsTable } from "@/src/features/companies/components/admin/merge/MergeDraftLinkConflictsTable";
+import { MergeExhibitorConflictsTable } from "@/src/features/companies/components/admin/merge/MergeExhibitorConflictsTable";
 import { MergeFieldResolutionForm } from "@/src/features/companies/components/admin/merge/MergeFieldResolutionForm";
 import { MergeImpactPreview } from "@/src/features/companies/components/admin/merge/MergeImpactPreview";
 import { MergeOrganizerConflictsTable } from "@/src/features/companies/components/admin/merge/MergeOrganizerConflictsTable";
@@ -27,14 +28,18 @@ import {
   buildInitialResolutionsFromPreview,
   executeMergeCompanies,
   updateDraftLinkStrategy,
+  updateExhibitorFieldStrategy,
   updateOrganizerStrategy,
   updateSponsorshipStrategy,
 } from "@/src/features/companies/components/admin/merge/mergeWizardResolutions";
+import { recomputeMergeIdentityBlockerMessages } from "@/src/features/companies/components/admin/merge/mergeIdentityBlockers";
 import type {
+  CompanyMergeExhibitorFieldName,
   CompanyMergeFieldResolutions,
   CompanyMergePreviewSnapshot,
   CompanyMergeResolutions,
   DraftLinkConflictStrategy,
+  ExhibitorFieldStrategy,
   OrganizerConflictStrategy,
   SponsorshipConflictStrategy,
 } from "@/src/features/companies/server/companyMerge";
@@ -91,7 +96,16 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
   const step1Complete =
     companyA !== null && companyB !== null && companyA.id !== companyB.id;
 
-  const hasBlockers = preview !== null && preview.blockers.length > 0;
+  const identityBlockers =
+    preview !== null && resolutions !== null
+      ? recomputeMergeIdentityBlockerMessages(preview, resolutions.field_resolutions)
+      : preview?.blockers ?? [];
+
+  const thirdPartyBlockers = identityBlockers.filter((message) =>
+    message.includes("owned by another company"),
+  );
+  const hasThirdPartyBlockers = thirdPartyBlockers.length > 0;
+  const hasIdentityBlockers = identityBlockers.length > 0;
 
   const loadPreview = useCallback(async () => {
     if (!canonicalId || !duplicateId) return;
@@ -151,7 +165,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
   }
 
   function goToStep4() {
-    if (!preview || hasBlockers) return;
+    if (!preview || hasThirdPartyBlockers) return;
     if (!resolutions) {
       setResolutions(buildInitialResolutionsFromPreview(preview));
     }
@@ -159,7 +173,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
   }
 
   function goToStep5() {
-    if (!preview || !resolutions || hasBlockers) return;
+    if (!preview || !resolutions || hasIdentityBlockers) return;
     setStep(5);
   }
 
@@ -196,6 +210,17 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
     setResolutions((current) => {
       if (!current) return current;
       return updateOrganizerStrategy(current, eventEditionId, strategy);
+    });
+  }
+
+  function handleExhibitorFieldStrategyChange(
+    eventEditionId: string,
+    field: CompanyMergeExhibitorFieldName,
+    strategy: ExhibitorFieldStrategy,
+  ) {
+    setResolutions((current) => {
+      if (!current) return current;
+      return updateExhibitorFieldStrategy(current, eventEditionId, field, strategy);
     });
   }
 
@@ -355,8 +380,8 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             preview={preview}
           />
 
-          {preview && preview.blockers.length > 0 ? (
-            <InlineErrorBanner message={preview.blockers.join(" ")} />
+          {identityBlockers.length > 0 ? (
+            <InlineErrorBanner message={identityBlockers.join(" ")} />
           ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -370,7 +395,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             <button
               type="button"
               className={`${primaryCtaClass} h-10`}
-              disabled={previewLoading || previewError !== null || preview === null || hasBlockers}
+              disabled={previewLoading || previewError !== null || preview === null || hasThirdPartyBlockers}
               onClick={goToStep4}
             >
               Next: Resolve conflicts
@@ -384,10 +409,14 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Resolve conflicts</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Choose how to handle edition conflicts, import draft conflicts, and differing
-              profile fields.
+              Choose how to handle event conflicts, import draft conflicts, and differing
+              profile fields. Primary Identity and website must resolve to the same Match Key.
             </p>
           </div>
+
+          {identityBlockers.length > 0 ? (
+            <InlineErrorBanner message={identityBlockers.join(" ")} />
+          ) : null}
 
           <MergeSponsorshipConflictsTable
             conflicts={preview.sponsorship_conflicts}
@@ -403,6 +432,14 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             canonicalName={canonicalName}
             duplicateName={duplicateName}
             onStrategyChange={handleOrganizerStrategyChange}
+          />
+
+          <MergeExhibitorConflictsTable
+            conflicts={preview.exhibitor_conflicts}
+            resolutions={resolutions}
+            canonicalName={canonicalName}
+            duplicateName={duplicateName}
+            onFieldStrategyChange={handleExhibitorFieldStrategyChange}
           />
 
           <MergeDraftLinkConflictsTable
@@ -430,6 +467,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             <button
               type="button"
               className={`${primaryCtaClass} h-10`}
+              disabled={hasIdentityBlockers}
               onClick={goToStep5}
             >
               Next: Confirm merge
@@ -458,8 +496,16 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
                 {preview.impact.event_sponsors_to_repoint === 1 ? "" : "s"} to repoint
               </li>
               <li>
-                {preview.sponsorship_conflicts.length} edition conflict
+                {preview.impact.event_exhibitors_to_repoint} exhibitor link
+                {preview.impact.event_exhibitors_to_repoint === 1 ? "" : "s"} to repoint
+              </li>
+              <li>
+                {preview.sponsorship_conflicts.length} event conflict
                 {preview.sponsorship_conflicts.length === 1 ? "" : "s"} resolved
+              </li>
+              <li>
+                {preview.exhibitor_conflicts.length} exhibitor field conflict
+                {preview.exhibitor_conflicts.length === 1 ? "" : "s"} resolved
               </li>
               <li>
                 {preview.draft_link_conflicts.length} draft batch conflict
@@ -491,7 +537,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
             <button
               type="button"
               className={`${primaryCtaClass} h-10 !bg-red-600 hover:!bg-red-700 focus-visible:!ring-red-300`}
-              disabled={executeLoading}
+              disabled={executeLoading || hasIdentityBlockers}
               onClick={() => {
                 setExecuteError(null);
                 setConfirmOpen(true);

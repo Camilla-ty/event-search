@@ -78,6 +78,12 @@ BEGIN
         'domain', 'canonical',
         'website', 'canonical',
         'logo', 'best_available'
+      ),
+      'identity_assertions', jsonb_build_object(
+        'winner_domain', 'merge-qa-canonical.example',
+        'winner_website', 'https://merge-qa-canonical.example',
+        'website_identity_key', 'merge-qa-canonical.example',
+        'website_identity_status', 'domain'
       )
     ),
     'slug-order-verify'
