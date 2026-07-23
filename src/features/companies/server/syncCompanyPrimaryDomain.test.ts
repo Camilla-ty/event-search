@@ -40,7 +40,7 @@ describe("planSyncCompanyPrimaryDomain", () => {
     );
   });
 
-  it("does not insert a primary company_domains row when Facebook yields null domain", () => {
+  it("does not insert when desired domain is null (bare Facebook / no_identity)", () => {
     assert.deepEqual(
       planSyncCompanyPrimaryDomain({
         desiredDomain: null,
@@ -53,11 +53,25 @@ describe("planSyncCompanyPrimaryDomain", () => {
       planSyncCompanyPrimaryDomain({
         desiredDomain: null,
         companyDomainRows: [
-          { id: PRIMARY_ID, domain: "facebook.com/profile.php", is_primary: true },
+          { id: PRIMARY_ID, domain: "facebook.com/profile.php?id=1", is_primary: true },
         ],
         foreignOwnersOfDesiredDomain: [],
       }),
       { action: "demote_all_primary" },
+    );
+  });
+
+  it("inserts Facebook profile identity as primary when company_domains is empty", () => {
+    assert.deepEqual(
+      planSyncCompanyPrimaryDomain({
+        desiredDomain: "facebook.com/profile.php?id=100068135449341",
+        companyDomainRows: [],
+        foreignOwnersOfDesiredDomain: [],
+      }),
+      {
+        action: "insert_primary",
+        domain: "facebook.com/profile.php?id=100068135449341",
+      },
     );
   });
 
@@ -248,6 +262,28 @@ describe("syncCompanyPrimaryDomainWithClient", () => {
     const inserted = state.companyDomains.find((row) => row.domain === "new.example");
     assert.equal(old?.is_primary, false);
     assert.equal(inserted?.is_primary, true);
+  });
+
+  it("inserts Facebook profile identity primary and noops on second sync", async () => {
+    const facebookKey = "facebook.com/profile.php?id=100068135449341";
+    const state: SyncMockState = { companyDomains: [] };
+
+    await syncCompanyPrimaryDomainWithClient(
+      createFullSyncMock(state) as never,
+      COMPANY_ID,
+      facebookKey,
+    );
+    assert.equal(state.companyDomains.length, 1);
+    assert.equal(state.companyDomains[0]?.domain, facebookKey);
+    assert.equal(state.companyDomains[0]?.is_primary, true);
+
+    await syncCompanyPrimaryDomainWithClient(
+      createFullSyncMock(state) as never,
+      COMPANY_ID,
+      facebookKey,
+    );
+    assert.equal(state.companyDomains.length, 1);
+    assert.equal(state.companyDomains[0]?.is_primary, true);
   });
 
   it("promotes an existing alias to primary", async () => {

@@ -274,9 +274,10 @@ export function CompanyAdminForm({
           <p className="text-xs text-slate-500">Required. Used to derive the company domain.</p>
         </label>
 
-        {mode === "edit" && readOnlyDomain ? (
+        {mode === "edit" ? (
           <p className="text-xs text-slate-600">
-            Domain: <span className="font-mono">{readOnlyDomain}</span>
+            Domain:{" "}
+            <span className="font-mono">{readOnlyDomain?.trim() ? readOnlyDomain : "—"}</span>
           </p>
         ) : null}
 

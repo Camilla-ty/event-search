@@ -19,6 +19,7 @@ import {
 } from "@/src/lib/domain/hostedPlatformWebsite";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdminSearch";
 import { syncCompanyPrimaryDomainWithClient } from "./syncCompanyPrimaryDomain";
@@ -284,12 +285,34 @@ export async function getCompanyAdminById(id: string): Promise<CompanyAdminRow |
   return mapCompanyAdminRow(data as Record<string, unknown>);
 }
 
-export async function updateCompanyAdmin(
+/**
+ * Derive companies.website + companies.domain for an admin website write.
+ * Preserves the verified URL string; domain is the normalized Identity / match key.
+ */
+export function companyWebsiteIdentityPatch(website: string): {
+  website: string;
+  domain: string | null;
+} {
+  const trimmed = website.trim();
+  const identity = resolveCompanyWebsiteIdentity(trimmed);
+  if (identity.status === "unparseable") {
+    throw new Error("Invalid company website");
+  }
+  // Community/social URLs (no_identity) clear the domain identity key.
+  return {
+    website: trimmed,
+    domain: identity.status === "domain" ? identity.domain : null,
+  };
+}
+
+export async function updateCompanyAdminWithClient(
+  supabase: SupabaseClient,
   id: string,
   input: UpdateCompanyAdminInput,
+  existingRow?: CompanyAdminRow | null,
 ): Promise<UpdateCompanyAdminResult> {
-  const supabase = createAdminClient();
-  const existing = await getCompanyAdminById(id);
+  const existing =
+    existingRow === undefined ? await getCompanyAdminById(id) : existingRow;
   if (!existing) {
     throw new Error("Company not found.");
   }
@@ -303,18 +326,15 @@ export async function updateCompanyAdmin(
   const patch: Record<string, unknown> = {};
   const warnings: string[] = [];
   let persistedLogoUrl: string | undefined;
+  let websiteIdentityDomain: string | null | undefined;
 
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.slug !== undefined) patch.slug = input.slug.trim();
   if (input.website !== undefined) {
-    const website = input.website.trim();
-    patch.website = website;
-    const identity = resolveCompanyWebsiteIdentity(website);
-    if (identity.status === "unparseable") {
-      throw new Error("Invalid company website");
-    }
-    // Community/social URLs (no_identity) clear the domain identity key.
-    patch.domain = identity.status === "domain" ? identity.domain : null;
+    const identityPatch = companyWebsiteIdentityPatch(input.website);
+    patch.website = identityPatch.website;
+    patch.domain = identityPatch.domain;
+    websiteIdentityDomain = identityPatch.domain;
   }
   if (input.aliases !== undefined) {
     const canonicalName =
@@ -349,7 +369,10 @@ export async function updateCompanyAdmin(
   const company = mapCompanyAdminRow(data as Record<string, unknown>);
 
   if (input.website !== undefined) {
-    await syncCompanyPrimaryDomainWithClient(supabase, id, company.domain);
+    // Prefer the post-update row; fall back to the derived identity so a
+    // missing domain is still synced into primary company_domains.
+    const desiredDomain = company.domain ?? websiteIdentityDomain ?? null;
+    await syncCompanyPrimaryDomainWithClient(supabase, id, desiredDomain);
   }
 
   if (persistedLogoUrl) {
@@ -360,6 +383,13 @@ export async function updateCompanyAdmin(
   }
 
   return { company, warnings };
+}
+
+export async function updateCompanyAdmin(
+  id: string,
+  input: UpdateCompanyAdminInput,
+): Promise<UpdateCompanyAdminResult> {
+  return updateCompanyAdminWithClient(createAdminClient(), id, input);
 }
 
 export type UploadCompanyLogoFileInput = {
