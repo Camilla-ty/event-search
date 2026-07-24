@@ -8,7 +8,6 @@ import {
   sortPublicExhibitorRows,
   type PublicExhibitorRow,
 } from "@/src/features/exhibitors/server/exhibitorsPublic";
-import { resolvePublicExhibitorWebPresence } from "@/src/features/exhibitors/lib/resolvePublicExhibitorWebPresence";
 
 function row(
   overrides: Partial<PublicExhibitorRow> & Pick<PublicExhibitorRow, "id" | "company_id">,
@@ -85,51 +84,11 @@ describe("groupPublicExhibitorsByTier", () => {
     ]);
 
     assert.equal(groups.length, 2);
-    assert.equal(formatPublicExhibitorTierHeading(groups[0]!), "Tier 1 · Gold");
+    assert.equal(formatPublicExhibitorTierHeading(groups[0]!), "Gold");
     assert.equal(formatPublicExhibitorTierHeading(groups[1]!), "Unranked");
     assert.deepEqual(
       groups[0]?.exhibitors.map((item) => item.id),
       ["a", "b"],
     );
-  });
-});
-
-describe("resolvePublicExhibitorWebPresence", () => {
-  it("prefers a clickable website when available", () => {
-    assert.deepEqual(
-      resolvePublicExhibitorWebPresence({
-        website: "https://acme.com/about",
-        domain: "acme.com",
-      }),
-      {
-        kind: "website",
-        href: "https://acme.com/about",
-        label: "acme.com",
-      },
-    );
-  });
-
-  it("falls back to domain text when website is missing", () => {
-    assert.deepEqual(
-      resolvePublicExhibitorWebPresence({
-        website: null,
-        domain: "acme.com",
-      }),
-      { kind: "domain", label: "acme.com" },
-    );
-  });
-
-  it("falls back to domain text when website is present but unparseable", () => {
-    assert.deepEqual(
-      resolvePublicExhibitorWebPresence({
-        website: "not a url",
-        domain: "acme.com",
-      }),
-      { kind: "domain", label: "acme.com" },
-    );
-  });
-
-  it("returns null when neither website nor domain is usable", () => {
-    assert.equal(resolvePublicExhibitorWebPresence({ website: "", domain: null }), null);
   });
 });

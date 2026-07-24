@@ -43,13 +43,27 @@ export function groupExhibitorsByTier<T extends ExhibitorTierGroupable>(
   return groups;
 }
 
+/**
+ * Public exhibitor tier copy:
+ * - custom label → label only
+ * - no label + rank 1 → "Exhibitor"
+ * - no label + rank > 1 → "Tier {rank}"
+ * - otherwise null (callers may map to "Unranked")
+ */
+export function formatExhibitorPublicTierDisplay(
+  tierRank: number | null,
+  tierLabel: string | null,
+): string | null {
+  const label = tierLabel?.trim() ?? "";
+  if (label !== "") return label;
+  if (tierRank === 1) return "Exhibitor";
+  if (tierRank !== null) return `Tier ${tierRank}`;
+  return null;
+}
+
 export function formatExhibitorTierHeading(group: {
   tierRank: number | null;
   tierLabel: string | null;
 }): string {
-  const rankText = group.tierRank === null ? "Unranked" : `Tier ${group.tierRank}`;
-  if (group.tierLabel && group.tierLabel.trim() !== "") {
-    return `${rankText} · ${group.tierLabel.trim()}`;
-  }
-  return rankText;
+  return formatExhibitorPublicTierDisplay(group.tierRank, group.tierLabel) ?? "Unranked";
 }

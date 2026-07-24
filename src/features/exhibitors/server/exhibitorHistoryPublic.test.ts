@@ -233,8 +233,9 @@ describe("groupExhibitorHistoryBySeries", () => {
 });
 
 describe("formatExhibitorHistoryTierLabel", () => {
-  it("prefers trimmed tier_label, then Tier {rank}, otherwise omits", () => {
+  it("prefers label only, defaults rank 1 to Exhibitor, and Tier N otherwise", () => {
     assert.equal(formatExhibitorHistoryTierLabel(1, "  Gold  "), "Gold");
+    assert.equal(formatExhibitorHistoryTierLabel(1, null), "Exhibitor");
     assert.equal(formatExhibitorHistoryTierLabel(2, null), "Tier 2");
     assert.equal(formatExhibitorHistoryTierLabel(null, "   "), null);
     assert.equal(formatExhibitorHistoryTierLabel(null, null), null);

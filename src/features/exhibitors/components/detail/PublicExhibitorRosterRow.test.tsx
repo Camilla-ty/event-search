@@ -17,7 +17,7 @@ function renderRow(exhibitor: PublicExhibitorRow): string {
 }
 
 describe("PublicExhibitorRosterRow", () => {
-  it("renders logo identity, profile link, and clickable website", () => {
+  it("makes the whole row a single company-profile link with domain as text", () => {
     const company = {
       id: "11111111-1111-1111-1111-111111111111",
       slug: "acme-corp",
@@ -42,16 +42,17 @@ describe("PublicExhibitorRosterRow", () => {
     });
 
     assert.match(html, /Acme Corp/);
-    // Company name must be inside the same sponsor-profile anchor (not only the website).
+    assert.match(html, /acme\.com/);
     assert.match(
       html,
       new RegExp(
-        `href="${expectedProfileHref!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>[\\s\\S]*Acme Corp`,
+        `href="${expectedProfileHref!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>[\\s\\S]*Acme Corp[\\s\\S]*acme\\.com`,
       ),
     );
-    assert.match(html, /href="https:\/\/acme\.com\/"/);
-    assert.match(html, /rel="noopener noreferrer"/);
+    assert.doesNotMatch(html, /href="https:\/\/acme\.com/);
+    assert.doesNotMatch(html, /rel="noopener noreferrer"/);
     assert.match(html, />A</);
+    assert.equal((html.match(/<a\b/g) ?? []).length, 1);
   });
 
   it("falls back to company id in the sponsor profile path when slug is missing", () => {
@@ -87,30 +88,6 @@ describe("PublicExhibitorRosterRow", () => {
     assert.doesNotMatch(html, /href="\/exhibitors\//);
   });
 
-  it("falls back to domain text when website is absent", () => {
-    const html = renderRow({
-      id: "exhibitor-2",
-      company_id: "11111111-1111-1111-1111-111111111111",
-      tier_rank: 1,
-      tier_label: null,
-      display_order: 1,
-      company: {
-        id: "11111111-1111-1111-1111-111111111111",
-        slug: "acme-corp",
-        name: "Acme Corp",
-        domain: "acme.com",
-        website: null,
-        restricted_at: null,
-        logo_url: null,
-        logo_source: null,
-        logo_status: null,
-      },
-    });
-
-    assert.match(html, /acme\.com/);
-    assert.doesNotMatch(html, /href="https:\/\/acme\.com/);
-  });
-
   it("scrubs restricted companies like sponsors", () => {
     const html = renderRow({
       id: "exhibitor-3",
@@ -138,5 +115,6 @@ describe("PublicExhibitorRosterRow", () => {
     assert.doesNotMatch(html, /restricted\.example/);
     assert.doesNotMatch(html, /href="https:\/\/restricted\.example/);
     assert.doesNotMatch(html, /<img\b/);
+    assert.doesNotMatch(html, /<a\b/);
   });
 });

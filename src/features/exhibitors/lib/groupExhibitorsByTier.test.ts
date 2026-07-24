@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  formatExhibitorPublicTierDisplay,
   formatExhibitorTierHeading,
   groupExhibitorsByTier,
 } from "@/src/features/exhibitors/lib/groupExhibitorsByTier";
@@ -34,8 +35,42 @@ describe("groupExhibitorsByTier", () => {
       groups[0]?.exhibitors.map((item) => item.id),
       ["a", "b"],
     );
-    assert.equal(formatExhibitorTierHeading(groups[0]!), "Tier 1 · Gold");
-    assert.equal(formatExhibitorTierHeading(groups[1]!), "Tier 2 · Silver");
+    assert.equal(formatExhibitorTierHeading(groups[0]!), "Gold");
+    assert.equal(formatExhibitorTierHeading(groups[1]!), "Silver");
+  });
+});
+
+describe("formatExhibitorTierHeading", () => {
+  it("prefers label only, defaults rank 1 to Exhibitor, and Tier N otherwise", () => {
+    assert.equal(
+      formatExhibitorTierHeading({ tierRank: 1, tierLabel: "  Gold  " }),
+      "Gold",
+    );
+    assert.equal(
+      formatExhibitorTierHeading({ tierRank: 1, tierLabel: null }),
+      "Exhibitor",
+    );
+    assert.equal(
+      formatExhibitorTierHeading({ tierRank: 1, tierLabel: "   " }),
+      "Exhibitor",
+    );
+    assert.equal(
+      formatExhibitorTierHeading({ tierRank: 2, tierLabel: null }),
+      "Tier 2",
+    );
+    assert.equal(
+      formatExhibitorTierHeading({ tierRank: null, tierLabel: null }),
+      "Unranked",
+    );
+  });
+});
+
+describe("formatExhibitorPublicTierDisplay", () => {
+  it("shares the public rule used by Event Detail and Company History", () => {
+    assert.equal(formatExhibitorPublicTierDisplay(1, "Gold"), "Gold");
+    assert.equal(formatExhibitorPublicTierDisplay(1, null), "Exhibitor");
+    assert.equal(formatExhibitorPublicTierDisplay(3, null), "Tier 3");
+    assert.equal(formatExhibitorPublicTierDisplay(null, null), null);
   });
 });
 

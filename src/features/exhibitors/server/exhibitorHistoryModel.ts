@@ -1,3 +1,4 @@
+import { formatExhibitorPublicTierDisplay } from "@/src/features/exhibitors/lib/groupExhibitorsByTier";
 import type { getEventEditions } from "@/src/lib/queries/events";
 
 export type ExhibitorHistoryEvent = NonNullable<
@@ -110,7 +111,5 @@ export function formatExhibitorHistoryTierLabel(
   tierRank: number | null,
   tierLabel: string | null,
 ): string | null {
-  if (tierLabel !== null && tierLabel.trim() !== "") return tierLabel.trim();
-  if (tierRank !== null) return `Tier ${tierRank}`;
-  return null;
+  return formatExhibitorPublicTierDisplay(tierRank, tierLabel);
 }
