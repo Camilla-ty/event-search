@@ -18,7 +18,7 @@ export function PublicExhibitorRosterRow({ exhibitor }: PublicExhibitorRosterRow
   const company = exhibitor.company;
   const restricted = isCompanyRestricted(company);
   const companyName = company.name?.trim() || "Unknown exhibitor";
-  const profileHref = restricted ? null : buildSponsorProfilePath(company);
+  const profileHref = buildSponsorProfilePath(company);
   const webPresence = restricted ? null : resolvePublicExhibitorWebPresence(company);
   const logoFields = companyLogoFieldsFromRow(
     restricted
@@ -69,7 +69,7 @@ export function PublicExhibitorRosterRow({ exhibitor }: PublicExhibitorRosterRow
         {profileHref ? (
           <Link
             href={profileHref}
-            className="min-w-0 rounded-md transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
+            className="block min-w-0 rounded-md transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
           >
             {identity}
           </Link>

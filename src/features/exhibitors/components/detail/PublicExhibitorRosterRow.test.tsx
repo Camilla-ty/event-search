@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PublicExhibitorRosterRow } from "@/src/features/exhibitors/components/detail/PublicExhibitorRosterRow";
 import type { PublicExhibitorRow } from "@/src/features/exhibitors/server/exhibitorsPublic";
 import { RESTRICTED_COMPANY_ROSTER_LABEL } from "@/src/lib/companies/companyPublicRestriction";
+import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
 
 function renderRow(exhibitor: PublicExhibitorRow): string {
   return renderToStaticMarkup(
@@ -17,30 +18,73 @@ function renderRow(exhibitor: PublicExhibitorRow): string {
 
 describe("PublicExhibitorRosterRow", () => {
   it("renders logo identity, profile link, and clickable website", () => {
+    const company = {
+      id: "11111111-1111-1111-1111-111111111111",
+      slug: "acme-corp",
+      name: "Acme Corp",
+      domain: "acme.com",
+      website: "https://acme.com",
+      restricted_at: null,
+      logo_url: null,
+      logo_source: null,
+      logo_status: null,
+    };
+    const expectedProfileHref = buildSponsorProfilePath(company);
+    assert.equal(expectedProfileHref, "/sponsors/acme-corp");
+
     const html = renderRow({
       id: "exhibitor-1",
-      company_id: "11111111-1111-1111-1111-111111111111",
+      company_id: company.id,
       tier_rank: 1,
       tier_label: "Gold",
       display_order: 1,
-      company: {
-        id: "11111111-1111-1111-1111-111111111111",
-        slug: "acme-corp",
-        name: "Acme Corp",
-        domain: "acme.com",
-        website: "https://acme.com",
-        restricted_at: null,
-        logo_url: null,
-        logo_source: null,
-        logo_status: null,
-      },
+      company,
     });
 
     assert.match(html, /Acme Corp/);
-    assert.match(html, /href="\/sponsors\/acme-corp"/);
+    // Company name must be inside the same sponsor-profile anchor (not only the website).
+    assert.match(
+      html,
+      new RegExp(
+        `href="${expectedProfileHref!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>[\\s\\S]*Acme Corp`,
+      ),
+    );
     assert.match(html, /href="https:\/\/acme\.com\/"/);
     assert.match(html, /rel="noopener noreferrer"/);
     assert.match(html, />A</);
+  });
+
+  it("falls back to company id in the sponsor profile path when slug is missing", () => {
+    const company = {
+      id: "11111111-1111-1111-1111-111111111111",
+      slug: null,
+      name: "Acme Corp",
+      domain: "acme.com",
+      website: null,
+      restricted_at: null,
+      logo_url: null,
+      logo_source: null,
+      logo_status: null,
+    };
+    const expectedProfileHref = buildSponsorProfilePath(company);
+    assert.equal(expectedProfileHref, `/sponsors/${company.id}`);
+
+    const html = renderRow({
+      id: "exhibitor-1b",
+      company_id: company.id,
+      tier_rank: 1,
+      tier_label: null,
+      display_order: 1,
+      company,
+    });
+
+    assert.match(
+      html,
+      new RegExp(
+        `href="${expectedProfileHref!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>[\\s\\S]*Acme Corp`,
+      ),
+    );
+    assert.doesNotMatch(html, /href="\/exhibitors\//);
   });
 
   it("falls back to domain text when website is absent", () => {
