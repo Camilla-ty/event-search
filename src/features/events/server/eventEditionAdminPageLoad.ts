@@ -11,6 +11,8 @@ import type { SeriesOption } from "@/src/features/events/server/getSeriesOptions
 import { getSeriesOptions } from "@/src/features/events/server/getSeriesOptions";
 import type { KeywordRow } from "@/src/features/events/server/seriesKeywordsAdmin";
 import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
+import type { LiveExhibitorRow } from "@/src/features/exhibitors/server/eventExhibitorAdmin";
+import { getLiveExhibitorsForEditionAdmin } from "@/src/features/exhibitors/server/eventExhibitorAdmin";
 import type { EditionOrganizerAdminRow } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import { getOrganizersForEditionAdmin } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import type { EditionImportContext } from "@/src/features/sponsor-import/server/importUiData";
@@ -21,6 +23,7 @@ export type AdminEditionPanelKey =
   | "series"
   | "sponsorCount"
   | "sponsors"
+  | "exhibitors"
   | "organizers"
   | "imports"
   | "keywords";
@@ -35,6 +38,7 @@ export type AdminEditionOptionalPanels = {
   series: SeriesOption[];
   liveSponsorCount: number;
   sponsors: LiveSponsorRow[];
+  exhibitors: LiveExhibitorRow[];
   organizers: EditionOrganizerAdminRow[];
   importsData: EditionImportContext;
   inheritedKeywords: KeywordRow[];
@@ -107,6 +111,7 @@ export async function loadAdminEditionOptionalPanels(
     series,
     liveSponsorCount,
     sponsors,
+    exhibitors,
     organizers,
     importsData,
     inheritedKeywords,
@@ -122,6 +127,12 @@ export async function loadAdminEditionOptionalPanels(
     resolveOptionalPanelLoad(
       "sponsors",
       () => getLiveSponsorsForEditionAdmin(editionId),
+      [],
+      panelErrors,
+    ),
+    resolveOptionalPanelLoad(
+      "exhibitors",
+      () => getLiveExhibitorsForEditionAdmin(editionId),
       [],
       panelErrors,
     ),
@@ -158,6 +169,7 @@ export async function loadAdminEditionOptionalPanels(
     series,
     liveSponsorCount,
     sponsors,
+    exhibitors,
     organizers,
     importsData,
     inheritedKeywords,
@@ -178,6 +190,7 @@ export const ADMIN_EDITION_PANEL_LABELS: Record<AdminEditionPanelKey, string> = 
   series: "Series options",
   sponsorCount: "Live sponsor count",
   sponsors: "Live sponsors",
+  exhibitors: "Exhibitors",
   organizers: "Organizers",
   imports: "Import history",
   keywords: "Inherited keywords",

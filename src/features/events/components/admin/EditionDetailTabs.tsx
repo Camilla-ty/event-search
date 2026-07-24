@@ -15,6 +15,7 @@ import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/class
 const TABS = [
   { id: "profile", label: "Profile" },
   { id: "sponsors", label: "Live sponsors" },
+  { id: "exhibitors", label: "Exhibitors" },
   { id: "imports", label: "Imports" },
 ] as const;
 
@@ -24,6 +25,7 @@ type EditionDetailTabsProps = {
   profileWarnings: string[];
   profilePanel: ReactNode;
   sponsorsPanel: ReactNode;
+  exhibitorsPanel: ReactNode;
   importsPanel: ReactNode;
 };
 
@@ -33,6 +35,7 @@ export function EditionDetailTabs({
   profileWarnings,
   profilePanel,
   sponsorsPanel,
+  exhibitorsPanel,
   importsPanel,
 }: EditionDetailTabsProps) {
   const readTabFromLocation = useCallback(
@@ -74,6 +77,7 @@ export function EditionDetailTabs({
         </>
       ) : null}
       {activeTab === "sponsors" ? sponsorsPanel : null}
+      {activeTab === "exhibitors" ? exhibitorsPanel : null}
       {activeTab === "imports" ? importsPanel : null}
     </div>
   );

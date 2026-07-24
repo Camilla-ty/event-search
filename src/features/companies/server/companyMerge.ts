@@ -495,7 +495,7 @@ export function collectOrganizerMergeEditionIds(
   ]);
 }
 
-/** Edition IDs whose exhibitor links changed during merge (for last_reviewed_at touch). */
+/** Edition IDs whose exhibitor links changed during merge (tooling / reporting only). */
 export function collectExhibitorMergeEditionIds(
   execution: CompanyMergeExecutionSnapshot,
 ): string[] {

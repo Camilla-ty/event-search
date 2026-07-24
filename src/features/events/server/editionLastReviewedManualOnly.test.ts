@@ -71,4 +71,9 @@ describe("edition last reviewed manual-only wiring", () => {
     const source = readSource("companies/server/companyMergeAdmin.ts");
     assertNoAutoTouch(source, "companyMergeAdmin");
   });
+
+  it("exhibitor admin does not auto-touch last_reviewed_at", () => {
+    const source = readSource("exhibitors/server/eventExhibitorAdmin.ts");
+    assertNoAutoTouch(source, "eventExhibitorAdmin");
+  });
 });

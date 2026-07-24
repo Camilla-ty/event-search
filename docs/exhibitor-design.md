@@ -1,8 +1,8 @@
 # EventPixels — Exhibitor Design Document
 
-**Status:** Approved  
-**Version:** v1.1  
-**Last updated:** 2026-07-24  
+**Status:** Approved
+**Version:** v1.1
+**Last updated:** 2026-07-24 (E2: manual-only `last_reviewed_at`)
 
 Canonical design for **Exhibitor** as an edition-scoped relationship between an **Event Edition** and a **Company**. Exhibitors answer *who exhibited at this occurrence* — inside the Event Edition and company-profile experiences, not as a standalone Exhibitor Discovery product.
 
@@ -227,30 +227,26 @@ Ordinary same-edition exhibitor tier edits are **E2 CRUD**, not Company Merge.
 
 ### 8.2 Resolutions shape
 
-Preview lists **every** edition where both companies have an exhibitor link.  
-`required_resolutions.exhibitor_conflicts` is an array of **edition UUIDs** (same shape as sponsorship conflicts).  
+Preview lists **every** edition where both companies have an exhibitor link.
+`required_resolutions.exhibitor_conflicts` is an array of **edition UUIDs** (same shape as sponsorship conflicts).
 Admin resolutions: `{ event_edition_id, strategy }` with `keep_canonical` \| `keep_duplicate_tier`.
 
 **Ordering (locked):** Company merge **preview** and **conflict resolution** for exhibitors must ship before (or in the same release as) the merge **commit** path that writes `event_exhibitors`. Merge must not silently drop or duplicate exhibitor links.
 
-Affected editions should be evaluated for `last_reviewed_at` under existing merge touch policy.
+Merge may collect affected edition IDs for tooling (`collectExhibitorMergeEditionIds`), but does **not** auto-touch `last_reviewed_at` (manual-only product policy).
 
 ---
 
 ## 9. `last_reviewed_at` policy (locked)
 
-Align with [last-reviewed automation scope](./phase-edition-last-reviewed-automation-scope.md) sponsor/organizer rules:
+**Manual-only** — same product policy as live sponsors and organizers. Do **not** auto-touch `event_editions.last_reviewed_at` on exhibitor create, update, delete, reorder, import publish, or company-merge exhibitor side effects. Researchers set **Last reviewed** on the edition Profile form when appropriate. Guarded by `editionLastReviewedManualOnly.test.ts`.
 
 | Action | Auto-touch `last_reviewed_at` |
 |--------|-------------------------------|
-| Add exhibitor | **Yes** |
-| Remove exhibitor | **Yes** |
-| Edit `tier_rank` / `tier_label` | **Yes** — substantive roster metadata |
-| Reorder only (`display_order`) | **No** — presentation only |
-| Company merge exhibitor repoint / conflict delete / tier update | **Yes** — touch each affected edition (same family as organizer merge policy) |
-| Future import publish (when built) | **Yes** if live `event_exhibitors` rows change; **No** if publish is a no-op |
-
-Phase E2 must wire admin CRUD touches **and** company-merge exhibitor side effects (`collectExhibitorMergeEditionIds` → touch loop). Exact server write paths belong in the E2 scope checklist.
+| Add / edit / remove exhibitor | **No** |
+| Reorder only (`display_order`) | **No** |
+| Company merge exhibitor side effects | **No** |
+| Future import publish (when built) | **No** |
 
 ---
 
@@ -260,7 +256,7 @@ Phase E2 must wire admin CRUD touches **and** company-merge exhibitor side effec
 |-------|-------------|
 | **E0 — Design lock** | This document approved; open decisions closed |
 | **E1 — Schema + merge** | `event_exhibitors` + RLS/grants; company-merge preview/commit for exhibitor conflicts |
-| **E2 — Admin CRUD + last-reviewed** | Edition Exhibitors tab: add / edit tier / remove / within-tier reorder; company admin history (hide when empty); auto-touch `last_reviewed_at` on those writes **and** on company-merge exhibitor side effects |
+| **E2 — Admin CRUD** | Edition Exhibitors tab: add / edit tier / remove / within-tier reorder; `assertCompanyLinkable` on create; **no** auto last-reviewed; Company History deferred |
 | **E3 — Public Event Detail** | Gated Exhibitors tab; restricted scrubbing; deep-link fallback |
 | **E4 — Public company profile** | Exhibitor history section; hide when empty; auth parity documented |
 | **E5 — Hardening** | Tests, merge QA; no discovery product |

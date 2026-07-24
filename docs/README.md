@@ -87,13 +87,13 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 
 ---
 
-## Exhibitors (v1 — design approved; E1 schema+merge applied)
+## Exhibitors (v1 — design approved; E1 applied; E2 admin CRUD)
 
 | Document | Description |
 |----------|-------------|
 | [Exhibitor Design](./exhibitor-design.md) | **Approved** — edition↔company exhibitor join; orthogonal to sponsors/organizers; public tab hide-when-empty |
 
-**Locked highlights:** `event_exhibitors` join (`tier_rank`, `tier_label`, within-tier `display_order`; Name/Website on `companies`); organizer-like public SELECT (no sponsor tier RLS); admin Exhibitors tab even at count 0; public Exhibitors tab only when count ≥ 1; public Exhibitor History visible without auth and hidden when empty; create/link requires active non-merged company; sponsor-strength restricted masking; merge preview/conflicts use Sponsor-style `keep_canonical` / `keep_duplicate_tier`; do not modify `/exhibitors` marketing stub; bulk import deferred.
+**Locked highlights:** `event_exhibitors` join (`tier_rank`, `tier_label`, within-tier `display_order`; Name/Website on `companies`); organizer-like public SELECT (no sponsor tier RLS); admin Exhibitors tab (E2); `assertCompanyLinkable` on create; Sponsor-style merge conflicts; **manual-only** `last_reviewed_at` (no auto-touch); public Exhibitors tab / Company History / Discovery / import deferred; do not modify `/exhibitors` marketing stub.
 
 ---
 

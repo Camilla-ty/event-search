@@ -7,6 +7,7 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { EditionDetailTabs } from "@/src/features/events/components/admin/EditionDetailTabs";
 import { parseAdminEditionTab } from "@/src/features/events/components/admin/adminEditionTabUrls";
+import { EditionExhibitorsPanel } from "@/src/features/exhibitors/components/admin/EditionExhibitorsPanel";
 import { EditionOrganizersPanel } from "@/src/features/organizers/components/admin/EditionOrganizersPanel";
 import { EditionImportsPanel } from "@/src/features/sponsor-import/components/EditionImportsPanel";
 import { defaultStepForBatchStatus, flowHref } from "@/src/features/sponsor-import/client/resumeStep";
@@ -128,6 +129,7 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
       : null;
 
   const sponsorsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "sponsors");
+  const exhibitorsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "exhibitors");
   const organizersPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "organizers");
   const importsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "imports");
   const profilePanelError =
@@ -293,6 +295,18 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
                 sponsors={panels.sponsors}
                 activeImport={activeImport}
                 sponsorNoteType={sponsorNoteType}
+              />
+            )
+          }
+          exhibitorsPanel={
+            exhibitorsPanelError ? (
+              <InlineErrorBanner message={`Exhibitors unavailable: ${exhibitorsPanelError}`} />
+            ) : (
+              <EditionExhibitorsPanel
+                editionId={edition.id}
+                editionName={edition.name}
+                editionYear={edition.year}
+                exhibitors={panels.exhibitors}
               />
             )
           }

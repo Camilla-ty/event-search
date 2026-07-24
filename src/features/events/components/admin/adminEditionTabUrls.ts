@@ -1,7 +1,7 @@
-export type AdminEditionTabId = "profile" | "sponsors" | "imports";
+export type AdminEditionTabId = "profile" | "sponsors" | "exhibitors" | "imports";
 
 export function parseAdminEditionTab(raw: string | null): AdminEditionTabId {
-  if (raw === "sponsors" || raw === "imports") return raw;
+  if (raw === "sponsors" || raw === "exhibitors" || raw === "imports") return raw;
   // Legacy ?tab=organizers (and unknown values) → Profile.
   return "profile";
 }

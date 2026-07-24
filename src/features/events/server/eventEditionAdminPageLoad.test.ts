@@ -83,6 +83,7 @@ describe("loadAdminEditionOptionalPanels", () => {
       assert.deepEqual(result.series, []);
       assert.equal(result.liveSponsorCount, 0);
       assert.deepEqual(result.sponsors, []);
+      assert.deepEqual(result.exhibitors, []);
       assert.deepEqual(result.organizers, []);
       assert.deepEqual(result.inheritedKeywords, []);
       assert.equal(result.importsData.editionId, sampleEdition.id);

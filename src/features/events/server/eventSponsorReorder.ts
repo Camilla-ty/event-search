@@ -8,6 +8,7 @@ export type TierReorderLinkIdsValidationResult =
 export function validateTierReorderLinkIds(
   orderedLinkIds: readonly string[],
   siblingLinkIds: readonly string[],
+  noun: string = "sponsor",
 ): TierReorderLinkIdsValidationResult {
   if (orderedLinkIds.length === 0) {
     return { ok: false, error: "ordered_link_ids must not be empty." };
@@ -16,7 +17,7 @@ export function validateTierReorderLinkIds(
   if (orderedLinkIds.length !== siblingLinkIds.length) {
     return {
       ok: false,
-      error: "ordered_link_ids must include every sponsor in this tier.",
+      error: `ordered_link_ids must include every ${noun} in this tier.`,
     };
   }
 
@@ -27,7 +28,7 @@ export function validateTierReorderLinkIds(
     if (!siblingSet.has(linkId)) {
       return {
         ok: false,
-        error: "ordered_link_ids contains a sponsor outside this tier.",
+        error: `ordered_link_ids contains a ${noun} link outside this tier.`,
       };
     }
     if (seen.has(linkId)) {
@@ -39,7 +40,7 @@ export function validateTierReorderLinkIds(
   if (seen.size !== siblingSet.size) {
     return {
       ok: false,
-      error: "ordered_link_ids must include every sponsor in this tier.",
+      error: `ordered_link_ids must include every ${noun} in this tier.`,
     };
   }
 

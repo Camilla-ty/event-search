@@ -9,7 +9,7 @@ import {
 import { parseAdminEditionTab } from "@/src/features/events/components/admin/adminEditionTabUrls";
 import { shouldInterceptTabAnchorClick } from "@/src/features/events/components/detail/instantTabNavigation";
 
-function renderTabs(initialTab: "profile" | "sponsors" | "imports") {
+function renderTabs(initialTab: "profile" | "sponsors" | "exhibitors" | "imports") {
   return renderToStaticMarkup(
     React.createElement(EditionDetailTabs, {
       editionId: "edition-1",
@@ -17,6 +17,7 @@ function renderTabs(initialTab: "profile" | "sponsors" | "imports") {
       profileWarnings: [],
       profilePanel: React.createElement("div", { "data-panel": "profile" }, "Profile panel"),
       sponsorsPanel: React.createElement("div", { "data-panel": "sponsors" }, "Sponsors panel"),
+      exhibitorsPanel: React.createElement("div", { "data-panel": "exhibitors" }, "Exhibitors panel"),
       importsPanel: React.createElement("div", { "data-panel": "imports" }, "Imports panel"),
     }),
   );
@@ -31,8 +32,9 @@ describe("parseAdminEditionTab", () => {
     assert.equal(parseAdminEditionTab("organizers"), "profile");
   });
 
-  it("preserves sponsors and imports", () => {
+  it("preserves sponsors, exhibitors, and imports", () => {
     assert.equal(parseAdminEditionTab("sponsors"), "sponsors");
+    assert.equal(parseAdminEditionTab("exhibitors"), "exhibitors");
     assert.equal(parseAdminEditionTab("imports"), "imports");
   });
 });
@@ -49,6 +51,12 @@ describe("EditionDetailTabs", () => {
   it("defaults to profile panel", () => {
     const html = renderTabs("profile");
     assert.match(html, /data-panel="profile"/);
+  });
+
+  it("switches exhibitors panel markup from initialTab", () => {
+    const html = renderTabs("exhibitors");
+    assert.match(html, /data-panel="exhibitors"/);
+    assert.match(html, /href="\/admin\/events\/editions\/edition-1\?tab=exhibitors"/);
   });
 
   it("switches imports panel markup from initialTab", () => {
