@@ -5,7 +5,7 @@
 
 Future ideas and deferred enhancements for EventPixels. Items here are **not approved for implementation** unless promoted to a dedicated scope or design document.
 
-For active phased delivery, see [Implementation Roadmap](./implementation-roadmap.md). For current shipped state, see [Project State](./project-state.md).
+For the project-wide roadmap index, see [Implementation Roadmap](./implementation-roadmap.md). For the historical v1 Events Admin + Sponsor Import plan, see [Implementation Roadmap v1](./implementation-roadmap-v1.md). For current shipped state, see [Project State](./project-state.md).
 
 **This document is planning only.** No SQL, migrations, API routes, or application code.
 
@@ -64,7 +64,8 @@ Technically feasible but not urgent. Defer until the sponsor, organizer, venue, 
 
 | Document | Path |
 |----------|------|
-| Implementation roadmap (v1) | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (canonical index) | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap v1 (historical) | [implementation-roadmap-v1.md](./implementation-roadmap-v1.md) |
 | Project state | [project-state.md](./project-state.md) |
 | Sponsor import database design | [sponsor-import-database-design.md](./sponsor-import-database-design.md) |
 | Partner Alumni design | [partner-alumni-design.md](./partner-alumni-design.md) |

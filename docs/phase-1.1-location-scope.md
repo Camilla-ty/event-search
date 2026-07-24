@@ -143,4 +143,4 @@ Edition/company form → Add city → Select country → Select state (if countr
 | Document | Path |
 |----------|------|
 | Phase 1 scope | [phase-1-events-admin-scope.md](./phase-1-events-admin-scope.md) |
-| Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (historical v1) | [implementation-roadmap-v1.md](./implementation-roadmap-v1.md) |

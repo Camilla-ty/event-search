@@ -4,7 +4,7 @@
 **Version:** v1  
 **Last updated:** 2026-06-03  
 
-Complete scope for Phase 1 per [implementation-roadmap.md](./implementation-roadmap.md). Reference document — implementation matches this scope.
+Complete scope for Phase 1 per [implementation-roadmap-v1.md](./implementation-roadmap-v1.md). Reference document — implementation matches this scope.
 
 **Permissions:** Admin-only (`profiles.role = admin`). No Editor/staff behavior.
 
@@ -451,6 +451,6 @@ src/features/companies/server/getCompanyAdminDetail.ts
 
 | Document | Path |
 |----------|------|
-| Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (historical v1) | [implementation-roadmap-v1.md](./implementation-roadmap-v1.md) |
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
 | Admin IA | [admin-information-architecture.md](./admin-information-architecture.md) |

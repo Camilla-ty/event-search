@@ -29,11 +29,12 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 | [Navigation & data fetching](./architecture/navigation-and-data-fetching.md) | Category A–D policy, shared `src/lib/navigation` utilities, PR checklist, phased rollout |
 | [Side-effect ownership](./architecture/side-effect-ownership.md) | One event / one owner policy, auth refresh provider, audit checklist |
 
-## Implementation (v1)
+## Implementation
 
 | Document | Description |
 |----------|-------------|
-| [Implementation Roadmap](./implementation-roadmap.md) | **Approved** five-phase plan: events admin → migration → API → UI → QA |
+| [Implementation Roadmap](./implementation-roadmap.md) | **Canonical** project-wide roadmap **index** — links to domain phase/design/plan docs |
+| [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md) | Historical Events Admin + Sponsor Import five-phase plan |
 
 **Permissions:** Admin-only for all v1 phases (`profiles.role = admin`). No Editor/staff behavior.
 
@@ -51,14 +52,16 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 |----------|-------------|
 | [Phase 1.1 — Location Scope](./phase-1.1-location-scope.md) | Location formatter + inline Add City — **implemented** |
 
-### Roadmap phases
+### Historical v1 roadmap phases
 
-1. **Events admin** — ✅ Complete — series, editions, companies, nav, import handoff stubs  
-1.1. **Location usability** — Formatter + inline Add City (proposed before Phase 2)  
-2. **Sponsor import migration** — 4 tables + constraints + RLS  
-3. **Sponsor import API** — Batch lifecycle (service role)  
-4. **Sponsor import UI** — Full Excel import flow  
-5. **QA and test plan** — Verification, search, dashboard polish  
+See [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
+
+1. **Events admin** — ✅ Complete — series, editions, companies, nav, import handoff stubs
+1.1. **Location usability** — Formatter + inline Add City (proposed before Phase 2)
+2. **Sponsor import migration** — ✅ Complete
+3. **Sponsor import API** — ✅ Complete
+4. **Sponsor import UI** — ✅ Complete
+5. **QA and test plan** — Residual items (see historical roadmap; admin search tracked as `PROD-001`)
 
 ---
 

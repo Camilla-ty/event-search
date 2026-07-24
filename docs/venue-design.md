@@ -555,7 +555,7 @@ None of the above block venue implementation scope or migration design.
 | Document | Path |
 |----------|------|
 | Project state | [project-state.md](./project-state.md) |
-| Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (canonical index) | [implementation-roadmap.md](./implementation-roadmap.md) |
 | Admin IA | [admin-information-architecture.md](./admin-information-architecture.md) |
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
 | Location scope (cities) | [phase-1.1-location-scope.md](./phase-1.1-location-scope.md) |

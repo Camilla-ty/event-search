@@ -620,7 +620,7 @@ flowchart TD
 | Phase 1 events admin | [phase-1-events-admin-scope.md](./phase-1-events-admin-scope.md) |
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
 | Admin IA | [admin-information-architecture.md](./admin-information-architecture.md) |
-| Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (canonical index) | [implementation-roadmap.md](./implementation-roadmap.md) |
 
 ---
 

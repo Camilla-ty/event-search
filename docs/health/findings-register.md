@@ -48,6 +48,8 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | PROD-002 | Public /exhibitors module is a roadmap stub with live product framing | public / polish | Medium | Small | Open | 2026-07 | 2026-07 | [Product 2026-07 §PROD-002](./product/2026-07-product.md) |
 | PROD-003 | Partner Alumni imports missing from Dashboard resume surface | admin / workflows | Medium | Medium | Open | 2026-07 | 2026-07 | [Product 2026-07 §PROD-003](./product/2026-07-product.md) |
 
+| ROAD-001 | Canonical implementation roadmap still marks sponsor-import phases 2–4 incomplete | roadmap / progress | High | Small | Open | 2026-07 | 2026-07 | [Roadmap 2026-07 §ROAD-001](./roadmap/2026-07-roadmap.md) |
+
 **Security topics owned by Security but tracked under existing IDs (cross-referenced, not duplicated):** `ARC-001` (RLS/service-role bypass), `ARC-007` (rate limiting + input validation), `ARC-009` (RLS/grant regression tests), `ARC-015` (email enumeration), `ARC-016` (security headers), `ARC-017` (middleware auth). See [Security 2026-07](./security/2026-07-security.md).
 
 ---
@@ -60,6 +62,7 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 |----|-------|-------------|-------|
 | SEC-001 | No dependency vulnerability scanning | [Security 2026-08](./security/2026-08-security.md) | Closed via GitHub Dependabot alerts + security updates; original write-up [Security 2026-07 §SEC-001](./security/2026-07-security.md) |
 | HYG-001 | Tracked temporary run artifacts and scratch files in git | [Code Hygiene 2026-08](./code-hygiene/2026-08-code-hygiene.md) | Removed tracked `tmp/`/`reports/`/`.tmp-before-phase1` artifacts; archived two logo rollback backups under `scripts/archives/logo-migrations/`; original write-up [Code Hygiene 2026-07 §HYG-001](./code-hygiene/2026-07-code-hygiene.md) |
+| ROAD-002 | Canonical implementation roadmap no longer represents current engineering direction | [Roadmap 2026-08](./roadmap/2026-08-roadmap.md) | Option C: historical v1 at `docs/implementation-roadmap-v1.md`; canonical index at `docs/implementation-roadmap.md`; original write-up [Roadmap 2026-07 §ROAD-002](./roadmap/2026-07-roadmap.md) |
 
 ---
 
@@ -75,3 +78,5 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-07-23 | Baseline Code Hygiene Audit (`code-hygiene/2026-07-code-hygiene.md`): added `HYG-001`–`HYG-003` (all `Open`). Cross-referenced `ARC-005/011/012/020`; did not duplicate import-subsystem duplication (`ARC-011`). |
 | 2026-07-23 | Resolved `HYG-001` (removed from open findings; retired). Closing report: `code-hygiene/2026-08-code-hygiene.md`. `HYG-002` and `HYG-003` remain `Open`. |
 | 2026-07-23 | Baseline Product Audit (`product/2026-07-product.md`): added `PROD-001`–`PROD-003` (all `Open`). Cross-referenced `ARC-011` and `HYG-002`; did not file speculative features. |
+| 2026-07-24 | Baseline Roadmap Review (`roadmap/2026-07-roadmap.md`): added `ROAD-001`–`ROAD-002` (all `Open`). Cross-referenced `PROD-001` / `PROD-002` / `ARC-011`; did not invent features or reprioritize work. |
+| 2026-07-24 | Resolved `ROAD-002` (removed from open findings; retired). Closing report: `roadmap/2026-08-roadmap.md`. `ROAD-001` remains `Open`. |

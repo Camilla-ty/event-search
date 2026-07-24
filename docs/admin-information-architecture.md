@@ -716,7 +716,7 @@ In v1 a single **admin account** may perform all personas; there is no separate 
 
 ## 12. Implementation alignment
 
-v1 delivery follows the five-phase [Implementation Roadmap](./implementation-roadmap.md):
+v1 delivery follows the five-phase [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
 
 1. Events admin  
 2. Sponsor import migration  
@@ -761,7 +761,8 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 
 | Document | Path |
 |----------|------|
-| Implementation roadmap | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap (canonical index) | [implementation-roadmap.md](./implementation-roadmap.md) |
+| Implementation roadmap v1 (historical) | [implementation-roadmap-v1.md](./implementation-roadmap-v1.md) |
 | Event admin workflow | [event-admin-workflow.md](./event-admin-workflow.md) |
 | Venue design | [venue-design.md](./venue-design.md) |
 | Venue v1 scope | [phase-venue-scope.md](./phase-venue-scope.md) |
