@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Pencil } from "lucide-react";
 
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
@@ -28,6 +29,7 @@ import {
 } from "@/src/features/events/server/mapPublicVenue";
 import { mapPublicOrganizersFromEditionRow } from "@/src/features/events/server/mapPublicOrganizers";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
+import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
 import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
@@ -42,7 +44,7 @@ import {
   buildEventEditionSummary,
   formatSummaryDateRange,
 } from "@/src/lib/content/factualSummary";
-import { brandLinkClass } from "@/src/lib/design/classes";
+import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
 import {
@@ -146,6 +148,9 @@ export default async function EventDetailPage({
   const eventSlug = typeof edition.slug === "string" ? edition.slug : id;
 
   const isAuthenticated = user !== null;
+  const viewerRole =
+    user !== null ? await getProfileRoleForUserId(supabase, user.id) : null;
+  const showAdminEditLink = isAdminRole(viewerRole) && editionId !== null;
 
   const [relatedEditions, topics, totalSponsorCount, partnerAlumni, exhibitors] =
     await Promise.all([
@@ -297,7 +302,21 @@ export default async function EventDetailPage({
                 ) : (
                   <Badge variant="neutral">{seriesBrandLabel ?? "Event"}</Badge>
                 )}
-                <h1 className="text-2xl font-semibold text-slate-900">{edition.name}</h1>
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+                  <h1 className="min-w-0 flex-1 text-2xl font-semibold text-slate-900">
+                    {edition.name}
+                  </h1>
+                  {showAdminEditLink ? (
+                    <Link
+                      href={`/admin/events/editions/${editionId}`}
+                      className={`${secondaryCtaClass} h-9 shrink-0 gap-1.5 px-3`}
+                      aria-label={`Edit ${eventDisplayName} in admin`}
+                    >
+                      <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Edit
+                    </Link>
+                  ) : null}
+                </div>
                 <p className="text-sm text-slate-600">{cityLabel || "Location not set"}</p>
                 <p className="text-sm text-slate-500">
                   {formatEventDateRange(edition.start_date, edition.end_date)}
