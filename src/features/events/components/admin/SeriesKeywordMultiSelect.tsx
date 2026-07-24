@@ -38,7 +38,7 @@ export function SeriesKeywordMultiSelect({
   return (
     <div className="space-y-2">
       <p className="text-xs text-slate-500">
-        {selectedIds.length} selected · applies to all editions in this series
+        {selectedIds.length} selected · applies to all events in this event brand
       </p>
       <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
         <div className="flex flex-wrap gap-2">

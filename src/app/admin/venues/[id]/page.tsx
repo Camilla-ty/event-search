@@ -44,7 +44,7 @@ export default async function AdminVenueDetailPage({ params, searchParams }: Pag
       />
       <AdminPageHeader
         title={venue.name}
-        description="Edit venue profile, view linked editions, and manage lifecycle."
+        description="Edit venue profile, view linked events, and manage lifecycle."
         actions={
           isArchived ? (
             <Badge variant="neutral">Archived</Badge>
@@ -72,7 +72,7 @@ export default async function AdminVenueDetailPage({ params, searchParams }: Pag
       />
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Linked editions</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Linked events</h2>
         <VenueLinkedEditionsTable editions={linkedEditions} />
       </div>
 

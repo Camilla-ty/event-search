@@ -75,7 +75,7 @@ export default function NewEventEditionForm({
       const data = (await response.json()) as ApiResponse;
 
       if (response.ok && data.ok) {
-        setResult({ ok: true, message: "Event edition created successfully." });
+        setResult({ ok: true, message: "Event created successfully." });
         setSeriesId("");
         setYear(String(CURRENT_YEAR));
         setName("");
@@ -88,13 +88,13 @@ export default function NewEventEditionForm({
 
       setResult({
         ok: false,
-        message: data.error ?? "Failed to create event edition.",
+        message: data.error ?? "Failed to create event.",
       });
     } catch (submitError) {
       const message =
         submitError instanceof Error && submitError.message.trim() !== ""
           ? submitError.message.trim()
-          : "Failed to create event edition.";
+          : "Failed to create event.";
       setResult({ ok: false, message });
     } finally {
       setIsSubmitting(false);
@@ -104,16 +104,16 @@ export default function NewEventEditionForm({
   return (
     <div className="relative rounded-xl border border-slate-200 bg-white p-6">
       <h1 className="text-xl font-semibold text-slate-900">
-        New Event Edition
+        New Event
       </h1>
       <p className="mt-1 text-sm text-slate-600">
-        Manually create an event edition record.
+        Manually create an event record.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block space-y-2">
           <span className="text-sm font-medium text-slate-700">
-            Series
+            Event brand
           </span>
           <select
             value={seriesId}
@@ -123,7 +123,7 @@ export default function NewEventEditionForm({
             className={formInputClass}
           >
             <option value="">
-              {series.length === 0 ? "No series available" : "Select a series"}
+              {series.length === 0 ? "No event brands available" : "Select an event brand"}
             </option>
             {series.map((s) => (
               <option key={s.id} value={s.id}>
@@ -133,7 +133,7 @@ export default function NewEventEditionForm({
           </select>
           {series.length === 0 ? (
             <p className="text-xs text-slate-500">
-              No event series found. Create series records first.
+              No event brands found. Create event brand records first.
             </p>
           ) : null}
         </label>
@@ -250,7 +250,7 @@ export default function NewEventEditionForm({
         </label>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Creating..." : "Create Event Edition"}
+          {isSubmitting ? "Creating..." : "Create event"}
         </Button>
       </form>
 

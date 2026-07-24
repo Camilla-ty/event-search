@@ -140,9 +140,9 @@ export async function getBatchEditionContext(eventEditionId: string) {
       : null;
 
   const warnings: string[] = [];
-  if (!data.website_url) warnings.push("Website not set on edition.");
-  if (!data.start_date && !data.end_date) warnings.push("Dates not set on edition.");
-  if (!data.city_id) warnings.push("City not set on edition.");
+  if (!data.website_url) warnings.push("Website not set on event.");
+  if (!data.start_date && !data.end_date) warnings.push("Dates not set on event.");
+  if (!data.city_id) warnings.push("City not set on event.");
 
   return {
     id: String(data.id),

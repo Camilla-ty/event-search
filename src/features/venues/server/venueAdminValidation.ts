@@ -8,7 +8,7 @@ export function isUuid(value: string): boolean {
 }
 
 export const VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE =
-  "city_id cannot be changed while editions are linked to this venue. Create a new venue for a relocation.";
+  "city_id cannot be changed while events are linked to this venue. Create a new venue for a relocation.";
 
 export type VenueFieldErrors = string[];
 

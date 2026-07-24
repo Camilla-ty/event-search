@@ -63,11 +63,11 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editionId || !file) {
-      setError("Select an edition and file.");
+      setError("Select an event and file.");
       return;
     }
     if (activeBatchId) {
-      setError("This edition already has an active import. Resume or discard it first.");
+      setError("This event already has an active import. Resume or discard it first.");
       return;
     }
 
@@ -92,7 +92,7 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
         <p className="font-medium text-slate-900">Excel sponsor import</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>One active import per edition</li>
+          <li>One active import per event</li>
           <li>Max 500 rows per file</li>
           <li>Columns: company name, website, sponsor tier (integer)</li>
         </ul>
@@ -106,14 +106,14 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
       </div>
 
       <label className="block text-sm font-medium text-slate-700">
-        Event edition
+        Event
         <select
           className={formInputClass}
           value={editionId}
           onChange={(e) => setEditionId(e.target.value)}
           disabled={Boolean(preselectedEditionId)}
         >
-          <option value="">Select edition…</option>
+          <option value="">Select event…</option>
           {editions.map((ed) => (
             <option key={ed.id} value={ed.id}>
               {ed.seriesName ? `${ed.seriesName} · ` : ""}
@@ -125,7 +125,7 @@ export function NewImportForm({ editions, preselectedEditionId }: NewImportFormP
 
       {selectedEdition && activeBatchId ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p>This edition has an import in progress.</p>
+          <p>This event has an import in progress.</p>
           <Link
             href={flowHref(activeBatchId, "review")}
             className="mt-2 inline-block font-medium text-brand-primary hover:underline"

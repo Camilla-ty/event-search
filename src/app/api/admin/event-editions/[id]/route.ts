@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(id);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
     const live_sponsor_count = await countLiveSponsorsForEdition(id);
     return NextResponse.json({ ok: true, edition, live_sponsor_count });
@@ -46,7 +46,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const existing = await getEventEditionAdminById(id);
   if (!existing) {
-    return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
   }
 
   const validated = validateEditionUpdateBody({

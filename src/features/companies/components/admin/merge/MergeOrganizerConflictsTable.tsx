@@ -49,13 +49,13 @@ export function MergeOrganizerConflictsTable({
       <div className="border-b border-slate-200 px-4 py-3">
         <h3 className="font-medium text-slate-900">Organizer conflicts</h3>
         <p className="text-sm text-slate-500">
-          Both companies organize these editions. Choose which organizer role to keep.
+          Both companies organize these events. Choose which organizer role to keep.
         </p>
       </div>
       <table className="min-w-full text-left text-sm">
         <thead className="bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-4 py-2 font-medium">Edition</th>
+            <th className="px-4 py-2 font-medium">Event</th>
             <th className="px-4 py-2 font-medium">Canonical role</th>
             <th className="px-4 py-2 font-medium">Duplicate role</th>
             <th className="px-4 py-2 font-medium">Strategy</th>

@@ -33,7 +33,7 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
   if (batches.length === 0) {
     return (
       <p className="px-4 py-8 text-center text-sm text-slate-500">
-        No active sponsor imports. Start by creating an event edition, then upload an Excel file.
+        No active sponsor imports. Start by creating an event, then upload an Excel file.
       </p>
     );
   }
@@ -44,7 +44,7 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
             <th className="px-4 py-3">File</th>
-            <th className="px-4 py-3">Edition</th>
+            <th className="px-4 py-3">Event</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3">Rows</th>
             <th className="px-4 py-3">Created</th>

@@ -25,12 +25,12 @@ export function EditionImportsStub({
       <div className="rounded-xl border border-sky-200 bg-sky-50 px-5 py-4">
         <h3 className="font-semibold text-sky-950">Sponsor import not available yet</h3>
         <p className="mt-2 text-sm text-sky-900">
-          Sponsor import for this edition will be available in Phase 4. When live, you will
-          upload an Excel file, review matches, publish sponsors to this edition, and see
+          Sponsor import for this event will be available in Phase 4. When live, you will
+          upload an Excel file, review matches, publish sponsors to this event, and see
           import history here.
         </p>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-sky-900">
-          <li>One active import per edition</li>
+          <li>One active import per event</li>
           <li>Additive publish — existing live sponsors stay</li>
           <li>Excel columns: Company name, Website, Sponsor tier (integer)</li>
         </ul>

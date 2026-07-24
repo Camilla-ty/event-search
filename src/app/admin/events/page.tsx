@@ -16,10 +16,10 @@ export default function AdminEventsOverviewPage() {
       />
       <AdminPageHeader
         title="Events"
-        description="Manage event series and editions before sponsor import."
+        description="Manage event brands and events before sponsor import."
         actions={
           <Link href="/admin/events/editions/new" className={`${primaryCtaClass} h-10`}>
-            Create edition
+            Create event
           </Link>
         }
       />
@@ -28,29 +28,29 @@ export default function AdminEventsOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Event series</CardTitle>
-            <CardDescription>Recurring event brands.</CardDescription>
+            <CardTitle>Event brands</CardTitle>
+            <CardDescription>Recurring event identities.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link
               href="/admin/events/series"
               className="text-sm text-brand-primary hover:underline"
             >
-              View all series →
+              View all event brands →
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Event editions</CardTitle>
-            <CardDescription>Year-specific events linked to sponsor imports.</CardDescription>
+            <CardTitle>Events</CardTitle>
+            <CardDescription>Occurrences linked to sponsor imports.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link
               href="/admin/events/editions"
               className="text-sm text-brand-primary hover:underline"
             >
-              View all editions →
+              View all events →
             </Link>
           </CardContent>
         </Card>

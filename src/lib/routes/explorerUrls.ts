@@ -88,3 +88,13 @@ export function buildSeriesHubPath(series: {
   const segment = slug !== "" ? slug : id;
   return segment !== "" ? `/events/series/${encodeURIComponent(segment)}` : null;
 }
+
+export function buildVenuePath(venue: {
+  slug?: string | null;
+  id?: string | null;
+}): string | null {
+  const slug = venue.slug?.trim() ?? "";
+  const id = venue.id?.trim() ?? "";
+  const segment = slug !== "" ? slug : id;
+  return segment !== "" ? `/venues/${encodeURIComponent(segment)}` : null;
+}

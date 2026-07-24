@@ -59,7 +59,7 @@ export function RemoveOrganizerModal({
         className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
       >
         <h2 id="remove-organizer-title" className="text-lg font-semibold text-slate-900">
-          Remove organizer from this edition?
+          Remove organizer from this event?
         </h2>
         <p className="mt-3 text-sm text-slate-600">
           <span className="font-medium text-slate-900">{companyName}</span> will be removed as an
@@ -80,7 +80,7 @@ export function RemoveOrganizerModal({
             onClick={() => void handleConfirm()}
             disabled={loading}
           >
-            {loading ? "Removing…" : "Remove from edition"}
+            {loading ? "Removing…" : "Remove from event"}
           </Button>
         </div>
       </div>

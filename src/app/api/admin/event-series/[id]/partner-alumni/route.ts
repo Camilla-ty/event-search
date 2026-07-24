@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const series = await getEventSeriesAdminById(seriesId);
     if (!series) {
-      return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event brand not found." }, { status: 404 });
     }
 
     const data = await getPartnerAlumniAdminBySeriesId(seriesId);

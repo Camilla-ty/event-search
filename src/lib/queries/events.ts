@@ -45,6 +45,7 @@ const EVENT_EDITION_DETAIL_SELECT = `
   venues (
     id,
     name,
+    slug,
     website_url,
     address_text,
     logo_url,

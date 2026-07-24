@@ -120,7 +120,7 @@ export function EditionOrganizersPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600">
-          Link companies as organizers for this edition. Order controls display on the public
+          Link companies as organizers for this event. Order controls display on the public
           Organizers tab.
         </p>
         <button

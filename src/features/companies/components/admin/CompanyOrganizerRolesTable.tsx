@@ -12,7 +12,7 @@ export function CompanyOrganizerRolesTable({
   if (organizerRoles.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-        This company is not an organizer of any edition yet.
+        This company is not an organizer of any event yet.
       </p>
     );
   }
@@ -23,7 +23,7 @@ export function CompanyOrganizerRolesTable({
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
             <th className="px-4 py-3 font-medium">Event</th>
-            <th className="px-4 py-3 font-medium">Series</th>
+            <th className="px-4 py-3 font-medium">Event brand</th>
             <th className="px-4 py-3 font-medium">Role</th>
           </tr>
         </thead>

@@ -45,6 +45,13 @@ export type CompanySummaryInput = {
   sponsoredEditionCountUnknown?: boolean;
 };
 
+export type VenueSummaryInput = {
+  name: string;
+  locationLabel?: string | null;
+  editions?: ReadonlyArray<SeriesEditionSummaryFact>;
+  now?: Date;
+};
+
 const MONTH_NAMES = [
   "January",
   "February",
@@ -427,6 +434,78 @@ export function buildCompanySummary(input: CompanySummaryInput): string | null {
     fragments.push(
       "The full list of sponsored events is available to logged-in users.",
     );
+  }
+
+  return fragments.join(" ");
+}
+
+export function buildVenueSummary(input: VenueSummaryInput): string | null {
+  const name = trimText(input.name);
+  if (!name) return null;
+
+  const now = input.now ?? new Date();
+  const today = utcTodayKey(now);
+  const editions = input.editions ?? [];
+  const location = trimText(input.locationLabel);
+
+  const fragments: string[] = [];
+
+  if (location) {
+    fragments.push(`${name} is a venue in ${location} on EventPixels.`);
+  } else {
+    fragments.push(`${name} is a venue on EventPixels.`);
+  }
+
+  if (editions.length >= 1) {
+    const editionNoun = editions.length === 1 ? "event" : "events";
+    const verb = editions.length === 1 ? "is" : "are";
+    fragments.push(
+      `${editions.length} ${editionNoun} ${verb} recorded at this venue.`,
+    );
+
+    const upcoming = editions
+      .filter((edition) => {
+        const startKey = parseDateOnlyKey(edition.startDate);
+        return startKey !== null && startKey > today;
+      })
+      .sort((a, b) => {
+        const aKey = parseDateOnlyKey(a.startDate) ?? "";
+        const bKey = parseDateOnlyKey(b.startDate) ?? "";
+        return aKey.localeCompare(bKey);
+      });
+
+    const next = upcoming[0] ?? null;
+    if (next) {
+      const editionName = trimText(next.name);
+      const dateRange = formatSummaryDateRange(next.startDate, next.endDate);
+      if (editionName && dateRange) {
+        fragments.push(
+          `The next recorded event, ${editionName}, will take place on ${dateRange}.`,
+        );
+      }
+    } else {
+      const pastOrCurrent = [...editions].sort((a, b) => {
+        const aKey =
+          parseDateOnlyKey(a.endDate) ??
+          parseDateOnlyKey(a.startDate) ??
+          (yearFromEdition(a) !== null ? `${yearFromEdition(a)}-12-31` : "");
+        const bKey =
+          parseDateOnlyKey(b.endDate) ??
+          parseDateOnlyKey(b.startDate) ??
+          (yearFromEdition(b) !== null ? `${yearFromEdition(b)}-12-31` : "");
+        return bKey.localeCompare(aKey);
+      });
+      const latest = pastOrCurrent[0] ?? null;
+      if (latest) {
+        const editionName = trimText(latest.name);
+        const year = yearFromEdition(latest);
+        if (editionName && year !== null) {
+          fragments.push(
+            `The most recent recorded event, ${editionName}, took place in ${year}.`,
+          );
+        }
+      }
+    }
   }
 
   return fragments.join(" ");

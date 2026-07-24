@@ -196,7 +196,7 @@ export function validateEditionUpdateBody(body: {
     errors.push("year cannot be changed");
   }
   if (body.logo_url !== undefined) {
-    errors.push("logo_url cannot be updated on event editions; edit the event series logo instead");
+    errors.push("logo_url cannot be updated on events; edit the event brand logo instead");
   }
 
   const patch: Record<string, unknown> = {};

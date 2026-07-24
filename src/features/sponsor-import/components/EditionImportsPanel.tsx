@@ -68,7 +68,7 @@ export function EditionImportsPanel({ data: initialData }: EditionImportsPanelPr
               ) : null}
             </div>
             <p className="text-sm text-slate-600">
-              One active import per edition. Resume or discard before starting a new import.
+              One active import per event. Resume or discard before starting a new import.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link

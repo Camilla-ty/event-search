@@ -30,7 +30,7 @@ export function EventSeriesLogoPreview({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={previewUrl}
-            alt="Event series logo preview"
+            alt="Event brand logo preview"
             className="max-h-full max-w-full object-contain"
           />
         </div>

@@ -133,7 +133,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           Sponsorships ({sponsorships.length})
         </h2>
         <p className="mb-3 text-sm text-slate-500">
-          Read-only. Tier and roster changes are made on each edition&apos;s sponsors
+          Read-only. Tier and roster changes are made on each event&apos;s sponsors
           tab.
         </p>
         <CompanySponsorshipsTable sponsorships={sponsorships} />
@@ -144,7 +144,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           Organizer roles ({organizerRoles.length})
         </h2>
         <p className="mb-3 text-sm text-slate-500">
-          Read-only. Organizer links are added and edited on each edition&apos;s Organizers
+          Read-only. Organizer links are added and edited on each event&apos;s Organizers
           tab.
         </p>
         <CompanyOrganizerRolesTable organizerRoles={organizerRoles} />

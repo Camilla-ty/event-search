@@ -217,7 +217,7 @@ export async function uploadEventSeriesLogoFileAdmin(
 ): Promise<UploadEventSeriesLogoFileAdminResult> {
   const existing = await getEventSeriesAdminById(seriesId);
   if (!existing) {
-    return { ok: false, status: 404, error: "Series not found." };
+    return { ok: false, status: 404, error: "Event brand not found." };
   }
 
   const validation = validateCompanyLogoUpload({

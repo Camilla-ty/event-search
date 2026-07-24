@@ -337,7 +337,7 @@ export function EditionSponsorsPanel({
         <WarningBanner
           title="Import in progress"
           messages={[
-            "An import batch is in progress for this edition. Tier changes and removals made here may be overwritten or re-added when that batch is published.",
+            "An import batch is in progress for this event. Tier changes and removals made here may be overwritten or re-added when that batch is published.",
           ]}
           action={
             <Link

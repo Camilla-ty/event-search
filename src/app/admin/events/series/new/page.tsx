@@ -14,13 +14,13 @@ export default async function AdminCreateEventSeriesPage() {
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Series", href: "/admin/events/series" },
+          { label: "Event Brands", href: "/admin/events/series" },
           { label: "Create" },
         ]}
       />
       <AdminPageHeader
-        title="Create event series"
-        description="Register a recurring event brand before creating editions."
+        title="Create event brand"
+        description="Register a recurring event brand before creating events."
       />
       <EventsSubNav />
       <EventSeriesForm

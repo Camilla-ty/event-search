@@ -107,7 +107,7 @@ export function EditionLiveSponsorsQARoster({
 
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-        No live sponsors on this edition yet.
+        No live sponsors on this event yet.
       </p>
     );
   }

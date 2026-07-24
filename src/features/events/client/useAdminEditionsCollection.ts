@@ -154,7 +154,7 @@ export function useAdminEditionsCollection(
         }
 
         const message =
-          fetchError instanceof Error ? fetchError.message : "Failed to load editions.";
+          fetchError instanceof Error ? fetchError.message : "Failed to load events.";
         setError(message);
       })
       .finally(() => {

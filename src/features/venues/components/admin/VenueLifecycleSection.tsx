@@ -94,7 +94,7 @@ export function VenueLifecycleSection({
   const actionLabel = pendingAction === "archive" ? "Archive" : "Unarchive";
   const actionDescription =
     pendingAction === "archive"
-      ? "Archived venues are hidden from the default list and edition pickers. Linked editions keep their venue reference."
+      ? "Archived venues are hidden from the default list and event pickers. Linked events keep their venue reference."
       : "Unarchiving restores this venue to active lists and pickers.";
 
   return (

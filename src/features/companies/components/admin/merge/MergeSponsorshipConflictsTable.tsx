@@ -27,7 +27,7 @@ export function MergeSponsorshipConflictsTable({
   if (conflicts.length === 0) {
     return (
       <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-        No edition conflicts. Sponsorships will be repointed without tier decisions.
+        No event conflicts. Sponsorships will be repointed without tier decisions.
       </p>
     );
   }
@@ -40,15 +40,15 @@ export function MergeSponsorshipConflictsTable({
   return (
     <section className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-4 py-3">
-        <h3 className="font-medium text-slate-900">Edition conflicts</h3>
+        <h3 className="font-medium text-slate-900">Event conflicts</h3>
         <p className="text-sm text-slate-500">
-          Both companies sponsor these editions. Choose which tier to keep for each edition.
+          Both companies sponsor these events. Choose which tier to keep for each event.
         </p>
       </div>
       <table className="min-w-full text-left text-sm">
         <thead className="bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-4 py-2 font-medium">Edition</th>
+            <th className="px-4 py-2 font-medium">Event</th>
             <th className="px-4 py-2 font-medium">Canonical tier</th>
             <th className="px-4 py-2 font-medium">Duplicate tier</th>
             <th className="px-4 py-2 font-medium">Strategy</th>

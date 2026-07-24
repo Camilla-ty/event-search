@@ -19,7 +19,7 @@ export default async function NewVenueAdminPage() {
       />
       <AdminPageHeader
         title="Create venue"
-        description="Add a reusable venue for event editions. City is required. Duplicate names in the same city produce a warning only."
+        description="Add a reusable venue for events. City is required. Duplicate names in the same city produce a warning only."
       />
       <VenueForm
         mode="create"

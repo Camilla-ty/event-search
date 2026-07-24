@@ -95,7 +95,7 @@ export function ImportSummaryStep({ seriesName, versionLabel }: ImportSummarySte
       </div>
 
       <p className="text-xs text-slate-500">
-        Current public version was not changed automatically. Use Set as current on the series
+        Current public version was not changed automatically. Use Set as current on the event brand
         Partner Alumni panel when ready.
       </p>
     </div>

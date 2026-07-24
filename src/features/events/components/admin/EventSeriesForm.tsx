@@ -176,7 +176,7 @@ export function EventSeriesForm({
       const warning = data.warnings?.[0];
       setResult({
         ok: true,
-        message: warning ?? "Series updated successfully.",
+        message: warning ?? "Event brand updated successfully.",
         variant: warning ? "warning" : "success",
       });
       router.refresh();
@@ -195,7 +195,7 @@ export function EventSeriesForm({
     if (values.lifecycle_status === "merged" && values.merged_into_series_id.trim() === "") {
       setResult({
         ok: false,
-        message: "Select a destination series when lifecycle status is Merged.",
+        message: "Select a destination event brand when lifecycle status is Merged.",
         variant: "error",
       });
       return;
@@ -478,7 +478,7 @@ export function EventSeriesForm({
         </div>
 
         <Button type="submit" disabled={fieldsDisabled}>
-          {isSubmitting ? "Saving…" : mode === "create" ? "Create series" : "Save changes"}
+          {isSubmitting ? "Saving…" : mode === "create" ? "Create event brand" : "Save changes"}
         </Button>
       </form>
 
@@ -491,7 +491,7 @@ export function EventSeriesForm({
       ) : null}
 
       <SlugChangeModal
-        entityLabel="Series"
+        entityLabel="Event brand"
         oldSlug={initial.slug}
         newSlug={effectiveSlug}
         publicPathPrefix="/events/series/"

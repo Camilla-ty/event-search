@@ -93,7 +93,7 @@ export function validateSeriesLifecycleState(
     seriesId &&
     state.merged_into_series_id === seriesId.trim()
   ) {
-    errors.push("A series cannot be merged into itself");
+    errors.push("An event brand cannot be merged into itself");
   }
 
   return errors;

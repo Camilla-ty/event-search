@@ -23,13 +23,13 @@ export default async function AdminCreateEventEditionPage({ searchParams }: Page
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Editions", href: "/admin/events/editions" },
+          { label: "Events", href: "/admin/events/editions" },
           { label: "Create" },
         ]}
       />
       <AdminPageHeader
-        title="Create event edition"
-        description="Create an occurrence of an event (e.g. TOKEN2049 Singapore 2026). Multiple editions per series and year are allowed — use city and a distinct slug to disambiguate."
+        title="Create event"
+        description="Create an occurrence of an event (e.g. TOKEN2049 Singapore 2026). Multiple events per event brand and year are allowed — use city and a distinct slug to disambiguate."
       />
       <EventsSubNav />
       <EventEditionForm

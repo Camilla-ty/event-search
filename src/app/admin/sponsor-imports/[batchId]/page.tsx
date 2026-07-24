@@ -72,7 +72,7 @@ export default async function SponsorImportBatchPage({ params, searchParams }: P
             href={`/admin/events/editions/${editionId}`}
             className="text-sm text-brand-primary hover:underline"
           >
-            Edition profile
+            Event profile
           </Link>
         }
       />

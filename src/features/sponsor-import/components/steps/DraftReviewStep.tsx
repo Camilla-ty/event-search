@@ -169,7 +169,7 @@ export function DraftReviewStep() {
         />
         <span>
           I have reviewed the draft sponsor list and understand publish will add or update
-          sponsors on this edition without removing existing live sponsors.
+          sponsors on this event without removing existing live sponsors.
         </span>
       </label>
 

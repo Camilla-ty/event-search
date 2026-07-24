@@ -55,7 +55,7 @@ export default async function PartnerAlumniImportBatchPage({ params, searchParam
       <AdminBreadcrumbs
         items={[
           { label: "Admin", href: "/admin" },
-          { label: "Event series", href: "/admin/events/series" },
+          { label: "Event brands", href: "/admin/events/series" },
           { label: versionContext.seriesName, href: `/admin/events/series/${seriesId}` },
           { label: String(batchRaw.source_filename) },
         ]}
@@ -68,7 +68,7 @@ export default async function PartnerAlumniImportBatchPage({ params, searchParam
             href={`/admin/events/series/${seriesId}`}
             className="text-sm text-brand-primary hover:underline"
           >
-            Series Partner Alumni
+            Event brand Partner Alumni
           </Link>
         }
       />

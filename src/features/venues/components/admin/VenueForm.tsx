@@ -383,7 +383,7 @@ export function VenueForm({
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                 {cityLabel || values.city_id}
                 <p className="mt-1 text-xs text-slate-500">
-                  City cannot be changed while editions are linked. Create a new venue to record a
+                  City cannot be changed while events are linked. Create a new venue to record a
                   relocation.
                 </p>
               </div>

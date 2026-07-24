@@ -1,7 +1,7 @@
 # Engineering Health Check
 
-**Status:** Active — Framework v1.0
-**Date:** 2026-07-20
+**Status:** Active — Framework v1.1
+**Date:** 2026-07-23
 **Scope:** Recurring engineering reviews of this repository and the long-term knowledge they produce.
 
 The Engineering Health Check preserves long-term engineering knowledge with minimal maintenance. It is **not** an issue tracker.
@@ -20,10 +20,11 @@ The Engineering Health Check preserves long-term engineering knowledge with mini
 | **Reports** | `<review-type>/<cycle>-<review-type>.md` | Immutable. Written once per review run, never edited afterward. |
 | **Findings Register** | [`findings-register.md`](./findings-register.md) | Living. The only mutable document. Holds outstanding work only. |
 | **Report template** | [`_templates/report-template.md`](./_templates/report-template.md) | One shared template for every review. |
+| **Execution prompts** | [`_prompts/`](./_prompts/) | Canonical paste-ready prompts per review type. Created when a review is formalized. |
 
 Review-type folders are created **lazily** — only when that review first runs.
 
-**Core governance documents.** Two documents are authoritative, and every review — and every generated Health Check prompt — must follow them:
+**Core governance documents.** Two documents are authoritative, and every review — and every Health Check execution prompt — must follow them:
 
 | Document | Authority |
 |---|---|
@@ -36,18 +37,23 @@ Review-type folders are created **lazily** — only when that review first runs.
 
 | Cadence | Review | Folder / slug | Finding prefix |
 |---|---|---|---|
+| Live | Dependency Vulnerability Monitoring | `dependency-vulns` | `DEP` |
 | Monthly | Architecture Audit | `architecture` | `ARC` |
 | Monthly | Product Audit | `product` | `PROD` |
+| Monthly | Data Quality Audit | `data-quality` | `DQ` |
 | Monthly | Database Audit | `database` | `DB` |
 | Monthly | Security Audit | `security` | `SEC` |
 | Monthly | Performance Audit | `performance` | `PERF` |
-| Monthly | Dead Code Audit | `dead-code` | `DEAD` |
+| Monthly | Code Hygiene Audit | `code-hygiene` | `HYG` |
 | Monthly | Roadmap Review | `roadmap` | `ROAD` |
+| Quarterly | Scalability Audit | `scalability` | `SCALE` |
 | Quarterly | SEO Audit | `seo` | `SEO` |
-| Quarterly | Future Scalability Audit | `scalability` | `SCALE` |
-| Quarterly | Data Quality Audit | `data-quality` | `DQ` |
+| Quarterly | UX Audit | `ux` | `UX` |
+| Quarterly | Documentation Audit | `documentation` | `DOC` |
 
 Not every review must run every cycle. A review that is not run simply produces no report that cycle; its Findings persist in the register untouched.
+
+**Boundary notes (summary):** Product owns product value and workflows; UX owns interaction quality, usability, and friction. Dependency Vulnerability Monitoring owns ongoing Dependabot / known-advisory triage; Security owns application security and trust boundaries. Architecture continues to own structural technical debt — there is no separate Tech Debt Audit. Full ownership rules live in [`audit-catalog.md`](./audit-catalog.md).
 
 ---
 
@@ -56,11 +62,11 @@ Not every review must run every cycle. A review that is not run simply produces 
 | Thing | Convention | Example |
 |---|---|---|
 | Report file | `<slug>/<cycle>-<slug>.md` | `architecture/2026-08-architecture.md` |
-| Monthly cycle token | `YYYY-MM` | `2026-08` |
+| Live / Monthly cycle token | `YYYY-MM` | `2026-08` |
 | Quarterly cycle token | `YYYY-Q#` | `2026-Q3` |
 | Finding ID | `<PREFIX>-NNN` (zero-padded, permanent) | `ARC-001`, `SEC-014` |
 
-The cycle token encodes cadence; each report also states `Cadence:` in its header.
+The cycle token encodes cadence; each report also states `Cadence:` in its header. Live monitoring uses the same `YYYY-MM` token when a status or triage report is written.
 
 ---
 
@@ -93,7 +99,7 @@ Severity and Effort are recorded on a Finding as **descriptive metadata** for pr
 Root-cause de-duplication applies across *every* audit type, not only within a single prefix. Every engineering problem has **one primary owner**.
 
 - **Ownership is defined by [`audit-catalog.md`](./audit-catalog.md)**, which is authoritative for every ownership decision.
-- **Before creating a new Finding, search all existing Finding prefixes** (`ARC`, `SEC`, `DB`, `PERF`, `PROD`, `DEAD`, `ROAD`, `SEO`, `SCALE`, `DQ`) for the same root cause.
+- **Before creating a new Finding, search all existing Finding prefixes** (`DEP`, `ARC`, `PROD`, `DQ`, `DB`, `SEC`, `PERF`, `HYG`, `ROAD`, `SCALE`, `SEO`, `UX`, `DOC`) for the same root cause.
 - If the same root cause already exists under another audit, **reference that existing Finding — never create a duplicate**. A non-owning audit may discuss the issue from its own perspective in its report's Observations, citing the existing ID.
 - The **primary owner** records and maintains the Finding. Existing IDs are **never renumbered** when ownership is clarified — ownership is expressed by cross-reference, not by re-issuing IDs.
 
@@ -138,7 +144,24 @@ This detection is part of the shared workflow (Step 0 below); reviews inherit it
 
 ---
 
-## 8. Monthly workflow
+## 8. Live workflow
+
+Dependency Vulnerability Monitoring runs continuously (Dependabot alerts and security updates). A written report is optional and produced only when there is something to remember across cycles — for example: new actionable advisories promoted to Findings, triage decisions with memory value, or a periodic status snapshot.
+
+When a Live report is written:
+
+0. **Determine mode automatically** — check `dependency-vulns/` for a prior report (Baseline vs Recurring; see §7).
+1. **Reconcile open `DEP` Findings** in the register (same status options as monthly).
+2. **Triage current Dependabot / advisory state** and capture observations.
+3. **Apply the memory-value test** → Finding (`DEP`) or report-only narrative.
+4. **Write the immutable report** from the template (`Cadence: Live`, cycle token `YYYY-MM`).
+5. **Update the register** as needed.
+
+Transient alert noise that does not pass the memory-value test stays out of the register.
+
+---
+
+## 9. Monthly workflow
 
 0. **Determine mode automatically** — check the review's folder for a prior report and resolve Baseline vs Recurring (see §7). A Baseline run skips step 1.
 1. **Reconcile the register first** — for each open Finding of this review type, decide: still Open / In Progress / Deferred / **Resolved (remove row)** / Reopened.
@@ -147,9 +170,9 @@ This detection is part of the shared workflow (Step 0 below); reviews inherit it
 4. **Write the immutable report** from the template.
 5. **Update the register** — add new Findings (new IDs), update statuses, remove any that became Resolved, refresh `Last updated`.
 
-## 9. Quarterly workflow
+## 10. Quarterly workflow
 
-Same mechanics, plus:
+Same mechanics as monthly, plus:
 
 1. Reports use the `YYYY-Q#` token and `Cadence: Quarterly`.
 2. **Deferred sweep** at quarter end: revisit every `Deferred` Finding and confirm it is still a conscious deferral or move it to `Open` / `In Progress`.
@@ -157,7 +180,7 @@ Same mechanics, plus:
 
 ---
 
-## 10. Governance rules (keep the system healthy for years)
+## 11. Governance rules (keep the system healthy for years)
 
 1. The live register is the source of truth for **what is still open**; reports are the source of truth for **what was found and what was resolved**.
 2. Reports reference Finding IDs — they never restate a Finding's full body.
@@ -178,3 +201,5 @@ Same mechanics, plus:
 |------|------|
 | 2026-07-20 | System established. Baseline Architecture Audit preserved as `architecture/2026-07-architecture.md`; register seeded with outstanding architecture Findings. |
 | 2026-07-20 | **Framework v1.0.** Added cross-audit Finding ownership (§5a, governance rule 10) with `audit-catalog.md` as ownership authority; moved automatic Baseline-vs-Recurring detection into the shared workflow (§7, §8 step 0); referenced `audit-catalog.md` as a core governance document (§1). |
+| 2026-07-23 | **Framework v1.1.** Cadence restructured: Live Dependency Vulnerability Monitoring; Data Quality moved to Monthly; Dead Code renamed Code Hygiene (`code-hygiene` / `HYG`); Future Scalability renamed Scalability; added quarterly UX and Documentation; no separate Tech Debt Audit. Live workflow §8 added; monthly/quarterly sections renumbered. |
+| 2026-07-23 | Added `_prompts/` for canonical execution prompts; published Monthly Code Hygiene prompt (`_prompts/code-hygiene.md`). |

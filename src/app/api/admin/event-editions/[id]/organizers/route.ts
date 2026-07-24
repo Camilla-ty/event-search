@@ -20,7 +20,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(id);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
 
     const organizers = await getOrganizersForEditionAdmin(id);
@@ -55,7 +55,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(id);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
 
     const link = await createEventOrganizerLinkAdmin(id, validated.data);

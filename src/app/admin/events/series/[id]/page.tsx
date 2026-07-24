@@ -41,19 +41,19 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Series", href: "/admin/events/series" },
+          { label: "Event Brands", href: "/admin/events/series" },
           { label: series.name },
         ]}
       />
       <AdminPageHeader
         title={series.name}
-        description="Edit series profile and manage editions."
+        description="Edit event brand profile and manage events."
         actions={
           <Link
             href={`/admin/events/editions/new?seriesId=${series.id}`}
             className={`${primaryCtaClass} h-10`}
           >
-            Create edition
+            Create event
           </Link>
         }
       />
@@ -96,7 +96,7 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
       />
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Editions</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">Events</h2>
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
@@ -112,7 +112,7 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
               {editions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                    No editions for this series yet.
+                    No events for this event brand yet.
                   </td>
                 </tr>
               ) : (

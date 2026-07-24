@@ -152,7 +152,7 @@ export function AdminVenueSelect({
         {loadError ? <p className="text-xs text-red-600">{loadError}</p> : null}
         {showArchivedLinkedVenue ? (
           <p className="text-xs text-slate-500">
-            This edition is linked to an archived venue. You can keep it, clear it, or choose an
+            This event is linked to an archived venue. You can keep it, clear it, or choose an
             active venue in the same city.{" "}
             <Link href={`/admin/venues/${linkedVenue.id}`} className="text-brand-primary underline">
               View venue

@@ -6,6 +6,7 @@ import {
   isUuid,
   parseCreateVenueFields,
   parseUpdateVenueFields,
+  VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE,
 } from "./venueAdminValidation";
 
 describe("isUuid", () => {
@@ -68,6 +69,13 @@ describe("parseUpdateVenueFields", () => {
   it("validates city_id uuid", () => {
     const { errors } = parseUpdateVenueFields({ city_id: "bad-id" });
     assert.ok(errors.includes("city_id must be a valid UUID"));
+  });
+});
+
+describe("VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE", () => {
+  it("uses event wording for linked occurrences", () => {
+    assert.match(VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE, /events are linked/);
+    assert.doesNotMatch(VENUE_CITY_IMMUTABLE_WHEN_LINKED_MESSAGE, /\beditions\b/i);
   });
 });
 

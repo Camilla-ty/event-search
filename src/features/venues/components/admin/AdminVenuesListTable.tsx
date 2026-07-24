@@ -36,7 +36,7 @@ export function AdminVenuesListTable({ venues, loading = false }: AdminVenuesLis
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">City</th>
-            <th className="px-4 py-3 font-medium">Linked editions</th>
+            <th className="px-4 py-3 font-medium">Linked events</th>
             <th className="px-4 py-3 font-medium">Logo</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Actions</th>

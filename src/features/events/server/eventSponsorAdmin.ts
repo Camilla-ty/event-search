@@ -13,7 +13,7 @@ import {
 } from "./eventSponsorReorder";
 
 export const DUPLICATE_SPONSOR_LINK_MESSAGE =
-  "This company is already a sponsor of this edition.";
+  "This company is already a sponsor of this event.";
 
 const UNIQUE_VIOLATION_CODE = "23505";
 

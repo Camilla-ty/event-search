@@ -17,6 +17,7 @@ describe("mapPublicVenueFromEditionRow", () => {
       venues: {
         id: "8ee9dbd6-e8f6-42b7-94f5-66829e6ce8a5",
         name: "Marina Bay Sands",
+        slug: "marina-bay-sands",
         website_url: "https://example.com",
         address_text: "10 Bayfront Ave",
         logo_url: "https://example.com/logo.png",
@@ -26,7 +27,21 @@ describe("mapPublicVenueFromEditionRow", () => {
 
     assert.ok(venue);
     assert.equal(venue?.name, "Marina Bay Sands");
+    assert.equal(venue?.slug, "marina-bay-sands");
     assert.equal(venue?.archived_at, "2026-01-01T00:00:00");
+  });
+
+  it("maps empty slug when embed omits slug", () => {
+    const venue = mapPublicVenueFromEditionRow({
+      venue_id: "8ee9dbd6-e8f6-42b7-94f5-66829e6ce8a5",
+      venues: {
+        id: "8ee9dbd6-e8f6-42b7-94f5-66829e6ce8a5",
+        name: "Marina Bay Sands",
+      },
+    });
+
+    assert.ok(venue);
+    assert.equal(venue?.slug, "");
   });
 });
 

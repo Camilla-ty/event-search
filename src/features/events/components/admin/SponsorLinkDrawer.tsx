@@ -428,7 +428,7 @@ function AddSponsorForm({
                       </span>
                     ) : null}
                     {attached ? (
-                      <span className="ml-2 text-xs">Already on this edition</span>
+                      <span className="ml-2 text-xs">Already on this event</span>
                     ) : null}
                   </button>
                 </li>

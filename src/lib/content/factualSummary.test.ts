@@ -5,6 +5,7 @@ import {
   buildCompanySummary,
   buildEventEditionSummary,
   buildEventSeriesSummary,
+  buildVenueSummary,
   countDistinctSponsorshipTiers,
   formatSummaryDateRange,
   resolveEventEditionTense,
@@ -432,6 +433,77 @@ describe("buildCompanySummary", () => {
   });
 });
 
+describe("buildVenueSummary", () => {
+  it("builds a venue with location, count, and next upcoming event", () => {
+    const summary = buildVenueSummary({
+      name: "The Venetian Resort Las Vegas",
+      locationLabel: "Las Vegas, Nevada",
+      editions: [
+        {
+          name: "Bitcoin Las Vegas 2025",
+          year: 2025,
+          startDate: "2025-05-27",
+          endDate: "2025-05-29",
+          locationLabel: "Las Vegas, Nevada",
+        },
+        {
+          name: "Bitcoin Las Vegas 2026",
+          year: 2026,
+          startDate: "2026-09-27",
+          endDate: "2026-09-29",
+          locationLabel: "Las Vegas, Nevada",
+        },
+      ],
+      now: NOW,
+    });
+
+    assert.equal(
+      summary,
+      "The Venetian Resort Las Vegas is a venue in Las Vegas, Nevada on EventPixels. 2 events are recorded at this venue. The next recorded event, Bitcoin Las Vegas 2026, will take place on Sep 27 – Sep 29, 2026.",
+    );
+    assertNoBannedWording(summary!);
+  });
+
+  it("uses most recent past when no upcoming editions exist", () => {
+    const summary = buildVenueSummary({
+      name: "Marina Bay Sands",
+      locationLabel: "Singapore",
+      editions: [
+        {
+          name: "Token2049 Singapore 2024",
+          year: 2024,
+          startDate: "2024-09-18",
+          endDate: "2024-09-19",
+        },
+      ],
+      now: NOW,
+    });
+
+    assert.equal(
+      summary,
+      "Marina Bay Sands is a venue in Singapore on EventPixels. 1 event is recorded at this venue. The most recent recorded event, Token2049 Singapore 2024, took place in 2024.",
+    );
+  });
+
+  it("omits event sentences when no editions are provided", () => {
+    const summary = buildVenueSummary({
+      name: "Epicenter Stockholm",
+      locationLabel: "Stockholm, Sweden",
+      editions: [],
+      now: NOW,
+    });
+
+    assert.equal(
+      summary,
+      "Epicenter Stockholm is a venue in Stockholm, Sweden on EventPixels.",
+    );
+  });
+
+  it("returns null for an empty name", () => {
+    assert.equal(buildVenueSummary({ name: "  " }), null);
+  });
+});
+
 describe("banned wording corpus", () => {
   it("keeps representative outputs free of marketing and absence apologies", () => {
     const corpus = [
@@ -470,6 +542,19 @@ describe("banned wording corpus", () => {
         name: "BitGo",
         domain: "bitgo.com",
         sponsoredEditionCount: 23,
+      }),
+      buildVenueSummary({
+        name: "The Venetian Resort Las Vegas",
+        locationLabel: "Las Vegas, Nevada",
+        editions: [
+          {
+            name: "Bitcoin Las Vegas 2026",
+            year: 2026,
+            startDate: "2026-09-27",
+            endDate: "2026-09-29",
+          },
+        ],
+        now: NOW,
       }),
     ];
 

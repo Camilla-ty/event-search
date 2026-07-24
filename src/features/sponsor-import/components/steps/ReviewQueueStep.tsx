@@ -62,7 +62,7 @@ function filterStatusParam(filter: FilterKey): string | undefined {
 
 function importStatusMessage(summary: RowSummary, canImportToDraft: boolean): string {
   if (canImportToDraft) {
-    return "All rows resolved. Ready to create the draft edition.";
+    return "All rows resolved. Ready to create the draft event.";
   }
   if (summary.auto_ready > 0) {
     const noun = summary.auto_ready === 1 ? "match" : "matches";

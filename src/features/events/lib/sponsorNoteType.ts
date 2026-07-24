@@ -10,7 +10,7 @@ export const SPONSOR_NOTE_TYPE_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "", label: "None" },
   { value: "upcoming_pending", label: "Upcoming / Pending" },
-  { value: "virtual_covid", label: "Virtual / COVID Edition" },
+  { value: "virtual_covid", label: "Virtual / COVID event" },
 ];
 
 const SPONSOR_NOTE_DISPLAY_MESSAGES: Record<SponsorNoteType, string> = {

@@ -9,7 +9,7 @@ import type {
 } from "@/src/lib/validation/eventOrganizer";
 
 export const DUPLICATE_ORGANIZER_LINK_MESSAGE =
-  "This company is already an organizer of this edition.";
+  "This company is already an organizer of this event.";
 
 const UNIQUE_VIOLATION_CODE = "23505";
 

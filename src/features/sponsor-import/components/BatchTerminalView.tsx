@@ -38,7 +38,7 @@ export function BatchTerminalView({
 
       {status === "published" ? (
         <p className="text-sm text-slate-600">
-          This import has been published. Live sponsors on the edition reflect the publish
+          This import has been published. Live sponsors on the event reflect the publish
           result.
         </p>
       ) : (
@@ -47,7 +47,7 @@ export function BatchTerminalView({
 
       <div className="flex flex-wrap gap-2">
         <Link href={`/admin/events/editions/${editionId}`} className={`${primaryCtaClass} h-10`}>
-          View edition
+          View event
         </Link>
         <Link href="/admin/sponsor-imports" className={`${secondaryCtaClass} h-10`}>
           Sponsor imports hub

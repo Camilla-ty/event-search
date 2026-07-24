@@ -21,7 +21,7 @@ export function VenueLinkedEditionsTable({ editions }: VenueLinkedEditionsTableP
           {editions.length === 0 ? (
             <tr>
               <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
-                No editions linked to this venue yet.
+                No events linked to this venue yet.
               </td>
             </tr>
           ) : (

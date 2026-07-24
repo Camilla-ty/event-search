@@ -4,6 +4,7 @@ Shared report template for the Engineering Health Check.
 How to use:
 - Copy this file to <review-type>/<cycle>-<review-type>.md
   e.g. architecture/2026-08-architecture.md  or  seo/2026-Q3-seo.md
+       or dependency-vulns/2026-08-dependency-vulns.md (Live)
 - Fill in the header block and each section.
 - Reports are IMMUTABLE once written. Do not edit a completed report.
 - Reference existing Findings by ID; never restate a Finding's full body.
@@ -12,8 +13,8 @@ How to use:
 
 # <Review Name> — <Cycle>
 
-**Review type:** <Architecture Audit | Product Audit | Database Audit | Security Audit | Performance Audit | Dead Code Audit | Roadmap Review | SEO Audit | Future Scalability Audit | Data Quality Audit>
-**Cadence:** <Monthly | Quarterly>
+**Review type:** <Dependency Vulnerability Monitoring | Architecture Audit | Product Audit | Data Quality Audit | Database Audit | Security Audit | Performance Audit | Code Hygiene Audit | Roadmap Review | Scalability Audit | SEO Audit | UX Audit | Documentation Audit>
+**Cadence:** <Live | Monthly | Quarterly>
 **Cycle:** <YYYY-MM | YYYY-Q#>
 **Date:** <YYYY-MM-DD>
 **Reviewer:** <name / role>

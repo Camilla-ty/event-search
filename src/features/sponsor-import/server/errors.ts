@@ -20,7 +20,7 @@ export function isUniqueViolation(message: string): boolean {
 
 export function uniqueViolationUserMessage(message: string): string {
   if (message.includes("sponsor_import_batches_one_active_per_edition")) {
-    return "This edition already has an active import in progress. Resume or discard it before starting another.";
+    return "This event already has an active import in progress. Resume or discard it before starting another.";
   }
 
   if (message.includes("sponsor_import_draft_links_batch_company_unique")) {
@@ -28,7 +28,7 @@ export function uniqueViolationUserMessage(message: string): string {
   }
 
   if (message.includes("event_sponsors_event_editions_id_company_id_unique")) {
-    return "This company is already a sponsor on this edition.";
+    return "This company is already a sponsor on this event.";
   }
 
   if (message.includes("companies") && message.includes("slug")) {

@@ -23,8 +23,8 @@ export function AdminEventEditionsListTable({
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-4 py-3 font-medium">Edition</th>
-            <th className="px-4 py-3 font-medium">Series</th>
+            <th className="px-4 py-3 font-medium">Event</th>
+            <th className="px-4 py-3 font-medium">Event brand</th>
             <th className="px-4 py-3 font-medium">Year</th>
             <th className="px-4 py-3 font-medium">City</th>
             <th className="px-4 py-3 font-medium">Live sponsors</th>
@@ -35,7 +35,7 @@ export function AdminEventEditionsListTable({
           {editions.length === 0 ? (
             <tr>
               <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                No editions found.
+                No events found.
               </td>
             </tr>
           ) : (

@@ -7,7 +7,7 @@ export function formatEditionWriteError(message: string): string {
   ) {
     return (
       "Slug already in use. Choose a distinct slug — include city or location in the " +
-      "edition name when multiple editions share the same series and year."
+      "event name when multiple events share the same event brand and year."
     );
   }
   if (
@@ -15,10 +15,10 @@ export function formatEditionWriteError(message: string): string {
     lower.includes("city_id is required when venue_id") ||
     lower.includes("venue_id references a missing venue")
   ) {
-    return "The selected venue does not match this edition city. Clear the venue or choose one in the same city.";
+    return "The selected venue does not match this event city. Clear the venue or choose one in the same city.";
   }
   if (lower.includes("cannot attach an archived venue")) {
-    return "Archived venues cannot be attached to editions. Unarchive the venue or choose another.";
+    return "Archived venues cannot be attached to events. Unarchive the venue or choose another.";
   }
   return message;
 }

@@ -14,8 +14,7 @@ export function FactualSummaryParagraph({
   return (
     <p
       className={
-        className ??
-        "text-sm leading-relaxed text-slate-700"
+        className ?? "text-sm leading-relaxed text-slate-700"
       }
     >
       {trimmed}

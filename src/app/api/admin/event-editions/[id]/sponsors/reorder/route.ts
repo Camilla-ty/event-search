@@ -31,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(editionId);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
 
     const links = await reorderEventSponsorLinksInTierAdmin(editionId, validated.data);

@@ -26,7 +26,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const series = await getEventSeriesAdminById(id);
     if (!series) {
-      return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event brand not found." }, { status: 404 });
     }
     const keywords = await getKeywordsForSeriesId(id);
     return NextResponse.json({ ok: true, series, keywords });
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const existing = await getEventSeriesAdminById(id);
   if (!existing) {
-    return NextResponse.json({ ok: false, error: "Series not found." }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "Event brand not found." }, { status: 404 });
   }
 
   if (body.name !== undefined) {

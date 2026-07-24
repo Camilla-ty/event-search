@@ -10,7 +10,7 @@ export const IMPORT_PROGRESS = {
   materializingDraftLinks: "Creating draft links…",
   finalizingDraft: "Finalizing draft…",
   importingToDraft: "Creating draft links…",
-  publishing: "Publishing to edition…",
+  publishing: "Publishing to event…",
   loadingDraft: "Loading draft links…",
   loadingPublishSummary: "Loading publish summary…",
   applyingDecisions: "Applying review decisions…",

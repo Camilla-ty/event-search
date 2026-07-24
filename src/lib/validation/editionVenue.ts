@@ -50,7 +50,7 @@ export async function validateEditionVenueAttachment(
   }
 
   if (editionCityId !== venueCityId) {
-    return ["event edition city_id must match the selected venue city"];
+    return ["event city_id must match the selected venue city"];
   }
 
   const isArchived = data.archived_at !== null;
@@ -58,7 +58,7 @@ export async function validateEditionVenueAttachment(
   const isNewAttachment = previousVenueId !== input.venueId;
 
   if (isArchived && isNewAttachment) {
-    return ["cannot attach an archived venue to an event edition"];
+    return ["cannot attach an archived venue to an event"];
   }
 
   return [];

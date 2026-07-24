@@ -3,6 +3,7 @@ import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 export type PublicVenueSummary = {
   id: string;
   name: string;
+  slug: string;
   website_url: string | null;
   address_text: string | null;
   logo_url: string | null;
@@ -29,9 +30,12 @@ export function mapPublicVenueFromEditionRow(
   const name = typeof row.name === "string" ? row.name.trim() : "";
   if (name === "") return null;
 
+  const slug = typeof row.slug === "string" ? row.slug.trim() : "";
+
   return {
     id: typeof row.id === "string" ? row.id : String(row.id ?? edition.venue_id),
     name,
+    slug,
     website_url: typeof row.website_url === "string" ? row.website_url : null,
     address_text: typeof row.address_text === "string" ? row.address_text : null,
     logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),

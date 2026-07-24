@@ -26,7 +26,7 @@ export async function fetchAdminEditionsCollection(
   });
 
   if (!response.ok) {
-    let message = "Failed to load editions.";
+    let message = "Failed to load events.";
     try {
       const payload = (await response.json()) as EditionsApiError;
       if (typeof payload.error === "string" && payload.error.trim() !== "") {
@@ -47,7 +47,7 @@ export async function fetchAdminEditionsCollection(
   };
 
   if (!payload.ok || !Array.isArray(payload.editions) || payload.params === undefined) {
-    throw new Error(payload.error ?? "Failed to load editions.");
+    throw new Error(payload.error ?? "Failed to load events.");
   }
 
   return {

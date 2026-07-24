@@ -30,7 +30,7 @@ export default async function SponsorImportsPage() {
       />
       <AdminPageHeader
         title="Sponsor imports"
-        description="Upload Excel sponsor lists for an event edition. One active import per edition."
+        description="Upload Excel sponsor lists for an event. One active import per event."
         actions={
           <Link href="/admin/sponsor-imports/new" className={`${primaryCtaClass} h-10`}>
             New import

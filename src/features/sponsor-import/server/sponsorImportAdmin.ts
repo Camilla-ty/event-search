@@ -152,7 +152,7 @@ async function assertEditionExists(editionId: string): Promise<void> {
     .eq("id", editionId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new SponsorImportHttpError(404, "Event edition not found.");
+  if (!data) throw new SponsorImportHttpError(404, "Event not found.");
 }
 
 export async function listBatchesAdmin(filters: {

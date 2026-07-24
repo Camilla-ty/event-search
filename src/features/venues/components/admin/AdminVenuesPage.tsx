@@ -28,7 +28,7 @@ function buildPageDescription(
   if (includeArchived) {
     return `All venues including archived (${total})`;
   }
-  return "Reusable event locations linked to editions.";
+  return "Reusable event locations linked to events.";
 }
 
 export function AdminVenuesPage({ initial }: AdminVenuesPageProps) {

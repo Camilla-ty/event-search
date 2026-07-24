@@ -23,7 +23,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(id);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
 
     const [sponsors, count] = await Promise.all([
@@ -62,7 +62,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const edition = await getEventEditionAdminById(id);
     if (!edition) {
-      return NextResponse.json({ ok: false, error: "Edition not found." }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "Event not found." }, { status: 404 });
     }
 
     const link = await createEventSponsorLinkAdmin(id, validated.data);

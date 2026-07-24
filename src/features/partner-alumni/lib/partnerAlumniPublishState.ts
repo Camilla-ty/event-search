@@ -11,8 +11,8 @@ export function partnerAlumniSetCurrentPrompt(data: PartnerAlumniAdminData): str
 
   const publishableCount = data.versions.filter((version) => version.member_count >= 1).length;
   if (publishableCount === 1) {
-    return "Partner Alumni is hidden on public edition pages until you set this version as current.";
+    return "Partner Alumni is hidden on public event pages until you set this version as current.";
   }
 
-  return "Partner Alumni is hidden on public edition pages until you set a version with companies as current.";
+  return "Partner Alumni is hidden on public event pages until you set a version with companies as current.";
 }

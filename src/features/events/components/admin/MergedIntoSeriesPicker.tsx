@@ -90,15 +90,15 @@ export function MergedIntoSeriesPicker({
     <div className="space-y-2">
       <label className="block space-y-1">
         <span className="text-sm font-medium text-slate-700">
-          Merged into series <span className="text-red-600">*</span>
+          Merged into event brand <span className="text-red-600">*</span>
         </span>
         <span className="block text-sm text-slate-500">
-          Search for the destination event series users should navigate to.
+          Search for the destination event brand users should navigate to.
         </span>
         <input
           type="search"
           className={formInputClass}
-          placeholder={`Search series (min ${SEARCH_MIN_CHARS} characters)…`}
+          placeholder={`Search event brands (min ${SEARCH_MIN_CHARS} characters)…`}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           disabled={disabled}
@@ -127,7 +127,7 @@ export function MergedIntoSeriesPicker({
           {loading ? (
             <p className="px-3 py-2 text-sm text-slate-500">Searching…</p>
           ) : results.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-500">No series found.</p>
+            <p className="px-3 py-2 text-sm text-slate-500">No event brands found.</p>
           ) : (
             <ul className="max-h-56 divide-y divide-slate-100 overflow-y-auto">
               {results.map((series) => (

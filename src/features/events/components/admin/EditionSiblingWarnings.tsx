@@ -34,11 +34,11 @@ export function EditionSiblingWarnings({
       role="status"
       className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
     >
-      <p className="font-medium">Related editions for this series in {year}</p>
+      <p className="font-medium">Related events for this event brand in {year}</p>
       <ul className="mt-2 list-disc space-y-2 pl-5">
         {cityMatches.length > 0 ? (
           <li>
-            An edition already exists for this series, year, and city
+            An event already exists for this event brand, year, and city
             {cityLabel !== "" ? ` (${cityLabel})` : ""}:
             <ul className="mt-1 list-none space-y-1 pl-0">
               {cityMatches.map((sibling) => (
@@ -56,10 +56,10 @@ export function EditionSiblingWarnings({
         ) : null}
         <li>
           {siblings.length === 1
-            ? "One other edition exists"
-            : `${siblings.length} other editions exist`}{" "}
-          for this series in {year}. Use a distinct name and slug
-          {cityId === "" ? " — add a city or include location in the edition name" : ""}:
+            ? "One other event exists"
+            : `${siblings.length} other events exist`}{" "}
+          for this event brand in {year}. Use a distinct name and slug
+          {cityId === "" ? " — add a city or include location in the event name" : ""}:
           <ul className="mt-1 list-none space-y-1 pl-0">
             {siblings.map((sibling) => (
               <li key={sibling.id}>
