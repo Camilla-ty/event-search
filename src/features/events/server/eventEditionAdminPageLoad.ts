@@ -13,6 +13,8 @@ import type { KeywordRow } from "@/src/features/events/server/seriesKeywordsAdmi
 import { getInheritedKeywordsForEditionId } from "@/src/features/events/server/seriesKeywordsAdmin";
 import type { LiveExhibitorRow } from "@/src/features/exhibitors/server/eventExhibitorAdmin";
 import { getLiveExhibitorsForEditionAdmin } from "@/src/features/exhibitors/server/eventExhibitorAdmin";
+import type { EditionImportContext as ExhibitorEditionImportContext } from "@/src/features/exhibitor-import/server/importUiData";
+import { getEditionImportsData as getExhibitorEditionImportsData } from "@/src/features/exhibitor-import/server/importUiData";
 import type { EditionOrganizerAdminRow } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import { getOrganizersForEditionAdmin } from "@/src/features/organizers/server/eventOrganizerAdmin";
 import type { EditionImportContext } from "@/src/features/sponsor-import/server/importUiData";
@@ -24,6 +26,7 @@ export type AdminEditionPanelKey =
   | "sponsorCount"
   | "sponsors"
   | "exhibitors"
+  | "exhibitorImports"
   | "organizers"
   | "imports"
   | "keywords";
@@ -39,6 +42,7 @@ export type AdminEditionOptionalPanels = {
   liveSponsorCount: number;
   sponsors: LiveSponsorRow[];
   exhibitors: LiveExhibitorRow[];
+  exhibitorImportsData: ExhibitorEditionImportContext;
   organizers: EditionOrganizerAdminRow[];
   importsData: EditionImportContext;
   inheritedKeywords: KeywordRow[];
@@ -63,6 +67,19 @@ function emptyEditionImportsData(edition: EventEditionAdminRow): EditionImportCo
     editionName: edition.name,
     seriesName: edition.event_series?.name ?? "—",
     liveSponsorCount: 0,
+    activeBatch: null,
+    batches: [],
+  };
+}
+
+function emptyExhibitorEditionImportsData(
+  edition: EventEditionAdminRow,
+): ExhibitorEditionImportContext {
+  return {
+    editionId: edition.id,
+    editionName: edition.name,
+    seriesName: edition.event_series?.name ?? "—",
+    liveExhibitorCount: 0,
     activeBatch: null,
     batches: [],
   };
@@ -112,6 +129,7 @@ export async function loadAdminEditionOptionalPanels(
     liveSponsorCount,
     sponsors,
     exhibitors,
+    exhibitorImportsData,
     organizers,
     importsData,
     inheritedKeywords,
@@ -134,6 +152,18 @@ export async function loadAdminEditionOptionalPanels(
       "exhibitors",
       () => getLiveExhibitorsForEditionAdmin(editionId),
       [],
+      panelErrors,
+    ),
+    resolveOptionalPanelLoad(
+      "exhibitorImports",
+      () =>
+        getExhibitorEditionImportsData(
+          editionId,
+          edition.name,
+          edition.event_series?.name ?? "—",
+          0,
+        ),
+      emptyExhibitorEditionImportsData(edition),
       panelErrors,
     ),
     resolveOptionalPanelLoad(
@@ -163,6 +193,7 @@ export async function loadAdminEditionOptionalPanels(
   ]);
 
   importsData.liveSponsorCount = liveSponsorCount;
+  exhibitorImportsData.liveExhibitorCount = exhibitors.length;
 
   return {
     cities,
@@ -170,6 +201,7 @@ export async function loadAdminEditionOptionalPanels(
     liveSponsorCount,
     sponsors,
     exhibitors,
+    exhibitorImportsData,
     organizers,
     importsData,
     inheritedKeywords,
@@ -191,6 +223,7 @@ export const ADMIN_EDITION_PANEL_LABELS: Record<AdminEditionPanelKey, string> = 
   sponsorCount: "Live sponsor count",
   sponsors: "Live sponsors",
   exhibitors: "Exhibitors",
+  exhibitorImports: "Exhibitor import history",
   organizers: "Organizers",
   imports: "Import history",
   keywords: "Inherited keywords",

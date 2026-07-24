@@ -1,0 +1,141 @@
+import type {
+  ExhibitorImportBatchStatus,
+  ExhibitorImportRowStatus,
+  RowSummary,
+} from "../types";
+import { ExhibitorImportHttpError } from "./errors";
+
+export type BatchRow = {
+  id: string;
+  event_edition_id: string;
+  status: ExhibitorImportBatchStatus;
+  review_acknowledged_at: string | null;
+  processing_phase: string | null;
+  updated_at?: string | null;
+};
+
+/** Orphaned import processing claims older than this may be auto-cleared when no draft links exist. */
+export const STALE_IMPORT_TO_DRAFT_MS = 5 * 60 * 1000;
+
+const STALE_RECOVERABLE_PROCESSING_PHASES = new Set([
+  "importing_to_draft",
+  "materializing_companies",
+]);
+
+export function isStaleImportProcessingPhaseClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  if (batch.status !== "review") {
+    return false;
+  }
+  if (!batch.processing_phase || !STALE_RECOVERABLE_PROCESSING_PHASES.has(batch.processing_phase)) {
+    return false;
+  }
+  const updatedAt = batch.updated_at;
+  if (!updatedAt) {
+    return true;
+  }
+  return nowMs - new Date(updatedAt).getTime() >= STALE_IMPORT_TO_DRAFT_MS;
+}
+
+export function isStaleImportToDraftClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  return (
+    batch.processing_phase === "importing_to_draft" &&
+    isStaleImportProcessingPhaseClaim(batch, nowMs)
+  );
+}
+
+export function isStaleMaterializingCompaniesClaim(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  nowMs = Date.now(),
+): boolean {
+  return (
+    batch.processing_phase === "materializing_companies" &&
+    isStaleImportProcessingPhaseClaim(batch, nowMs)
+  );
+}
+
+export type ImportRowRecord = {
+  id: string;
+  status: ExhibitorImportRowStatus;
+  has_blocking_validation: boolean;
+  duplicate_cluster_key?: string | null;
+  duplicate_role: string | null;
+  duplicate_resolution: string | null;
+};
+
+const TERMINAL_BATCH: ExhibitorImportBatchStatus[] = ["published", "discarded"];
+
+export function assertBatchStatus(batch: BatchRow, allowed: ExhibitorImportBatchStatus[]): void {
+  if (!allowed.includes(batch.status)) {
+    throw new ExhibitorImportHttpError(
+      409,
+      `Batch status must be one of ${allowed.join(", ")} (current: ${batch.status}).`,
+      { status: batch.status },
+    );
+  }
+}
+
+export function assertBatchNotTerminal(batch: BatchRow): void {
+  if (TERMINAL_BATCH.includes(batch.status)) {
+    throw new ExhibitorImportHttpError(409, `Batch is terminal (${batch.status}).`, {
+      status: batch.status,
+    });
+  }
+}
+
+export function assertImportToDraftGuards(rows: ImportRowRecord[]): void {
+  const blockingReasons: string[] = [];
+
+  const blockingValidation = rows.filter(
+    (r) => r.status !== "excluded" && r.has_blocking_validation,
+  ).length;
+  if (blockingValidation > 0) {
+    blockingReasons.push(`${blockingValidation} row(s) have blocking validation`);
+  }
+
+  const pendingDuplicates = rows.filter(
+    (r) => r.duplicate_role === "duplicate" && r.duplicate_resolution === "pending",
+  ).length;
+  if (pendingDuplicates > 0) {
+    blockingReasons.push(`${pendingDuplicates} duplicate row(s) pending resolution`);
+  }
+
+  const needsReview = rows.filter((r) => r.status === "needs_review").length;
+  if (needsReview > 0) {
+    blockingReasons.push(`${needsReview} row(s) need review`);
+  }
+
+  const autoReady = rows.filter((r) => r.status === "auto_ready").length;
+  if (autoReady > 0) {
+    blockingReasons.push(
+      `${autoReady} auto_ready row(s) must be bulk accepted before import-to-draft`,
+    );
+  }
+
+  if (blockingReasons.length > 0) {
+    throw new ExhibitorImportHttpError(422, "Import-to-draft blocked.", {
+      blockingReasons,
+    });
+  }
+}
+
+export function summarizeRows(rows: ImportRowRecord[]): RowSummary {
+  return {
+    total: rows.length,
+    needs_review: rows.filter((r) => r.status === "needs_review").length,
+    auto_ready: rows.filter((r) => r.status === "auto_ready").length,
+    resolved: rows.filter((r) => r.status === "resolved").length,
+    excluded: rows.filter((r) => r.status === "excluded").length,
+    blocking_validation_count: rows.filter(
+      (r) => r.status !== "excluded" && r.has_blocking_validation,
+    ).length,
+    pending_duplicate_count: rows.filter(
+      (r) => r.duplicate_role === "duplicate" && r.duplicate_resolution === "pending",
+    ).length,
+  };
+}

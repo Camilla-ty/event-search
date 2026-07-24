@@ -23,12 +23,15 @@ import {
   type ExhibitorEditSavedPayload,
 } from "./ExhibitorLinkDrawer";
 import { RemoveExhibitorModal } from "./RemoveExhibitorModal";
+import { EditionImportsPanel } from "@/src/features/exhibitor-import/components/EditionImportsPanel";
+import type { EditionImportContext } from "@/src/features/exhibitor-import/server/importUiData";
 
 type EditionExhibitorsPanelProps = {
   editionId: string;
   editionName: string;
   editionYear: number;
   exhibitors: LiveExhibitorRow[];
+  importsData: EditionImportContext;
 };
 
 type DrawerState =
@@ -71,6 +74,7 @@ export function EditionExhibitorsPanel({
   editionName,
   editionYear,
   exhibitors: initialExhibitors,
+  importsData,
 }: EditionExhibitorsPanelProps) {
   const [exhibitors, setExhibitors] = useState(initialExhibitors);
   const [drawer, setDrawer] = useState<DrawerState>({ kind: "closed" });
@@ -337,6 +341,11 @@ export function EditionExhibitorsPanel({
           onRemoved={handleRemoved}
         />
       ) : null}
+
+      <div className="border-t border-slate-200 pt-6">
+        <h3 className="mb-3 text-sm font-semibold text-slate-800">Bulk Upload</h3>
+        <EditionImportsPanel data={importsData} />
+      </div>
     </div>
   );
 }

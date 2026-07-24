@@ -130,6 +130,10 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
 
   const sponsorsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "sponsors");
   const exhibitorsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "exhibitors");
+  const exhibitorImportsPanelError = adminEditionPanelErrorMessage(
+    panels.panelErrors,
+    "exhibitorImports",
+  );
   const organizersPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "organizers");
   const importsPanelError = adminEditionPanelErrorMessage(panels.panelErrors, "imports");
   const profilePanelError =
@@ -307,6 +311,15 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
                 editionName={edition.name}
                 editionYear={edition.year}
                 exhibitors={panels.exhibitors}
+                importsData={
+                  exhibitorImportsPanelError
+                    ? {
+                        ...panels.exhibitorImportsData,
+                        activeBatch: null,
+                        batches: [],
+                      }
+                    : panels.exhibitorImportsData
+                }
               />
             )
           }

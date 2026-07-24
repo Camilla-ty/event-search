@@ -1,0 +1,54 @@
+export class ExhibitorImportHttpError extends Error {
+  readonly status: number;
+  readonly details?: unknown;
+
+  constructor(status: number, message: string, details?: unknown) {
+    super(message);
+    this.name = "ExhibitorImportHttpError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export function isUniqueViolation(message: string): boolean {
+  return (
+    message.includes("duplicate key") ||
+    message.includes("unique constraint") ||
+    message.includes("exhibitor_import_batches_one_active_per_edition")
+  );
+}
+
+export function uniqueViolationUserMessage(message: string): string {
+  if (message.includes("exhibitor_import_batches_one_active_per_edition")) {
+    return "This event already has an active import in progress. Resume or discard it before starting another.";
+  }
+
+  if (message.includes("exhibitor_import_draft_links_batch_company_unique")) {
+    return "Draft links for this import are already being created. Wait for the operation to finish — do not click Import to draft again.";
+  }
+
+  if (message.includes("event_exhibitors_edition_company_unique")) {
+    return "This company is already an exhibitor on this event.";
+  }
+
+  if (message.includes("companies") && message.includes("slug")) {
+    return "A company with this slug already exists.";
+  }
+
+  if (
+    message.includes("companies_name") ||
+    (message.includes("companies") && message.includes("(name)"))
+  ) {
+    return "A company with this name already exists — often caused by duplicate names in the spreadsheet or companies left from a prior failed import. Link to the existing company instead of creating a new one.";
+  }
+
+  if (message.includes("companies") && message.includes("domain")) {
+    return "A company with this website domain already exists.";
+  }
+
+  if (message.includes("company_domains_domain_uidx")) {
+    return "This domain is already linked to another company.";
+  }
+
+  return "A uniqueness constraint was violated. If an action is still running, wait for it to finish before retrying.";
+}

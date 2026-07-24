@@ -13,6 +13,7 @@ const ADMIN_RPC_SECURITY_FUNCTIONS = [
   "company_merge_preview",
   "merge_companies",
   "sponsor_import_publish_batch",
+  "exhibitor_import_publish_batch",
   "set_company_primary_domain",
 ] as const;
 
@@ -98,6 +99,11 @@ function rpcPayload(functionName: (typeof ADMIN_RPC_SECURITY_FUNCTIONS)[number])
         p_notes: "admin-rpc-security-test",
       };
     case "sponsor_import_publish_batch":
+      return {
+        p_batch_id: FAKE_BATCH_ID,
+        p_published_by: FAKE_UUID,
+      };
+    case "exhibitor_import_publish_batch":
       return {
         p_batch_id: FAKE_BATCH_ID,
         p_published_by: FAKE_UUID,
@@ -232,6 +238,19 @@ describeIntegration("admin RPC execute permissions (integration)", () => {
     const { data, error } = await supabase.rpc(
       "sponsor_import_publish_batch",
       rpcPayload("sponsor_import_publish_batch"),
+    );
+
+    assert.equal(data, null);
+    assert.ok(error);
+    assert.equal(isRpcBusinessRuleError(error), true);
+    assert.match(error.message ?? "", /batch_not_found/);
+  });
+
+  it("service_role reaches business validation for exhibitor_import_publish_batch", async () => {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc(
+      "exhibitor_import_publish_batch",
+      rpcPayload("exhibitor_import_publish_batch"),
     );
 
     assert.equal(data, null);

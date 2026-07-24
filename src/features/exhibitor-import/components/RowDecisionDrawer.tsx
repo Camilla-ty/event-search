@@ -1,0 +1,246 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { Button, InlineErrorBanner } from "@/src/components/common";
+import { formInputClass } from "@/src/lib/design/classes";
+
+import { patchRowDecision } from "../client/api";
+import type { ExhibitorImportRow } from "../client/types";
+import { ImportRowMatchReason } from "./ImportRowMatchReason";
+import { hasImportRowMatchReason } from "../importRowMatchReason";
+
+type CompanyOption = { id: string; name: string; domain: string | null };
+
+type RowDecisionDrawerProps = {
+  batchId: string;
+  row: ExhibitorImportRow | null;
+  onClose: () => void;
+  onUpdated: () => void;
+};
+
+export function RowDecisionDrawer({
+  batchId,
+  row,
+  onClose,
+  onUpdated,
+}: RowDecisionDrawerProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<CompanyOption[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<{
+    rowId: string;
+    companyId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!row || companySearch.trim().length < 2) {
+      return;
+    }
+
+    let cancelled = false;
+    async function search() {
+      const res = await fetch(
+        `/api/admin/companies?search=${encodeURIComponent(companySearch.trim())}`,
+      );
+      const data = (await res.json()) as {
+        ok: boolean;
+        companies?: Array<{ id: string; name: string; domain: string | null }>;
+      };
+      if (cancelled || !data.ok || !data.companies) return;
+      setCompanyOptions(
+        data.companies.map((c) => ({
+          id: String(c.id),
+          name: String(c.name),
+          domain: c.domain,
+        })),
+      );
+    }
+    void search();
+    return () => {
+      cancelled = true;
+    };
+  }, [companySearch, row]);
+
+  if (!row) return null;
+
+  const selectedCompanyId =
+    selectedCompany?.rowId === row.id
+      ? selectedCompany.companyId
+      : (row.resolved_company_id ?? row.proposed_company_id ?? "");
+  const visibleCompanyOptions =
+    companySearch.trim().length < 2 ? [] : companyOptions;
+
+  async function decide(
+    decision_type: "use_matched" | "create_new" | "choose_different" | "exclude",
+    extra?: { resolved_company_id?: string; duplicate_resolution?: "kept" | "excluded" },
+  ) {
+    if (!row) return;
+    setLoading(true);
+    setError(null);
+    const result = await patchRowDecision(batchId, row.id, {
+      decision_type,
+      resolved_company_id: extra?.resolved_company_id ?? null,
+      duplicate_resolution: extra?.duplicate_resolution,
+    });
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onUpdated();
+    onClose();
+  }
+
+  const isDuplicate = row.duplicate_role === "duplicate";
+  const duplicateClusterSize =
+    typeof row.duplicate_cluster_size === "number" && row.duplicate_cluster_size > 1
+      ? row.duplicate_cluster_size
+      : null;
+  const duplicateSiblingCount = duplicateClusterSize ? duplicateClusterSize - 1 : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/30">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Row {row.excel_row_number}
+          </h2>
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+          <div>
+            <p className="font-medium text-slate-900">{row.raw_company_name ?? "—"}</p>
+            <p className="text-slate-600">{row.normalized_domain ?? row.raw_website ?? "—"}</p>
+            <p className="text-slate-600">
+              Tier: {row.mapped_tier_rank ?? "—"}
+              {row.mapped_tier_label ? ` · ${row.mapped_tier_label}` : ""}
+            </p>
+          </div>
+
+          {hasImportRowMatchReason(row) || row.proposed_company_id ? (
+            <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <p className="font-medium text-slate-800">Proposed match</p>
+              <ImportRowMatchReason
+                row={row}
+                layout="detail"
+                showMatchedCompany={Boolean(row.proposed_company_id)}
+              />
+            </div>
+          ) : null}
+
+          {isDuplicate ? (
+            <div className="space-y-2 rounded-md border border-slate-200 p-3">
+              <p className="font-semibold text-slate-900">
+                Duplicate{duplicateClusterSize ? ` (${duplicateClusterSize} rows)` : ""}
+              </p>
+              <p className="font-medium text-slate-700">Choose which row to keep.</p>
+              {duplicateSiblingCount > 0 ? (
+                <p className="text-slate-600">
+                  Keeping this row excludes the other {duplicateSiblingCount}{" "}
+                  {duplicateSiblingCount === 1 ? "duplicate" : "duplicates"}.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={loading}
+                  onClick={() =>
+                    void decide(row.proposed_company_id ? "use_matched" : "create_new", {
+                      duplicate_resolution: "kept",
+                    })
+                  }
+                >
+                  Keep this row
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {!isDuplicate ? (
+            <div className="space-y-2">
+              <Button
+                className="w-full justify-start"
+                variant="secondary"
+                disabled={loading || !row.proposed_company_id}
+                onClick={() => void decide("use_matched")}
+              >
+                {row.proposed_company?.name
+                  ? `Use matched company: ${row.proposed_company.name}`
+                  : "Use matched company"}
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => void decide("create_new")}
+              >
+                Create new company
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => void decide("exclude")}
+              >
+                Exclude from import
+              </Button>
+
+              <div className="border-t border-slate-200 pt-3">
+                <p className="mb-2 font-medium text-slate-700">Choose different company</p>
+                <input
+                  className={formInputClass}
+                  placeholder="Search companies…"
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                />
+                {visibleCompanyOptions.length > 0 ? (
+                  <ul className="mt-2 max-h-40 overflow-y-auto rounded-md border border-slate-200">
+                    {visibleCompanyOptions.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className={[
+                            "w-full px-3 py-2 text-left hover:bg-slate-50",
+                            selectedCompanyId === c.id ? "bg-brand-primary-muted" : "",
+                          ].join(" ")}
+                          onClick={() =>
+                            setSelectedCompany({ rowId: row.id, companyId: c.id })
+                          }
+                        >
+                          {c.name}
+                          {c.domain ? (
+                            <span className="ml-2 text-xs text-slate-500">{c.domain}</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <Button
+                  className="mt-2 w-full"
+                  disabled={loading || !selectedCompanyId}
+                  onClick={() =>
+                    void decide("choose_different", { resolved_company_id: selectedCompanyId })
+                  }
+                >
+                  Use selected company
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {error ? <InlineErrorBanner message={error} /> : null}
+        </div>
+      </div>
+    </div>
+  );
+}

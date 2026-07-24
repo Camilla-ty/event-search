@@ -67,6 +67,14 @@ describe("edition last reviewed manual-only wiring", () => {
     assertNoAutoTouch(body, "publishBatch");
   });
 
+  it("exhibitor import publish does not auto-touch last_reviewed_at", () => {
+    const source = readSource("exhibitor-import/server/exhibitorImportAdmin.ts");
+    const body = extractFunctionBody(source, "publishBatch");
+    assertNoAutoTouch(body, "exhibitor publishBatch");
+    assert.doesNotMatch(body, /last_reviewed_at/);
+    assert.doesNotMatch(source, /event_sponsors/);
+  });
+
   it("company merge does not auto-touch last_reviewed_at", () => {
     const source = readSource("companies/server/companyMergeAdmin.ts");
     assertNoAutoTouch(source, "companyMergeAdmin");

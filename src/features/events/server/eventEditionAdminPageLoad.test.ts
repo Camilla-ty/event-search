@@ -84,6 +84,9 @@ describe("loadAdminEditionOptionalPanels", () => {
       assert.equal(result.liveSponsorCount, 0);
       assert.deepEqual(result.sponsors, []);
       assert.deepEqual(result.exhibitors, []);
+      assert.equal(result.exhibitorImportsData.editionId, sampleEdition.id);
+      assert.equal(result.exhibitorImportsData.activeBatch, null);
+      assert.deepEqual(result.exhibitorImportsData.batches, []);
       assert.deepEqual(result.organizers, []);
       assert.deepEqual(result.inheritedKeywords, []);
       assert.equal(result.importsData.editionId, sampleEdition.id);
