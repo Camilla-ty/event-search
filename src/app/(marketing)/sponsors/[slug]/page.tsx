@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { getPublicExhibitorHistoryForCompany } from "@/src/features/exhibitors/server/exhibitorHistoryPublic";
 import { SponsorDetailView } from "@/src/features/sponsors/components/detail/SponsorDetailView";
 import { getSponsorDetailData } from "@/src/features/sponsors/server/getSponsorDetailData";
 import {
@@ -71,5 +72,15 @@ export default async function SponsorDetailPage({
     notFound();
   }
 
-  return <SponsorDetailView data={data} />;
+  // Independent of Sponsor History auth gate: full exhibitor list for all visitors.
+  const exhibitorHistoryGroups = await getPublicExhibitorHistoryForCompany(
+    data.company.id,
+  );
+
+  return (
+    <SponsorDetailView
+      data={data}
+      exhibitorHistoryGroups={exhibitorHistoryGroups}
+    />
+  );
 }

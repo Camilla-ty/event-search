@@ -4,6 +4,8 @@ import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
 import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
+import { ExhibitorHistorySection } from "@/src/features/exhibitors/components/detail/ExhibitorHistorySection";
+import type { ExhibitorHistorySeriesGroup } from "@/src/features/exhibitors/server/exhibitorHistoryModel";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
@@ -28,7 +30,13 @@ function formatTierLabel(tierRank: number | null, tierLabel: string | null): str
   return null;
 }
 
-export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
+export function SponsorDetailView({
+  data,
+  exhibitorHistoryGroups = [],
+}: {
+  data: SponsorDetailData;
+  exhibitorHistoryGroups?: ExhibitorHistorySeriesGroup[];
+}) {
   const { company, isAuthenticated, summary, eventSeriesGroups } = data;
   const locationLabel = formatLocationFromCityEmbed(company.cities);
   const websiteDisplay = formatPublicCompanyWebsite({
@@ -193,6 +201,8 @@ export function SponsorDetailView({ data }: { data: SponsorDetailData }) {
           </ul>
         )}
       </section>
+
+      <ExhibitorHistorySection groups={exhibitorHistoryGroups} />
     </section>
   );
 }
