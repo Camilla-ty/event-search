@@ -59,6 +59,11 @@ import {
   getPublicPartnerAlumniForSeriesId,
   shouldShowPublicPartnerAlumniTab,
 } from "@/src/features/partner-alumni/server/partnerAlumniPublic";
+import { EventExhibitorsSection } from "@/src/features/exhibitors/components/detail/EventExhibitorsSection";
+import {
+  getPublicExhibitorsForEditionId,
+  shouldShowPublicExhibitorsTab,
+} from "@/src/features/exhibitors/server/exhibitorsPublic";
 import { createClient } from "@/src/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -142,21 +147,25 @@ export default async function EventDetailPage({
 
   const isAuthenticated = user !== null;
 
-  const [relatedEditions, topics, totalSponsorCount, partnerAlumni] = await Promise.all([
-    seriesId !== null && editionId !== null
-      ? getRelatedEditions({
-          seriesId,
-          excludeEditionId: editionId,
-        })
-      : Promise.resolve([]),
-    seriesId !== null
-      ? getPublicKeywordsForSeriesId(seriesId)
-      : Promise.resolve([]),
-    editionId !== null ? getTotalSponsorCount(editionId) : Promise.resolve(0),
-    seriesId !== null
-      ? getPublicPartnerAlumniForSeriesId(seriesId)
-      : Promise.resolve(null),
-  ]);
+  const [relatedEditions, topics, totalSponsorCount, partnerAlumni, exhibitors] =
+    await Promise.all([
+      seriesId !== null && editionId !== null
+        ? getRelatedEditions({
+            seriesId,
+            excludeEditionId: editionId,
+          })
+        : Promise.resolve([]),
+      seriesId !== null
+        ? getPublicKeywordsForSeriesId(seriesId)
+        : Promise.resolve([]),
+      editionId !== null ? getTotalSponsorCount(editionId) : Promise.resolve(0),
+      seriesId !== null
+        ? getPublicPartnerAlumniForSeriesId(seriesId)
+        : Promise.resolve(null),
+      editionId !== null
+        ? getPublicExhibitorsForEditionId(editionId)
+        : Promise.resolve([]),
+    ]);
 
   const [sponsorTierSummaries, tier1PageResult] = await Promise.all([
     editionId !== null
@@ -185,9 +194,16 @@ export default async function EventDetailPage({
   ]);
 
   const showPartnerAlumniTab = shouldShowPublicPartnerAlumniTab(partnerAlumni);
-  const initialTab = parsePublicEditionTab(requestedTab ?? null, showPartnerAlumniTab);
+  const showExhibitorsTab = shouldShowPublicExhibitorsTab(exhibitors);
+  const initialTab = parsePublicEditionTab(requestedTab ?? null, {
+    showExhibitorsTab,
+    showPartnerAlumniTab,
+  });
 
   if (requestedTab === "partner-alumni" && !showPartnerAlumniTab) {
+    redirect(`/events/${eventSlug || id}`);
+  }
+  if (requestedTab === "exhibitors" && !showExhibitorsTab) {
     redirect(`/events/${eventSlug || id}`);
   }
 
@@ -326,6 +342,7 @@ export default async function EventDetailPage({
       <PublicEventEditionTabs
         eventSlug={eventSlug}
         initialTab={initialTab}
+        showExhibitorsTab={showExhibitorsTab}
         showPartnerAlumniTab={showPartnerAlumniTab}
           overviewPanel={
             <div className="space-y-6">
@@ -360,6 +377,11 @@ export default async function EventDetailPage({
               totalSponsorCount={totalSponsorCount}
               sponsorNoteType={sponsorNoteType}
             />
+          }
+          exhibitorsPanel={
+            showExhibitorsTab ? (
+              <EventExhibitorsSection embedded exhibitors={exhibitors} />
+            ) : null
           }
           venuePanel={
             venue ? (

@@ -4,18 +4,30 @@ import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { buildPublicEditionTabHref, parsePublicEditionTab } from "@/src/features/events/components/detail/publicEditionTabUrls";
+import {
+  buildPublicEditionTabHref,
+  parsePublicEditionTab,
+} from "@/src/features/events/components/detail/publicEditionTabUrls";
 import { PublicEventEditionTabs } from "@/src/features/events/components/detail/PublicEventEditionTabs";
 import { shouldInterceptTabAnchorClick } from "@/src/features/events/components/detail/instantTabNavigation";
 
-function renderTabs(initialTab: "overview" | "sponsors" | "venue" | "organizers") {
+function renderTabs(
+  initialTab: "overview" | "sponsors" | "exhibitors" | "venue" | "organizers",
+  options?: { showExhibitorsTab?: boolean; showPartnerAlumniTab?: boolean },
+) {
   return renderToStaticMarkup(
     React.createElement(PublicEventEditionTabs, {
       eventSlug: "demo-event",
       initialTab,
-      showPartnerAlumniTab: false,
+      showExhibitorsTab: options?.showExhibitorsTab ?? false,
+      showPartnerAlumniTab: options?.showPartnerAlumniTab ?? false,
       overviewPanel: React.createElement("div", { "data-panel": "overview" }, "Overview panel"),
       sponsorsPanel: React.createElement("div", { "data-panel": "sponsors" }, "Sponsors panel"),
+      exhibitorsPanel: React.createElement(
+        "div",
+        { "data-panel": "exhibitors" },
+        "Exhibitors panel",
+      ),
       venuePanel: React.createElement("div", { "data-panel": "venue" }, "Venue panel"),
       organizersPanel: React.createElement(
         "div",
@@ -33,18 +45,74 @@ function renderTabs(initialTab: "overview" | "sponsors" | "venue" | "organizers"
 
 describe("parsePublicEditionTab", () => {
   it("falls back to overview when partner-alumni tab is hidden", () => {
-    assert.equal(parsePublicEditionTab("partner-alumni", false), "overview");
+    assert.equal(
+      parsePublicEditionTab("partner-alumni", {
+        showExhibitorsTab: false,
+        showPartnerAlumniTab: false,
+      }),
+      "overview",
+    );
   });
 
   it("selects partner-alumni when tab is shown", () => {
-    assert.equal(parsePublicEditionTab("partner-alumni", true), "partner-alumni");
+    assert.equal(
+      parsePublicEditionTab("partner-alumni", {
+        showExhibitorsTab: false,
+        showPartnerAlumniTab: true,
+      }),
+      "partner-alumni",
+    );
+  });
+
+  it("falls back to overview when exhibitors tab is hidden", () => {
+    assert.equal(
+      parsePublicEditionTab("exhibitors", {
+        showExhibitorsTab: false,
+        showPartnerAlumniTab: true,
+      }),
+      "overview",
+    );
+  });
+
+  it("selects exhibitors when tab is shown", () => {
+    assert.equal(
+      parsePublicEditionTab("exhibitors", {
+        showExhibitorsTab: true,
+        showPartnerAlumniTab: false,
+      }),
+      "exhibitors",
+    );
   });
 
   it("preserves other tab ids", () => {
-    assert.equal(parsePublicEditionTab("sponsors", false), "sponsors");
-    assert.equal(parsePublicEditionTab("venue", true), "venue");
-    assert.equal(parsePublicEditionTab("organizers", true), "organizers");
-    assert.equal(parsePublicEditionTab(null, true), "overview");
+    assert.equal(
+      parsePublicEditionTab("sponsors", {
+        showExhibitorsTab: false,
+        showPartnerAlumniTab: false,
+      }),
+      "sponsors",
+    );
+    assert.equal(
+      parsePublicEditionTab("venue", {
+        showExhibitorsTab: true,
+        showPartnerAlumniTab: true,
+      }),
+      "venue",
+    );
+    assert.equal(
+      parsePublicEditionTab("organizers", {
+        showExhibitorsTab: true,
+        showPartnerAlumniTab: true,
+      }),
+      "organizers",
+    );
+    assert.equal(
+      parsePublicEditionTab(null, {
+        showExhibitorsTab: true,
+        showPartnerAlumniTab: true,
+      }),
+      "overview",
+    );
   });
 });
 
@@ -60,6 +128,26 @@ describe("PublicEventEditionTabs", () => {
     assert.match(html, />Sponsors<\/a>/);
   });
 
+  it("places Exhibitors after Sponsors when the tab is shown", () => {
+    const html = renderTabs("exhibitors", { showExhibitorsTab: true });
+    const sponsorsIdx = html.indexOf(">Sponsors</a>");
+    const exhibitorsIdx = html.indexOf(">Exhibitors</a>");
+    const venueIdx = html.indexOf(">Venue</a>");
+
+    assert.ok(sponsorsIdx !== -1);
+    assert.ok(exhibitorsIdx !== -1);
+    assert.ok(venueIdx !== -1);
+    assert.ok(sponsorsIdx < exhibitorsIdx);
+    assert.ok(exhibitorsIdx < venueIdx);
+    assert.match(html, /data-panel="exhibitors"/);
+    assert.match(html, /href="\/events\/demo-event\?tab=exhibitors"/);
+  });
+
+  it("omits Exhibitors from the tab bar when hidden", () => {
+    const html = renderTabs("overview", { showExhibitorsTab: false });
+    assert.doesNotMatch(html, />Exhibitors<\/a>/);
+  });
+
   it("uses a clean overview href without a tab query param", () => {
     const html = renderTabs("overview");
 
@@ -73,6 +161,10 @@ describe("PublicEventEditionTabs", () => {
     assert.equal(
       buildPublicEditionTabHref("demo-event", "sponsors"),
       "/events/demo-event?tab=sponsors",
+    );
+    assert.equal(
+      buildPublicEditionTabHref("demo-event", "exhibitors"),
+      "/events/demo-event?tab=exhibitors",
     );
   });
 
@@ -143,6 +235,12 @@ describe("PublicEventEditionTabs", () => {
   });
 
   it("falls back safely when partner alumni is hidden", () => {
-    assert.equal(parsePublicEditionTab("partner-alumni", false), "overview");
+    assert.equal(
+      parsePublicEditionTab("partner-alumni", {
+        showExhibitorsTab: true,
+        showPartnerAlumniTab: false,
+      }),
+      "overview",
+    );
   });
 });

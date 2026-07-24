@@ -1,16 +1,22 @@
 import type { LiveExhibitorRow } from "@/src/features/exhibitors/server/eventExhibitorAdmin";
 
-export type LiveExhibitorTierGroup = {
+export type ExhibitorTierGroupable = {
+  id: string;
+  tier_rank: number | null;
+  tier_label: string | null;
+};
+
+export type LiveExhibitorTierGroup<T extends ExhibitorTierGroupable = LiveExhibitorRow> = {
   tierRank: number | null;
   tierLabel: string | null;
-  exhibitors: LiveExhibitorRow[];
+  exhibitors: T[];
 };
 
 /** Groups exhibitors by tier_rank, preserving input order within each group. */
-export function groupExhibitorsByTier(
-  rows: readonly LiveExhibitorRow[],
-): LiveExhibitorTierGroup[] {
-  const groups: LiveExhibitorTierGroup[] = [];
+export function groupExhibitorsByTier<T extends ExhibitorTierGroupable>(
+  rows: readonly T[],
+): LiveExhibitorTierGroup<T>[] {
+  const groups: LiveExhibitorTierGroup<T>[] = [];
   const indexByRank = new Map<string, number>();
 
   for (const row of rows) {
@@ -37,7 +43,10 @@ export function groupExhibitorsByTier(
   return groups;
 }
 
-export function formatExhibitorTierHeading(group: LiveExhibitorTierGroup): string {
+export function formatExhibitorTierHeading(group: {
+  tierRank: number | null;
+  tierLabel: string | null;
+}): string {
   const rankText = group.tierRank === null ? "Unranked" : `Tier ${group.tierRank}`;
   if (group.tierLabel && group.tierLabel.trim() !== "") {
     return `${rankText} · ${group.tierLabel.trim()}`;

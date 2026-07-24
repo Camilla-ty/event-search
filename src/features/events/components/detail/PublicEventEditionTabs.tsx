@@ -20,19 +20,14 @@ import {
   type PublicEditionTabId,
 } from "./publicEditionTabUrls";
 
-const BASE_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "sponsors", label: "Sponsors" },
-  { id: "venue", label: "Venue" },
-  { id: "organizers", label: "Organizers" },
-] as const;
-
 type PublicEventEditionTabsProps = {
   eventSlug: string;
   initialTab: PublicEditionTabId;
+  showExhibitorsTab: boolean;
   showPartnerAlumniTab: boolean;
   overviewPanel: ReactNode;
   sponsorsPanel: ReactNode;
+  exhibitorsPanel: ReactNode;
   venuePanel: ReactNode;
   organizersPanel: ReactNode;
   partnerAlumniPanel: ReactNode;
@@ -41,16 +36,22 @@ type PublicEventEditionTabsProps = {
 export function PublicEventEditionTabs({
   eventSlug,
   initialTab,
+  showExhibitorsTab,
   showPartnerAlumniTab,
   overviewPanel,
   sponsorsPanel,
+  exhibitorsPanel,
   venuePanel,
   organizersPanel,
   partnerAlumniPanel,
 }: PublicEventEditionTabsProps) {
   const readTabFromLocation = useCallback(
-    () => parsePublicEditionTab(readTabSearchParamFromWindow(), showPartnerAlumniTab),
-    [showPartnerAlumniTab],
+    () =>
+      parsePublicEditionTab(readTabSearchParamFromWindow(), {
+        showExhibitorsTab,
+        showPartnerAlumniTab,
+      }),
+    [showExhibitorsTab, showPartnerAlumniTab],
   );
 
   const { activeTab, handleTabClick, selectTab } = useInstantTabNavigation({
@@ -58,7 +59,14 @@ export function PublicEventEditionTabs({
     readTabFromLocation,
   });
 
-  const tabs: Array<{ id: PublicEditionTabId; label: string }> = [...BASE_TABS];
+  const tabs: Array<{ id: PublicEditionTabId; label: string }> = [
+    { id: "overview", label: "Overview" },
+    { id: "sponsors", label: "Sponsors" },
+  ];
+  if (showExhibitorsTab) {
+    tabs.push({ id: "exhibitors", label: "Exhibitors" });
+  }
+  tabs.push({ id: "venue", label: "Venue" }, { id: "organizers", label: "Organizers" });
   if (showPartnerAlumniTab) {
     tabs.push({ id: "partner-alumni", label: "Partner Alumni" });
   }
@@ -68,11 +76,13 @@ export function PublicEventEditionTabs({
       ? overviewPanel
       : activeTab === "sponsors"
         ? sponsorsPanel
-        : activeTab === "venue"
-          ? venuePanel
-          : activeTab === "organizers"
-            ? organizersPanel
-            : partnerAlumniPanel;
+        : activeTab === "exhibitors"
+          ? exhibitorsPanel
+          : activeTab === "venue"
+            ? venuePanel
+            : activeTab === "organizers"
+              ? organizersPanel
+              : partnerAlumniPanel;
 
   return (
     <PublicEditionTabNavigationProvider selectTab={selectTab}>

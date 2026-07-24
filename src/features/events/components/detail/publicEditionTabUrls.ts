@@ -1,16 +1,25 @@
 export type PublicEditionTabId =
   | "overview"
   | "sponsors"
+  | "exhibitors"
   | "venue"
   | "organizers"
   | "partner-alumni";
 
+export type PublicEditionTabVisibility = {
+  showExhibitorsTab: boolean;
+  showPartnerAlumniTab: boolean;
+};
+
 export function parsePublicEditionTab(
   raw: string | null,
-  showPartnerAlumniTab: boolean,
+  visibility: PublicEditionTabVisibility,
 ): PublicEditionTabId {
+  if (raw === "exhibitors") {
+    return visibility.showExhibitorsTab ? "exhibitors" : "overview";
+  }
   if (raw === "partner-alumni") {
-    return showPartnerAlumniTab ? "partner-alumni" : "overview";
+    return visibility.showPartnerAlumniTab ? "partner-alumni" : "overview";
   }
   if (raw === "sponsors" || raw === "venue" || raw === "organizers") return raw;
   return "overview";
