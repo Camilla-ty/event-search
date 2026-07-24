@@ -2,13 +2,13 @@
 
 **Status:** Approved
 **Version:** v1.1
-**Last updated:** 2026-07-24 (E2: manual-only `last_reviewed_at`)
+**Last updated:** 2026-07-24 (E6 Bulk Import marked shipped)
 
 Canonical design for **Exhibitor** as an edition-scoped relationship between an **Event Edition** and a **Company**. Exhibitors answer *who exhibited at this occurrence* — inside the Event Edition and company-profile experiences, not as a standalone Exhibitor Discovery product.
 
 **Source roster columns (research):** Exhibitor Tier, Exhibitor Label, Name, Website. Name and Website remain on `companies`; tier metadata lives on the join.
 
-**This document is design only** for UI/API surfaces beyond Phase E1. Schema and company-merge SQL are specified for E1 implementation.
+**Authority:** This document remains the product-design source of truth for exhibitor rules. Implementation status for phases E0–E6 is recorded in §10 (do not treat older “future / deferred” wording elsewhere as current delivery state without checking §10).
 
 **Related architecture (do not duplicate):**
 
@@ -20,7 +20,7 @@ Canonical design for **Exhibitor** as an edition-scoped relationship between an 
 | Organizer join (closest structural twin for RLS) | [organizer-design.md](./organizer-design.md) |
 | Hide-when-empty public tab pattern | Partner Alumni — [partner-alumni-design.md](./partner-alumni-design.md), `shouldShowPublicPartnerAlumniTab` |
 | Research freshness | [phase-edition-last-reviewed-automation-scope.md](./phase-edition-last-reviewed-automation-scope.md) |
-| Import matching (reuse later) | [sponsor-import-database-design.md](./sponsor-import-database-design.md), `companyImportMatching` |
+| Import matching | [sponsor-import-database-design.md](./sponsor-import-database-design.md), `companyImportMatching` (reused by shipped E6 exhibitor import) |
 
 ---
 
@@ -252,17 +252,17 @@ Merge may collect affected edition IDs for tooling (`collectExhibitorMergeEditio
 
 ## 10. Phased implementation plan
 
-| Phase | Deliverable |
-|-------|-------------|
-| **E0 — Design lock** | This document approved; open decisions closed |
-| **E1 — Schema + merge** | `event_exhibitors` + RLS/grants; company-merge preview/commit for exhibitor conflicts |
-| **E2 — Admin CRUD** | Edition Exhibitors tab: add / edit tier / remove / within-tier reorder; `assertCompanyLinkable` on create; **no** auto last-reviewed; Company History deferred |
-| **E3 — Public Event Detail** | Gated Exhibitors tab; restricted scrubbing; deep-link fallback |
-| **E4 — Public company profile** | Exhibitor history section; hide when empty; auth parity documented |
-| **E5 — Hardening** | Tests, merge QA; no discovery product |
-| **E6 — Bulk import (future)** | Separate design; reuse `companyImportMatching` + identity/create/domain link; **independent** draft→publish into `event_exhibitors` only (writes exhibitor tiers; **no** writes to `event_sponsors`) |
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| **E0 — Design lock** | This document approved; open decisions closed | Complete |
+| **E1 — Schema + merge** | `event_exhibitors` + RLS/grants; company-merge preview/commit for exhibitor conflicts | Shipped (`20260725130000_event_exhibitors_v1.sql`) |
+| **E2 — Admin CRUD** | Edition Exhibitors tab: add / edit tier / remove / within-tier reorder; `assertCompanyLinkable` on create; **no** auto last-reviewed | Shipped |
+| **E3 — Public Event Detail** | Gated Exhibitors tab; restricted scrubbing; deep-link fallback | Shipped |
+| **E4 — Public company profile** | Exhibitor history section; hide when empty; auth parity documented | Shipped |
+| **E5 — Hardening** | Tests, merge QA; no discovery product | Shipped |
+| **E6 — Bulk import** | Independent draft→publish into `event_exhibitors` only (writes exhibitor tiers; **no** writes to `event_sponsors`); reuses `companyImportMatching` + identity/create/domain link | **Shipped** (`20260726120000_exhibitor_import_v1.sql`, `src/features/exhibitor-import/**`, `/admin/exhibitor-imports`; commit `a33f304`) |
 
-E0–E5 are **Exhibitors v1**. E6 is explicitly post-v1.
+**History:** E0–E5 were scoped as **Exhibitors v1**. E6 was originally labeled post-v1 / future in this document; it is now shipped. Do not revert E6 to “future” without a deliberate product decision.
 
 ---
 
@@ -270,7 +270,7 @@ E0–E5 are **Exhibitors v1**. E6 is explicitly post-v1.
 
 | Item | Notes |
 |------|-------|
-| Exhibitor Discovery / marketing productization of `/exhibitors` | Stub may remain; do not expand |
+| Exhibitor Discovery / marketing productization of `/exhibitors` | Stub may remain; do not expand (`PROD-002`) |
 | Homepage or public exhibitor statistics | |
 | Exhibitor SEO landing pages | |
 | Booth / hall / floor-plan coordinates | |
@@ -279,7 +279,7 @@ E0–E5 are **Exhibitors v1**. E6 is explicitly post-v1.
 | Series-level exhibitors | Edition only |
 | Sponsor RLS / ADR-003 lazy-load / Sponsor Discovery APIs | Do not copy |
 | Folding exhibitors into `event_sponsors` | Forbidden |
-| Bulk import | Deferred to E6 |
+| Bulk import | **Was** deferred to E6; **E6 is now shipped** (see §10) |
 | Overview / Explorer exhibitor UI | |
 | Changing event indexability to depend on exhibitor count | Keep sponsor-driven unless product revisits |
 
@@ -287,11 +287,10 @@ E0–E5 are **Exhibitors v1**. E6 is explicitly post-v1.
 
 ## 12. Open items for later phases only
 
-Product decisions above are locked. Remaining engineering details for E2+:
+Product decisions above are locked. Residual engineering follow-ups (not new phases):
 
-1. Exact admin tab id / URL param naming on edition detail.
-2. Migration apply order / remote verification checklist (ops).
-3. When to extend `assertCompanyLinkable` to sponsor/organizer create paths (follow-up hardening).
+1. When to extend `assertCompanyLinkable` to sponsor/organizer create paths (follow-up hardening).
+2. Marketing `/exhibitors` stub framing vs live product language (`PROD-002`).
 
 ---
 
@@ -303,3 +302,13 @@ Product decisions above are locked. Remaining engineering details for E2+:
 - Restricted companies do not leak logos/links on public exhibitor rows.
 - Company merge cannot silently drop or duplicate exhibitor links without resolution.
 - No Exhibitor Discovery surface ships.
+- Researchers can bulk-upload exhibitors via the independent E6 pipeline without writing `event_sponsors`.
+
+---
+
+## Document history
+
+| Date | Change |
+|------|--------|
+| 2026-07-24 | E2 locked: manual-only `last_reviewed_at` |
+| 2026-07-24 | E6 Bulk Import marked **shipped**; E0–E5 status column added; preserved post-v1 history note for E6 |

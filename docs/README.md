@@ -96,13 +96,13 @@ See [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
 
 ---
 
-## Exhibitors (v1 — design approved; E1 applied; E2 admin CRUD)
+## Exhibitors (E0–E6 shipped; Discovery out of scope)
 
 | Document | Description |
 |----------|-------------|
-| [Exhibitor Design](./exhibitor-design.md) | **Approved** — edition↔company exhibitor join; orthogonal to sponsors/organizers; public tab hide-when-empty |
+| [Exhibitor Design](./exhibitor-design.md) | **Approved** — edition↔company exhibitor join; orthogonal to sponsors/organizers; public tab hide-when-empty; **E6 bulk import shipped** |
 
-**Locked highlights:** `event_exhibitors` join (`tier_rank`, `tier_label`, within-tier `display_order`; Name/Website on `companies`); organizer-like public SELECT (no sponsor tier RLS); admin Exhibitors tab (E2); `assertCompanyLinkable` on create; Sponsor-style merge conflicts; **manual-only** `last_reviewed_at` (no auto-touch); public Exhibitors tab / Company History / Discovery / import deferred; do not modify `/exhibitors` marketing stub.
+**Locked highlights:** `event_exhibitors` join (`tier_rank`, `tier_label`, within-tier `display_order`; Name/Website on `companies`); organizer-like public SELECT (no sponsor tier RLS); admin Exhibitors tab (E2); public Exhibitors tab (E3); company Exhibitor history (E4); **manual-only** `last_reviewed_at` (no auto-touch); `assertCompanyLinkable` on create; Sponsor-style merge conflicts; **E6** independent exhibitor import (writes `event_exhibitors` only — never `event_sponsors`); Exhibitor Discovery / marketing `/exhibitors` stub expansion out of scope (`PROD-002`).
 
 ---
 
