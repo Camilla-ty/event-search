@@ -6,6 +6,12 @@
 |----------|-------------|
 | [Terminology](./terminology.md) | Source of truth for internal model names and user-facing **Event Brand** / **Event** terminology |
 
+## Engineering standards
+
+| Document | Description |
+|----------|-------------|
+| [Definition of Done](./standards/definition-of-done.md) | **Canonical** minimum evidence before work may be described as complete or prepared for commit |
+
 ## Engineering Health Check
 
 | Document | Description |

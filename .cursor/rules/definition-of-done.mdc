@@ -1,0 +1,17 @@
+---
+description: Enforce canonical Definition of Done before completion or commit prep
+alwaysApply: true
+---
+
+# Definition of Done
+
+Always follow [`docs/standards/definition-of-done.md`](docs/standards/definition-of-done.md).
+
+Before describing repository work as complete, and before preparing a commit:
+
+1. Run a Definition of Done review against every applicable section.
+2. Perform and report a Documentation Impact Review (or state `Documentation impact: None` with a brief reason).
+3. Report verification that was actually run. Do not claim unrun checks passed.
+4. If an applicable requirement is incomplete, identify it explicitly instead of declaring the work complete.
+
+Do not commit or push unless the user explicitly requests it.
