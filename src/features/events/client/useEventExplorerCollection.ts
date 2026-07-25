@@ -41,6 +41,8 @@ type EventExplorerCollectionState = {
 export type UseEventExplorerCollectionResult = EventExplorerCollectionState & {
   params: EventExplorerParams;
   isLoading: boolean;
+  /** True while params are ahead of the last applied fetch (includes one-frame gap). */
+  isResultsPending: boolean;
   error: string | null;
   setFilters: (
     value: EventFilters | ((prev: EventFilters) => EventFilters),
@@ -70,6 +72,9 @@ export function useEventExplorerCollection(
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAppliedParamsKey, setLastAppliedParamsKey] = useState(() =>
+    buildEventExplorerParamsKey(initial.params),
+  );
 
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
@@ -98,6 +103,7 @@ export function useEventExplorerCollection(
       activeTopic: initial.activeTopic,
       topicUnknown: initial.topicUnknown,
     });
+    setLastAppliedParamsKey(initialParamsKey);
     setError(null);
     setIsLoading(false);
   }, [
@@ -187,6 +193,7 @@ export function useEventExplorerCollection(
           activeTopic: result.activeTopic,
           topicUnknown: result.topicUnknown,
         });
+        setLastAppliedParamsKey(resultKey);
         setParams(result.params);
       })
       .catch((fetchError: unknown) => {
@@ -250,6 +257,9 @@ export function useEventExplorerCollection(
     }
   }, []);
 
+  const paramsKey = buildEventExplorerParamsKey(params);
+  const isResultsPending = isLoading || paramsKey !== lastAppliedParamsKey;
+
   return {
     rows: collection.rows,
     total: collection.total,
@@ -258,6 +268,7 @@ export function useEventExplorerCollection(
     topicUnknown: collection.topicUnknown,
     params,
     isLoading,
+    isResultsPending,
     error,
     setFilters,
     setSort,

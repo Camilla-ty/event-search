@@ -364,4 +364,61 @@ describe("useEventExplorerCollection sort behavior", () => {
     assert.deepEqual(harness.latest().rows.map((r) => r.id), ["d1"]);
     assert.equal(harness.latest().error, null);
   });
+
+  it("marks results pending on query change without clearing the previous collection", async () => {
+    const deferred = createDeferred<Response>();
+
+    restoreFetch = installFetchMock({
+      recommended: () => deferred.promise,
+    });
+
+    const initial = buildInitial({
+      rows: [row("r1", "Recommended First")],
+      total: 84,
+    });
+
+    const harness = mount(initial);
+    await flush();
+
+    assert.equal(harness.latest().isResultsPending, false);
+    assert.equal(harness.latest().total, 84);
+
+    act(() => {
+      harness.latest().setQuery("tokeni");
+    });
+
+    // One-frame / pre-fetch gap: params moved ahead of the last fetched key.
+    assert.equal(harness.latest().isResultsPending, true);
+    assert.equal(harness.latest().total, 84);
+    assert.deepEqual(harness.latest().rows.map((r) => r.id), ["r1"]);
+
+    await flush(1);
+    assert.equal(harness.latest().isResultsPending, true);
+    assert.equal(harness.latest().isLoading, true);
+    assert.equal(harness.latest().total, 84);
+
+    act(() => {
+      deferred.resolve(
+        jsonResponse(
+          buildInitial({
+            rows: [row("t1", "Tokenize: LDN 2025")],
+            total: 1,
+            filters: { ...DEFAULT_EVENT_EXPLORER_FILTERS, query: "tokeni" },
+            params: {
+              filters: { ...DEFAULT_EVENT_EXPLORER_FILTERS, query: "tokeni" },
+              sort: "recommended",
+              page: 1,
+            },
+          }),
+        ),
+      );
+    });
+    await flush();
+
+    assert.equal(harness.latest().isResultsPending, false);
+    assert.equal(harness.latest().isLoading, false);
+    assert.equal(harness.latest().total, 1);
+    assert.deepEqual(harness.latest().rows.map((r) => r.id), ["t1"]);
+    assert.equal(harness.latest().error, null);
+  });
 });

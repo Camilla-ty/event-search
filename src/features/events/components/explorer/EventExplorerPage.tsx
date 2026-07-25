@@ -42,7 +42,7 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
     total,
     facets,
     params,
-    isLoading,
+    isResultsPending,
     error,
     setFilters,
     setSort,
@@ -115,6 +115,7 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
             sortOptions={EVENT_SORT_OPTIONS}
             onSortChange={setSort}
             onOpenFilters={() => setMobileFiltersOpen(true)}
+            isPending={isResultsPending}
           />
           {error !== null ? (
             <div
@@ -135,7 +136,7 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
             total={total}
             page={params.page}
             pageSize={initial.page_size}
-            loading={isLoading}
+            loading={isResultsPending}
             onPageChange={setPage}
             onReset={handleReset}
           />

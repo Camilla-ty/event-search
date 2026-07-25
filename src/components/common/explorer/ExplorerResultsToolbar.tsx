@@ -13,7 +13,27 @@ type ExplorerResultsToolbarProps<T extends string> = {
   onSortChange: (value: T) => void;
   onOpenFilters?: () => void;
   showSort?: boolean;
+  /** When true, hide the previous total and show a pending status instead. */
+  isPending?: boolean;
+  pendingLabel?: string;
 };
+
+export function formatExplorerResultsFoundLabel(
+  total: number,
+  entityLabel: string,
+): { countText: string; restText: string; fullText: string } {
+  if (total === 1) {
+    const singular = entityLabel.endsWith("s")
+      ? entityLabel.slice(0, -1)
+      : entityLabel;
+    const fullText = `1 ${singular} found`;
+    return { countText: "1", restText: `${singular} found`, fullText };
+  }
+
+  const countText = total.toLocaleString();
+  const fullText = `${countText} ${entityLabel} found`;
+  return { countText, restText: `${entityLabel} found`, fullText };
+}
 
 export function ExplorerResultsToolbar<T extends string>({
   total,
@@ -23,13 +43,23 @@ export function ExplorerResultsToolbar<T extends string>({
   onSortChange,
   onOpenFilters,
   showSort = true,
+  isPending = false,
+  pendingLabel = "Updating results…",
 }: ExplorerResultsToolbarProps<T>) {
+  const found = formatExplorerResultsFoundLabel(total, entityLabel);
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p className="text-sm text-slate-600">
-        <span className="font-semibold text-slate-900">{total.toLocaleString()}</span>{" "}
-        {entityLabel} found
-      </p>
+      {isPending ? (
+        <p className="text-sm text-slate-600" role="status" aria-live="polite">
+          {pendingLabel}
+        </p>
+      ) : (
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{found.countText}</span>{" "}
+          {found.restText}
+        </p>
+      )}
 
       <div className="flex items-center gap-2">
         {onOpenFilters ? (
