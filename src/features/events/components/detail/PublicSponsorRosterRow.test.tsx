@@ -21,7 +21,6 @@ describe("PublicSponsorRosterRow", () => {
     const html = renderRow({
       id: "sponsor-1",
       company_id: "11111111-1111-1111-1111-111111111111",
-      tier_label: "Title Partner",
       companies: {
         id: "11111111-1111-1111-1111-111111111111",
         slug: "acme-corp",
@@ -38,76 +37,7 @@ describe("PublicSponsorRosterRow", () => {
     assert.match(html, /acme\.com/);
     assert.match(html, /href="\/sponsors\/acme-corp"/);
     assert.match(html, />A</);
-    assert.doesNotMatch(html, /Title Partner/);
     assert.doesNotMatch(html, new RegExp(RESTRICTED_COMPANY_PUBLIC_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  });
-
-  it("shows the exact stored tier_label badge when showTierLabel is set", () => {
-    const html = renderToStaticMarkup(
-      <ul>
-        <PublicSponsorRosterRow
-          showTierLabel
-          sponsor={{
-            id: "sponsor-3",
-            company_id: "33333333-3333-3333-3333-333333333333",
-            tier_rank: 1,
-            tier_label: "Title Partner",
-            companies: {
-              id: "33333333-3333-3333-3333-333333333333",
-              slug: "okx",
-              name: "OKX",
-              domain: "okx.com",
-              restricted_at: null,
-            },
-          }}
-        />
-      </ul>,
-    );
-
-    assert.match(html, /OKX/);
-    assert.match(html, /Title Partner/);
-  });
-
-  it("hides the tier badge when tier_label is null or blank", () => {
-    const nullLabel = renderToStaticMarkup(
-      <ul>
-        <PublicSponsorRosterRow
-          showTierLabel
-          sponsor={{
-            id: "sponsor-4",
-            tier_label: null,
-            companies: {
-              id: "44444444-4444-4444-4444-444444444444",
-              name: "No Tier Co",
-              domain: "example.com",
-              restricted_at: null,
-            },
-          }}
-        />
-      </ul>,
-    );
-    const blankLabel = renderToStaticMarkup(
-      <ul>
-        <PublicSponsorRosterRow
-          showTierLabel
-          sponsor={{
-            id: "sponsor-5",
-            tier_label: "   ",
-            companies: {
-              id: "55555555-5555-5555-5555-555555555555",
-              name: "Blank Tier Co",
-              domain: "blank.example",
-              restricted_at: null,
-            },
-          }}
-        />
-      </ul>,
-    );
-
-    assert.match(nullLabel, /No Tier Co/);
-    assert.doesNotMatch(nullLabel, /bg-slate-100/);
-    assert.match(blankLabel, /Blank Tier Co/);
-    assert.doesNotMatch(blankLabel, /bg-slate-100/);
   });
 
   it("renders restricted sponsors with name and policy message only", () => {

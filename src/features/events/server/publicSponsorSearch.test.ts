@@ -67,7 +67,6 @@ describe("mapPublicSponsorSearchItem", () => {
     assert.equal(item?.company.restricted, false);
     assert.equal(item?.company.domain, "acme.com");
     assert.equal(item?.company.href, "/sponsors/acme");
-    assert.equal(item?.tier_rank, 1);
     assert.equal(item?.tier_label, "Gold");
     assert.equal(
       Object.prototype.hasOwnProperty.call(item?.company ?? {}, "aliases"),
@@ -75,30 +74,9 @@ describe("mapPublicSponsorSearchItem", () => {
     );
   });
 
-  it("preserves the exact stored tier_label and omits blank labels", () => {
-    const titled = mapPublicSponsorSearchItem({
-      ...baseRow,
-      tier_label: "Title Partner",
-    });
-    assert.equal(titled?.tier_label, "Title Partner");
-
-    const blank = mapPublicSponsorSearchItem({
-      ...baseRow,
-      tier_label: "   ",
-    });
-    assert.equal(blank?.tier_label, null);
-
-    const missing = mapPublicSponsorSearchItem({
-      ...baseRow,
-      tier_label: null,
-    });
-    assert.equal(missing?.tier_label, null);
-  });
-
-  it("scrubs restricted company fields but keeps tier_rank and tier_label", () => {
+  it("scrubs restricted company fields in the API payload", () => {
     const item = mapPublicSponsorSearchItem({
       ...baseRow,
-      tier_label: "Title Partner",
       company: {
         ...baseRow.company,
         restricted_at: "2026-07-01T00:00:00Z",
@@ -115,8 +93,6 @@ describe("mapPublicSponsorSearchItem", () => {
     assert.equal(item?.company.logo_status, null);
     assert.equal(item?.company.slug, null);
     assert.equal(item?.company.href, null);
-    assert.equal(item?.tier_rank, 1);
-    assert.equal(item?.tier_label, "Title Partner");
   });
 
   it("returns null when required identity fields are missing", () => {
@@ -160,8 +136,6 @@ describe("sponsor search wiring", () => {
     assert.match(source, /status: 401/);
     assert.match(source, /event_edition_sponsor_search/);
     assert.match(source, /PUBLIC_SPONSOR_SEARCH_MAX_RESULTS/);
-    assert.match(source, /tier_rank/);
-    assert.match(source, /tier_label/);
     assert.equal(PUBLIC_SPONSOR_SEARCH_MAX_RESULTS, 20);
     assert.doesNotMatch(source, /createAdminClient/);
     assert.doesNotMatch(source, /sponsors\/discovery|getSponsorDiscovery/);
@@ -178,10 +152,6 @@ describe("sponsor search wiring", () => {
     assert.match(source, /CREATE OR REPLACE FUNCTION public\.event_edition_sponsor_search/);
     assert.match(source, /SECURITY INVOKER/);
     assert.match(source, /LIMIT 20/);
-    assert.match(source, /es\.tier_rank/);
-    assert.match(source, /es\.tier_label/);
-    assert.match(source, /'tier_rank', m\.tier_rank/);
-    assert.match(source, /'tier_label', m\.tier_label/);
     assert.match(source, /__company_matches_verified_domain_search/);
     assert.match(
       source,

@@ -37,17 +37,11 @@ function readSearchItem(raw: unknown): PublicSponsorSearchItem | null {
   const name = typeof company.name === "string" ? company.name.trim() : "";
   if (name === "") return null;
 
-  const tierLabelRaw =
-    typeof row.tier_label === "string" ? row.tier_label : null;
-  // Keep the stored label text; blank/whitespace-only → null (no badge).
-  const tierLabel =
-    tierLabelRaw !== null && tierLabelRaw.trim() !== "" ? tierLabelRaw : null;
-
   return {
     id,
     company_id: companyId,
     tier_rank: typeof row.tier_rank === "number" ? row.tier_rank : null,
-    tier_label: tierLabel,
+    tier_label: typeof row.tier_label === "string" ? row.tier_label : null,
     display_order:
       typeof row.display_order === "number" ? row.display_order : null,
     company: {
