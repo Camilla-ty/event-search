@@ -1,6 +1,7 @@
+import { groupSponsorsByTier } from "@/src/features/events/lib/groupSponsorsByTier";
 import type { PublicSponsorSearchItem } from "@/src/features/events/server/publicSponsorSearch";
 
-import { PublicSponsorRosterRow } from "./PublicSponsorRosterRow";
+import { PublicSponsorTierPanel } from "./PublicSponsorTierPanel";
 import type { EventSponsorRow } from "./types";
 
 function searchItemToSponsorRow(item: PublicSponsorSearchItem): EventSponsorRow {
@@ -25,6 +26,10 @@ function searchItemToSponsorRow(item: PublicSponsorSearchItem): EventSponsorRow 
   };
 }
 
+function searchTierSlug(tierRank: number | null): string {
+  return tierRank === null ? "unranked" : String(tierRank);
+}
+
 type PublicSponsorSearchResultsProps = {
   items: PublicSponsorSearchItem[];
   loading: boolean;
@@ -33,6 +38,10 @@ type PublicSponsorSearchResultsProps = {
   query: string;
 };
 
+/**
+ * Search results as a filtered sponsor roster: always-expanded tier panels,
+ * no accordion / Load more / lazy load. Groups the capped flat API response.
+ */
 export function PublicSponsorSearchResults({
   items,
   loading,
@@ -40,6 +49,9 @@ export function PublicSponsorSearchResults({
   fetched,
   query,
 }: PublicSponsorSearchResultsProps) {
+  const rows = items.map(searchItemToSponsorRow);
+  const tierGroups = groupSponsorsByTier(rows);
+
   if (loading && items.length === 0) {
     return (
       <p className="text-sm text-slate-500" role="status">
@@ -64,20 +76,29 @@ export function PublicSponsorSearchResults({
     );
   }
 
+  if (tierGroups.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-xs text-slate-500">
         Showing up to {items.length} match{items.length === 1 ? "" : "es"}
         {loading ? "…" : ""}
       </p>
-      <ul className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {items.map((item) => (
-          <PublicSponsorRosterRow
-            key={item.id}
-            sponsor={searchItemToSponsorRow(item)}
+      {tierGroups.map((group) => {
+        const slug = searchTierSlug(group.tierRank);
+        return (
+          <PublicSponsorTierPanel
+            key={slug}
+            tierLabel={group.tierLabel}
+            count={group.sponsors.length}
+            headerId={`search-sponsor-tier-header-${slug}`}
+            panelId={`search-sponsor-tier-panel-${slug}`}
+            sponsors={group.sponsors}
           />
-        ))}
-      </ul>
+        );
+      })}
     </div>
   );
 }
