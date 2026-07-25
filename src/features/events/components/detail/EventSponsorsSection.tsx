@@ -16,7 +16,7 @@ import type {
 
 import { EditionSponsorNote } from "./EditionSponsorNote";
 import { EditionSectionSurface } from "./EditionSectionSurface";
-import { PublicSponsorTierGroupedRoster } from "./PublicSponsorTierGroupedRoster";
+import { PublicSponsorRosterWithSearch } from "./PublicSponsorRosterWithSearch";
 
 type EventSponsorsSectionProps = {
   tierSummaries: PublicSponsorTierSummary;
@@ -57,8 +57,7 @@ export function EventSponsorsSection({
       {showSponsorNote ? (
         <EditionSponsorNote sponsorNoteType={sponsorNoteType} />
       ) : (
-        <PublicSponsorTierGroupedRoster
-          key={tierSummaries.editionId}
+        <PublicSponsorRosterWithSearch
           editionId={tierSummaries.editionId}
           initialTier1Page={initialTier1Page}
           tierSummaries={tierSummaries.tiers}
