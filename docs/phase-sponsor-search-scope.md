@@ -36,6 +36,7 @@ GET /api/events/[id]/sponsors/search?q={query}
 | Unauthenticated | **`401`** `{ ok: false, error: "Authentication required." }` |
 | Cache | `Cache-Control: no-store` |
 | Success body | `{ ok: true, query, items: [...] }` only |
+| Item fields (required for roster row) | Include `tier_rank` and `tier_label` from `event_sponsors` (exact stored label; blank/null allowed) |
 | Forbidden response fields | `total`, `hasMore`, `next`, `page`, client-controlled `page_size` |
 
 `[id]` resolves the same way as the existing roster API (edition UUID or public slug).
@@ -88,6 +89,7 @@ Name (and a policy/restricted label consistent with the public roster row) may r
 | Query state | **Local component state** — no URL `?q=` (or other search query param) |
 | Trigger | Debounced request **after ≥3** characters |
 | Results UX | Search results **replace** the tier accordion temporarily |
+| Tier badge | Show each result’s **exact** stored `tier_label` as a subtle badge on the roster row; **hide** when `tier_label` is null or blank; do **not** normalize/rename labels from `tier_rank` |
 | Pagination | **No** “Load more” in search mode |
 | Clear | Clearing the query **restores** the existing tier roster state (accordion + previously loaded tier page data as before search) |
 
@@ -149,8 +151,8 @@ Migration: `supabase/migrations/20260727120000_event_edition_sponsor_search.sql`
 | Phase | Deliverable |
 |-------|-------------|
 | **S0 — Contract lock** | This document approved; API shape + visibility + scrub rules frozen |
-| **S1 — Server search** | ✅ Route `GET /api/events/[id]/sponsors/search`; auth **401**; INVOKER RPC (no anon EXECUTE); hard cap 20; restricted scrub; `no-store`; unit/wiring tests |
-| **S2 — Sponsors tab UI** | ✅ Search input **for authenticated users only**; debounce ≥3; results replace accordion; clear restores roster; reuse roster row presentation |
+| **S1 — Server search** | ✅ Route `GET /api/events/[id]/sponsors/search`; auth **401**; INVOKER RPC (no anon EXECUTE); hard cap 20; `tier_rank`/`tier_label` on items; restricted scrub; `no-store`; unit/wiring tests |
+| **S2 — Sponsors tab UI** | ✅ Search input **for authenticated users only**; debounce ≥3; results replace accordion; exact `tier_label` badge on rows; clear restores roster; reuse roster row presentation |
 | **S3 — Release gate** | Confirm CF/app rate-limit path coverage for the new endpoint before calling the feature publicly released |
 
 Optional follow-up (out of v1): extract shared parse/match/request helpers for Exhibitors / Partner Alumni — eligibility and UI still separate.
@@ -169,28 +171,30 @@ Optional follow-up (out of v1): extract shared parse/match/request helpers for E
 6. Response contains at most **20** items.
 7. Response JSON has **no** `total`, `hasMore`, `next`, or client-driven page size.
 8. Authenticated caller: matching sponsors from **all tiers** may appear (parity with authenticated roster permissions).
-9. Restricted company in results: name/policy only; no domain, website, logo, profile link, aliases, or match metadata in JSON.
-10. Unknown edition id/slug → `404` (when authenticated).
-11. `Cache-Control: no-store` on responses.
-12. Repeated identical queries return the same order for the same eligible set (stable ordering).
-13. `anon` cannot `EXECUTE` `event_edition_sponsor_search`; migration does not grant new EXECUTE on `__company_matches_verified_domain_search`.
+9. Each item includes `tier_rank` and `tier_label` from the stored sponsor link (exact label text; null/blank when unset).
+10. Restricted company in results: name/policy only; no domain, website, logo, profile link, aliases, or match metadata in JSON; `tier_rank`/`tier_label` may remain.
+11. Unknown edition id/slug → `404` (when authenticated).
+12. `Cache-Control: no-store` on responses.
+13. Repeated identical queries return the same order for the same eligible set (stable ordering).
+14. `anon` cannot `EXECUTE` `event_edition_sponsor_search`; migration does not grant new EXECUTE on `__company_matches_verified_domain_search`.
 
 ### 5.2 Client
 
-14. Search UI exists only on the event **Sponsors** tab and **only for authenticated viewers**.
-15. Anonymous viewers do not see the search control.
-16. No URL query parameter is written for the search string.
-17. Requests fire only after debounce and ≥3 characters.
-18. While search is active, results replace the tier accordion; there is no Load more.
-19. Clearing the input restores the prior tier roster UI state.
-20. The client never receives or accumulates a full-edition sponsor roster solely to power search.
+15. Search UI exists only on the event **Sponsors** tab and **only for authenticated viewers**.
+16. Anonymous viewers do not see the search control.
+17. No URL query parameter is written for the search string.
+18. Requests fire only after debounce and ≥3 characters.
+19. While search is active, results replace the tier accordion; there is no Load more.
+20. Each result row shows the exact stored `tier_label` as a subtle badge; badge omitted when label is null/blank; labels are not renamed from `tier_rank`.
+21. Clearing the input restores the prior tier roster UI state.
+22. The client never receives or accumulates a full-edition sponsor roster solely to power search.
 
 ### 5.3 Security / non-goals checks
 
-21. Implementation does not use service role or admin search helpers for this endpoint.
-22. Implementation does not call `/api/sponsors/discovery` or `/api/sponsors/suggest` as the Sponsors-tab search backend.
-23. No `event_sponsors` RLS migration ships in this phase.
-24. Rate limiting is explicitly called out as an ops prerequisite for public release (may be documented in the completion report even if configured outside the repo).
+23. Implementation does not use service role or admin search helpers for this endpoint.
+24. Implementation does not call `/api/sponsors/discovery` or `/api/sponsors/suggest` as the Sponsors-tab search backend.
+25. No `event_sponsors` RLS migration ships in this phase.
+26. Rate limiting is explicitly called out as an ops prerequisite for public release (may be documented in the completion report even if configured outside the repo).
 
 ---
 
@@ -214,3 +218,4 @@ Optional follow-up (out of v1): extract shared parse/match/request helpers for E
 | 2026-07-24 | S1: locked INVOKER RPC approach; server route + mapper + migration authored |
 | 2026-07-25 | **Authenticated-only:** API 401 for anon; RPC EXECUTE revoked from anon; no helper EXECUTE grants; UI gated to signed-in users (S2) |
 | 2026-07-25 | S2 UI: Sponsors tab search for authenticated viewers; roster kept mounted while searching |
+| 2026-07-25 | Search results show exact stored `tier_label` badge (`tier_rank`/`tier_label` already on RPC/API) |

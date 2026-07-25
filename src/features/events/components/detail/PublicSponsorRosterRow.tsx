@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import {
@@ -12,14 +13,26 @@ import type { EventSponsorRow } from "./types";
 
 type PublicSponsorRosterRowProps = {
   sponsor: EventSponsorRow;
+  /** When true, show the stored tier_label as a subtle badge (search results). */
+  showTierLabel?: boolean;
 };
 
-export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps) {
+export function PublicSponsorRosterRow({
+  sponsor,
+  showTierLabel = false,
+}: PublicSponsorRosterRowProps) {
   const company = sponsor.companies;
   const restricted = isCompanyRestricted(company);
   const companyName = company?.name?.trim() || "Unknown sponsor";
   const domain = restricted ? null : company?.domain?.trim() || null;
   const profileHref = company ? buildSponsorProfilePath(company) : null;
+  // Exact stored label only — no rank→name normalization. Blank/null → no badge.
+  const tierLabel =
+    showTierLabel &&
+    typeof sponsor.tier_label === "string" &&
+    sponsor.tier_label.trim() !== ""
+      ? sponsor.tier_label
+      : null;
   const logoFields = companyLogoFieldsFromRow(
     restricted && company
       ? {
@@ -47,7 +60,17 @@ export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps)
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <p className="truncate font-medium text-slate-900">{companyName}</p>
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <p className="truncate font-medium text-slate-900">{companyName}</p>
+          {tierLabel ? (
+            <Badge
+              variant="neutral"
+              className="w-fit max-w-full truncate px-1.5 py-0 text-[11px] font-medium text-slate-600"
+            >
+              {tierLabel}
+            </Badge>
+          ) : null}
+        </div>
         {restricted ? (
           <p className="truncate text-xs text-slate-500 sm:max-w-[40%] sm:shrink-0 sm:text-right">
             {RESTRICTED_COMPANY_ROSTER_LABEL}

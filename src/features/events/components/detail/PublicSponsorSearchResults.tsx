@@ -75,6 +75,7 @@ export function PublicSponsorSearchResults({
           <PublicSponsorRosterRow
             key={item.id}
             sponsor={searchItemToSponsorRow(item)}
+            showTierLabel
           />
         ))}
       </ul>
