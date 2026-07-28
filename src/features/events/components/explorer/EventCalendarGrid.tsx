@@ -1,5 +1,7 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import { buildCalendarColorLayout } from "@/src/features/events/lib/eventCalendarColors";
 import type { EventsByDay } from "@/src/features/events/lib/eventCalendarGrouping";
+import { buildCalendarLaneLayout } from "@/src/features/events/lib/eventCalendarLanes";
 import {
   isIsoDateInMonth,
   listGridDays,
@@ -21,6 +23,20 @@ type EventCalendarGridProps = {
   stretch?: boolean;
 };
 
+function collectUniqueEvents(eventsByDay: EventsByDay<EventRecord>): EventRecord[] {
+  const byId = new Map<string, EventRecord>();
+
+  for (const dayEvents of eventsByDay.values()) {
+    for (const event of dayEvents) {
+      if (!byId.has(event.id)) {
+        byId.set(event.id, event);
+      }
+    }
+  }
+
+  return [...byId.values()];
+}
+
 export function EventCalendarGrid({
   bounds,
   eventsByDay,
@@ -29,6 +45,9 @@ export function EventCalendarGrid({
   stretch = false,
 }: EventCalendarGridProps) {
   const gridDays = listGridDays(bounds.gridStart, bounds.gridEnd);
+  const visibleEvents = collectUniqueEvents(eventsByDay);
+  const laneLayout = buildCalendarLaneLayout(visibleEvents, bounds);
+  const colorLayout = buildCalendarColorLayout(laneLayout, bounds);
 
   return (
     <div
@@ -54,6 +73,7 @@ export function EventCalendarGrid({
             isoDate={isoDate}
             isCurrentMonth={isIsoDateInMonth(isoDate, bounds.month)}
             events={eventsByDay.get(isoDate) ?? []}
+            colorByEventId={colorLayout.colorByEventId}
             variant={variant}
           />
         ))}

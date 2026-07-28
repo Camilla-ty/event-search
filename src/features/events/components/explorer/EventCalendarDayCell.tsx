@@ -1,5 +1,7 @@
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import type { CalendarColorFamily } from "@/src/features/events/lib/eventCalendarColors";
 import { getTodayIsoDate } from "@/src/features/events/lib/eventCalendarGrouping";
+import { compareCalendarEvents } from "@/src/features/events/lib/eventCalendarOrdering";
 
 import { EventCalendarEventChip } from "./EventCalendarEventChip";
 
@@ -31,6 +33,7 @@ type EventCalendarDayCellProps = {
   isoDate: string;
   isCurrentMonth: boolean;
   events: readonly EventRecord[];
+  colorByEventId?: ReadonlyMap<string, CalendarColorFamily>;
   variant?: EventCalendarDayCellVariant;
 };
 
@@ -38,6 +41,7 @@ export function EventCalendarDayCell({
   isoDate,
   isCurrentMonth,
   events,
+  colorByEventId,
   variant = "default",
 }: EventCalendarDayCellProps) {
   const dayNumber = Number(isoDate.slice(8, 10));
@@ -45,9 +49,7 @@ export function EventCalendarDayCell({
   const eventCount = events.length;
   const isCompact = variant === "compact";
 
-  const sortedEvents = [...events].sort((a, b) =>
-    (a.name ?? "").localeCompare(b.name ?? "", undefined, { sensitivity: "base" }),
-  );
+  const sortedEvents = [...events].sort(compareCalendarEvents);
   const visibleEvents = sortedEvents.slice(0, MAX_VISIBLE_EVENTS);
   const overflowCount = sortedEvents.length - visibleEvents.length;
   const compactMobileOverflow = Math.max(
@@ -98,6 +100,7 @@ export function EventCalendarDayCell({
               <EventCalendarEventChip
                 key={`${isoDate}-${primaryCompactEvent.id}`}
                 event={primaryCompactEvent}
+                colorFamily={colorByEventId?.get(primaryCompactEvent.id)}
               />
             ) : null}
             {secondaryCompactEvent ? (
@@ -105,6 +108,7 @@ export function EventCalendarDayCell({
                 <EventCalendarEventChip
                   key={`${isoDate}-${secondaryCompactEvent.id}`}
                   event={secondaryCompactEvent}
+                  colorFamily={colorByEventId?.get(secondaryCompactEvent.id)}
                 />
               </div>
             ) : null}
@@ -129,7 +133,11 @@ export function EventCalendarDayCell({
       ) : (
         <div className="space-y-1">
           {visibleEvents.map((event) => (
-            <EventCalendarEventChip key={`${isoDate}-${event.id}`} event={event} />
+            <EventCalendarEventChip
+              key={`${isoDate}-${event.id}`}
+              event={event}
+              colorFamily={colorByEventId?.get(event.id)}
+            />
           ))}
           {overflowCount > 0 ? (
             <p className="px-1 text-xs font-medium text-slate-500">+{overflowCount} more</p>
