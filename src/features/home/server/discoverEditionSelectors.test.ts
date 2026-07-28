@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import {
   DISCOVER_MODULE_LIMIT,
   isUpcomingEdition,
-  selectRecentlyAddedEditions,
+  selectRecentlyReviewedEditions,
   selectUpcomingEditions,
   type DiscoverEditionCandidate,
 } from "@/src/features/home/server/discoverEditionSelectors";
@@ -23,7 +23,7 @@ function edition(
     end_date: null,
     locationLabel: "",
     event_series: null,
-    created_at: "2026-06-01T12:00:00Z",
+    last_reviewed_at: "2026-06-01T12:00:00Z",
     ...overrides,
   };
 }
@@ -145,36 +145,84 @@ describe("selectUpcomingEditions", () => {
   });
 });
 
-describe("selectRecentlyAddedEditions", () => {
-  it("sorts by created_at descending and respects the limit", () => {
+describe("selectRecentlyReviewedEditions", () => {
+  it("sorts by last_reviewed_at descending and respects the limit", () => {
     const editions = [
       edition({
         id: "1",
-        slug: "oldest",
-        name: "Oldest",
-        created_at: "2026-06-01T12:00:00Z",
+        slug: "oldest-review",
+        name: "Oldest Review",
+        last_reviewed_at: "2026-06-01T12:00:00Z",
       }),
       edition({
         id: "2",
-        slug: "middle",
-        name: "Middle",
-        created_at: "2026-06-05T12:00:00Z",
+        slug: "middle-review",
+        name: "Middle Review",
+        last_reviewed_at: "2026-06-05T12:00:00Z",
       }),
       edition({
         id: "3",
-        slug: "newest",
-        name: "Newest",
-        created_at: "2026-06-10T12:00:00Z",
+        slug: "newest-review",
+        name: "Newest Review",
+        last_reviewed_at: "2026-06-10T12:00:00Z",
       }),
     ];
 
-    const result = selectRecentlyAddedEditions(editions, { limit: 2 });
+    const result = selectRecentlyReviewedEditions(editions, { limit: 2 });
 
     assert.equal(result.length, 2);
     assert.deepEqual(
       result.map((item) => item.slug),
-      ["newest", "middle"],
+      ["newest-review", "middle-review"],
     );
     assert.equal(DISCOVER_MODULE_LIMIT, 6);
+  });
+
+  it("places unreviewed editions after reviewed editions", () => {
+    const editions = [
+      edition({
+        id: "unreviewed",
+        slug: "unreviewed",
+        name: "Unreviewed",
+        last_reviewed_at: null,
+      }),
+      edition({
+        id: "reviewed",
+        slug: "reviewed",
+        name: "Reviewed",
+        last_reviewed_at: "2026-06-10T00:00:00Z",
+      }),
+    ];
+
+    const result = selectRecentlyReviewedEditions(editions, { limit: 2 });
+
+    assert.deepEqual(
+      result.map((item) => item.slug),
+      ["reviewed", "unreviewed"],
+    );
+  });
+
+  it("uses name and id tie-breaks for equal last_reviewed_at values", () => {
+    const editions = [
+      edition({
+        id: "b",
+        slug: "beta",
+        name: "Beta",
+        last_reviewed_at: "2026-06-15T00:00:00Z",
+      }),
+      edition({
+        id: "a",
+        slug: "alpha",
+        name: "Alpha",
+        last_reviewed_at: "2026-06-15T00:00:00Z",
+      }),
+    ];
+
+    const result = selectRecentlyReviewedEditions(editions, { limit: 2 });
+
+    assert.deepEqual(
+      result.map((item) => item.slug),
+      ["alpha", "beta"],
+    );
   });
 });

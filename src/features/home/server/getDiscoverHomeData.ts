@@ -9,8 +9,8 @@ import { getPublicKeywordsForSeriesIds } from "@/src/features/events/server/seri
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
 import {
   DISCOVER_MODULE_LIMIT,
-  readEditionCreatedAt,
-  selectRecentlyAddedEditions,
+  readEditionLastReviewedAt,
+  selectRecentlyReviewedEditions,
   selectUpcomingEditions,
   type DiscoverEditionCandidate,
 } from "@/src/features/home/server/discoverEditionSelectors";
@@ -27,7 +27,7 @@ export type DiscoverEditionSummary = PublicEditionSummary & {
 
 export type DiscoverHomeData = {
   upcoming: DiscoverEditionSummary[];
-  recentlyAdded: DiscoverEditionSummary[];
+  recentlyReviewed: DiscoverEditionSummary[];
   calendarEvents: EventRecord[];
 };
 
@@ -66,9 +66,9 @@ export async function getDiscoverHomeData(options?: {
     seriesIdByEditionId.set(mapped.id, readSeriesId(row));
     editions.push({
       ...mapped,
-      created_at: readEditionCreatedAt(
+      last_reviewed_at: readEditionLastReviewedAt(
         typeof row === "object" && row !== null
-          ? (row as { created_at?: unknown }).created_at
+          ? (row as { last_reviewed_at?: unknown }).last_reviewed_at
           : null,
       ),
     });
@@ -78,14 +78,14 @@ export async function getDiscoverHomeData(options?: {
     .filter((edition) => readEventDateRange(edition) !== null)
     .map(mapEditionToEventRecord);
   const upcoming = selectUpcomingEditions(editions, { limit });
-  const recentlyAdded = selectRecentlyAddedEditions(editions, { limit });
-  const selectedEditions = [...upcoming, ...recentlyAdded];
+  const recentlyReviewed = selectRecentlyReviewedEditions(editions, { limit });
+  const selectedEditions = [...upcoming, ...recentlyReviewed];
   const selectedSeriesIds = selectedEditions.map(
     (edition) => seriesIdByEditionId.get(edition.id) ?? "",
   );
   const [keywordsBySeriesId, sponsorCountsByEditionId] = await Promise.all([
     getPublicKeywordsForSeriesIds(selectedSeriesIds),
-    getSponsorCountsByEditionIds(recentlyAdded.map((edition) => edition.id)),
+    getSponsorCountsByEditionIds(recentlyReviewed.map((edition) => edition.id)),
   ]);
 
   const withTopicPreview = (
@@ -104,7 +104,7 @@ export async function getDiscoverHomeData(options?: {
 
   return {
     upcoming: upcoming.map((edition) => withTopicPreview(edition, 2)),
-    recentlyAdded: recentlyAdded.map((edition) => ({
+    recentlyReviewed: recentlyReviewed.map((edition) => ({
       ...withTopicPreview(edition),
       sponsorCount: readSponsorCountForEdition(sponsorCountsByEditionId, edition.id),
     })),

@@ -1,9 +1,11 @@
+import type { EventRecord } from "@/src/features/events/components/explorer/types";
+import { compareRecentlyReviewedOrder } from "@/src/features/events/lib/eventExplorerOrdering";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
 
 export const DISCOVER_MODULE_LIMIT = 6;
 
 export type DiscoverEditionCandidate = PublicEditionSummary & {
-  created_at: string | null;
+  last_reviewed_at: string | null;
 };
 
 function compareStringsAsc(a: string, b: string): number {
@@ -17,10 +19,19 @@ function readIsoDate(value: string | null | undefined): string {
   return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : "";
 }
 
-export function readEditionCreatedAt(raw: unknown): string | null {
+export function readEditionLastReviewedAt(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const trimmed = raw.trim();
   return trimmed !== "" ? trimmed : null;
+}
+
+function toReviewOrderable(edition: DiscoverEditionCandidate): EventRecord {
+  return {
+    id: edition.id,
+    name: edition.name,
+    series_id: null,
+    last_reviewed_at: edition.last_reviewed_at,
+  };
 }
 
 export function isUpcomingEdition(
@@ -74,10 +85,10 @@ export function selectUpcomingEditions(
       return compareStringsAsc(a.name, b.name);
     })
     .slice(0, limit)
-    .map(stripCreatedAt);
+    .map(stripLastReviewedAt);
 }
 
-export function selectRecentlyAddedEditions(
+export function selectRecentlyReviewedEditions(
   editions: DiscoverEditionCandidate[],
   options?: { limit?: number },
 ): PublicEditionSummary[] {
@@ -85,25 +96,22 @@ export function selectRecentlyAddedEditions(
 
   return editions
     .slice()
-    .sort((a, b) => {
-      const createdA = a.created_at;
-      const createdB = b.created_at;
-      if (createdA && createdB) {
-        const byCreated = createdB.localeCompare(createdA);
-        if (byCreated !== 0) return byCreated;
-      } else if (createdA) {
-        return -1;
-      } else if (createdB) {
-        return 1;
-      }
-
-      return compareStringsAsc(a.name, b.name);
-    })
+    .sort((a, b) =>
+      compareRecentlyReviewedOrder(toReviewOrderable(a), toReviewOrderable(b)),
+    )
     .slice(0, limit)
-    .map(stripCreatedAt);
+    .map(stripLastReviewedAt);
 }
 
-function stripCreatedAt(edition: DiscoverEditionCandidate): PublicEditionSummary {
-  const { created_at: _createdAt, ...summary } = edition;
-  return summary;
+function stripLastReviewedAt(edition: DiscoverEditionCandidate): PublicEditionSummary {
+  return {
+    id: edition.id,
+    slug: edition.slug,
+    name: edition.name,
+    year: edition.year,
+    start_date: edition.start_date,
+    end_date: edition.end_date,
+    locationLabel: edition.locationLabel,
+    event_series: edition.event_series,
+  };
 }

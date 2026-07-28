@@ -33,6 +33,12 @@ export function buildEventExplorerUpcomingUrl(fromDate?: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+export function buildEventExplorerRecentlyReviewedUrl(): string {
+  const url = new URL("/events", "http://local");
+  url.searchParams.set("sort", "reviewed");
+  return `${url.pathname}${url.search}`;
+}
+
 export function buildTopicHubPath(slug: string): string | null {
   const trimmed = slug.trim();
   if (trimmed === "") return null;

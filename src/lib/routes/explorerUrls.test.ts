@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildSponsorProfilePath, buildVenuePath } from "./explorerUrls";
+import {
+  buildEventExplorerRecentlyReviewedUrl,
+  buildSponsorProfilePath,
+  buildVenuePath,
+} from "./explorerUrls";
+
+describe("buildEventExplorerRecentlyReviewedUrl", () => {
+  it("opens the Event Explorer with Recently Reviewed selected", () => {
+    assert.equal(buildEventExplorerRecentlyReviewedUrl(), "/events?sort=reviewed");
+  });
+});
 
 describe("buildSponsorProfilePath", () => {
   it("returns null for restricted companies by default", () => {

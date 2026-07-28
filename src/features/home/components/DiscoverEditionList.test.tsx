@@ -131,7 +131,7 @@ describe("DiscoverEditionList", () => {
     assert.equal(html.includes("Bitcoin Conference"), false);
   });
 
-  it("renders Recently Added as Explorer-style full cards", () => {
+  it("renders Recently Reviewed as Explorer-style full cards", () => {
     const html = renderToStaticMarkup(
       <DiscoverEditionList
         editions={[
