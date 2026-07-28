@@ -40,11 +40,11 @@ export default async function ExhibitorImportNewPage({ searchParams }: PageProps
       />
       <AdminPageHeader
         title="Bulk Upload exhibitors"
-        description="Upload a spreadsheet and map columns for this event’s exhibitors."
+        description="Upload a spreadsheet and map columns for this event edition’s exhibitors."
       />
 
       <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-950">
-        <p className="font-semibold">Event: {edition.name}</p>
+        <p className="font-semibold">Event edition: {edition.name}</p>
         <p className="mt-1">
           {edition.event_series?.name ?? "—"} · {edition.year}
         </p>

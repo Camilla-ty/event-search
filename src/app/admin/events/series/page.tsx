@@ -17,15 +17,15 @@ export default async function AdminEventSeriesListPage() {
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Event Brands" },
+          { label: "Event Series" },
         ]}
       />
       <AdminPageHeader
-        title="Event brands"
+        title="Event Series"
         description="Recurring event identities."
         actions={
           <Link href="/admin/events/series/new" className={`${primaryCtaClass} h-10`}>
-            Create event brand
+            Create event series
           </Link>
         }
       />
@@ -37,7 +37,7 @@ export default async function AdminEventSeriesListPage() {
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Slug</th>
-              <th className="px-4 py-3 font-medium">Events</th>
+              <th className="px-4 py-3 font-medium">Event Editions</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -45,7 +45,7 @@ export default async function AdminEventSeriesListPage() {
             {series.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                  No event brands yet.{" "}
+                  No event series yet.{" "}
                   <Link href="/admin/events/series/new" className="text-brand-primary underline">
                     Create one
                   </Link>

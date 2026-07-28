@@ -44,7 +44,7 @@ export function ImportHistoryTable({ batches }: { batches: ImportHistoryRow[] })
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
             <th className="px-4 py-3">File</th>
-            <th className="px-4 py-3">Event</th>
+            <th className="px-4 py-3">Event Edition</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3">Rows</th>
             <th className="px-4 py-3">Created</th>

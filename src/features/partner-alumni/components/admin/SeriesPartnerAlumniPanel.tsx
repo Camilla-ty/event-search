@@ -274,7 +274,7 @@ export function SeriesPartnerAlumniPanel({
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Partner Alumni</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Manage versioned partner rosters for this event brand. The{" "}
+            Manage versioned partner rosters for this event series. The{" "}
             <span className="font-medium">current version</span> is shown on public event pages.
           </p>
         </div>

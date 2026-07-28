@@ -58,7 +58,7 @@ export async function validateEditionVenueAttachment(
   const isNewAttachment = previousVenueId !== input.venueId;
 
   if (isArchived && isNewAttachment) {
-    return ["cannot attach an archived venue to an event"];
+    return ["cannot attach an archived venue to an event edition"];
   }
 
   return [];

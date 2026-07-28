@@ -57,7 +57,7 @@ export function RemoveSponsorModal({
         className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
       >
         <h2 id="remove-sponsor-title" className="text-lg font-semibold text-slate-900">
-          Remove sponsor from this event?
+          Remove sponsor from this event edition?
         </h2>
         <p className="mt-3 text-sm text-slate-600">
           <span className="font-medium text-slate-900">{companyName}</span> will be
@@ -84,7 +84,7 @@ export function RemoveSponsorModal({
             onClick={() => void handleConfirm()}
             disabled={loading}
           >
-            {loading ? "Removing…" : "Remove from event"}
+            {loading ? "Removing…" : "Remove from event edition"}
           </Button>
         </div>
       </div>

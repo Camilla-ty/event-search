@@ -54,7 +54,7 @@ export function DiscardImportModal({
           import logs.
         </p>
         <p className="mt-3 text-sm text-slate-600">
-          Companies created during import and live event exhibitors will NOT be deleted.
+          Companies created during import and live event edition exhibitors will NOT be deleted.
         </p>
         {error ? <p className={`mt-3 ${feedbackErrorClass}`}>{error}</p> : null}
         <div className="mt-6 flex justify-end gap-2">

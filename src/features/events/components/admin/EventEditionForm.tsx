@@ -200,7 +200,7 @@ export function EventEditionForm({
     const warning = data.warnings?.[0];
     setResult({
       ok: true,
-      message: warning ?? "Event updated successfully.",
+      message: warning ?? "Event edition updated successfully.",
       variant: warning ? "warning" : "success",
     });
     router.refresh();
@@ -248,7 +248,7 @@ export function EventEditionForm({
           {mode === "edit" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-sm font-medium text-slate-700">Event brand</p>
+                <p className="text-sm font-medium text-slate-700">Event Series</p>
                 <p className="mt-1 text-sm text-slate-900">
                   {readOnlySeriesId && readOnlySeriesName ? (
                     <Link
@@ -261,7 +261,7 @@ export function EventEditionForm({
                     (readOnlySeriesName ?? "—")
                   )}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">Event brand cannot be changed.</p>
+                <p className="mt-1 text-xs text-slate-500">Event series cannot be changed.</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-700">Year</p>
@@ -271,7 +271,7 @@ export function EventEditionForm({
             </div>
           ) : (
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-700">Event brand</span>
+              <span className="text-sm font-medium text-slate-700">Event Series</span>
               <select
                 value={values.series_id}
                 onChange={(e) => updateField("series_id", e.target.value)}
@@ -280,7 +280,7 @@ export function EventEditionForm({
                 className={formInputClass}
               >
                 <option value="">
-                  {series.length === 0 ? "No event brands available" : "Select an event brand"}
+                  {series.length === 0 ? "No event series available" : "Select an event series"}
                 </option>
                 {series.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -291,7 +291,7 @@ export function EventEditionForm({
               {series.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   <Link href="/admin/events/series/new" className="text-brand-primary underline">
-                    Create an event brand first
+                    Create an event series first
                   </Link>
                 </p>
               ) : null}
@@ -315,7 +315,7 @@ export function EventEditionForm({
           ) : null}
 
           <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Event name</span>
+            <span className="text-sm font-medium text-slate-700">Event edition name</span>
             <input
               type="text"
               required
@@ -343,7 +343,7 @@ export function EventEditionForm({
           </label>
 
           <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Event details (recommended)
+            Event edition details (recommended)
           </h2>
 
           <label className="block space-y-2">
@@ -483,7 +483,7 @@ export function EventEditionForm({
                   disabled={isSubmitting || !values.series_id}
                   onClick={() => void handleSave("detail")}
                 >
-                  Create event only
+                  Create event edition only
                 </Button>
               </>
             ) : (
@@ -503,7 +503,7 @@ export function EventEditionForm({
       </div>
 
       <SlugChangeModal
-        entityLabel="Event"
+        entityLabel="Event edition"
         oldSlug={initial.slug}
         newSlug={effectiveSlug}
         publicPathPrefix="/events/"

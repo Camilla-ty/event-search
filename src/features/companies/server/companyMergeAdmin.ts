@@ -224,7 +224,7 @@ function parseSponsorshipConflicts(raw: unknown): CompanyMergeResolutions["spons
     if (eventEditionId === null || !isCompanyMergeUuid(eventEditionId)) {
       throw new CompanyMergeAdminHttpError(
         400,
-        "Each sponsorship conflict requires a valid event id.",
+        "Each sponsorship conflict requires a valid event edition id.",
       );
     }
     if (strategy === null || !SPONSORSHIP_STRATEGIES.has(strategy as SponsorshipConflictStrategy)) {
@@ -266,7 +266,7 @@ function parseOrganizerConflicts(raw: unknown): CompanyMergeResolutions["organiz
     if (eventEditionId === null || !isCompanyMergeUuid(eventEditionId)) {
       throw new CompanyMergeAdminHttpError(
         400,
-        "Each organizer conflict requires a valid event id.",
+        "Each organizer conflict requires a valid event edition id.",
       );
     }
     if (strategy === null || !ORGANIZER_STRATEGIES.has(strategy as OrganizerConflictStrategy)) {
@@ -308,7 +308,7 @@ function parseExhibitorConflicts(raw: unknown): CompanyMergeResolutions["exhibit
     if (eventEditionId === null || !isCompanyMergeUuid(eventEditionId)) {
       throw new CompanyMergeAdminHttpError(
         400,
-        "Each exhibitor conflict requires a valid event id.",
+        "Each exhibitor conflict requires a valid event edition id.",
       );
     }
     if (strategy === null || !EXHIBITOR_STRATEGIES.has(strategy as ExhibitorConflictStrategy)) {

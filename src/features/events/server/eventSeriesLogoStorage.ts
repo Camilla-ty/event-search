@@ -56,7 +56,7 @@ export function isEventSeriesIdLogoStorageSegment(segment: string): boolean {
   return SERIES_ID_SEGMENT_PATTERN.test(segment.trim());
 }
 
-/** Event logos are manual-only. Canonical path: event-series/{seriesId}/logo.{ext} */
+/** Event series logos are manual-only. Canonical path: event-series/{seriesId}/logo.{ext} */
 export function eventSeriesLogoObjectPath(seriesId: string, extension: string): string {
   const id = seriesId.trim();
   const ext = extension.trim().toLowerCase();

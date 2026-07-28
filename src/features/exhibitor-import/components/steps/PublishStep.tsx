@@ -91,8 +91,8 @@ export function PublishStep({ editionId }: PublishStepProps) {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Publish</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Publish draft exhibitors to the live event. This is additive — exhibitors already on the
-          event are not removed.
+          Publish draft exhibitors to the live event edition. This is additive — exhibitors already on the
+          event edition are not removed.
         </p>
       </div>
 
@@ -125,7 +125,7 @@ export function PublishStep({ editionId }: PublishStepProps) {
           Back
         </Button>
         <Button onClick={() => void handlePublish()} disabled={publishing || loading}>
-          {publishing ? "Publishing to event…" : "Publish to event"}
+          {publishing ? "Publishing to event edition…" : "Publish to event edition"}
         </Button>
       </div>
     </div>

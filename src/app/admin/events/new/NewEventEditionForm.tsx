@@ -75,7 +75,7 @@ export default function NewEventEditionForm({
       const data = (await response.json()) as ApiResponse;
 
       if (response.ok && data.ok) {
-        setResult({ ok: true, message: "Event created successfully." });
+        setResult({ ok: true, message: "Event edition created successfully." });
         setSeriesId("");
         setYear(String(CURRENT_YEAR));
         setName("");
@@ -88,13 +88,13 @@ export default function NewEventEditionForm({
 
       setResult({
         ok: false,
-        message: data.error ?? "Failed to create event.",
+        message: data.error ?? "Failed to create event edition.",
       });
     } catch (submitError) {
       const message =
         submitError instanceof Error && submitError.message.trim() !== ""
           ? submitError.message.trim()
-          : "Failed to create event.";
+          : "Failed to create event edition.";
       setResult({ ok: false, message });
     } finally {
       setIsSubmitting(false);
@@ -113,7 +113,7 @@ export default function NewEventEditionForm({
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <label className="block space-y-2">
           <span className="text-sm font-medium text-slate-700">
-            Event brand
+            Event Series
           </span>
           <select
             value={seriesId}
@@ -123,7 +123,7 @@ export default function NewEventEditionForm({
             className={formInputClass}
           >
             <option value="">
-              {series.length === 0 ? "No event brands available" : "Select an event brand"}
+              {series.length === 0 ? "No event series available" : "Select an event series"}
             </option>
             {series.map((s) => (
               <option key={s.id} value={s.id}>
@@ -133,7 +133,7 @@ export default function NewEventEditionForm({
           </select>
           {series.length === 0 ? (
             <p className="text-xs text-slate-500">
-              No event brands found. Create event brand records first.
+              No event series found. Create event series records first.
             </p>
           ) : null}
         </label>
@@ -250,7 +250,7 @@ export default function NewEventEditionForm({
         </label>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Creating..." : "Create event"}
+          {isSubmitting ? "Creating..." : "Create event edition"}
         </Button>
       </form>
 

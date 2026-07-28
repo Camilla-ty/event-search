@@ -90,7 +90,7 @@ export async function updateEventEdition(
 ): Promise<EventEditionRow> {
   const existing = await getEventEditionAdminById(id);
   if (!existing) {
-    throw new Error("Event not found.");
+    throw new Error("Event edition not found.");
   }
 
   const supabase = createAdminClient();

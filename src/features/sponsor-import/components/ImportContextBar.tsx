@@ -41,7 +41,7 @@ export function ImportContextBar({
               href={`/admin/events/editions/${editionId}`}
               className="ml-2 cursor-pointer text-brand-primary hover:underline"
             >
-              Edit event
+              Edit event edition
             </Link>
           </p>
           <p className="flex flex-wrap items-center gap-2 text-slate-600">

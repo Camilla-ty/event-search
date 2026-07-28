@@ -2,59 +2,60 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
+/** Ban legacy Admin Event Brand copy and ambiguous standalone "event" patterns. */
 const LEGACY_ADMIN_TERMINOLOGY =
-  /\b(event series|event edition|event editions|create edition|edition conflict|select edition|per edition|this edition|from this edition|on this edition|no editions|series options|edition profile|edition unavailable|load editions|linked to editions|while editions)\b/i;
+  /\b(event brand|event brands|create event brand|create event(?! (?:series|edition))|select event(?! edition)|remove from event(?! edition)|failed to load events|event conflicts|linked to events|related events for this event brand)\b/i;
 
 const ADMIN_COPY_FILES = [
   {
     path: "../../../../lib/constants/navigation.ts",
-    expected: "Event Brands",
+    expected: "Event Series",
   },
   {
     path: "EventEditionForm.tsx",
-    expected: "Event brand",
+    expected: "Event Series",
   },
   {
     path: "EventSeriesForm.tsx",
-    expected: "Create event brand",
+    expected: "Create event series",
   },
   {
     path: "AdminEventEditionsPage.tsx",
-    expected: "Create event",
+    expected: "Create event edition",
   },
   {
     path: "EditionSiblingWarnings.tsx",
-    expected: "Related events for this event brand",
+    expected: "Related event editions for this event series",
   },
   {
     path: "../../../sponsor-import/components/NewImportForm.tsx",
-    expected: "Select event",
+    expected: "Select event edition",
   },
   {
     path: "../../../companies/components/admin/merge/MergeSponsorshipConflictsTable.tsx",
-    expected: "Event conflicts",
+    expected: "Event edition conflicts",
   },
   {
     path: "../../../organizers/components/admin/RemoveOrganizerModal.tsx",
-    expected: "Remove from event",
+    expected: "Remove from event edition",
   },
   {
     path: "../../../venues/components/admin/AdminVenuesPage.tsx",
-    expected: "linked to events",
+    expected: "linked to event editions",
   },
   {
     path: "../../../events/client/fetchAdminEditionsCollection.ts",
-    expected: "Failed to load events.",
+    expected: "Failed to load event editions.",
   },
   {
     path: "../../../companies/server/companyMergeAdmin.ts",
-    expected: "Each sponsorship conflict requires a valid event id.",
+    expected: "Each sponsorship conflict requires a valid event edition id.",
   },
 ] as const;
 
 describe("admin event terminology", () => {
   for (const entry of ADMIN_COPY_FILES) {
-    it(`uses Event Brand and Event copy in ${entry.path}`, () => {
+    it(`uses Event Series / Event Edition copy in ${entry.path}`, () => {
       const source = readFileSync(new URL(entry.path, import.meta.url), "utf8");
 
       assert.match(source, new RegExp(entry.expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));

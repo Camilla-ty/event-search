@@ -200,7 +200,7 @@ export function EditionExhibitorsPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-600">
-          Link companies as exhibitors for this event. Group by tier; reorder within a tier.
+          Link companies as exhibitors for this event edition. Group by tier; reorder within a tier.
         </p>
         <button
           type="button"

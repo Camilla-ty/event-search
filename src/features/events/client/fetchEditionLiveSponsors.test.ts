@@ -48,7 +48,7 @@ describe("fetchEditionLiveSponsors", () => {
   it("throws with API error message on failure", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () =>
-      new Response(JSON.stringify({ ok: false, error: "Event not found." }), {
+      new Response(JSON.stringify({ ok: false, error: "Event edition not found." }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       })) as typeof fetch;
@@ -56,7 +56,7 @@ describe("fetchEditionLiveSponsors", () => {
     try {
       await assert.rejects(
         () => fetchEditionLiveSponsors("missing"),
-        /Event not found\./,
+        /Event edition not found\./,
       );
     } finally {
       globalThis.fetch = originalFetch;

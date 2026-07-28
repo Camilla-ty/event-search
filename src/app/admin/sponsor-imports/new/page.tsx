@@ -44,12 +44,12 @@ export default async function SponsorImportNewPage({ searchParams }: PageProps) 
       />
       <AdminPageHeader
         title="Import sponsors"
-        description="Upload an Excel file and map columns for a single event."
+        description="Upload an Excel file and map columns for a single event edition."
       />
 
       {preselected ? (
         <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-950">
-          <p className="font-semibold">Event: {preselected.name}</p>
+          <p className="font-semibold">Event edition: {preselected.name}</p>
           <p className="mt-1">
             {preselected.event_series?.name ?? "—"} · {preselected.year}
           </p>
@@ -57,7 +57,7 @@ export default async function SponsorImportNewPage({ searchParams }: PageProps) 
             href={`/admin/events/editions/${preselected.id}`}
             className="mt-2 inline-block text-brand-primary hover:underline"
           >
-            Edit event profile
+            Edit event edition profile
           </Link>
         </div>
       ) : null}

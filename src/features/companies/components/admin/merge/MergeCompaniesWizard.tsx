@@ -407,7 +407,7 @@ export function MergeCompaniesWizard({ prefill }: MergeCompaniesWizardProps) {
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Resolve conflicts</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Choose how to handle event conflicts, import draft conflicts, and differing
+              Choose how to handle event edition conflicts, import draft conflicts, and differing
               profile fields. Primary Identity and website must resolve to the same Match Key.
             </p>
           </div>

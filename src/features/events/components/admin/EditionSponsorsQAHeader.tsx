@@ -56,7 +56,7 @@ export function EditionSponsorsQAHeader({
               rel="noopener noreferrer"
               className={`${secondaryCtaClass} h-10`}
             >
-              Open event website
+              Open event edition website
             </Link>
           ) : (
             <button
@@ -65,7 +65,7 @@ export function EditionSponsorsQAHeader({
               title="Set website on the Profile tab"
               className={`${secondaryCtaClass} h-10 cursor-not-allowed opacity-50`}
             >
-              Open event website
+              Open event edition website
             </button>
           )}
         </div>

@@ -71,7 +71,7 @@ async function downloadExternalLogoImage(url: string): Promise<FetchedImage | nu
 
 /**
  * Download a pasted logo URL, upload to event-series Storage, and verify the object.
- * Event logos are manual-only. Does not write to the database.
+ * Event series logos are manual-only. Does not write to the database.
  */
 export async function ingestManualEventSeriesLogoFromUrl(
   externalUrl: string,

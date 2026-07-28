@@ -63,10 +63,10 @@ function editionProfileWarnings(edition: {
     messages.push("Website is strongly recommended for sponsor research.");
   }
   if (!edition.start_date && !edition.end_date) {
-    messages.push("Dates help users find this event.");
+    messages.push("Dates help users find this event edition.");
   }
   if (!edition.city_id) {
-    messages.push("City improves event discovery and filtering.");
+    messages.push("City improves event edition discovery and filtering.");
   }
   return messages;
 }
@@ -83,7 +83,7 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
           items={[
             { label: "Admin", href: "/admin" },
             { label: "Events", href: "/admin/events" },
-            { label: "Editions", href: "/admin/events/editions" },
+            { label: "Event Editions", href: "/admin/events/editions" },
             { label: "Edition unavailable" },
           ]}
         />
@@ -149,7 +149,7 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Editions", href: "/admin/events/editions" },
+          { label: "Event Editions", href: "/admin/events/editions" },
           { label: edition.name },
         ]}
       />

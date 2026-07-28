@@ -171,7 +171,7 @@ export function DraftReviewStep() {
         />
         <span>
           I have reviewed the draft exhibitor list and understand publish will add or update
-          exhibitors on this event without removing existing live exhibitors.
+          exhibitors on this event edition without removing existing live exhibitors.
         </span>
       </label>
 

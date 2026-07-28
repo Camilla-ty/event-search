@@ -12,7 +12,7 @@ export function CompanySponsorshipsTable({
   if (sponsorships.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-        This company is not a sponsor of any event yet.
+        This company is not a sponsor of any event edition yet.
       </p>
     );
   }
@@ -22,8 +22,8 @@ export function CompanySponsorshipsTable({
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
-            <th className="px-4 py-3 font-medium">Event</th>
-            <th className="px-4 py-3 font-medium">Event brand</th>
+            <th className="px-4 py-3 font-medium">Event Edition</th>
+            <th className="px-4 py-3 font-medium">Event Series</th>
             <th className="px-4 py-3 font-medium">Tier label</th>
             <th className="px-4 py-3 font-medium">Rank</th>
           </tr>

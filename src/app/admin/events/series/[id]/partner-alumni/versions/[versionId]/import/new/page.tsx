@@ -27,7 +27,7 @@ export default async function PartnerAlumniImportNewPage({ params }: PageProps) 
       <AdminBreadcrumbs
         items={[
           { label: "Admin", href: "/admin" },
-          { label: "Event brands", href: "/admin/events/series" },
+          { label: "Event Series", href: "/admin/events/series" },
           { label: versionContext.seriesName, href: `/admin/events/series/${seriesId}` },
           { label: "Import companies" },
         ]}
@@ -53,7 +53,7 @@ export default async function PartnerAlumniImportNewPage({ params }: PageProps) 
 
       <div className="mt-8">
         <Link href={`/admin/events/series/${seriesId}`} className={`${secondaryCtaClass} h-9 text-sm`}>
-          Back to event brand
+          Back to event series
         </Link>
       </div>
     </section>

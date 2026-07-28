@@ -54,7 +54,7 @@ export function RemoveExhibitorModal({
         className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg"
       >
         <h2 id="remove-exhibitor-title" className="text-lg font-semibold text-slate-900">
-          Remove exhibitor from this event?
+          Remove exhibitor from this event edition?
         </h2>
         <p className="mt-3 text-sm text-slate-600">
           <span className="font-medium text-slate-900">{companyName}</span> will be removed from{" "}
@@ -74,7 +74,7 @@ export function RemoveExhibitorModal({
             onClick={() => void handleConfirm()}
             disabled={loading}
           >
-            {loading ? "Removing…" : "Remove from event"}
+            {loading ? "Removing…" : "Remove from event edition"}
           </Button>
         </div>
       </div>

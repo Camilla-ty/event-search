@@ -176,7 +176,7 @@ export function EventSeriesForm({
       const warning = data.warnings?.[0];
       setResult({
         ok: true,
-        message: warning ?? "Event brand updated successfully.",
+        message: warning ?? "Event series updated successfully.",
         variant: warning ? "warning" : "success",
       });
       router.refresh();
@@ -195,7 +195,7 @@ export function EventSeriesForm({
     if (values.lifecycle_status === "merged" && values.merged_into_series_id.trim() === "") {
       setResult({
         ok: false,
-        message: "Select a destination event brand when lifecycle status is Merged.",
+        message: "Select a destination event series when lifecycle status is Merged.",
         variant: "error",
       });
       return;
@@ -354,7 +354,7 @@ export function EventSeriesForm({
         </label>
 
         <h2 className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Event history
+          Series history
         </h2>
 
         <label className="block space-y-2">
@@ -418,7 +418,7 @@ export function EventSeriesForm({
                 placeholder="https://…"
               />
               <p className="text-xs text-slate-500">
-                Event logos are manual-only. Paste an image URL to download and store in Supabase.
+                Event series logos are manual-only. Paste an image URL to download and store in Supabase.
                 Clear this field and save to remove the logo.
               </p>
             </label>
@@ -478,7 +478,7 @@ export function EventSeriesForm({
         </div>
 
         <Button type="submit" disabled={fieldsDisabled}>
-          {isSubmitting ? "Saving…" : mode === "create" ? "Create event brand" : "Save changes"}
+          {isSubmitting ? "Saving…" : mode === "create" ? "Create event series" : "Save changes"}
         </Button>
       </form>
 
@@ -491,7 +491,7 @@ export function EventSeriesForm({
       ) : null}
 
       <SlugChangeModal
-        entityLabel="Event brand"
+        entityLabel="Event series"
         oldSlug={initial.slug}
         newSlug={effectiveSlug}
         publicPathPrefix="/events/series/"

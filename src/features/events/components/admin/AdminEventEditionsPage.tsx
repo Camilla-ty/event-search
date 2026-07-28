@@ -26,15 +26,15 @@ export function AdminEventEditionsPage({ initial }: AdminEventEditionsPageProps)
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Events", href: "/admin/events" },
-          { label: "Events" },
+          { label: "Event Editions" },
         ]}
       />
       <AdminPageHeader
-        title="Events"
-        description="Each occurrence of an event (event brand + year + location). Multiple events per event brand and year are allowed."
+        title="Event Editions"
+        description="Each occurrence of an event series (event series + year + location). Multiple event editions per event series and year are allowed."
         actions={
           <Link href="/admin/events/editions/new" className={`${primaryCtaClass} h-10`}>
-            Create event
+            Create event edition
           </Link>
         }
       />

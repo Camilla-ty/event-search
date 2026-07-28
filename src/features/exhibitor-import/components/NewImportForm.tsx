@@ -56,7 +56,7 @@ export function NewImportForm({ editionId, editionHref }: NewImportFormProps) {
       return;
     }
     if (activeBatchId) {
-      setError("This event already has an active import. Resume or discard it first.");
+      setError("This event edition already has an active import. Resume or discard it first.");
       return;
     }
 
@@ -79,7 +79,7 @@ export function NewImportForm({ editionId, editionHref }: NewImportFormProps) {
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
         <p className="font-medium text-slate-900">Excel exhibitor import</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>One active import per event</li>
+          <li>One active import per event edition</li>
           <li>Max 500 rows per file</li>
           <li>Columns: Exhibitor Tier, Exhibitor Label, Name, Website</li>
         </ul>
@@ -94,7 +94,7 @@ export function NewImportForm({ editionId, editionHref }: NewImportFormProps) {
 
       {activeBatchId ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p>This event has an import in progress.</p>
+          <p>This event edition has an import in progress.</p>
           <Link
             href={flowHref(activeBatchId, "review")}
             className="mt-2 inline-block font-medium text-brand-primary hover:underline"

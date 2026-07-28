@@ -38,7 +38,7 @@ export function BatchTerminalView({
 
       {status === "published" ? (
         <p className="text-sm text-slate-600">
-          This import has been published. Live exhibitors on the event reflect the publish
+          This import has been published. Live exhibitors on the event edition reflect the publish
           result.
         </p>
       ) : (
