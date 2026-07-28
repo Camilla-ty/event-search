@@ -8,6 +8,7 @@ type DiscoverEventModuleProps = {
   description: string;
   viewAllHref: string;
   viewAllLabel?: string;
+  showHeaderViewAll?: boolean;
   emptyMessage: string;
   emptyActionHref: string;
   emptyActionLabel?: string;
@@ -21,6 +22,7 @@ export function DiscoverEventModule({
   description,
   viewAllHref,
   viewAllLabel = "View all",
+  showHeaderViewAll = true,
   emptyMessage,
   emptyActionHref,
   emptyActionLabel = "Browse all events",
@@ -35,9 +37,11 @@ export function DiscoverEventModule({
           <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
           <p className="text-sm text-slate-600">{description}</p>
         </div>
-        <Link href={viewAllHref} className={`text-sm ${brandLinkClass}`}>
-          {viewAllLabel}
-        </Link>
+        {showHeaderViewAll ? (
+          <Link href={viewAllHref} className={`text-sm ${brandLinkClass}`}>
+            {viewAllLabel}
+          </Link>
+        ) : null}
       </div>
 
       {isEmpty ? (

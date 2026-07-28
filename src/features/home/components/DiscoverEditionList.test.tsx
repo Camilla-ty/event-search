@@ -75,8 +75,54 @@ describe("DiscoverEditionList", () => {
     assert.match(html, /Las Vegas, Nevada/);
     assert.equal(html.includes("2026 · 2026-04-27"), false);
     assert.equal(html.includes("Sponsors"), false);
-    assert.match(html, /flex-1 divide-y divide-slate-100/);
-    assert.match(html, /divide-y divide-slate-100 rounded-xl border border-slate-200/);
+    assert.match(html, /flex flex-1 flex-col rounded-xl border border-slate-200/);
+    assert.match(html, /divide-y divide-slate-100/);
+    assert.equal(html.includes("Browse all upcoming events"), false);
+  });
+
+  it("renders a compact footer CTA with the provided href and label", () => {
+    const html = renderToStaticMarkup(
+      <DiscoverEditionList
+        editions={[
+          edition(),
+          edition({
+            id: "evt-2",
+            slug: "bitcoin-asia-2026",
+            name: "Bitcoin Asia 2026",
+          }),
+        ]}
+        variant="compact"
+        footerHref="/events?start=2026-07-28"
+        footerLabel="Browse all upcoming events"
+      />,
+    );
+
+    assert.equal(html.match(/<li/g)?.length, 2);
+    assert.match(html, /href="\/events\/bitcoin-las-vegas-2026"/);
+    assert.match(html, /href="\/events\/bitcoin-asia-2026"/);
+    assert.match(html, /href="\/events\?start=2026-07-28"/);
+    assert.match(html, /Browse all upcoming events/);
+    assert.match(html, /mt-auto border-t border-slate-200/);
+    assert.equal(html.includes(">View all<"), false);
+  });
+
+  it("keeps compact event rows unchanged when a footer is present", () => {
+    const html = renderToStaticMarkup(
+      <DiscoverEditionList
+        editions={[edition()]}
+        variant="compact"
+        footerHref="/events?start=2026-07-28"
+        footerLabel="Browse all upcoming events"
+      />,
+    );
+
+    assert.equal(html.match(/<li/g)?.length, 1);
+    assert.match(html, /aria-label="View Bitcoin Las Vegas 2026"/);
+    assert.match(html, /Apr 27 – Apr 29, 2026/);
+    assert.match(html, /Las Vegas, Nevada/);
+    assert.match(html, /Bitcoin/);
+    assert.equal(html.includes("Sponsors"), false);
+    assert.equal(html.includes("Bitcoin Conference"), false);
   });
 
   it("renders Recently Added as Explorer-style full cards", () => {

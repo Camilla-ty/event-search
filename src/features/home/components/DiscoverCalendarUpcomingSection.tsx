@@ -30,12 +30,18 @@ export function DiscoverCalendarUpcomingSection({
           title="Upcoming Events"
           description="Events with upcoming or in-progress dates."
           viewAllHref={upcomingViewAllHref}
+          showHeaderViewAll={false}
           emptyMessage="No upcoming events with scheduled dates."
           emptyActionHref={upcomingViewAllHref}
           isEmpty={upcoming.length === 0}
           fillHeight
         >
-          <DiscoverEditionList editions={upcoming} variant="compact" />
+          <DiscoverEditionList
+            editions={upcoming}
+            variant="compact"
+            footerHref={upcomingViewAllHref}
+            footerLabel="Browse all upcoming events"
+          />
         </DiscoverEventModule>
       </div>
     </section>
