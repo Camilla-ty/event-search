@@ -1,13 +1,12 @@
-import type { EventRecord } from "@/src/features/events/components/explorer/types";
-import type { CalendarColorFamily } from "@/src/features/events/lib/eventCalendarColors";
+import type { ReactNode } from "react";
+
 import { getTodayIsoDate } from "@/src/features/events/lib/eventCalendarGrouping";
-import { compareCalendarEvents } from "@/src/features/events/lib/eventCalendarOrdering";
 
-import { EventCalendarEventChip } from "./EventCalendarEventChip";
-
-const MAX_VISIBLE_EVENTS = 3;
-const COMPACT_MOBILE_VISIBLE_EVENTS = 1;
-const COMPACT_DESKTOP_VISIBLE_EVENTS = 2;
+import {
+  EventCalendarHiddenEventsPopover,
+  type HiddenCalendarEvent,
+} from "./EventCalendarHiddenEventsPopover";
+const MAX_VISIBLE_LANES = 3;
 
 export type EventCalendarDayCellVariant = "default" | "compact";
 
@@ -32,36 +31,27 @@ function formatDayCellAccessibleLabel(isoDate: string, eventCount: number): stri
 type EventCalendarDayCellProps = {
   isoDate: string;
   isCurrentMonth: boolean;
-  events: readonly EventRecord[];
-  colorByEventId?: ReadonlyMap<string, CalendarColorFamily>;
+  eventCount: number;
+  overflowCount?: number;
+  hiddenEvents?: readonly HiddenCalendarEvent[];
   variant?: EventCalendarDayCellVariant;
 };
+
+function renderLanePlaceholder(key: string, className = ""): ReactNode {
+  return <div key={key} className={`h-5 ${className}`.trim()} aria-hidden="true" />;
+}
 
 export function EventCalendarDayCell({
   isoDate,
   isCurrentMonth,
-  events,
-  colorByEventId,
+  eventCount,
+  overflowCount = 0,
+  hiddenEvents = [],
   variant = "default",
 }: EventCalendarDayCellProps) {
   const dayNumber = Number(isoDate.slice(8, 10));
   const isToday = isoDate === getTodayIsoDate();
-  const eventCount = events.length;
   const isCompact = variant === "compact";
-
-  const sortedEvents = [...events].sort(compareCalendarEvents);
-  const visibleEvents = sortedEvents.slice(0, MAX_VISIBLE_EVENTS);
-  const overflowCount = sortedEvents.length - visibleEvents.length;
-  const compactMobileOverflow = Math.max(
-    0,
-    sortedEvents.length - COMPACT_MOBILE_VISIBLE_EVENTS,
-  );
-  const compactDesktopOverflow = Math.max(
-    0,
-    sortedEvents.length - COMPACT_DESKTOP_VISIBLE_EVENTS,
-  );
-  const primaryCompactEvent = sortedEvents[0];
-  const secondaryCompactEvent = sortedEvents[1];
   const compactAccessibleLabel = isCompact
     ? formatDayCellAccessibleLabel(isoDate, eventCount)
     : undefined;
@@ -94,53 +84,21 @@ export function EventCalendarDayCell({
       </div>
 
       {isCompact ? (
-        eventCount > 0 ? (
-          <div className="space-y-1">
-            {primaryCompactEvent ? (
-              <EventCalendarEventChip
-                key={`${isoDate}-${primaryCompactEvent.id}`}
-                event={primaryCompactEvent}
-                colorFamily={colorByEventId?.get(primaryCompactEvent.id)}
-              />
-            ) : null}
-            {secondaryCompactEvent ? (
-              <div className="hidden lg:block">
-                <EventCalendarEventChip
-                  key={`${isoDate}-${secondaryCompactEvent.id}`}
-                  event={secondaryCompactEvent}
-                  colorFamily={colorByEventId?.get(secondaryCompactEvent.id)}
-                />
-              </div>
-            ) : null}
-            {compactMobileOverflow > 0 ? (
-              <p
-                aria-hidden="true"
-                className="px-1 text-xs font-medium text-slate-500 lg:hidden"
-              >
-                +{compactMobileOverflow} more
-              </p>
-            ) : null}
-            {compactDesktopOverflow > 0 ? (
-              <p
-                aria-hidden="true"
-                className="hidden px-1 text-xs font-medium text-slate-500 lg:block"
-              >
-                +{compactDesktopOverflow} more
-              </p>
-            ) : null}
-          </div>
-        ) : null
+        <div className="space-y-1">
+          {Array.from({ length: MAX_VISIBLE_LANES }, (_, lane) =>
+            renderLanePlaceholder(`${isoDate}-lane-${lane}`),
+          )}
+          {overflowCount > 0 ? (
+            <EventCalendarHiddenEventsPopover hiddenEvents={hiddenEvents} />
+          ) : null}
+        </div>
       ) : (
         <div className="space-y-1">
-          {visibleEvents.map((event) => (
-            <EventCalendarEventChip
-              key={`${isoDate}-${event.id}`}
-              event={event}
-              colorFamily={colorByEventId?.get(event.id)}
-            />
-          ))}
+          {Array.from({ length: MAX_VISIBLE_LANES }, (_, lane) =>
+            renderLanePlaceholder(`${isoDate}-lane-${lane}`),
+          )}
           {overflowCount > 0 ? (
-            <p className="px-1 text-xs font-medium text-slate-500">+{overflowCount} more</p>
+            <EventCalendarHiddenEventsPopover hiddenEvents={hiddenEvents} />
           ) : null}
         </div>
       )}

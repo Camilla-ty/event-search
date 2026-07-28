@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { EventCalendarDayCell } from "@/src/features/events/components/explorer/EventCalendarDayCell";
+import type { HiddenCalendarEvent } from "@/src/features/events/components/explorer/EventCalendarHiddenEventsPopover";
 import type { EventRecord } from "@/src/features/events/components/explorer/types";
 import { compareCalendarEvents } from "@/src/features/events/lib/eventCalendarOrdering";
 
@@ -26,6 +27,17 @@ function makeEvent({
     end_date: endDate,
     event_series: { name: "Series", logo_url: null },
     cities: null,
+  };
+}
+
+function makeHiddenEvent(id: string, name: string): HiddenCalendarEvent {
+  return {
+    event: makeEvent({
+      id,
+      name,
+      startDate: "2026-11-05",
+    }),
+    colorFamily: "Blue",
   };
 }
 
@@ -64,44 +76,18 @@ describe("EventCalendarDayCell", () => {
     );
   });
 
-  it("renders visible events in canonical calendar order", () => {
+  it("renders date UI and lane placeholders without visible event chips", () => {
     const html = renderToStaticMarkup(
       <EventCalendarDayCell
         isoDate="2026-11-05"
         isCurrentMonth
-        events={[
-          makeEvent({
-            id: "longest",
-            name: "Beta Week",
-            startDate: "2026-11-04",
-            endDate: "2026-11-08",
-          }),
-          makeEvent({
-            id: "earlier-start",
-            name: "Omega Forum",
-            startDate: "2026-11-03",
-            endDate: "2026-11-04",
-          }),
-          makeEvent({
-            id: "alphabetical-earlier",
-            name: "Alpha Forum",
-            startDate: "2026-11-03",
-            endDate: "2026-11-04",
-          }),
-        ]}
+        eventCount={3}
       />,
     );
 
-    const longestIndex = html.indexOf("Beta Week");
-    const earlierStartAlphaIndex = html.indexOf("Alpha Forum");
-    const earlierStartOmegaIndex = html.indexOf("Omega Forum");
-
-    assert.notEqual(longestIndex, -1);
-    assert.notEqual(earlierStartAlphaIndex, -1);
-    assert.notEqual(earlierStartOmegaIndex, -1);
-
-    assert.ok(longestIndex < earlierStartAlphaIndex);
-    assert.ok(earlierStartAlphaIndex < earlierStartOmegaIndex);
+    assert.match(html, />5</);
+    assert.equal((html.match(/class="h-5"/g) ?? []).length, 3);
+    assert.doesNotMatch(html, /href="\/events\//);
   });
 
   it("preserves the existing overflow behavior", () => {
@@ -109,32 +95,12 @@ describe("EventCalendarDayCell", () => {
       <EventCalendarDayCell
         isoDate="2026-11-05"
         isCurrentMonth
-        events={[
-          makeEvent({
-            id: "one",
-            name: "One",
-            startDate: "2026-11-05",
-          }),
-          makeEvent({
-            id: "two",
-            name: "Two",
-            startDate: "2026-11-05",
-          }),
-          makeEvent({
-            id: "three",
-            name: "Three",
-            startDate: "2026-11-05",
-          }),
-          makeEvent({
-            id: "four",
-            name: "Four",
-            startDate: "2026-11-05",
-          }),
-        ]}
+        eventCount={4}
+        overflowCount={1}
+        hiddenEvents={[makeHiddenEvent("four", "Four")]}
       />,
     );
 
-    assert.equal((html.match(/title="/g) ?? []).length, 3);
     assert.match(html, /\+1 more/);
   });
 });

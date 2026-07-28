@@ -2,16 +2,16 @@ import type { EventRecord } from "@/src/features/events/components/explorer/type
 import { buildCalendarColorLayout } from "@/src/features/events/lib/eventCalendarColors";
 import type { EventsByDay } from "@/src/features/events/lib/eventCalendarGrouping";
 import { buildCalendarLaneLayout } from "@/src/features/events/lib/eventCalendarLanes";
+import { buildCalendarSegmentLayout } from "@/src/features/events/lib/eventCalendarSegments";
 import {
-  isIsoDateInMonth,
   listGridDays,
   type MonthGridBounds,
 } from "@/src/features/events/lib/eventCalendarGrouping";
 
 import {
-  EventCalendarDayCell,
   type EventCalendarDayCellVariant,
 } from "./EventCalendarDayCell";
+import { EventCalendarWeekRow } from "./EventCalendarWeekRow";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -48,6 +48,10 @@ export function EventCalendarGrid({
   const visibleEvents = collectUniqueEvents(eventsByDay);
   const laneLayout = buildCalendarLaneLayout(visibleEvents, bounds);
   const colorLayout = buildCalendarColorLayout(laneLayout, bounds);
+  const segmentLayout = buildCalendarSegmentLayout(colorLayout, bounds);
+  const weekRows = Array.from({ length: Math.ceil(gridDays.length / 7) }, (_, index) =>
+    gridDays.slice(index * 7, index * 7 + 7),
+  );
 
   return (
     <div
@@ -66,14 +70,14 @@ export function EventCalendarGrid({
         ))}
       </div>
 
-      <div className={`grid grid-cols-7 ${stretch ? "flex-1 auto-rows-fr" : ""}`}>
-        {gridDays.map((isoDate) => (
-          <EventCalendarDayCell
-            key={isoDate}
-            isoDate={isoDate}
-            isCurrentMonth={isIsoDateInMonth(isoDate, bounds.month)}
-            events={eventsByDay.get(isoDate) ?? []}
-            colorByEventId={colorLayout.colorByEventId}
+      <div className={`${stretch ? "flex-1" : ""}`}>
+        {weekRows.map((days) => (
+          <EventCalendarWeekRow
+            key={days.join("-")}
+            days={days}
+            month={bounds.month}
+            eventsByDay={eventsByDay}
+            segmentsByDay={segmentLayout.segmentsByDay}
             variant={variant}
           />
         ))}
