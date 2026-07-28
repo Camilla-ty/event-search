@@ -46,7 +46,12 @@ describe("DiscoverCalendarUpcomingSection", () => {
     assert.match(html, /Upcoming Events/);
     assert.match(html, /Browse all upcoming events/);
     assert.match(html, /href="\/events\?start=2026-07-28"/);
-    assert.match(html, /mt-auto border-t border-slate-200/);
+    assert.match(
+      html,
+      /mt-auto block rounded-b-xl border-t border-slate-200 bg-white px-4 py-3/,
+    );
+    assert.match(html, /text-center text-sm text-slate-600/);
+    assert.match(html, /hover:bg-slate-50 hover:text-brand-primary/);
     assert.equal(html.includes(">View all<"), false);
     assert.equal(html.match(/<li/g)?.length, 2);
     assert.match(html, /Bitcoin Las Vegas 2026/);

@@ -6,8 +6,15 @@ import {
   type EventCardVariant,
 } from "@/src/features/events/components/EventCard";
 import type { DiscoverEditionSummary } from "@/src/features/home/server/getDiscoverHomeData";
-import { brandLinkClass } from "@/src/lib/design/classes";
 import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
+
+/** Matches Discover calendar empty-month strip (`px-4 py-3 text-center text-sm text-slate-600`). */
+const compactListFooterClass = [
+  "mt-auto block rounded-b-xl border-t border-slate-200 bg-white px-4 py-3",
+  "text-center text-sm text-slate-600 transition",
+  "hover:bg-slate-50 hover:text-brand-primary",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
 
 type DiscoverEditionListProps = {
   editions: DiscoverEditionSummary[];
@@ -74,11 +81,9 @@ export function DiscoverEditionList({
         ))}
       </ul>
       {showFooter ? (
-        <div className="mt-auto border-t border-slate-200 px-4 py-3">
-          <Link href={footerHref} className={`text-sm ${brandLinkClass}`}>
-            {footerLabel}
-          </Link>
-        </div>
+        <Link href={footerHref} className={compactListFooterClass}>
+          {footerLabel}
+        </Link>
       ) : null}
     </div>
   );
