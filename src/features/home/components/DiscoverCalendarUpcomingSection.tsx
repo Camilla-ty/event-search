@@ -16,7 +16,7 @@ export function DiscoverCalendarUpcomingSection({
   upcomingViewAllHref,
 }: DiscoverCalendarUpcomingSectionProps) {
   return (
-    <section className="grid grid-cols-1 gap-8 border-b border-slate-200 pb-6 lg:grid-cols-12">
+    <section className="grid grid-cols-1 gap-8 border-b border-slate-200 pb-10 lg:grid-cols-12">
       <div className="flex h-full flex-col space-y-3 lg:col-span-5">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-slate-900">Event Calendar</h2>
