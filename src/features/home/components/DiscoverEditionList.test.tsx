@@ -169,6 +169,30 @@ describe("DiscoverEditionList", () => {
     assert.equal(html.includes("flex-1 divide-y"), false);
     assert.equal(html.includes("divide-y divide-slate-100"), false);
     assert.equal(html.includes("Bitcoin Conference"), false);
+    assert.equal(html.includes("Browse all recently reviewed events"), false);
+  });
+
+  it("renders a full-list footer CTA with the provided href and label", () => {
+    const html = renderToStaticMarkup(
+      <DiscoverEditionList
+        editions={[edition({ sponsorCount: 3 })]}
+        variant="full"
+        footerHref="/events?sort=reviewed"
+        footerLabel="Browse all recently reviewed events"
+      />,
+    );
+
+    assert.match(html, /Sponsors/);
+    assert.match(html, /href="\/events\/bitcoin-las-vegas-2026"/);
+    assert.match(html, /href="\/events\?sort=reviewed"/);
+    assert.match(html, /Browse all recently reviewed events/);
+    assert.match(
+      html,
+      /block rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm/,
+    );
+    assert.match(html, /text-center text-sm text-slate-600 transition/);
+    assert.match(html, /hover:bg-slate-50 hover:text-brand-primary/);
+    assert.equal(html.includes(">View all<"), false);
   });
 
   it("renders a non-interactive row when no event detail href is available", () => {

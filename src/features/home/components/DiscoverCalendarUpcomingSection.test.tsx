@@ -43,6 +43,7 @@ describe("DiscoverCalendarUpcomingSection", () => {
       />,
     );
 
+    assert.match(html, /grid grid-cols-1 gap-8 border-b border-slate-200 pb-6 lg:grid-cols-12/);
     assert.match(html, /Upcoming Events/);
     assert.match(html, /Browse all upcoming events/);
     assert.match(html, /href="\/events\?start=2026-07-28"/);

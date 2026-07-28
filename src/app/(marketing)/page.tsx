@@ -37,11 +37,17 @@ export default async function DiscoverPage() {
         title="Recently Reviewed Events"
         description="Event coverage most recently reviewed and verified on EventPixels."
         viewAllHref={recentlyReviewedViewAllHref}
+        showHeaderViewAll={false}
         emptyMessage="No recently reviewed events yet."
         emptyActionHref={recentlyReviewedViewAllHref}
         isEmpty={recentlyReviewed.length === 0}
       >
-        <DiscoverEditionList editions={recentlyReviewed} variant="full" />
+        <DiscoverEditionList
+          editions={recentlyReviewed}
+          variant="full"
+          footerHref={recentlyReviewedViewAllHref}
+          footerLabel="Browse all recently reviewed events"
+        />
       </DiscoverEventModule>
     </div>
   );
