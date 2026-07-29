@@ -17,6 +17,33 @@ export function parseEventExplorerMonth(raw: string | null | undefined): string 
   return trimmed;
 }
 
+/** Inclusive YYYY-MM-DD bounds for a calendar month (`YYYY-MM`). UTC last-day math. */
+export function getEventExplorerMonthDateBounds(
+  month: string,
+): { start: string; end: string } | null {
+  const normalizedMonth = parseEventExplorerMonth(month);
+  if (normalizedMonth === null) return null;
+
+  const year = Number(normalizedMonth.slice(0, 4));
+  const monthNumber = Number(normalizedMonth.slice(5, 7));
+  const start = `${normalizedMonth}-01`;
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  const end = `${normalizedMonth}-${String(lastDay).padStart(2, "0")}`;
+
+  return { start, end };
+}
+
+/** Event Explorer filtered to the given calendar month via existing start/end params. */
+export function buildEventExplorerMonthUrl(month: string): string | null {
+  const bounds = getEventExplorerMonthDateBounds(month);
+  if (bounds === null) return null;
+
+  const url = new URL("/events", "http://local");
+  url.searchParams.set("start", bounds.start);
+  url.searchParams.set("end", bounds.end);
+  return `${url.pathname}${url.search}`;
+}
+
 export function buildEventExplorerUrl(query?: string): string {
   const url = new URL("/events", "http://local");
   const trimmed = query?.trim() ?? "";

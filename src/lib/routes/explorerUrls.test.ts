@@ -2,14 +2,57 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  buildEventExplorerMonthUrl,
   buildEventExplorerRecentlyReviewedUrl,
   buildSponsorProfilePath,
   buildVenuePath,
+  getEventExplorerMonthDateBounds,
 } from "./explorerUrls";
 
 describe("buildEventExplorerRecentlyReviewedUrl", () => {
   it("opens the Event Explorer with Recently Reviewed selected", () => {
     assert.equal(buildEventExplorerRecentlyReviewedUrl(), "/events?sort=reviewed");
+  });
+});
+
+describe("buildEventExplorerMonthUrl", () => {
+  it("filters Explorer to a 31-day month", () => {
+    assert.equal(
+      buildEventExplorerMonthUrl("2027-01"),
+      "/events?start=2027-01-01&end=2027-01-31",
+    );
+  });
+
+  it("filters Explorer to a 30-day month", () => {
+    assert.equal(
+      buildEventExplorerMonthUrl("2027-09"),
+      "/events?start=2027-09-01&end=2027-09-30",
+    );
+  });
+
+  it("filters Explorer to February in a leap year", () => {
+    assert.equal(
+      buildEventExplorerMonthUrl("2024-02"),
+      "/events?start=2024-02-01&end=2024-02-29",
+    );
+  });
+
+  it("returns null for invalid months", () => {
+    assert.equal(buildEventExplorerMonthUrl("2027-13"), null);
+    assert.equal(buildEventExplorerMonthUrl("not-a-month"), null);
+  });
+});
+
+describe("getEventExplorerMonthDateBounds", () => {
+  it("matches getMonthStartEnd-style inclusive bounds", () => {
+    assert.deepEqual(getEventExplorerMonthDateBounds("2026-04"), {
+      start: "2026-04-01",
+      end: "2026-04-30",
+    });
+    assert.deepEqual(getEventExplorerMonthDateBounds("2028-02"), {
+      start: "2028-02-01",
+      end: "2028-02-29",
+    });
   });
 });
 

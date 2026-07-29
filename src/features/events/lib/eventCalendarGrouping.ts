@@ -3,7 +3,10 @@ import {
   readEventDateRange,
   readEventIsoDate,
 } from "@/src/features/events/lib/readEventIsoDate";
-import { parseEventExplorerMonth } from "@/src/lib/routes/explorerUrls";
+import {
+  getEventExplorerMonthDateBounds,
+  parseEventExplorerMonth,
+} from "@/src/lib/routes/explorerUrls";
 
 export type MonthGridBounds = {
   month: string;
@@ -46,16 +49,10 @@ function getMondayBasedWeekday(isoDate: string): number {
 export function getMonthStartEnd(
   month: string,
 ): { monthStart: string; monthEnd: string } | null {
-  const normalizedMonth = parseEventExplorerMonth(month);
-  if (normalizedMonth === null) return null;
+  const bounds = getEventExplorerMonthDateBounds(month);
+  if (bounds === null) return null;
 
-  const year = Number(normalizedMonth.slice(0, 4));
-  const monthNumber = Number(normalizedMonth.slice(5, 7));
-  const monthStart = `${normalizedMonth}-01`;
-  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  const monthEnd = `${normalizedMonth}-${String(lastDay).padStart(2, "0")}`;
-
-  return { monthStart, monthEnd };
+  return { monthStart: bounds.start, monthEnd: bounds.end };
 }
 
 export function getMonthGridBounds(month: string): MonthGridBounds | null {
