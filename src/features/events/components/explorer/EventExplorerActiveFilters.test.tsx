@@ -91,7 +91,7 @@ describe("EventExplorerActiveFilters", () => {
     assert.match(html, /Search: custody/);
     assert.match(html, /Keyword: AI, Bitcoin/);
     assert.match(html, /Country: Singapore/);
-    assert.match(html, /Date: Jan 2027 – Mar 2027/);
+    assert.match(html, /Date: Jan 1 – Mar 31, 2027/);
     assert.doesNotMatch(html, /From: Jan/);
     assert.doesNotMatch(html, /Until: Mar/);
   });
@@ -104,7 +104,7 @@ describe("EventExplorerActiveFilters", () => {
         topicOptions={topicOptions}
         regions={[]}
         countryOptions={countryOptions}
-        startDate="2027-01-01"
+        startDate="2026-08-15"
         endDate=""
         onRemoveSearch={() => undefined}
         onRemoveKeywords={() => undefined}
@@ -113,7 +113,8 @@ describe("EventExplorerActiveFilters", () => {
         onClearAll={() => undefined}
       />,
     );
-    assert.match(startOnly, /Date: From Jan 2027/);
+    assert.match(startOnly, /From: Aug 15, 2026/);
+    assert.doesNotMatch(startOnly, /Date:/);
 
     const endOnly = renderToStaticMarkup(
       <EventExplorerActiveFilters
@@ -123,7 +124,7 @@ describe("EventExplorerActiveFilters", () => {
         regions={[]}
         countryOptions={countryOptions}
         startDate=""
-        endDate="2027-03-31"
+        endDate="2026-09-04"
         onRemoveSearch={() => undefined}
         onRemoveKeywords={() => undefined}
         onRemoveCountries={() => undefined}
@@ -131,7 +132,69 @@ describe("EventExplorerActiveFilters", () => {
         onClearAll={() => undefined}
       />,
     );
-    assert.match(endOnly, /Date: Until Mar 2027/);
+    assert.match(endOnly, /Until: Sep 4, 2026/);
+    assert.doesNotMatch(endOnly, /Date:/);
+  });
+
+  it("formats full-month and same-month day-level date chips", () => {
+    const fullMonth = renderToStaticMarkup(
+      <EventExplorerActiveFilters
+        query=""
+        topics={[]}
+        topicOptions={topicOptions}
+        regions={[]}
+        countryOptions={countryOptions}
+        startDate="2026-08-01"
+        endDate="2026-08-31"
+        onRemoveSearch={() => undefined}
+        onRemoveKeywords={() => undefined}
+        onRemoveCountries={() => undefined}
+        onRemoveDates={() => undefined}
+        onClearAll={() => undefined}
+      />,
+    );
+    assert.match(fullMonth, /Date: Aug 1 – Aug 31, 2026/);
+
+    const partial = renderToStaticMarkup(
+      <EventExplorerActiveFilters
+        query=""
+        topics={[]}
+        topicOptions={topicOptions}
+        regions={[]}
+        countryOptions={countryOptions}
+        startDate="2026-08-15"
+        endDate="2026-09-04"
+        onRemoveSearch={() => undefined}
+        onRemoveKeywords={() => undefined}
+        onRemoveCountries={() => undefined}
+        onRemoveDates={() => undefined}
+        onClearAll={() => undefined}
+      />,
+    );
+    assert.match(partial, /Date: Aug 15 – Sep 4, 2026/);
+  });
+
+  it("does not render a date chip for invalid bounds", () => {
+    const html = renderToStaticMarkup(
+      <EventExplorerActiveFilters
+        query="custody"
+        topics={[]}
+        topicOptions={topicOptions}
+        regions={[]}
+        countryOptions={countryOptions}
+        startDate="not-a-date"
+        endDate="also-bad"
+        onRemoveSearch={() => undefined}
+        onRemoveKeywords={() => undefined}
+        onRemoveCountries={() => undefined}
+        onRemoveDates={() => undefined}
+        onClearAll={() => undefined}
+      />,
+    );
+    assert.match(html, /Search: custody/);
+    assert.doesNotMatch(html, /Date:/);
+    assert.doesNotMatch(html, /From:/);
+    assert.doesNotMatch(html, /Until:/);
   });
 
   it("shows Active Filters for query-only state", () => {
@@ -201,7 +264,7 @@ describe("EventExplorerActiveFilters", () => {
       'button[aria-label="Remove country filters"]',
     );
     const removeDates = container!.querySelector(
-      'button[aria-label="Remove date filter Jan 2027 – Mar 2027"]',
+      'button[aria-label="Remove date filter Jan 1 – Mar 31, 2027"]',
     );
     const clearAll = Array.from(container!.querySelectorAll("button")).find(
       (button) => button.textContent === "Clear all",

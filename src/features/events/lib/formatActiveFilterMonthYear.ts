@@ -1,69 +1,40 @@
-const MONTH_NAMES = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
+import { formatPublicEventDateRange } from "@/src/lib/date/formatPublicEventDateRange";
 
-function daysInMonth(year: number, month: number): number {
-  if (month === 2) {
-    const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-    return isLeapYear ? 29 : 28;
-  }
-  return month === 4 || month === 6 || month === 9 || month === 11 ? 30 : 31;
-}
+export type ActiveFilterDateChip = {
+  /** Chip group label shown before the colon. */
+  label: "Date" | "From" | "Until";
+  /** Day-level value from the canonical public date formatter. */
+  value: string;
+};
 
-/** Compact month-year label for Active Filter chips (`Jan 2027`). */
-export function formatActiveFilterMonthYear(
-  value: string | null | undefined,
-): string | null {
-  const trimmed = typeof value === "string" ? value.trim() : "";
-  if (trimmed === "") return null;
-
-  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
-  if (!match) return null;
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (
-    !Number.isInteger(year) ||
-    year < 1 ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > daysInMonth(year, month)
-  ) {
-    return null;
-  }
-
-  return `${MONTH_NAMES[month - 1]} ${year}`;
-}
-
-/** Active Filters Date group label body (without the `Date:` prefix). */
-export function formatActiveFilterDateChipBody(
+/**
+ * Active Filters Date group chip (exact day-level labels via formatPublicEventDateRange).
+ * Returns null when neither bound is a usable date.
+ */
+export function formatActiveFilterDateChip(
   startDate: string,
   endDate: string,
-): string | null {
-  const start = formatActiveFilterMonthYear(startDate);
-  const end = formatActiveFilterMonthYear(endDate);
+): ActiveFilterDateChip | null {
+  const start = startDate.trim();
+  const end = endDate.trim();
 
-  if (start !== null && end !== null) {
-    return `${start} – ${end}`;
+  if (start !== "" && end !== "") {
+    const value = formatPublicEventDateRange(start, end);
+    if (value === null) return null;
+    return { label: "Date", value };
   }
-  if (start !== null) {
-    return `From ${start}`;
+
+  if (start !== "") {
+    const value = formatPublicEventDateRange(start, null);
+    if (value === null) return null;
+    return { label: "From", value };
   }
-  if (end !== null) {
-    return `Until ${end}`;
+
+  if (end !== "") {
+    const value = formatPublicEventDateRange(null, end);
+    if (value === null) return null;
+    return { label: "Until", value };
   }
+
   return null;
 }

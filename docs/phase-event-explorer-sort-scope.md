@@ -1,10 +1,10 @@
 # Phase — Event Explorer Sort: Implementation Scope
 
-**Status:** Partially implemented (Recommended default, Reset fix, Recently Reviewed shipped; date split pending; Active Filters v1 locked, not shipped)
-**Version:** v1.2
+**Status:** Partially implemented (Recommended default, Reset fix, Recently Reviewed, Active Filters v1 shipped; date split pending; Active Filters date chips revised to day-level)
+**Version:** v1.3
 **Last updated:** 2026-07-29
 
-Implementation scope for **Event Explorer sort improvements** on the public `/events` page. Also records **Active Filters v1** locked UX decisions (§11). Defines product decisions, sort semantics, filter-summary UX, implementation boundaries, and verification — not application code.
+Implementation scope for **Event Explorer sort improvements** on the public `/events` page. Also records **Active Filters v1** UX decisions (§11). Defines product decisions, sort semantics, filter-summary UX, implementation boundaries, and verification — not application code.
 
 **Related code (current):** `src/features/events/lib/eventExplorerOrdering.ts`, `src/features/events/components/explorer/EventExplorerPage.tsx`, `src/features/events/components/explorer/EventExplorerActiveFilters.tsx`, `src/components/common/explorer/ExplorerResultsToolbar.tsx`, `src/components/layout/GlobalSearchBar.tsx`
 
@@ -314,10 +314,10 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 - [ ] `npm run build` passes; ordering tests pass
 - [ ] `project-state.md` updated when date split ships
 
-### Active Filters v1 (locked; not shipped)
+### Active Filters v1 (shipped; date-chip day-level revised)
 
-- [ ] Group chips: Search / Keyword / Country / Date with labels
-- [ ] Date chip formats: From / Until / range (month-year)
+- [x] Group chips: Search / Keyword / Country / Date with labels
+- [x] Date chip formats: From / Until / range (exact day-level via `formatPublicEventDateRange`)
 - [ ] Non-empty Search submit replaces Search group and clears input; no sync back into bar
 - [ ] Empty Search submit is a no-op (does not clear applied Search)
 - [ ] Search removed only via Search chip × or Clear all
@@ -335,9 +335,9 @@ Active Filters v1 (§11) treats Search as a first-class applied filter, summariz
 
 ---
 
-## 11. Active Filters v1 (locked 2026-07-29)
+## 11. Active Filters v1 (locked 2026-07-29; date chips revised 2026-07-29)
 
-**Status:** Decisions locked; **not shipped**.
+**Status:** Shipped. Date-chip formatting revised from month-year to exact day-level.
 **Purpose:** Active Filters always represent the **complete** set of conditions applied to Explorer results. Search is a first-class filter alongside Keyword, Country, and Date.
 
 ### 11.1 Display
@@ -351,11 +351,11 @@ Active Filters v1 (§11) treats Search as a first-class applied filter, summariz
 | Search | `Search: custody` |
 | Keyword | `Keyword: AI, Blockchain` |
 | Country | `Country: Singapore` |
-| Date (both bounds) | `Date: Jan 2027 – Mar 2027` |
-| Date (start only) | `Date: From Jan 2027` |
-| Date (end only) | `Date: Until Mar 2027` |
+| Date (both bounds) | `Date: Aug 1 – Aug 31, 2026` |
+| Date (start only) | `From: Aug 15, 2026` |
+| Date (end only) | `Until: Sep 4, 2026` |
 
-**Date formatting (chips only):** compact **month-year** (`Jan 2027`). Do **not** reuse `formatPublicEventDateRange` for Active Filter chips.
+**Date formatting (chips only):** exact **day-level** dates via the canonical public formatter `formatPublicEventDateRange` (e.g. `Aug 1 – Aug 31, 2026`, `Aug 15 – Sep 4, 2026`). Open bounds use chip labels **`From:`** / **`Until:`** with a single formatted day. Invalid bounds do not create a date chip.
 
 **Keyword terminology:** user-facing chip label is **`Keyword:`**. Internal state / URL may remain `topics` / `topic`.
 
@@ -390,7 +390,7 @@ Active Filters mirror filtering logic:
 
 Example:
 
-`(Search: custody) AND (Keyword: AI OR Blockchain) AND (Country: Singapore) AND (Date: Jan 2027 – Mar 2027)`
+`(Search: custody) AND (Keyword: AI OR Blockchain) AND (Country: Singapore) AND (Date: Jan 1 – Mar 31, 2027)`
 
 ### 11.5 Explicit non-goals (v1)
 

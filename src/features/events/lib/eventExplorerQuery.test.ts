@@ -6,6 +6,7 @@ import {
   buildEventExplorerFilterKey,
   buildEventExplorerSearchParams,
   eventExplorerClientUrlMatchesDraft,
+  eventOverlapsDateRange,
   isEventExplorerFiltersApplying,
   matchesEventExplorerFilters,
   normalizeEventExplorerFilters,
@@ -503,5 +504,98 @@ describe("matchesEventExplorerFilters q search", () => {
       ),
       true,
     );
+  });
+});
+
+describe("eventOverlapsDateRange / date filters", () => {
+  const dated = {
+    name: "Dated Conference",
+    series_id: null,
+    start_date: "2026-08-10",
+    end_date: "2026-08-12",
+  };
+  const startOnly = {
+    name: "Start Only",
+    series_id: null,
+    start_date: "2026-08-15",
+    end_date: null,
+  };
+  const endOnly = {
+    name: "End Only",
+    series_id: null,
+    start_date: null,
+    end_date: "2026-08-20",
+  };
+  const undated = {
+    name: "Nordic Blockchain Conference 2027",
+    series_id: null,
+    start_date: null,
+    end_date: null,
+  };
+  const items = [dated, startOnly, endOnly, undated];
+
+  it("includes Date TBC editions when no date filter is active", () => {
+    assert.equal(eventOverlapsDateRange(undated, "", ""), true);
+    assert.deepEqual(
+      applyEventExplorerFilters(items, baseFilters).map((item) => item.name),
+      [
+        "Dated Conference",
+        "Start Only",
+        "End Only",
+        "Nordic Blockchain Conference 2027",
+      ],
+    );
+  });
+
+  it("excludes fully undated editions when both bounds are active", () => {
+    assert.equal(eventOverlapsDateRange(undated, "2026-08-01", "2026-08-31"), false);
+    assert.deepEqual(
+      applyEventExplorerFilters(items, {
+        ...baseFilters,
+        startDate: "2026-08-01",
+        endDate: "2026-08-31",
+      }).map((item) => item.name),
+      ["Dated Conference", "Start Only"],
+    );
+  });
+
+  it("excludes fully undated editions when only startDate is active", () => {
+    assert.equal(eventOverlapsDateRange(undated, "2026-08-01", ""), false);
+    assert.ok(
+      !applyEventExplorerFilters(items, {
+        ...baseFilters,
+        startDate: "2026-08-01",
+      }).some((item) => item.name === undated.name),
+    );
+  });
+
+  it("excludes fully undated editions when only endDate is active", () => {
+    assert.equal(eventOverlapsDateRange(undated, "", "2026-08-31"), false);
+    assert.ok(
+      !applyEventExplorerFilters(items, {
+        ...baseFilters,
+        endDate: "2026-08-31",
+      }).some((item) => item.name === undated.name),
+    );
+  });
+
+  it("treats start_date-only events as single-day for inclusive overlap", () => {
+    assert.equal(eventOverlapsDateRange(startOnly, "2026-08-15", "2026-08-15"), true);
+    assert.equal(eventOverlapsDateRange(startOnly, "2026-08-16", "2026-08-31"), false);
+    assert.equal(eventOverlapsDateRange(startOnly, "2026-08-01", "2026-08-14"), false);
+  });
+
+  it("excludes end_date-only events when a date filter is active", () => {
+    assert.equal(eventOverlapsDateRange(endOnly, "2026-08-01", "2026-08-31"), false);
+    assert.equal(eventOverlapsDateRange(endOnly, "2026-08-01", ""), false);
+    assert.equal(eventOverlapsDateRange(endOnly, "", "2026-08-31"), false);
+  });
+
+  it("uses inclusive overlap for valid date ranges", () => {
+    assert.equal(eventOverlapsDateRange(dated, "2026-08-12", "2026-08-12"), true);
+    assert.equal(eventOverlapsDateRange(dated, "2026-08-01", "2026-08-10"), true);
+    assert.equal(eventOverlapsDateRange(dated, "2026-08-12", "2026-08-31"), true);
+    assert.equal(eventOverlapsDateRange(dated, "2026-08-13", "2026-08-31"), false);
+    assert.equal(eventOverlapsDateRange(dated, "2026-08-01", "2026-08-09"), false);
   });
 });

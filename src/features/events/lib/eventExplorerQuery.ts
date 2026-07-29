@@ -3,7 +3,7 @@ import type { EventFilters } from "@/src/features/events/components/explorer/typ
 import {
   eventExplorerDomainMatchesQuery,
 } from "@/src/features/events/lib/eventExplorerDomain";
-import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
+import { readEventDateRange } from "@/src/features/events/lib/readEventIsoDate";
 
 export type EventExplorerSeriesKeyword = {
   name?: string | null;
@@ -414,7 +414,12 @@ export function isEventExplorerFiltersApplying(input: {
   return draftKey !== appliedKey || appliedKey !== serverKey;
 }
 
-/** True when the event's date range overlaps [filterStart, filterEnd] (inclusive). */
+/**
+ * True when the event's usable date range overlaps [filterStart, filterEnd] (inclusive).
+ * With no active filter bounds, undated / Date TBC editions are included.
+ * With any active bound, editions without a usable start_date are excluded
+ * (aligned with Discover calendar usable-date behaviour via readEventDateRange).
+ */
 export function eventOverlapsDateRange(
   event: Pick<EventExplorerMatchable, "start_date" | "end_date">,
   filterStartDate: string,
@@ -423,12 +428,13 @@ export function eventOverlapsDateRange(
   const startDate = filterStartDate.trim();
   const endDate = filterEndDate.trim();
 
-  const startValue = readEventIsoDate(event.start_date);
-  const endValue = readEventIsoDate(event.end_date ?? event.start_date);
+  if (startDate === "" && endDate === "") return true;
 
-  const afterStart = startDate === "" || endValue === "" || endValue >= startDate;
-  const beforeEnd = endDate === "" || startValue === "" || startValue <= endDate;
+  const range = readEventDateRange(event);
+  if (range === null) return false;
 
+  const afterStart = startDate === "" || range.end >= startDate;
+  const beforeEnd = endDate === "" || range.start <= endDate;
   return afterStart && beforeEnd;
 }
 

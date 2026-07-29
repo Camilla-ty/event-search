@@ -19,8 +19,8 @@ function makeEvent(overrides: Partial<EventRecord> & Pick<EventRecord, "id">): E
     slug: overrides.slug ?? null,
     name: overrides.name ?? "Sample Event",
     website_url: overrides.website_url ?? null,
-    start_date: overrides.start_date ?? "2026-06-15",
-    end_date: overrides.end_date ?? "2026-06-15",
+    start_date: "start_date" in overrides ? overrides.start_date ?? null : "2026-06-15",
+    end_date: "end_date" in overrides ? overrides.end_date ?? null : "2026-06-15",
     event_series: overrides.event_series ?? { name: "Sample Series", logo_url: null },
     cities: overrides.cities ?? {
       name: "Singapore",
@@ -104,6 +104,32 @@ describe("filterEventRecords", () => {
         (event) => event.id,
       ),
       ["1"],
+    );
+  });
+
+  it("excludes undated and end-only editions when a date filter is active", () => {
+    const mixed = [
+      ...events,
+      makeEvent({ id: "tbc", name: "Date TBC", start_date: null, end_date: null }),
+      makeEvent({
+        id: "end-only",
+        name: "End Only",
+        start_date: null,
+        end_date: "2026-07-02",
+      }),
+    ];
+
+    assert.deepEqual(
+      filterEventRecords(mixed, defaultFilters).map((event) => event.id),
+      ["1", "2", "tbc", "end-only"],
+    );
+    assert.deepEqual(
+      filterEventRecords(mixed, {
+        ...defaultFilters,
+        startDate: "2026-07-01",
+        endDate: "2026-07-31",
+      }).map((event) => event.id),
+      ["2"],
     );
   });
 });

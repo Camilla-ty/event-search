@@ -124,7 +124,9 @@ describe("server/client non-topic filter equivalence", () => {
     const datedCatalog = catalog.map((item) =>
       item.id === "btc-only"
         ? { ...item, start_date: "2026-06-01", end_date: "2026-06-03" }
-        : item,
+        : item.id === "ai-only"
+          ? { ...item, start_date: "2026-07-10", end_date: null }
+          : item,
     );
 
     const filters = {
@@ -141,5 +143,24 @@ describe("server/client non-topic filter equivalence", () => {
     }).map((item) => item.id);
 
     assert.deepEqual(client, server);
+    assert.deepEqual(client, ["btc-only"]);
+  });
+
+  it("excludes undated editions under date filters on both paths", () => {
+    const filters = {
+      ...DEFAULT_EVENT_EXPLORER_FILTERS,
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+    };
+
+    const server = applyEventExplorerFilters(catalog, filters, {
+      topicSeriesIds: null,
+    }).map((item) => item.id);
+    const client = applyEventExplorerFilters(catalog, filters, {
+      matchTopicsByKeywords: true,
+    }).map((item) => item.id);
+
+    assert.deepEqual(client, server);
+    assert.deepEqual(client, []);
   });
 });

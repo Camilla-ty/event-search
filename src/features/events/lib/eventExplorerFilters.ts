@@ -1,8 +1,10 @@
 import type { EventFilters, EventRecord } from "@/src/features/events/components/explorer/types";
 
 import { eventExplorerDomainMatchesQuery } from "@/src/features/events/lib/eventExplorerDomain";
-import { editionMatchesEventExplorerRegions } from "@/src/features/events/lib/eventExplorerQuery";
-import { readEventIsoDate } from "@/src/features/events/lib/readEventIsoDate";
+import {
+  editionMatchesEventExplorerRegions,
+  eventOverlapsDateRange,
+} from "@/src/features/events/lib/eventExplorerQuery";
 
 function normalize(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
@@ -26,12 +28,8 @@ export function filterEventRecords(
       seriesName.includes(query) ||
       eventExplorerDomainMatchesQuery(event, filters.query, "includes");
     const regionMatch = editionMatchesEventExplorerRegions(event, filters.regions);
+    const dateMatch = eventOverlapsDateRange(event, startDate, endDate);
 
-    const startValue = readEventIsoDate(event.start_date);
-    const endValue = readEventIsoDate(event.end_date ?? event.start_date);
-    const afterStart = startDate === "" || endValue === "" || endValue >= startDate;
-    const beforeEnd = endDate === "" || startValue === "" || startValue <= endDate;
-
-    return queryMatch && regionMatch && afterStart && beforeEnd;
+    return queryMatch && regionMatch && dateMatch;
   });
 }

@@ -3,7 +3,7 @@
 import { buildActiveCountryChips } from "@/src/features/events/lib/activeCountryChips";
 import { buildActiveTopicChips } from "@/src/features/events/lib/activeTopicChips";
 import type { EventExplorerTopicFacet } from "@/src/features/events/lib/eventExplorerFilterFacets";
-import { formatActiveFilterDateChipBody } from "@/src/features/events/lib/formatActiveFilterMonthYear";
+import { formatActiveFilterDateChip } from "@/src/features/events/lib/formatActiveFilterMonthYear";
 import { brandLinkClass } from "@/src/lib/design/classes";
 
 type EventExplorerActiveFiltersProps = {
@@ -69,13 +69,13 @@ export function EventExplorerActiveFilters({
   const trimmedQuery = query.trim();
   const topicChips = buildActiveTopicChips(topics, topicOptions);
   const countryChips = buildActiveCountryChips(regions, countryOptions);
-  const dateBody = formatActiveFilterDateChipBody(startDate, endDate);
+  const dateChip = formatActiveFilterDateChip(startDate, endDate);
 
   if (
     trimmedQuery === "" &&
     topicChips.length === 0 &&
     countryChips.length === 0 &&
-    dateBody === null
+    dateChip === null
   ) {
     return null;
   }
@@ -113,12 +113,12 @@ export function EventExplorerActiveFilters({
             removeAriaLabel="Remove country filters"
           />
         ) : null}
-        {dateBody !== null ? (
+        {dateChip !== null ? (
           <ActiveFilterGroupChip
-            label="Date"
-            value={dateBody}
+            label={dateChip.label}
+            value={dateChip.value}
             onRemove={onRemoveDates}
-            removeAriaLabel={`Remove date filter ${dateBody}`}
+            removeAriaLabel={`Remove date filter ${dateChip.value}`}
           />
         ) : null}
       </div>
