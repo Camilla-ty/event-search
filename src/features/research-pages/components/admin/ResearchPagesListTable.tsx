@@ -29,12 +29,13 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Public URL</th>
             <th className="px-4 py-3 font-medium">Created</th>
+            <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
           {pages.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                 No research pages yet.{" "}
                 <Link
                   href="/admin/research-pages/new"
@@ -76,6 +77,14 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
                       month: "short",
                       year: "numeric",
                     })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/admin/research-pages/${page.id}/preview`}
+                      className="text-sm text-brand-primary hover:underline"
+                    >
+                      Preview
+                    </Link>
                   </td>
                 </tr>
               );

@@ -110,6 +110,28 @@ export async function listRegionOptionsAdmin(): Promise<RegionOption[]> {
   }));
 }
 
+export async function getResearchPageById(
+  id: string,
+): Promise<ResearchPageListItem | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("topic_region_research_pages")
+    .select(`
+      id,
+      status,
+      published_at,
+      created_at,
+      keyword:topic_keyword_id ( name, slug ),
+      regions:region_id ( name, slug )
+    `)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return mapRow(data as unknown as ResearchPageRow);
+}
+
 export async function createResearchPageDraft(input: {
   topicKeywordId: string;
   regionId: string;
