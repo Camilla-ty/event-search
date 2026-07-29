@@ -53,7 +53,8 @@ import {
   createNotFoundPageMetadata,
   createPageMetadata,
 } from "@/src/lib/metadata/site";
-import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
+import { buildEventDetailPath, buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
+import { buildBreadcrumbListJsonLd } from "@/src/lib/seo/breadcrumbListJsonLd";
 import { buildEventJsonLd } from "@/src/lib/seo/eventJsonLd";
 import {
   getEventEditionIndexability,
@@ -282,15 +283,27 @@ export default async function EventDetailPage({
       : null,
   });
 
+  const breadcrumbItems = [
+    { label: "Events", href: "/events" },
+    { label: eventDisplayName },
+  ];
+  const eventDetailPath = buildEventDetailPath({
+    slug: eventSlug,
+    id: editionId,
+  });
+  const breadcrumbListJsonLd =
+    eventDetailPath !== null
+      ? buildBreadcrumbListJsonLd({
+          items: breadcrumbItems,
+          currentPagePath: eventDetailPath,
+        })
+      : null;
+
   return (
     <section className="space-y-6">
       {eventJsonLd ? <JsonLd data={eventJsonLd} /> : null}
-      <PublicBreadcrumbs
-        items={[
-          { label: "Events", href: "/events" },
-          { label: eventDisplayName },
-        ]}
-      />
+      {breadcrumbListJsonLd ? <JsonLd data={breadcrumbListJsonLd} /> : null}
+      <PublicBreadcrumbs items={breadcrumbItems} />
 
       <header className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
