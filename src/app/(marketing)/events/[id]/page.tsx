@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { Badge } from "@/src/components/common";
 import { PublicBreadcrumbs } from "@/src/components/common/PublicBreadcrumbs";
 import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
+import { JsonLd } from "@/src/components/seo/JsonLd";
 import { EventOrganizersSection } from "@/src/features/events/components/detail/EventOrganizersSection";
 import { EventOverviewSummarySection } from "@/src/features/events/components/detail/EventOverviewSummarySection";
 import { EventSponsorsSection } from "@/src/features/events/components/detail/EventSponsorsSection";
@@ -47,11 +48,13 @@ import {
 import { brandLinkClass, secondaryCtaClass } from "@/src/lib/design/classes";
 import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { resolveSeriesDisplayLogo } from "@/src/lib/events/resolveSeriesDisplayLogo";
+import { locationInputFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import {
   createNotFoundPageMetadata,
   createPageMetadata,
 } from "@/src/lib/metadata/site";
 import { buildSeriesHubPath } from "@/src/lib/routes/explorerUrls";
+import { buildEventJsonLd } from "@/src/lib/seo/eventJsonLd";
 import {
   getEventEditionIndexability,
   robotsForIndexability,
@@ -256,8 +259,32 @@ export default async function EventDetailPage({
     lastReviewedAt,
   });
 
+  const eventJsonLd = buildEventJsonLd({
+    name: typeof edition.name === "string" ? edition.name : "",
+    slug: eventSlug,
+    id: editionId,
+    startDate: typeof edition.start_date === "string" ? edition.start_date : null,
+    endDate: typeof edition.end_date === "string" ? edition.end_date : null,
+    city: locationInputFromCityEmbed(edition.cities),
+    venue: venue
+      ? { name: venue.name, archived_at: venue.archived_at }
+      : null,
+    organizers: organizers.map((organizer) => ({
+      name: organizer.company?.name ?? "",
+      slug: organizer.company?.slug,
+      id: organizer.company?.id,
+      restricted_at: organizer.company?.restricted_at,
+    })),
+    imageUrl: seriesLogoUrl,
+    description: factualSummary,
+    series: series
+      ? { name: series.name, slug: series.slug, id: series.id }
+      : null,
+  });
+
   return (
     <section className="space-y-6">
+      {eventJsonLd ? <JsonLd data={eventJsonLd} /> : null}
       <PublicBreadcrumbs
         items={[
           { label: "Events", href: "/events" },
