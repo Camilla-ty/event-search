@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
+import { ResearchPageStatusAction } from "@/src/features/research-pages/components/admin/ResearchPageStatusAction";
 import type { ResearchPageListItem } from "@/src/features/research-pages/server/researchPageAdmin";
 
 type ResearchPagesListTableProps = {
@@ -79,12 +80,18 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
                     })}
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/research-pages/${page.id}/preview`}
-                      className="text-sm text-brand-primary hover:underline"
-                    >
-                      Preview
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/admin/research-pages/${page.id}/preview`}
+                        className="text-sm text-brand-primary hover:underline"
+                      >
+                        Preview
+                      </Link>
+                      <ResearchPageStatusAction
+                        pageId={page.id}
+                        currentStatus={page.status}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

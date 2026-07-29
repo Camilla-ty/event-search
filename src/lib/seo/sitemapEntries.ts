@@ -2,15 +2,14 @@ import type { MetadataRoute } from "next";
 
 import { PRODUCTION_SITE_ORIGIN } from "@/src/lib/metadata/site";
 import {
-  getBitcoinAsiaHubIndexability,
   getCompanyIndexability,
   getEventEditionIndexability,
   getSeriesIndexability,
   getTopicIndexability,
   normalizeSeriesLifecycle,
 } from "@/src/lib/seo/indexability";
-import { BITCOIN_ASIA_HUB_PATH } from "@/src/features/events/lib/bitcoinAsiaHub";
-import { getBitcoinAsiaHubPageData } from "@/src/features/events/server/bitcoinAsiaHubPublic";
+import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
+import { listResearchPagesAdmin } from "@/src/features/research-pages/server/researchPageAdmin";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createClient } from "@supabase/supabase-js";
 
@@ -302,20 +301,19 @@ export function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
 }
 
 /**
- * IR4 MVP: include Bitcoin × Asia only when the same public-value gate as the
- * route passes (via getBitcoinAsiaHubPageData → getBitcoinAsiaHubIndexability).
+ * Include all published Topic × Region research pages whose quality gate passes.
  */
-export async function fetchBitcoinAsiaHubSitemapEntries(): Promise<
+export async function fetchResearchPageSitemapEntries(): Promise<
   MetadataRoute.Sitemap
 > {
-  const data = await getBitcoinAsiaHubPageData();
-  if (!data) return [];
+  const pages = await listResearchPagesAdmin();
+  const published = pages.filter((p) => p.status === "published");
 
-  const decision = getBitcoinAsiaHubIndexability({
-    indexableEventCount: data.facts.indexableEventCount,
-    distinctSponsorCount: data.facts.distinctSponsorCount,
-  });
-  if (!decision.includeInSitemap) return [];
-
-  return [{ url: absoluteUrl(BITCOIN_ASIA_HUB_PATH) }];
+  const entries: MetadataRoute.Sitemap = [];
+  for (const page of published) {
+    const data = await getTopicRegionHubPageData(page.topicSlug, page.regionSlug);
+    if (!data || !data.passesGate) continue;
+    entries.push({ url: absoluteUrl(data.path) });
+  }
+  return entries;
 }

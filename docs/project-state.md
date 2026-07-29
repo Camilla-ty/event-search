@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-07-29 (Structured Data v1 completed — Event, BreadcrumbList, Organization JSON-LD)
+> Last updated: 2026-07-29 (Research Pages: admin Publish/Unpublish, generic public route, sitemap integration)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -27,6 +27,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 | **Event Exhibitors** | `event_exhibitors` | Edition-scoped join: `tier_rank`, `tier_label`, within-tier `display_order`. Orthogonal to sponsors/organizers. Migration: `20260725130000_event_exhibitors_v1.sql`. See [exhibitor-design.md](./exhibitor-design.md). |
 | **Event Edition Organizers** | `event_edition_organizers` | Edition-scoped join: company as organizer with `role_label` (default "Organizer") and `display_order`. `UNIQUE (event_editions_id, company_id)`. Replaces rejected legacy `event_organizers` → `organizers` architecture (those tables were never shipped). See [organizer-design.md](./organizer-design.md) and [phase-organizer-scope.md](./phase-organizer-scope.md). |
 | **Keywords** | `keyword`, `event_series_keyword` | Attach to series; editions inherit (read-only chips on edition profile). |
+| **Topic × Region Research Pages** | `topic_region_research_pages` | Admin-managed approval table. `status` = `draft` \| `published`. Only published rows produce public pages at `/events/topics/{topicSlug}/regions/{regionSlug}`. Content dynamically computed. Migration: `20260729120000_topic_region_research_pages.sql`. |
 | **Partner Alumni** *(v2 — program/admin shipped)* | `event_partner_alumni`, `event_partner_alumni_versions`, `event_partner_alumni_version_companies` | Series-scoped **versioned** roster; **`current_version_id`** public pointer (server-side resolution); version-scoped bulk import; company merge repoints version members. Separate from sponsors. Migrations: `20260710120000_partner_alumni_v1.sql`, `20260711120000_partner_alumni_v2_versions.sql`, `20260712120000_company_merge_partner_alumni.sql`. See [partner-alumni-design.md](./partner-alumni-design.md), [phase-partner-alumni-scope.md](./phase-partner-alumni-scope.md). |
 | **Logos** | columns on `companies`; `event_series.logo_url`; `venues.logo_url` | Companies: Logo.dev ingest + metadata. Event series and venues: manual HTTP URL and/or file upload to `COMPANY_LOGO_BUCKET` (`venues/{id}/logo.{ext}`). Event edition logos are manual-only. |
 | **Imports** | `sponsor_import_*`; Partner Alumni import tables; `exhibitor_import_*` | Excel pipelines → validate/match → draft → publish. Sponsor: one active batch per edition. Exhibitor: edition-scoped independent pipeline (writes `event_exhibitors` only). Partner Alumni: version-scoped batch import. |
@@ -38,6 +39,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 - `event_exhibitors`: anon and authenticated SELECT all rows (organizer-like; no sponsor tier gate); no client writes.
 - `event_partner_alumni` / draft tables (v1): RLS enabled; **no** anon/authenticated SELECT — **draft table removed in v2 (PA1′)**.
 - `event_partner_alumni_snapshots` / snapshot members (v1): anon SELECT all rows — **v2: current version only (or server-resolved)**.
+- `topic_region_research_pages`: authenticated SELECT all rows; admin writes via service role.
 - Core catalog tables: public SELECT; admin writes via service role.
 - Import tables: service role only.
 
@@ -77,6 +79,8 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 **Public — organizers** — Event edition detail tabs include **Organizers** (`?tab=organizers`). Organizers tab always visible; list or standard empty state inside tab. Fully public (no tier gate). No organizers block on Overview. No `/organizers/...` routes; no “Events organized” on public company pages in v1.
 
 **Public — exhibitors** — Event edition detail **Exhibitors** tab hide-when-empty (`?tab=exhibitors`); restricted-company scrubbing on rows. Company public **Exhibitor history** when non-empty. Marketing `/exhibitors` stub remains; Exhibitor Discovery out of scope (`PROD-002`).
+
+**Admin — Research Pages** — Topic × Region research page management at `/admin/research-pages`. List, create (draft only), preview (draft + published), publish, unpublish. Publish sets `status=published` and `published_at=now()`; unpublish reverts to draft and removes public access. Generic public route at `/events/topics/[topicSlug]/regions/[regionSlug]` renders only published pages. Quality gate controls indexability (`index` when passes, `noindex` when fails) — published pages render regardless of gate. Sitemap includes only published + gate-passing pages. Bitcoin × Asia seeded as published; governed by the same generic route. See migration `20260729120000_topic_region_research_pages.sql`.
 
 ### Structured Data v1 (Completed)
 

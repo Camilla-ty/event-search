@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { TopicRegionHubView } from "@/src/features/events/components/topic-region/TopicRegionHubView";
+import { ResearchPageStatusAction } from "@/src/features/research-pages/components/admin/ResearchPageStatusAction";
 import { getResearchPageById } from "@/src/features/research-pages/server/researchPageAdmin";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
 
@@ -51,6 +52,10 @@ export default async function AdminResearchPagePreview({
               Gate: {data.passesGate ? "passes" : "fails"}
             </span>
           ) : null}
+          <ResearchPageStatusAction
+            pageId={record.id}
+            currentStatus={record.status}
+          />
         </div>
         <p className="mt-2 text-sm text-amber-800">
           This is an admin-only preview. {!data ? "No data is available for this combination yet." : !data.passesGate ? "This page does not yet meet the indexability threshold." : "This page meets the indexability threshold."}

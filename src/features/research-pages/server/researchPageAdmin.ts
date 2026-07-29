@@ -132,6 +132,55 @@ export async function getResearchPageById(
   return mapRow(data as unknown as ResearchPageRow);
 }
 
+export async function publishResearchPage(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("topic_region_research_pages")
+    .update({ status: "published", published_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function unpublishResearchPage(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("topic_region_research_pages")
+    .update({ status: "draft", published_at: null })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Look up a published research page by topic+region slugs.
+ * Used by the generic public route to gate access.
+ */
+export async function getPublishedResearchPageBySlugs(
+  topicSlug: string,
+  regionSlug: string,
+): Promise<{ id: string } | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("topic_region_research_pages")
+    .select(`
+      id,
+      keyword:topic_keyword_id ( name, slug ),
+      regions:region_id ( name, slug )
+    `)
+    .eq("status", "published")
+    .limit(100);
+
+  if (error) throw new Error(error.message);
+
+  for (const row of data ?? []) {
+    const kw = readEmbedded(row.keyword as unknown);
+    const rg = readEmbedded(row.regions as unknown);
+    if (kw?.slug === topicSlug && rg?.slug === regionSlug) {
+      return { id: row.id };
+    }
+  }
+  return null;
+}
+
 export async function createResearchPageDraft(input: {
   topicKeywordId: string;
   regionId: string;
