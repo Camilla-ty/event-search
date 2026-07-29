@@ -54,14 +54,16 @@ function buildDaysForAssignment(
   return days;
 }
 
+/**
+ * True when two capsules occupy neighbouring days in the same week row.
+ * Lane is ignored so stacked cross-lane day-neighbours still conflict.
+ */
 function touchesHorizontally(
   a: CalendarLaneAssignment,
   b: CalendarLaneAssignment,
   gridDays: readonly string[],
   dayIndexByIsoDate: ReadonlyMap<string, number>,
 ): boolean {
-  if (a.lane !== b.lane) return false;
-
   const bDays = new Set(buildDaysForAssignment(b));
 
   for (const day of buildDaysForAssignment(a)) {

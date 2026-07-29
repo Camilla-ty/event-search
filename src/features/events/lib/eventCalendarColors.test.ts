@@ -133,6 +133,59 @@ describe("buildCalendarColorLayout", () => {
     assert.equal(colorLayout.colorByEventId.get("wednesday"), "Green");
   });
 
+  it("avoids reusing a color for cross-lane neighbouring events on adjacent days", () => {
+    const bounds = getMonthGridBounds("2026-10");
+    assert.ok(bounds);
+
+    const laneLayout = buildCalendarLaneLayout(
+      [
+        makeEvent({
+          id: "dasummit",
+          name: "Digital Assets Summit (DASummit) 2026",
+          startDate: "2026-10-06",
+          endDate: "2026-10-06",
+        }),
+        // Alphabetically earlier so it occupies lane 0 on Oct 7 and pushes Asia to lane 1.
+        makeEvent({
+          id: "token2049",
+          name: "AAA TOKEN2049 Singapore 2026",
+          startDate: "2026-10-07",
+          endDate: "2026-10-07",
+        }),
+        makeEvent({
+          id: "dasummit-asia",
+          name: "Digital Asset Summit Asia 2026",
+          startDate: "2026-10-07",
+          endDate: "2026-10-07",
+        }),
+      ],
+      bounds,
+    );
+
+    assert.equal(laneLayout.assignmentsByEventId.get("dasummit")?.lane, 0);
+    assert.equal(laneLayout.assignmentsByEventId.get("token2049")?.lane, 0);
+    assert.equal(laneLayout.assignmentsByEventId.get("dasummit-asia")?.lane, 1);
+
+    const first = buildCalendarColorLayout(laneLayout, bounds);
+    const second = buildCalendarColorLayout(laneLayout, bounds);
+
+    assert.equal(first.colorByEventId.get("dasummit"), "Blue");
+    assert.equal(first.colorByEventId.get("dasummit-asia"), "Green");
+    assert.equal(first.colorByEventId.get("token2049"), "Orange");
+    assert.notEqual(
+      first.colorByEventId.get("dasummit"),
+      first.colorByEventId.get("dasummit-asia"),
+    );
+    assert.notEqual(
+      first.colorByEventId.get("token2049"),
+      first.colorByEventId.get("dasummit-asia"),
+    );
+    assert.deepEqual(
+      [...first.colorByEventId.entries()],
+      [...second.colorByEventId.entries()],
+    );
+  });
+
   it("uses the deterministic fallback when all five palette families are forbidden", () => {
     const bounds = getMonthGridBounds("2026-11");
     assert.ok(bounds);
@@ -159,6 +212,10 @@ describe("buildCalendarColorLayout", () => {
     assert.equal(
       first.colorByEventId.get("event-fallback"),
       second.colorByEventId.get("event-fallback"),
+    );
+    assert.deepEqual(
+      [...first.colorByEventId.entries()],
+      [...second.colorByEventId.entries()],
     );
     assert.ok(
       ["Blue", "Green", "Orange", "Purple", "Grey"].includes(
