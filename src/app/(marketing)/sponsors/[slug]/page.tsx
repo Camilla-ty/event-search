@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/src/components/seo/JsonLd";
 import { getPublicExhibitorHistoryForCompany } from "@/src/features/exhibitors/server/exhibitorHistoryPublic";
 import { SponsorDetailView } from "@/src/features/sponsors/components/detail/SponsorDetailView";
 import { getSponsorDetailData } from "@/src/features/sponsors/server/getSponsorDetailData";
+import { buildCompanySummary } from "@/src/lib/content/factualSummary";
+import { locationInputFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import {
   createNotFoundPageMetadata,
   createPageMetadata,
@@ -12,6 +15,7 @@ import {
   getCompanyIndexability,
   robotsForIndexability,
 } from "@/src/lib/seo/indexability";
+import { buildOrganizationJsonLd } from "@/src/lib/seo/organizationJsonLd";
 import { buildSponsorMetadataDescription } from "@/src/lib/seo/sponsorMetadata";
 import { createClient } from "@/src/lib/supabase/server";
 
@@ -77,10 +81,39 @@ export default async function SponsorDetailPage({
     data.company.id,
   );
 
+  const company = data.company;
+  const companyName =
+    typeof company.name === "string" && company.name.trim() !== ""
+      ? company.name.trim()
+      : "";
+  const factualSummary = buildCompanySummary({
+    name: companyName || "Company profile",
+    website: company.website,
+    domain: company.domain,
+    sponsoredEditionCount: data.summary.sponsoredEditionCount,
+    sponsoredEditionCountUnknown:
+      data.summary.sponsoredEditionCountUnknown === true,
+  });
+  // JSON-LD uses the real name only; UI may still show "Company profile".
+  const organizationJsonLd = buildOrganizationJsonLd({
+    name: companyName,
+    slug: company.slug,
+    id: company.id,
+    restricted_at: company.restricted_at,
+    logoUrl: company.logo_url,
+    website: company.website,
+    domain: company.domain,
+    description: companyName !== "" ? factualSummary : null,
+    city: locationInputFromCityEmbed(company.cities),
+  });
+
   return (
-    <SponsorDetailView
-      data={data}
-      exhibitorHistoryGroups={exhibitorHistoryGroups}
-    />
+    <>
+      {organizationJsonLd ? <JsonLd data={organizationJsonLd} /> : null}
+      <SponsorDetailView
+        data={data}
+        exhibitorHistoryGroups={exhibitorHistoryGroups}
+      />
+    </>
   );
 }
