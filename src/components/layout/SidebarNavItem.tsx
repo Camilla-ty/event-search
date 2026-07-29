@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
+  BookOpen,
   Building,
   Building2,
   CalendarDays,
@@ -27,6 +28,7 @@ const sidebarNavIcons: Record<SidebarNavIconKey, LucideIcon> = {
   "upload-cloud": UploadCloud,
   building: Building,
   "map-pin": MapPin,
+  "book-open": BookOpen,
 };
 
 type SidebarNavItemProps = {

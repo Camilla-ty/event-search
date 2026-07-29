@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-07-24 (Exhibitors E1–E6 shipped; Partner Alumni batch import shipped; legacy PA drawer still present)
+> Last updated: 2026-07-29 (Structured Data v1 completed — Event, BreadcrumbList, Organization JSON-LD)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -77,6 +77,36 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 **Public — organizers** — Event edition detail tabs include **Organizers** (`?tab=organizers`). Organizers tab always visible; list or standard empty state inside tab. Fully public (no tier gate). No organizers block on Overview. No `/organizers/...` routes; no “Events organized” on public company pages in v1.
 
 **Public — exhibitors** — Event edition detail **Exhibitors** tab hide-when-empty (`?tab=exhibitors`); restricted-company scrubbing on rows. Company public **Exhibitor history** when non-empty. Marketing `/exhibitors` stub remains; Exhibitor Discovery out of scope (`PROD-002`).
+
+### Structured Data v1 (Completed)
+
+Implemented:
+
+- Event JSON-LD on public Event Detail pages
+- BreadcrumbList JSON-LD on public Event Detail pages
+- Organization JSON-LD on public Sponsor Detail pages
+
+Principles:
+
+- Uses anonymous-visible public facts only
+- No admin-only or authenticated-only data
+- No sponsor, exhibitor, or organizer relationship graphs
+- Restricted companies emit no Organization graph
+- No additional database queries
+- Server-rendered JSON-LD
+- Existing JsonLd serializer reused
+- No visible UI changes
+
+Validation:
+
+- Unit tests passing
+- ESLint clean
+- TypeScript clean
+- Production verification completed
+- Canonical production URLs verified
+- No localhost URLs
+- JSON parses successfully
+- SSR output verified
 
 ## 4. In Progress
 
