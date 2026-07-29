@@ -10,8 +10,6 @@ import {
 import { Button } from "@/src/components/common";
 import { useEventExplorerCollection } from "@/src/features/events/client/useEventExplorerCollection";
 import { useEventExplorerFilterBridgePublisher } from "@/src/features/events/client/EventExplorerFilterBridge";
-import { toggleCountrySelection } from "@/src/features/events/lib/filterPanelCountries";
-import { toggleTopicSelection } from "@/src/features/events/lib/filterPanelTopics";
 import type { EventExplorerSortMode } from "@/src/features/events/lib/eventExplorerOrdering";
 import {
   explorerFilterStickyClass,
@@ -20,7 +18,7 @@ import {
 import { feedbackWarningClass } from "@/src/lib/design/classes";
 import type { EventExplorerPageResult } from "@/src/features/events/server/eventExplorerTypes";
 
-import { ActiveTopicFilters } from "./ActiveTopicFilters";
+import { EventExplorerActiveFilters } from "./EventExplorerActiveFilters";
 import { EventGrid } from "./EventGrid";
 import { FilterPanel } from "./FilterPanel";
 
@@ -60,22 +58,40 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
   function handleClearAllFilters() {
     setFilters({
       ...params.filters,
+      query: "",
       topics: [],
+      regions: [],
+      startDate: "",
+      endDate: "",
+    });
+  }
+
+  function handleRemoveSearch() {
+    setFilters({
+      ...params.filters,
+      query: "",
+    });
+  }
+
+  function handleRemoveKeywords() {
+    setFilters({
+      ...params.filters,
+      topics: [],
+    });
+  }
+
+  function handleRemoveCountries() {
+    setFilters({
+      ...params.filters,
       regions: [],
     });
   }
 
-  function handleRemoveTopic(slug: string) {
+  function handleRemoveDates() {
     setFilters({
       ...params.filters,
-      topics: toggleTopicSelection(params.filters.topics, slug, false),
-    });
-  }
-
-  function handleRemoveCountry(country: string) {
-    setFilters({
-      ...params.filters,
-      regions: toggleCountrySelection(params.filters.regions, country, false),
+      startDate: "",
+      endDate: "",
     });
   }
 
@@ -99,13 +115,18 @@ export function EventExplorerPage({ initial }: EventExplorerPageProps) {
         </div>
 
         <div className="space-y-4">
-          <ActiveTopicFilters
+          <EventExplorerActiveFilters
+            query={params.filters.query}
             topics={params.filters.topics}
             topicOptions={facets.topics}
             regions={params.filters.regions}
             countryOptions={facets.countries}
-            onRemoveTopic={handleRemoveTopic}
-            onRemoveCountry={handleRemoveCountry}
+            startDate={params.filters.startDate}
+            endDate={params.filters.endDate}
+            onRemoveSearch={handleRemoveSearch}
+            onRemoveKeywords={handleRemoveKeywords}
+            onRemoveCountries={handleRemoveCountries}
+            onRemoveDates={handleRemoveDates}
             onClearAll={handleClearAllFilters}
           />
           <ExplorerResultsToolbar

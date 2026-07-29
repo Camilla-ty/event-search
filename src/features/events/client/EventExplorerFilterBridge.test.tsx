@@ -260,13 +260,15 @@ describe("EventExplorerFilterBridge publisher policy", () => {
 });
 
 describe("GlobalSearchBar bridge dependency policy", () => {
-  it("depends on eventExplorerQuery instead of the full bridge object", () => {
+  it("applies Explorer search through the bridge without syncing query into the input", () => {
     const source = readFileSync(
       path.join(process.cwd(), "src/components/layout/GlobalSearchBar.tsx"),
       "utf8",
     );
 
-    assert.match(source, /eventExplorerQuery/);
+    assert.match(source, /eventExplorerBridge\.setFilters/);
+    assert.match(source, /clearOnSubmit=\{isEventExplorerPage\}/);
+    assert.doesNotMatch(source, /syncValue=/);
     assert.doesNotMatch(source, /\[eventExplorerBridge\?\.filters\.query, eventExplorerBridge\]/);
   });
 });

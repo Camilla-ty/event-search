@@ -2,7 +2,7 @@
 
 **Status:** Canonical
 **Role:** Project-wide implementation roadmap **index** only
-**Last updated:** 2026-07-24
+**Last updated:** 2026-07-29
 **Purpose:** Point engineers to the authoritative phase, design, and plan documents for each major domain. This file does **not** define phase sequencing, timelines, or new priorities.
 
 For current shipped product state, see [project-state.md](./project-state.md).
@@ -40,7 +40,7 @@ Statuses below summarize what existing documents and shipped code already establ
 | **Edition research metadata** | [phase-edition-last-reviewed-automation-scope.md](./phase-edition-last-reviewed-automation-scope.md) | |
 | **Company identity & merge** | [adr/ADR-001-company-identity.md](./adr/ADR-001-company-identity.md), [adr/ADR-002-company-website-canonical-identity.md](./adr/ADR-002-company-website-canonical-identity.md), [phase-company-website-identity-scope.md](./phase-company-website-identity-scope.md), [implementation/company-domain-matching-v1.md](./implementation/company-domain-matching-v1.md) | |
 | **Restricted companies** | [plans/protection-v1.md](./plans/protection-v1.md), [plans/indexability-policy.md](./plans/indexability-policy.md) | Public restriction / discovery exclusion |
-| **Event Explorer / public discovery** | [phase-event-explorer-sort-scope.md](./phase-event-explorer-sort-scope.md) | |
+| **Event Explorer / public discovery** | [phase-event-explorer-sort-scope.md](./phase-event-explorer-sort-scope.md) | Sort scope + Active Filters v1 locked decisions (§11) |
 | **Public sponsor roster** | [adr/ADR-003-tier-lazy-loaded-event-sponsors.md](./adr/ADR-003-tier-lazy-loaded-event-sponsors.md), [phase-public-sponsor-roster-lazy-load-scope.md](./phase-public-sponsor-roster-lazy-load-scope.md) | |
 | **SEO / indexability** | [plans/seo-implementation-roadmap.md](./plans/seo-implementation-roadmap.md), [plans/seo-foundation.md](./plans/seo-foundation.md) | Parallel track — explicitly labeled roadmap-only where stated |
 | **Terminology & IA** | [terminology.md](./terminology.md), [admin-information-architecture.md](./admin-information-architecture.md) | |

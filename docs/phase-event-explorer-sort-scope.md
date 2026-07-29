@@ -1,12 +1,12 @@
 # Phase — Event Explorer Sort: Implementation Scope
 
-**Status:** Partially implemented (Recommended default, Reset fix, Recently Reviewed shipped; date split pending)  
-**Version:** v1.1  
-**Last updated:** 2026-07-03  
+**Status:** Partially implemented (Recommended default, Reset fix, Recently Reviewed shipped; date split pending; Active Filters v1 locked, not shipped)
+**Version:** v1.2
+**Last updated:** 2026-07-29
 
-Implementation scope for **Event Explorer sort improvements** on the public `/events` page. Defines product decisions, sort semantics, implementation boundaries, and verification — not application code.
+Implementation scope for **Event Explorer sort improvements** on the public `/events` page. Also records **Active Filters v1** locked UX decisions (§11). Defines product decisions, sort semantics, filter-summary UX, implementation boundaries, and verification — not application code.
 
-**Related code (current):** `src/features/events/lib/eventExplorerOrdering.ts`, `src/features/events/components/explorer/EventExplorerPage.tsx`, `src/components/common/explorer/ExplorerResultsToolbar.tsx`
+**Related code (current):** `src/features/events/lib/eventExplorerOrdering.ts`, `src/features/events/components/explorer/EventExplorerPage.tsx`, `src/features/events/components/explorer/EventExplorerActiveFilters.tsx`, `src/components/common/explorer/ExplorerResultsToolbar.tsx`, `src/components/layout/GlobalSearchBar.tsx`
 
 **Permissions:** Public read-only. No admin changes.
 
@@ -23,7 +23,9 @@ The Event Explorer (`/events`) is EventPixels’ primary public discovery surfac
 | Keyword | Left filter panel | `topics[]` — checkbox multi-select; URL `topic=` |
 | Country | Left filter panel | `regions[]` — checkbox multi-select; URL `region=` |
 | Start / End date | Left filter panel | `startDate` / `endDate`; URL `start=` / `end=` |
-| Search (`q`) | Global / URL | Text search across edition name, series name, domains |
+| Search (`q`) | Global search bar / URL | Text search across edition name, series name, domains |
+
+**Active Filters** (results column) must summarize the **complete** applied filter set. Locked chip UX and Clear all rules: **§11 Active Filters v1**.
 
 The **Event Series filter was removed** from the explorer. Series discovery is covered by:
 
@@ -284,7 +286,7 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 
 | Document | Action |
 |----------|--------|
-| **This file** (`phase-event-explorer-sort-scope.md`) | **Living scope** for sort v1 |
+| **This file** (`phase-event-explorer-sort-scope.md`) | **Living scope** for sort v1 and Active Filters v1 (§11) |
 | [`project-state.md`](./project-state.md) | Update **only after implementation ships** (per maintenance rule) |
 | [`README.md`](./README.md) | Optional: add link under public site / explorer when implementation starts |
 | Migration design | **Not required** — no schema changes |
@@ -312,8 +314,88 @@ All modes operate on the **already-filtered** client-side `EventRecord[]` passed
 - [ ] `npm run build` passes; ordering tests pass
 - [ ] `project-state.md` updated when date split ships
 
+### Active Filters v1 (locked; not shipped)
+
+- [ ] Group chips: Search / Keyword / Country / Date with labels
+- [ ] Date chip formats: From / Until / range (month-year)
+- [ ] Non-empty Search submit replaces Search group and clears input; no sync back into bar
+- [ ] Empty Search submit is a no-op (does not clear applied Search)
+- [ ] Search removed only via Search chip × or Clear all
+- [ ] Chip × removes entire group
+- [ ] Active Filters Clear all clears Search + Keyword + Country + Date; preserves sort
+- [ ] Filter Panel still edits individual Keyword / Country / Date values
+
 ---
 
 ## 10. Summary
 
 Event Explorer sort v1 prioritizes **research freshness** over popularity. **Recommended** remains the default; **Recently Reviewed** sorts by `last_reviewed_at`. Chronological sorting uses **two explicit date modes** — **Event Date (Oldest First)** and **Event Date (Newest First)** — so users always know sort direction. **Event Name** remains alphabetical. Sort stays **client-side** in the **results toolbar** without URL persistence. Most Sponsors, Upcoming First, and catalog Newest First (`created_at`) remain excluded.
+
+Active Filters v1 (§11) treats Search as a first-class applied filter, summarizes each filter group as one labeled chip, and requires Clear all to reset Search, Keyword, Country, and Date while preserving sort.
+
+---
+
+## 11. Active Filters v1 (locked 2026-07-29)
+
+**Status:** Decisions locked; **not shipped**.
+**Purpose:** Active Filters always represent the **complete** set of conditions applied to Explorer results. Search is a first-class filter alongside Keyword, Country, and Date.
+
+### 11.1 Display
+
+- Show chips **by filter group**, not per value. Exactly **one chip per group**.
+- Multiple values in a group are joined with commas.
+- Every chip includes its group label.
+
+| Group | Chip examples |
+|-------|----------------|
+| Search | `Search: custody` |
+| Keyword | `Keyword: AI, Blockchain` |
+| Country | `Country: Singapore` |
+| Date (both bounds) | `Date: Jan 2027 – Mar 2027` |
+| Date (start only) | `Date: From Jan 2027` |
+| Date (end only) | `Date: Until Mar 2027` |
+
+**Date formatting (chips only):** compact **month-year** (`Jan 2027`). Do **not** reuse `formatPublicEventDateRange` for Active Filter chips.
+
+**Keyword terminology:** user-facing chip label is **`Keyword:`**. Internal state / URL may remain `topics` / `topic`.
+
+### 11.2 Behaviour
+
+| Action | Result |
+|--------|--------|
+| Enter / submit with non-empty Search | Apply Search (replace existing Search group); **clear the input** |
+| Enter / submit with **empty** Search | **No-op** — does **not** clear the applied Search group; input may remain empty |
+| Applied Search value | Lives **only** in the Search chip — **do not** sync back into the Search input |
+| Chip × | Removes the **entire** filter group |
+| Chips | **Not editable** |
+| Search bar | Used only to **create / replace** the Search group |
+| Filter Panel | Remains the place to add/remove individual Keyword, Country, and Date values |
+| Clear all (Active Filters) | Clears **Search, Keyword, Country, and Date**; **preserves sort** |
+
+**Search removal:** Applied Search is removed only via the Search chip **×** or **Clear all** — never via empty Search submit.
+
+### 11.3 Search cardinality (v1)
+
+- **One** Search value only.
+- Submitting a new **non-empty** Search **replaces** the existing Search group.
+- Empty Search submit is a **no-op** (does not clear Search).
+- Multi-search OR is **out of scope** for v1.
+
+### 11.4 Logical model
+
+Active Filters mirror filtering logic:
+
+- Values **within** a group: **OR** (Keyword, Country; Search is a single value in v1).
+- Different groups: **AND**.
+
+Example:
+
+`(Search: custody) AND (Keyword: AI OR Blockchain) AND (Country: Singapore) AND (Date: Jan 2027 – Mar 2027)`
+
+### 11.5 Explicit non-goals (v1)
+
+- Multi-search chips / Search OR
+- Editable chips
+- Syncing applied `q` back into the Search bar on `/events`
+- Clearing applied Search via empty Search submit
+- Changing Filter Panel Clear all / Reset Filters semantics beyond what’s required for consistency with §11.2 (Reset may still full-reset including sort — separate from Active Filters Clear all)

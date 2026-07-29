@@ -46,7 +46,7 @@ describe("GlobalSearchBar navigation policy", () => {
     assert.match(source, /if \(isEventExplorerPage && eventExplorerBridge !== null\)/);
     assert.match(source, /eventExplorerBridge\.setFilters/);
     assert.match(source, /applyEventExplorerQueryChange/);
-    assert.match(source, /router\.push\(buildEventExplorerUrl\(query\)\)/);
+    assert.match(source, /router\.push\(buildEventExplorerUrl\(trimmed\)\)/);
   });
 
   it("falls back to router.push when not on /events", () => {
@@ -54,17 +54,19 @@ describe("GlobalSearchBar navigation policy", () => {
       path.join(process.cwd(), "src/components/layout/GlobalSearchBar.tsx"),
       "utf8",
     );
-    assert.match(source, /router\.push\(buildEventExplorerUrl\(query\)\)/);
+    assert.match(source, /router\.push\(buildEventExplorerUrl\(trimmed\)\)/);
   });
 
-  it("syncs search input from Event Explorer bridge and popstate", () => {
+  it("applies non-empty Explorer search, clears the input, and ignores empty submit", () => {
     const source = readFileSync(
       path.join(process.cwd(), "src/components/layout/GlobalSearchBar.tsx"),
       "utf8",
     );
-    assert.match(source, /syncValue=\{isEventExplorerPage \? eventQuerySync/);
-    assert.match(source, /handlePopState/);
-    assert.match(source, /readSearchParamsFromWindow/);
+    assert.match(source, /clearOnSubmit=\{isEventExplorerPage\}/);
+    assert.doesNotMatch(source, /syncValue=\{isEventExplorerPage/);
+    assert.match(source, /Empty submit is a no-op/);
+    assert.match(source, /if \(trimmed === ""\)/);
+    assert.match(source, /return;/);
   });
 });
 
@@ -79,6 +81,10 @@ describe("Event Explorer bridge wiring", () => {
     );
     assert.match(source, /useEventExplorerFilterBridgePublisher\(params\.filters, setFilters\)/);
     assert.match(source, /useEventExplorerCollection/);
+    assert.match(source, /EventExplorerActiveFilters/);
+    assert.match(source, /query: ""/);
+    assert.match(source, /startDate: ""/);
+    assert.match(source, /endDate: ""/);
   });
 
   it("BrowseMarketingChrome provides the bridge around GlobalSearchBar", () => {
@@ -98,8 +104,8 @@ describe("cross-route event search URL", () => {
   });
 });
 
-describe("popstate restoration for global search sync", () => {
-  it("restores query from window search params", () => {
+describe("popstate restoration for explorer filters", () => {
+  it("restores query from window search params into filter state", () => {
     const originalWindow = globalThis.window;
 
     Object.defineProperty(globalThis, "window", {
