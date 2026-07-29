@@ -373,6 +373,7 @@ export default async function EventDetailPage({
                 hasVenueId={hasVenueId}
                 sponsors={sponsors}
                 totalSponsorCount={totalSponsorCount}
+                organizers={organizers}
               />
               {seriesBrandLabel && seriesHubHref ? (
                 <RelatedEditionsSection

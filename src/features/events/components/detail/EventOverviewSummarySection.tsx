@@ -5,10 +5,12 @@ import type { BadgeProps } from "@/src/components/common/Badge";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
+import { resolveCompanyLogo } from "@/src/lib/companies/resolveCompanyLogo";
 import {
   buildEventHistoryRows,
   type MergedIntoSeriesDestination,
 } from "@/src/features/events/components/detail/eventHistoryDisplay";
+import type { PublicOrganizerRow } from "@/src/features/events/server/mapPublicOrganizers";
 import type { PublicVenueSummary } from "@/src/features/events/server/mapPublicVenue";
 import { brandLinkClass } from "@/src/lib/design/classes";
 
@@ -19,6 +21,10 @@ import type { EventSponsorRow } from "./types";
 
 const SPONSOR_PREVIEW_LIMIT = 5;
 
+/** Body-text link that shifts to brand colour on hover/focus (Overview tab jumps). */
+const overviewTabTextLinkClass =
+  "font-medium text-slate-900 transition hover:text-brand-primary focus-visible:text-brand-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2";
+
 type EventOverviewSummarySectionProps = {
   eventSlug: string;
   lifecycleStatus: string | null | undefined;
@@ -27,6 +33,7 @@ type EventOverviewSummarySectionProps = {
   hasVenueId: boolean;
   sponsors: EventSponsorRow[];
   totalSponsorCount: number;
+  organizers?: PublicOrganizerRow[];
 };
 
 function statusBadgeVariant(value: string): BadgeProps["variant"] {
@@ -37,6 +44,23 @@ function statusBadgeVariant(value: string): BadgeProps["variant"] {
   return "neutral";
 }
 
+function previewLogoSponsors(sponsors: EventSponsorRow[]): EventSponsorRow[] {
+  return sponsors
+    .filter(
+      (sponsor) => sponsor.companies && !isCompanyRestricted(sponsor.companies),
+    )
+    .slice(0, SPONSOR_PREVIEW_LIMIT);
+}
+
+function organizerDisplayNames(organizers: PublicOrganizerRow[]): string {
+  const names: string[] = [];
+  for (const organizer of organizers) {
+    const name = organizer.company?.name?.trim();
+    if (name) names.push(name);
+  }
+  return names.join(", ");
+}
+
 export function EventOverviewSummarySection({
   eventSlug,
   lifecycleStatus,
@@ -45,6 +69,7 @@ export function EventOverviewSummarySection({
   hasVenueId,
   sponsors,
   totalSponsorCount,
+  organizers = [],
 }: EventOverviewSummarySectionProps) {
   const historyRows = buildEventHistoryRows({
     lifecycleStatus,
@@ -55,13 +80,10 @@ export function EventOverviewSummarySection({
 
   const showVenueRow = venue !== null || hasVenueId;
   const hasSponsorData = totalSponsorCount > 0 || sponsors.length > 0;
-  const previewSponsors = sponsors.slice(0, SPONSOR_PREVIEW_LIMIT);
-  const previewLogoSponsors = sponsors
-    .filter(
-      (sponsor) => sponsor.companies && !isCompanyRestricted(sponsor.companies),
-    )
-    .slice(0, SPONSOR_PREVIEW_LIMIT);
-  const overflowCount = Math.max(0, totalSponsorCount - previewSponsors.length);
+  const logoSponsors = previewLogoSponsors(sponsors);
+  const showSponsorEllipsis = totalSponsorCount > logoSponsors.length;
+  const organizerNames = organizerDisplayNames(organizers);
+  const showOrganizersRow = organizerNames !== "";
 
   return (
     <section
@@ -94,7 +116,7 @@ export function EventOverviewSummarySection({
                 <PublicEditionInPageTabLink
                   eventSlug={eventSlug}
                   tab="venue"
-                  className={`font-medium ${brandLinkClass}`}
+                  className={overviewTabTextLinkClass}
                 >
                   {venue.name}
                 </PublicEditionInPageTabLink>
@@ -108,44 +130,67 @@ export function EventOverviewSummarySection({
         <div className="py-3 first:pt-0 last:pb-0">
           <MetadataRow label="Sponsors">
             {hasSponsorData ? (
-              previewSponsors.length > 0 ? (
-                <PublicEditionInPageTabLink
-                  eventSlug={eventSlug}
-                  tab="sponsors"
-                  aria-label={`View all ${totalSponsorCount.toLocaleString()} sponsors`}
-                  className="inline-flex flex-wrap items-center gap-3 rounded-lg transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
-                >
-                  {previewLogoSponsors.map((sponsor) => {
-                    const company = sponsor.companies;
-                    if (!company) return null;
+              <PublicEditionInPageTabLink
+                eventSlug={eventSlug}
+                tab="sponsors"
+                aria-label={`View all ${totalSponsorCount.toLocaleString()} sponsors`}
+                className="inline-flex flex-col items-start gap-1.5 rounded-lg transition hover:bg-brand-primary-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
+              >
+                <span className="font-medium text-slate-900">
+                  {totalSponsorCount.toLocaleString()}{" "}
+                  {totalSponsorCount === 1 ? "sponsor" : "sponsors"}
+                </span>
+                {logoSponsors.length > 0 ? (
+                  <span className="inline-flex flex-wrap items-center gap-3">
+                    {logoSponsors.map((sponsor) => {
+                      const company = sponsor.companies;
+                      if (!company) return null;
+                      const companyName = company.name?.trim() || "Sponsor";
+                      const logoFields = companyLogoFieldsFromRow(company);
+                      const accessibleLogoName = `${companyName} logo`;
+                      const resolvedLogo = resolveCompanyLogo(logoFields);
 
-                    return (
-                      <CompanyLogo
-                        key={String(sponsor.id)}
-                        company={companyLogoFieldsFromRow(company)}
-                        className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
-                        monogramClassName="text-sm font-semibold text-slate-400"
-                        alt=""
-                      />
-                    );
-                  })}
-                  {overflowCount > 0 ? (
-                    <Badge
-                      variant="neutral"
-                      className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                    >
-                      +{overflowCount.toLocaleString()}
-                    </Badge>
-                  ) : null}
-                </PublicEditionInPageTabLink>
-              ) : (
-                <p className="text-slate-500">Sponsor data not yet available.</p>
-              )
+                      return (
+                        <span key={String(sponsor.id)} className="inline-flex">
+                          <CompanyLogo
+                            company={logoFields}
+                            className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white"
+                            monogramClassName="text-sm font-semibold text-slate-400"
+                            alt={accessibleLogoName}
+                          />
+                          {resolvedLogo.kind === "monogram" ? (
+                            <span className="sr-only">{accessibleLogoName}</span>
+                          ) : null}
+                        </span>
+                      );
+                    })}
+                    {showSponsorEllipsis ? (
+                      <span aria-hidden="true" className="text-slate-500">
+                        …
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </PublicEditionInPageTabLink>
             ) : (
               <p className="text-slate-500">Sponsor data not yet available.</p>
             )}
           </MetadataRow>
         </div>
+
+        {showOrganizersRow ? (
+          <div className="py-3 first:pt-0 last:pb-0">
+            <MetadataRow label="Organizers">
+              <PublicEditionInPageTabLink
+                eventSlug={eventSlug}
+                tab="organizers"
+                className={overviewTabTextLinkClass}
+              >
+                {organizerNames}
+              </PublicEditionInPageTabLink>
+            </MetadataRow>
+          </div>
+        ) : null}
       </dl>
     </section>
   );
