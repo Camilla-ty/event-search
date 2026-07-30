@@ -54,10 +54,8 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
                 page.regionSlug,
                 page.year,
               );
-              // Year-scoped public routes are Phase B; only all-years pages are
-              // publicly linkable today.
-              const canLinkPublic =
-                page.status === "published" && page.year === null;
+              // Published pages (all-years and year-scoped) are publicly linkable.
+              const canLinkPublic = page.status === "published";
               return (
                 <tr key={page.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-slate-900">

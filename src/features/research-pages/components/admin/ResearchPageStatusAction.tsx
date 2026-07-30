@@ -3,39 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import {
-  canPublishResearchPage,
-  YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE,
-} from "@/src/features/research-pages/lib/researchPagePublishGuard";
-
 type ResearchPageStatusActionProps = {
   pageId: string;
   currentStatus: "draft" | "published";
-  /** null = All years. Year-scoped drafts cannot be published until Phase B. */
-  year: number | null;
+  /** Retained for callers; publish is allowed for all years after Phase B. */
+  year?: number | null;
 };
 
 export function ResearchPageStatusAction({
   pageId,
   currentStatus,
-  year,
 }: ResearchPageStatusActionProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-
-  const publishBlocked =
-    currentStatus === "draft" && !canPublishResearchPage(year);
-
-  if (publishBlocked) {
-    return (
-      <span
-        className="max-w-xs text-xs text-slate-500"
-        title={YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE}
-      >
-        {YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE}
-      </span>
-    );
-  }
 
   const targetAction = currentStatus === "draft" ? "publish" : "unpublish";
   const label = currentStatus === "draft" ? "Publish" : "Unpublish";

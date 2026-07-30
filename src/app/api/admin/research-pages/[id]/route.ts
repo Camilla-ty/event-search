@@ -4,7 +4,6 @@ import {
   publishResearchPage,
   unpublishResearchPage,
 } from "@/src/features/research-pages/server/researchPageAdmin";
-import { YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE } from "@/src/features/research-pages/lib/researchPagePublishGuard";
 import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 
 type PatchBody = {
@@ -47,12 +46,6 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    const status =
-      message === YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE
-        ? 409
-        : message === "Research page not found."
-          ? 404
-          : 500;
-    return NextResponse.json({ ok: false, error: message }, { status });
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

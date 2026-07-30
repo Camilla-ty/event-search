@@ -311,7 +311,11 @@ export async function fetchResearchPageSitemapEntries(): Promise<
 
   const entries: MetadataRoute.Sitemap = [];
   for (const page of published) {
-    const data = await getTopicRegionHubPageData(page.topicSlug, page.regionSlug);
+    const data = await getTopicRegionHubPageData(
+      page.topicSlug,
+      page.regionSlug,
+      page.year,
+    );
     if (!data || !data.passesGate) continue;
     entries.push({ url: absoluteUrl(data.path) });
   }

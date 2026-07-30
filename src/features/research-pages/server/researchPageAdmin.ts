@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
-import { assertCanPublishResearchPage } from "@/src/features/research-pages/lib/researchPagePublishGuard";
 
 export type ResearchPageStatus = "draft" | "published";
 
@@ -150,17 +149,6 @@ export async function getResearchPageById(
 
 export async function publishResearchPage(id: string): Promise<void> {
   const supabase = createAdminClient();
-  const { data: existing, error: readError } = await supabase
-    .from("topic_region_research_pages")
-    .select("year")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (readError) throw new Error(readError.message);
-  if (!existing) throw new Error("Research page not found.");
-
-  assertCanPublishResearchPage(readYear(existing.year));
-
   const { error } = await supabase
     .from("topic_region_research_pages")
     .update({ status: "published", published_at: new Date().toISOString() })
@@ -178,30 +166,37 @@ export async function unpublishResearchPage(id: string): Promise<void> {
 }
 
 /**
- * Look up a published research page by topic+region slugs.
- * Used by the generic public route to gate access.
+ * Look up a published research page by topic+region (+ optional year).
+ * year = null → all-years row only (year IS NULL).
+ * year = number → exact year-scoped row only.
  */
 export async function getPublishedResearchPageBySlugs(
   topicSlug: string,
   regionSlug: string,
+  year: number | null = null,
 ): Promise<{ id: string } | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("topic_region_research_pages")
     .select(`
       id,
+      year,
       keyword:topic_keyword_id ( name, slug ),
       regions:region_id ( name, slug )
     `)
     .eq("status", "published")
-    .limit(100);
+    .limit(200);
 
   if (error) throw new Error(error.message);
 
   for (const row of data ?? []) {
     const kw = readEmbedded(row.keyword as unknown);
     const rg = readEmbedded(row.regions as unknown);
-    if (kw?.slug === topicSlug && rg?.slug === regionSlug) {
+    if (kw?.slug !== topicSlug || rg?.slug !== regionSlug) continue;
+    const rowYear = readYear(row.year);
+    if (year === null) {
+      if (rowYear === null) return { id: row.id };
+    } else if (rowYear === year) {
       return { id: row.id };
     }
   }

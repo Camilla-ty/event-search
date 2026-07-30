@@ -4,7 +4,6 @@ import { describe, it } from "node:test";
 import {
   assertCanPublishResearchPage,
   canPublishResearchPage,
-  YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE,
 } from "@/src/features/research-pages/lib/researchPagePublishGuard";
 
 describe("canPublishResearchPage", () => {
@@ -13,13 +12,8 @@ describe("canPublishResearchPage", () => {
     assert.doesNotThrow(() => assertCanPublishResearchPage(null));
   });
 
-  it("blocks year-specific pages from publishing", () => {
-    assert.equal(canPublishResearchPage(2026), false);
-    assert.throws(
-      () => assertCanPublishResearchPage(2026),
-      (error: unknown) =>
-        error instanceof Error &&
-        error.message === YEAR_SCOPED_PUBLISH_BLOCKED_MESSAGE,
-    );
+  it("allows year-specific pages to publish", () => {
+    assert.equal(canPublishResearchPage(2026), true);
+    assert.doesNotThrow(() => assertCanPublishResearchPage(2026));
   });
 });

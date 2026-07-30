@@ -20,7 +20,11 @@ export default async function AdminResearchPagePreview({
   const record = await getResearchPageById(id);
   if (!record) notFound();
 
-  const data = await getTopicRegionHubPageData(record.topicSlug, record.regionSlug);
+  const data = await getTopicRegionHubPageData(
+    record.topicSlug,
+    record.regionSlug,
+    record.year,
+  );
 
   return (
     <section>

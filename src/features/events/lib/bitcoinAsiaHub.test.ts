@@ -55,6 +55,10 @@ describe("bitcoinAsiaHub copy helpers", () => {
   it("builds title and formats last reviewed", () => {
     assert.equal(buildBitcoinAsiaHubTitle("Bitcoin", "Asia"), "Bitcoin Events in Asia");
     assert.equal(
+      buildBitcoinAsiaHubTitle("Bitcoin", "Asia", 2026),
+      "Bitcoin Events in Asia (2026)",
+    );
+    assert.equal(
       formatBitcoinAsiaHubLastReviewed("2026-07-08 11:49:51.845+00"),
       "8 July 2026",
     );

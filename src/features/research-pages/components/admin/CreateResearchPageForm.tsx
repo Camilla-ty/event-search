@@ -167,12 +167,6 @@ export function CreateResearchPageForm({
       {previewPath ? (
         <p className="rounded-lg bg-slate-50 px-4 py-3 font-mono text-xs text-slate-600">
           Public URL (when published): {previewPath}
-          {parsedYear !== null ? (
-            <span className="mt-1 block text-amber-700">
-              Note: year-scoped public routes ship in a later phase. Preview still
-              shows all-years data until then.
-            </span>
-          ) : null}
         </p>
       ) : null}
 

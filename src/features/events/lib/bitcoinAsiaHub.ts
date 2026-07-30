@@ -86,8 +86,13 @@ export function buildBitcoinAsiaHubMetaDescription(facts: BitcoinAsiaHubFacts): 
   return `EventPixels records ${facts.eventCount} ${facts.topicName} events in ${facts.regionName}${yearPart}${countryPart}, with ${facts.distinctSponsorCount} companies recorded as sponsors of those events.`;
 }
 
-export function buildBitcoinAsiaHubTitle(topicName: string, regionName: string): string {
-  return `${topicName} Events in ${regionName}`;
+export function buildBitcoinAsiaHubTitle(
+  topicName: string,
+  regionName: string,
+  year?: number | null,
+): string {
+  const base = `${topicName} Events in ${regionName}`;
+  return typeof year === "number" ? `${base} (${year})` : base;
 }
 
 /** Hub last-reviewed display: "8 July 2026". */

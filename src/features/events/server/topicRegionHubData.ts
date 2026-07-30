@@ -26,6 +26,7 @@ import {
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
+import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 
 export type TopicRegionHubEventCard = {
   id: string;
@@ -177,10 +178,14 @@ function maxLastReviewedAt(values: readonly (string | null)[]): string | null {
  * Returns computed data even when the indexability gate fails.
  * Returns null only when the topic/region combination has no data at all
  * (missing keyword, no linked series, or no editions in the region).
+ *
+ * @param year - When set, editions are filtered at the DB with `.eq("year", year)`.
+ *   When null/omitted, all years are included (existing behaviour).
  */
 export async function getTopicRegionHubPageData(
   topicSlug: string,
   regionSlug: string,
+  year: number | null = null,
 ): Promise<TopicRegionHubPageData | null> {
   const admin = createAdminClient();
 
@@ -210,10 +215,16 @@ export async function getTopicRegionHubPageData(
   const seriesIds = readSeriesIdsFromKeywordLinks(seriesLinksResult.data ?? []);
   if (seriesIds.length === 0) return null;
 
-  const editionsResult = await admin
+  let editionsQuery = admin
     .from("event_editions")
     .select(EVENT_EDITION_LIST_SELECT)
     .in("series_id", seriesIds);
+
+  if (year !== null) {
+    editionsQuery = editionsQuery.eq("year", year);
+  }
+
+  const editionsResult = await editionsQuery;
 
   if (editionsResult.error) throw new Error(editionsResult.error.message);
 
@@ -368,17 +379,22 @@ export async function getTopicRegionHubPageData(
     distinctSponsorCount,
   };
 
-  const hubPath = `/events/topics/${topicSlug}/regions/${regionSlug}`;
+  const hubPath = formatResearchPagePublicPath(topicSlug, regionSlug, year);
   const hubLastReviewedAt = maxLastReviewedAt(
     eventCards.map((event) => event.lastReviewedAt),
   );
+  const title = buildBitcoinAsiaHubTitle(topic.name, regionName, year);
+  const eyebrow =
+    year === null
+      ? `${topic.name} · ${regionName}`
+      : `${topic.name} · ${regionName} · ${year}`;
 
   return {
     path: hubPath,
-    title: buildBitcoinAsiaHubTitle(topic.name, regionName),
+    title,
     metaDescription: buildBitcoinAsiaHubMetaDescription(facts),
-    h1: buildBitcoinAsiaHubTitle(topic.name, regionName),
-    eyebrow: `${topic.name} · ${regionName}`,
+    h1: title,
+    eyebrow,
     topicName: topic.name,
     regionName,
     summary: buildBitcoinAsiaHubSummary(facts),

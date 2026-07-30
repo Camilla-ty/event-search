@@ -14,10 +14,10 @@ describe("formatResearchPagePublicPath", () => {
     );
   });
 
-  it("appends year when provided", () => {
+  it("appends /years/{year} when year is provided", () => {
     assert.equal(
       formatResearchPagePublicPath("bitcoin", "asia", 2026),
-      "/events/topics/bitcoin/regions/asia/2026",
+      "/events/topics/bitcoin/regions/asia/years/2026",
     );
   });
 
