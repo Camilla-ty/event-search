@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
+import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 import { formInputClass, feedbackSuccessClass } from "@/src/lib/design/classes";
 
 type SelectOption = { id: string; name: string; slug: string };
@@ -26,6 +27,7 @@ export function CreateResearchPageForm({
   const router = useRouter();
   const [topicId, setTopicId] = useState("");
   const [regionId, setRegionId] = useState("");
+  const [yearInput, setYearInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{
     ok: boolean;
@@ -34,15 +36,36 @@ export function CreateResearchPageForm({
 
   const selectedTopic = topics.find((t) => t.id === topicId);
   const selectedRegion = regions.find((r) => r.id === regionId);
+
+  const parsedYear =
+    yearInput.trim() === ""
+      ? null
+      : Number.isInteger(Number(yearInput)) &&
+          Number(yearInput) >= 1990 &&
+          Number(yearInput) <= 2100
+        ? Number(yearInput)
+        : undefined;
+
   const previewPath =
-    selectedTopic && selectedRegion
-      ? `/events/topics/${selectedTopic.slug}/regions/${selectedRegion.slug}`
+    selectedTopic && selectedRegion && parsedYear !== undefined
+      ? formatResearchPagePublicPath(
+          selectedTopic.slug,
+          selectedRegion.slug,
+          parsedYear,
+        )
       : null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!topicId || !regionId) {
       setResult({ ok: false, message: "Select both a topic and a region." });
+      return;
+    }
+    if (parsedYear === undefined) {
+      setResult({
+        ok: false,
+        message: "Year must be blank (all years) or an integer between 1990 and 2100.",
+      });
       return;
     }
 
@@ -56,6 +79,7 @@ export function CreateResearchPageForm({
         body: JSON.stringify({
           topic_keyword_id: topicId,
           region_id: regionId,
+          year: parsedYear,
         }),
       });
       const data = (await response.json()) as ApiResponse;
@@ -119,9 +143,36 @@ export function CreateResearchPageForm({
         </select>
       </label>
 
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-slate-700">
+          Year <span className="font-normal text-slate-500">(optional)</span>
+        </span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1990}
+          max={2100}
+          step={1}
+          value={yearInput}
+          onChange={(e) => setYearInput(e.target.value)}
+          disabled={isSubmitting}
+          placeholder="Leave blank for all years"
+          className={formInputClass}
+        />
+        <span className="block text-xs text-slate-500">
+          Leave blank for all years. Enter a year (1990–2100) for a year-scoped page.
+        </span>
+      </label>
+
       {previewPath ? (
         <p className="rounded-lg bg-slate-50 px-4 py-3 font-mono text-xs text-slate-600">
           Public URL (when published): {previewPath}
+          {parsedYear !== null ? (
+            <span className="mt-1 block text-amber-700">
+              Note: year-scoped public routes ship in a later phase. Preview still
+              shows all-years data until then.
+            </span>
+          ) : null}
         </p>
       ) : null}
 

@@ -55,6 +55,7 @@ export default async function AdminResearchPagePreview({
           <ResearchPageStatusAction
             pageId={record.id}
             currentStatus={record.status}
+            year={record.year}
           />
         </div>
         <p className="mt-2 text-sm text-amber-800">

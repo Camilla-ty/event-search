@@ -22,6 +22,7 @@ export async function GET() {
 type CreateBody = {
   topic_keyword_id?: string;
   region_id?: string;
+  year?: number | null;
 };
 
 export async function POST(request: Request) {
@@ -45,6 +46,20 @@ export async function POST(request: Request) {
   if (!topicKeywordId) errors.push("topic_keyword_id is required");
   if (!regionId) errors.push("region_id is required");
 
+  let year: number | null = null;
+  if (body.year !== undefined && body.year !== null) {
+    if (
+      typeof body.year !== "number" ||
+      !Number.isInteger(body.year) ||
+      body.year < 1990 ||
+      body.year > 2100
+    ) {
+      errors.push("year must be an integer between 1990 and 2100, or omitted for all years");
+    } else {
+      year = body.year;
+    }
+  }
+
   if (errors.length > 0) {
     return NextResponse.json(
       { ok: false, error: errors.join("; ") },
@@ -56,6 +71,7 @@ export async function POST(request: Request) {
     const result = await createResearchPageDraft({
       topicKeywordId,
       regionId,
+      year,
     });
     return NextResponse.json({ ok: true, page: result }, { status: 201 });
   } catch (error) {

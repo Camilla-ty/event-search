@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { assertCanPublishResearchPage } from "@/src/features/research-pages/lib/researchPagePublishGuard";
 
 export type ResearchPageStatus = "draft" | "published";
 
@@ -8,6 +9,8 @@ export type ResearchPageListItem = {
   topicSlug: string;
   regionName: string;
   regionSlug: string;
+  /** null = All years. */
+  year: number | null;
   status: ResearchPageStatus;
   publishedAt: string | null;
   createdAt: string;
@@ -16,6 +19,7 @@ export type ResearchPageListItem = {
 type ResearchPageRow = {
   id: string;
   status: string;
+  year: number | null;
   published_at: string | null;
   created_at: string;
   keyword: { name: string; slug: string } | { name: string; slug: string }[] | null;
@@ -35,6 +39,15 @@ function isValidStatus(value: unknown): value is ResearchPageStatus {
   return value === "draft" || value === "published";
 }
 
+function readYear(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isInteger(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function mapRow(raw: ResearchPageRow): ResearchPageListItem | null {
   const topic = readEmbedded(raw.keyword);
   const region = readEmbedded(raw.regions);
@@ -47,6 +60,7 @@ function mapRow(raw: ResearchPageRow): ResearchPageListItem | null {
     topicSlug: topic.slug,
     regionName: region.name,
     regionSlug: region.slug,
+    year: readYear(raw.year),
     status: raw.status,
     publishedAt: raw.published_at,
     createdAt: raw.created_at,
@@ -60,6 +74,7 @@ export async function listResearchPagesAdmin(): Promise<ResearchPageListItem[]> 
     .select(`
       id,
       status,
+      year,
       published_at,
       created_at,
       keyword:topic_keyword_id ( name, slug ),
@@ -119,6 +134,7 @@ export async function getResearchPageById(
     .select(`
       id,
       status,
+      year,
       published_at,
       created_at,
       keyword:topic_keyword_id ( name, slug ),
@@ -134,6 +150,17 @@ export async function getResearchPageById(
 
 export async function publishResearchPage(id: string): Promise<void> {
   const supabase = createAdminClient();
+  const { data: existing, error: readError } = await supabase
+    .from("topic_region_research_pages")
+    .select("year")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (readError) throw new Error(readError.message);
+  if (!existing) throw new Error("Research page not found.");
+
+  assertCanPublishResearchPage(readYear(existing.year));
+
   const { error } = await supabase
     .from("topic_region_research_pages")
     .update({ status: "published", published_at: new Date().toISOString() })
@@ -184,13 +211,21 @@ export async function getPublishedResearchPageBySlugs(
 export async function createResearchPageDraft(input: {
   topicKeywordId: string;
   regionId: string;
+  /** null or omitted = All years. */
+  year?: number | null;
 }): Promise<{ id: string }> {
   const supabase = createAdminClient();
+  const year =
+    typeof input.year === "number" && Number.isInteger(input.year)
+      ? input.year
+      : null;
+
   const { data, error } = await supabase
     .from("topic_region_research_pages")
     .insert({
       topic_keyword_id: input.topicKeywordId,
       region_id: input.regionId,
+      year,
       status: "draft",
     })
     .select("id")
@@ -198,7 +233,11 @@ export async function createResearchPageDraft(input: {
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("This Topic × Region combination already exists.");
+      throw new Error(
+        year === null
+          ? "This Topic × Region combination already exists."
+          : `This Topic × Region × ${year} combination already exists.`,
+      );
     }
     throw new Error(error.message);
   }

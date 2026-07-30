@@ -2,6 +2,10 @@ import Link from "next/link";
 
 import { Badge } from "@/src/components/common";
 import { ResearchPageStatusAction } from "@/src/features/research-pages/components/admin/ResearchPageStatusAction";
+import {
+  formatResearchPagePublicPath,
+  formatResearchPageYearLabel,
+} from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 import type { ResearchPageListItem } from "@/src/features/research-pages/server/researchPageAdmin";
 
 type ResearchPagesListTableProps = {
@@ -15,10 +19,6 @@ function ResearchPageStatusBadge({ status }: { status: string }) {
   return <Badge variant="neutral">Draft</Badge>;
 }
 
-function formatPublicPath(topicSlug: string, regionSlug: string): string {
-  return `/events/topics/${topicSlug}/regions/${regionSlug}`;
-}
-
 export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -27,6 +27,7 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
           <tr>
             <th className="px-4 py-3 font-medium">Topic</th>
             <th className="px-4 py-3 font-medium">Region</th>
+            <th className="px-4 py-3 font-medium">Year</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Public URL</th>
             <th className="px-4 py-3 font-medium">Created</th>
@@ -36,7 +37,7 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
         <tbody>
           {pages.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                 No research pages yet.{" "}
                 <Link
                   href="/admin/research-pages/new"
@@ -48,18 +49,29 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
             </tr>
           ) : (
             pages.map((page) => {
-              const publicPath = formatPublicPath(page.topicSlug, page.regionSlug);
+              const publicPath = formatResearchPagePublicPath(
+                page.topicSlug,
+                page.regionSlug,
+                page.year,
+              );
+              // Year-scoped public routes are Phase B; only all-years pages are
+              // publicly linkable today.
+              const canLinkPublic =
+                page.status === "published" && page.year === null;
               return (
                 <tr key={page.id} className="border-b border-slate-100 last:border-0">
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {page.topicName}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{page.regionName}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {formatResearchPageYearLabel(page.year)}
+                  </td>
                   <td className="px-4 py-3">
                     <ResearchPageStatusBadge status={page.status} />
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
-                    {page.status === "published" ? (
+                    {canLinkPublic ? (
                       <Link
                         href={publicPath}
                         target="_blank"
@@ -90,6 +102,7 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
                       <ResearchPageStatusAction
                         pageId={page.id}
                         currentStatus={page.status}
+                        year={page.year}
                       />
                     </div>
                   </td>
