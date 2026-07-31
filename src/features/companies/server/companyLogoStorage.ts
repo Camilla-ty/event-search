@@ -1,9 +1,10 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { MAX_LOGO_BINARY_BYTES, validateLogoBinary } from "@/src/lib/companies/logoBinaryValidation";
 import { bucketRelativePathFromLogoReference } from "@/src/lib/storage/bucketRelativeLogoPath";
 
 export const COMPANY_LOGO_BUCKET = process.env.BACKFILL_LOGO_BUCKET ?? "company-logos";
 export const COMPANY_LOGO_STORAGE_NAMESPACE = "companies";
-export const MAX_COMPANY_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+export const MAX_COMPANY_LOGO_SIZE_BYTES = MAX_LOGO_BINARY_BYTES;
 
 /** Known logo file extensions that may exist under a company folder. */
 export const COMPANY_LOGO_STALE_EXTENSIONS = [
@@ -142,32 +143,27 @@ export type UploadCompanyLogoBytesResult =
 export async function uploadCompanyLogoBytes(params: {
   companyId: string;
   bytes: Uint8Array;
-  contentType: string;
+  /** Ignored for accept/reject — magic bytes decide type (kept for call-site compat). */
+  contentType?: string;
 }): Promise<UploadCompanyLogoBytesResult> {
   const companyId = params.companyId.trim();
   if (!companyId) {
     return { ok: false, error: "missing_company_id" };
   }
 
-  if (params.bytes.byteLength === 0) {
-    return { ok: false, error: "empty_file" };
+  const validation = validateLogoBinary(params.bytes);
+  if (!validation.ok) {
+    return { ok: false, error: validation.code };
   }
 
-  if (params.bytes.byteLength > MAX_COMPANY_LOGO_SIZE_BYTES) {
-    return { ok: false, error: "file_too_large" };
-  }
-
-  const extension = extensionForContentType(params.contentType);
-  const storagePath = companyLogoObjectPath(companyId, extension);
-  const normalizedContentType =
-    params.contentType.split(";")[0]?.trim() || params.contentType;
+  const storagePath = companyLogoObjectPath(companyId, validation.extension);
 
   const supabase = createAdminClient();
   const { error: uploadError } = await supabase.storage
     .from(COMPANY_LOGO_BUCKET)
     .upload(storagePath, params.bytes, {
       upsert: true,
-      contentType: normalizedContentType,
+      contentType: validation.contentType,
       cacheControl: "3600",
     });
 

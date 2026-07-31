@@ -1,4 +1,8 @@
 import { MAX_COMPANY_LOGO_SIZE_BYTES } from "@/src/features/companies/server/companyLogoStorage";
+import {
+  isAllowedLogoRasterContentType,
+  validateLogoBinary,
+} from "@/src/lib/companies/logoBinaryValidation";
 
 import {
   uploadEventSeriesLogoBytes,
@@ -6,17 +10,6 @@ import {
 } from "./eventSeriesLogoStorage";
 
 const FETCH_TIMEOUT_MS = 5000;
-
-const ALLOWED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/svg+xml",
-  "image/gif",
-  "image/x-icon",
-  "image/vnd.microsoft.icon",
-];
 
 type FetchedImage = {
   bytes: Uint8Array;
@@ -28,8 +21,7 @@ export type ManualEventSeriesLogoIngestResult =
   | { ok: false; error: string };
 
 function isAllowedImageContentType(contentType: string): boolean {
-  const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
-  return ALLOWED_IMAGE_TYPES.includes(base);
+  return isAllowedLogoRasterContentType(contentType);
 }
 
 async function fetchWithTimeout(url: string): Promise<Response | null> {
@@ -62,11 +54,10 @@ async function downloadExternalLogoImage(url: string): Promise<FetchedImage | nu
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_COMPANY_LOGO_SIZE_BYTES) {
-    return null;
-  }
+  const validation = validateLogoBinary(bytes);
+  if (!validation.ok) return null;
 
-  return { bytes, contentType };
+  return { bytes, contentType: validation.contentType };
 }
 
 /**

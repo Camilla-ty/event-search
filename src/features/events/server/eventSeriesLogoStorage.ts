@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { validateLogoBinary } from "@/src/lib/companies/logoBinaryValidation";
 import { EVENT_SERIES_LOGO_STORAGE_NAMESPACE } from "@/src/lib/events/eventLogoPolicy";
 import { bucketRelativePathFromLogoReference } from "@/src/lib/storage/bucketRelativeLogoPath";
 
@@ -10,7 +11,7 @@ import {
   type VerifyCompanyLogoStorageObjectResult,
 } from "@/src/features/companies/server/companyLogoStorage";
 
-export { extensionForContentType };
+export { extensionForContentType, MAX_COMPANY_LOGO_SIZE_BYTES };
 
 /** Known logo file extensions that may exist under an event-series folder. */
 export const EVENT_SERIES_LOGO_STALE_EXTENSIONS = [
@@ -119,32 +120,27 @@ export type UploadEventSeriesLogoBytesResult =
 export async function uploadEventSeriesLogoBytes(params: {
   seriesId: string;
   bytes: Uint8Array;
-  contentType: string;
+  /** Ignored for accept/reject — magic bytes decide type (kept for call-site compat). */
+  contentType?: string;
 }): Promise<UploadEventSeriesLogoBytesResult> {
   const seriesId = params.seriesId.trim();
   if (!seriesId) {
     return { ok: false, error: "missing_series_id" };
   }
 
-  if (params.bytes.byteLength === 0) {
-    return { ok: false, error: "empty_file" };
+  const validation = validateLogoBinary(params.bytes);
+  if (!validation.ok) {
+    return { ok: false, error: validation.code };
   }
 
-  if (params.bytes.byteLength > MAX_COMPANY_LOGO_SIZE_BYTES) {
-    return { ok: false, error: "file_too_large" };
-  }
-
-  const extension = extensionForContentType(params.contentType);
-  const storagePath = eventSeriesLogoObjectPath(seriesId, extension);
-  const normalizedContentType =
-    params.contentType.split(";")[0]?.trim() || params.contentType;
+  const storagePath = eventSeriesLogoObjectPath(seriesId, validation.extension);
 
   const supabase = createAdminClient();
   const { error: uploadError } = await supabase.storage
     .from(COMPANY_LOGO_BUCKET)
     .upload(storagePath, params.bytes, {
       upsert: true,
-      contentType: normalizedContentType,
+      contentType: validation.contentType,
       cacheControl: "3600",
     });
 

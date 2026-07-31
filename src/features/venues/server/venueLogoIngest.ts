@@ -1,5 +1,8 @@
 import { MAX_COMPANY_LOGO_SIZE_BYTES } from "@/src/features/companies/server/companyLogoStorage";
-import { normalizeManualLogoUploadMimeType } from "@/src/lib/companies/companyLogoUploadValidation";
+import {
+  isAllowedLogoRasterContentType,
+  validateLogoBinary,
+} from "@/src/lib/companies/logoBinaryValidation";
 
 import {
   uploadVenueLogoBytes,
@@ -18,8 +21,7 @@ export type ManualVenueLogoIngestResult =
   | { ok: false; error: string };
 
 export function isAllowedVenueLogoIngestContentType(contentType: string): boolean {
-  const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
-  return normalizeManualLogoUploadMimeType(base) !== null;
+  return isAllowedLogoRasterContentType(contentType);
 }
 
 async function fetchWithTimeout(url: string): Promise<Response | null> {
@@ -52,11 +54,10 @@ async function downloadExternalLogoImage(url: string): Promise<FetchedImage | nu
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_COMPANY_LOGO_SIZE_BYTES) {
-    return null;
-  }
+  const validation = validateLogoBinary(bytes);
+  if (!validation.ok) return null;
 
-  return { bytes, contentType };
+  return { bytes, contentType: validation.contentType };
 }
 
 /**

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { validateLogoBinary } from "@/src/lib/companies/logoBinaryValidation";
 
 const LOGO_BUCKET = "company-logos";
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
@@ -10,10 +11,6 @@ const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/webp",
-  "image/svg+xml",
-  "image/gif",
-  "image/x-icon",
-  "image/vnd.microsoft.icon",
 ];
 
 type FetchedImage = {
@@ -35,17 +32,6 @@ function getLegacyLogoProviderUrl(domain: string): string {
   const providerBase =
     process.env.LOGO_PROVIDER_BASE_URL ?? "https://logo.clearbit.com";
   return `${providerBase.replace(/\/+$/, "")}/${domain}`;
-}
-
-function extensionFor(contentType: string): string {
-  const value = contentType.toLowerCase();
-  if (value.includes("png")) return "png";
-  if (value.includes("jpeg") || value.includes("jpg")) return "jpg";
-  if (value.includes("webp")) return "webp";
-  if (value.includes("svg")) return "svg";
-  if (value.includes("gif")) return "gif";
-  if (value.includes("icon")) return "ico";
-  return "bin";
 }
 
 function isAllowedImageContentType(contentType: string): boolean {
@@ -91,10 +77,11 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
     }
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) {
+  const validation = validateLogoBinary(bytes);
+  if (!validation.ok) {
     return null;
   }
-  return { bytes, contentType };
+  return { bytes, contentType: validation.contentType };
 }
 
 async function tryProviderLogo(domain: string): Promise<FetchedImage | null> {
@@ -154,13 +141,18 @@ async function uploadLogoToBucket(
   domain: string,
   image: FetchedImage,
 ): Promise<string | null> {
+  const validation = validateLogoBinary(image.bytes);
+  if (!validation.ok) {
+    return null;
+  }
+
   const supabase = createAdminClient();
-  const path = `${domain}/logo.${extensionFor(image.contentType)}`;
+  const path = `${domain}/logo.${validation.extension}`;
   const { error: uploadError } = await supabase.storage
     .from(LOGO_BUCKET)
     .upload(path, image.bytes, {
       upsert: true,
-      contentType: image.contentType.split(";")[0]?.trim() || image.contentType,
+      contentType: validation.contentType,
       cacheControl: "3600",
     });
 

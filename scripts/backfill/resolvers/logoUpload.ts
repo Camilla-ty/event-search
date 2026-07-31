@@ -4,22 +4,16 @@ import type {
   BackfillRow,
 } from "../core/runBackfillJob";
 import { normalizeWebsiteToDomain } from "./domain";
+import {
+  isAllowedLogoRasterContentType,
+  MAX_LOGO_BINARY_BYTES,
+  validateLogoBinary,
+} from "@/src/lib/companies/logoBinaryValidation";
 
 const DEFAULT_LOGO_BUCKET = process.env.BACKFILL_LOGO_BUCKET ?? "company-logos";
 const FETCH_TIMEOUT_MS = 5000;
 const HTML_FETCH_TIMEOUT_MS = 6000;
-const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
-
-const ALLOWED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/svg+xml",
-  "image/gif",
-  "image/x-icon",
-  "image/vnd.microsoft.icon",
-];
+const MAX_LOGO_SIZE_BYTES = MAX_LOGO_BINARY_BYTES;
 
 type FetchedImage = {
   bytes: Uint8Array;
@@ -46,20 +40,8 @@ function getGoogleFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
-function extensionFor(contentType: string): string {
-  const value = contentType.toLowerCase();
-  if (value.includes("png")) return "png";
-  if (value.includes("jpeg") || value.includes("jpg")) return "jpg";
-  if (value.includes("webp")) return "webp";
-  if (value.includes("svg")) return "svg";
-  if (value.includes("gif")) return "gif";
-  if (value.includes("icon")) return "ico";
-  return "bin";
-}
-
 function isAllowedImageContentType(contentType: string): boolean {
-  const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
-  return ALLOWED_IMAGE_TYPES.includes(base);
+  return isAllowedLogoRasterContentType(contentType);
 }
 
 async function fetchWithTimeout(
@@ -111,15 +93,16 @@ async function downloadImage(url: string): Promise<FetchedImage | null> {
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) {
-    console.warn("[logo-backfill] downloaded bytes invalid", {
+  const validation = validateLogoBinary(bytes);
+  if (!validation.ok) {
+    console.warn("[logo-backfill] unsupported logo bytes", {
       url,
-      byteLength: bytes.byteLength,
+      code: validation.code,
     });
     return null;
   }
 
-  return { bytes, contentType, sourceUrl: url };
+  return { bytes, contentType: validation.contentType, sourceUrl: url };
 }
 
 function extractOgImageUrl(html: string, baseDomain: string): string | null {
@@ -195,14 +178,6 @@ function isHighQualityOnlyMode(): boolean {
   return value === "1" || value === "true";
 }
 
-function storagePath(input: {
-  namespace: string;
-  domain: string;
-  contentType: string;
-}): string {
-  return `${input.namespace}/${input.domain}/logo.${extensionFor(input.contentType)}`;
-}
-
 async function uploadLogo(input: {
   supabase: SupabaseClient;
   bucket: string;
@@ -210,19 +185,22 @@ async function uploadLogo(input: {
   domain: string;
   image: FetchedImage;
 }): Promise<string | null> {
-  const path = storagePath({
-    namespace: input.namespace,
-    domain: input.domain,
-    contentType: input.image.contentType,
-  });
-  const contentType =
-    input.image.contentType.split(";")[0]?.trim() || input.image.contentType;
+  const validation = validateLogoBinary(input.image.bytes);
+  if (!validation.ok) {
+    console.warn("[logo-backfill] unsupported logo bytes", {
+      domain: input.domain,
+      code: validation.code,
+    });
+    return null;
+  }
+
+  const path = `${input.namespace}/${input.domain}/logo.${validation.extension}`;
 
   const { error: uploadError } = await input.supabase.storage
     .from(input.bucket)
     .upload(path, input.image.bytes, {
       upsert: true,
-      contentType,
+      contentType: validation.contentType,
       cacheControl: "3600",
     });
 

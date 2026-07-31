@@ -1,18 +1,12 @@
+import {
+  isAllowedLogoRasterContentType,
+  MAX_LOGO_BINARY_BYTES,
+  validateLogoBinary,
+} from "@/src/lib/companies/logoBinaryValidation";
+
 const LOGO_DEV_IMAGE_HOST = "https://img.logo.dev";
 
 const FETCH_TIMEOUT_MS = 5000;
-const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
-
-const ALLOWED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/svg+xml",
-  "image/gif",
-  "image/x-icon",
-  "image/vnd.microsoft.icon",
-];
 
 export type LogoDevFetchedImage = {
   bytes: Uint8Array;
@@ -49,8 +43,7 @@ export function buildLogoDevFetchUrl(
 }
 
 function isAllowedImageContentType(contentType: string): boolean {
-  const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
-  return ALLOWED_IMAGE_TYPES.includes(base);
+  return isAllowedLogoRasterContentType(contentType);
 }
 
 async function fetchWithTimeout(
@@ -94,11 +87,16 @@ export async function fetchLogoDevImage(
   const contentLengthHeader = response.headers.get("content-length");
   if (contentLengthHeader) {
     const length = Number(contentLengthHeader);
-    if (Number.isFinite(length) && length > MAX_LOGO_SIZE_BYTES) return null;
+    if (Number.isFinite(length) && length > MAX_LOGO_BINARY_BYTES) return null;
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_LOGO_SIZE_BYTES) return null;
+  const validation = validateLogoBinary(bytes);
+  if (!validation.ok) return null;
 
-  return { bytes, contentType, sourceUrl: url };
+  return {
+    bytes,
+    contentType: validation.contentType,
+    sourceUrl: url,
+  };
 }
