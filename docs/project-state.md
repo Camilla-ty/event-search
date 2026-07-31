@@ -1,7 +1,7 @@
 # EventPixels — Project State
 
 > Single source of truth for current project status.
-> Last updated: 2026-07-31 (ADR-004 SB1 — Admin same-brand company profile link)
+> Last updated: 2026-07-31 (ADR-004 SB3 — tests/docs/regressions; SB4 manual review pending)
 
 **Naming:** The product is **EventPixels**. The repository and npm package are named **handshakes**.
 
@@ -19,7 +19,7 @@ Next.js (App Router) + Supabase (Postgres, RLS). Server components fetch data; a
 
 | Entity | Table | Notes |
 |---|---|---|
-| **Event Series** | `event_series` | Recurring event brand (name, slug, website, logo, lifecycle). Optional nullable **`company_profile_id`** → `companies.id` (ADR-004 same-brand link; FK `ON DELETE RESTRICT`; unique so one Company links to at most one Series). **Admin SB1:** Series detail can search/link/replace/unlink; Company detail shows read-only reverse Series. Public reciprocal links not shipped (SB2). Migration: `20260731120000_event_series_company_profile_id.sql`. |
+| **Event Series** | `event_series` | Recurring event brand (name, slug, website, logo, lifecycle). Optional nullable **`company_profile_id`** → `companies.id` (ADR-004 same-brand link; FK `ON DELETE RESTRICT`; unique so one Company links to at most one Series). **Admin:** Series detail can search/link/replace/unlink; Company detail shows read-only reverse Series. **Public:** Series hub ↔ Company (`/sponsors/...`) reciprocal links when the target is publicly safe (hidden for restricted/merged/inactive/unavailable). No import/auto-match writes the FK. **SB4 pending:** manual dual-profile candidate review only. Migration: `20260731120000_event_series_company_profile_id.sql`. |
 | **Event Editions** | `event_editions` | Series occurrence (year, dates, city, website, globally unique slug). Multiple editions per series + year allowed. Optional `venue_id` → `venues`. `last_reviewed_at` auto-updates on meaningful admin curation (exhibitors excluded — manual-only). |
 | **Venues** | `venues` | Reusable named location (name, slug, city, address, website, logo). Linked to editions via nullable `event_editions.venue_id`; `city_id` retained on editions. Archive-only lifecycle (`archived_at`). See [venue-design.md](./venue-design.md) and [phase-venue-scope.md](./phase-venue-scope.md). |
 | **Companies** | `companies` | Canonical company entity. No separate sponsors table — "sponsor" = company linked to an edition. Optional `restricted_at` excludes public discovery/profile. |

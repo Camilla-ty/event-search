@@ -136,6 +136,7 @@ export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
         series={data.series}
         topics={data.topics}
         factualSummary={factualSummary}
+        sameBrandCompanyLink={data.sameBrandCompanyLink}
       />
       <SeriesEditionsList editions={data.editions} />
     </section>

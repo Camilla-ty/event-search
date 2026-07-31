@@ -19,6 +19,7 @@ const EVENT_SERIES_PUBLIC_SELECT = `
   website_url,
   logo_url,
   lifecycle_status,
+  company_profile_id,
   merged_into_series_id,
   merged_into_series:merged_into_series_id ( id, name, slug )
 `;

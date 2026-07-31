@@ -1,8 +1,11 @@
+import Link from "next/link";
+
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import { PublicTopicsSection } from "@/src/features/events/components/PublicTopicsSection";
 import type { PublicEventSeriesSummary } from "@/src/features/events/types/publicEdition";
 import type { PublicKeywordSummary } from "@/src/features/events/types/keywords";
 import { FactualSummaryParagraph } from "@/src/components/seo/FactualSummaryParagraph";
+import type { PublicSameBrandLink } from "@/src/lib/companies/sameBrandPublicLink";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import { formatPublicCompanyWebsite } from "@/src/lib/domain/formatPublicCompanyWebsite";
 
@@ -10,12 +13,15 @@ type SeriesHubHeaderProps = {
   series: PublicEventSeriesSummary;
   topics?: ReadonlyArray<PublicKeywordSummary>;
   factualSummary?: string | null;
+  /** Safe public same-brand organization/company profile link. */
+  sameBrandCompanyLink?: PublicSameBrandLink | null;
 };
 
 export function SeriesHubHeader({
   series,
   topics = [],
   factualSummary = null,
+  sameBrandCompanyLink = null,
 }: SeriesHubHeaderProps) {
   const websiteDisplay = formatPublicCompanyWebsite({
     website: series.website_url,
@@ -50,6 +56,15 @@ export function SeriesHubHeader({
             >
               {websiteDisplay.label}
             </a>
+          </p>
+        ) : null}
+        {sameBrandCompanyLink ? (
+          <p className="text-sm text-slate-600">
+            <span className="text-slate-500">Company profile</span>
+            {" · "}
+            <Link href={sameBrandCompanyLink.href} className={brandLinkClass}>
+              {sameBrandCompanyLink.name}
+            </Link>
           </p>
         ) : null}
         <PublicTopicsSection topics={topics} />

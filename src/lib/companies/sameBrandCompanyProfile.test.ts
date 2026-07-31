@@ -97,7 +97,7 @@ describe("validateSameBrandCompanyProfileAssignment", () => {
     });
   });
 
-  it("rejects missing and merged companies", () => {
+  it("rejects missing, inactive, and merged companies", () => {
     assert.deepEqual(
       validateSameBrandCompanyProfileAssignment({
         seriesId: SERIES_ID,
@@ -108,6 +108,18 @@ describe("validateSameBrandCompanyProfileAssignment", () => {
       }),
       { ok: false, error: SAME_BRAND_COMPANY_MISSING_MESSAGE },
     );
+
+    const inactive = validateSameBrandCompanyProfileAssignment({
+      seriesId: SERIES_ID,
+      seriesLifecycleStatus: "active",
+      companyProfileId: COMPANY_ID,
+      company: {
+        ...activeCompany,
+        status: "inactive",
+      },
+      occupyingSeries: null,
+    });
+    assert.deepEqual(inactive, { ok: false, error: COMPANY_NOT_LINKABLE_MESSAGE });
 
     const merged = validateSameBrandCompanyProfileAssignment({
       seriesId: SERIES_ID,

@@ -1,3 +1,4 @@
+import type { PublicSameBrandLink } from "@/src/lib/companies/sameBrandPublicLink";
 import type { getCompanyById } from "@/src/lib/queries/companies";
 import type { getEventEditions } from "@/src/lib/queries/events";
 
@@ -42,4 +43,6 @@ export type SponsorDetailData = {
   isAuthenticated: boolean;
   summary: SponsorDetailSummary;
   eventSeriesGroups: SponsorDetailSeriesGroup[];
+  /** Safe public same-brand Event Series hub link; null when absent or not publicly resolvable. */
+  sameBrandSeriesLink: PublicSameBrandLink | null;
 };

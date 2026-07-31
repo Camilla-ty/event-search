@@ -18,9 +18,15 @@ describe("event-series PATCH same-brand company_profile_id wiring", () => {
     assert.match(source, /findSeriesByCompanyProfileIdAdmin/);
     assert.match(source, /patch\.company_profile_id = null/);
     assert.match(source, /patch\.company_profile_id = companyProfileId/);
+    assert.match(source, /updateEventSeries/);
   });
 
   it("surfaces restricted-company warnings from validation", () => {
     assert.match(source, /warnings\.push\(\.\.\.validation\.warnings\)/);
+  });
+
+  it("maps uniqueness conflicts to HTTP 409", () => {
+    assert.match(source, /already linked as the same-brand/i);
+    assert.match(source, /\?\s*409\s*:/);
   });
 });

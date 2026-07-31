@@ -246,6 +246,8 @@ Before coding, produce a thin **implementation / phase scope** (not another open
 
 **Scope document:** [phase-event-series-company-same-brand-scope.md](../phase-event-series-company-same-brand-scope.md) (SB0–SB4).
 
+**Implementation status (2026-07-31):** SB0–SB3 complete per the phase scope (schema, Admin link lifecycle, public reciprocal links, focused tests/docs/regressions). **SB4** (manual dual-profile candidate review) remains pending and must not be automated.
+
 **This ADR does not authorize migrations or application code by itself.** Implementation starts only when coding is explicitly requested against that phase scope.
 
 ---
@@ -290,6 +292,7 @@ Do not implement polymorphic sponsor (or organizer/exhibitor) FKs toward `event_
 |------|--------|
 | 2026-07-31 | Accepted — locks optional 1:1 `event_series.company_profile_id`, admin verify-on-save, public reciprocal links, no merge auto-repoint, supersedes polymorphic sponsors |
 | 2026-07-31 | Linked thin implementation scope [phase-event-series-company-same-brand-scope.md](../phase-event-series-company-same-brand-scope.md) |
+| 2026-07-31 | Implementation status note: SB0–SB3 complete; SB4 manual candidate review pending |
 
 ---
 

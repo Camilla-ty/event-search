@@ -75,4 +75,9 @@ Do not expose internal table, field, route, or code names as display labels.
 7. Tests that assert user-visible text must use the terms for that surface (`PublicTerminology` / `AdminTerminology`). Tests of internal models and technical contracts should continue to use their exact internal names.
 8. Do not perform an unscoped global replacement of `series` or `edition`. Those words may be part of internal identifiers, technical contracts, historical records, or unrelated language.
 
+9. When an Event Brand also has a Company profile linked as the same brand (ADR-004):
+   - Public Series hub may link to a **Company profile** (organization/sponsor profile) — never call that page a second Event Brand.
+   - Public Company profile may link to an **Event profile** / Event Brand hub — do not label the Series hub as organizer or owner of the Company.
+   - Admin continues to say **Event Series** and **Company** for the same-brand section.
+
 When terminology is unclear, follow this document before introducing new copy.

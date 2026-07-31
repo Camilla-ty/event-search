@@ -2,12 +2,17 @@ import {
   mapPublicEditionRow,
   mapPublicEventSeries,
 } from "@/src/features/events/server/mapPublicEditionRow";
+import {
+  loadPublicSameBrandCompanyLinkForSeries,
+  readCompanyProfileIdFromSeriesRow,
+} from "@/src/features/events/server/sameBrandPublicLinks";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import type {
   PublicEditionSummary,
   PublicEventSeriesSummary,
 } from "@/src/features/events/types/publicEdition";
 import type { PublicKeywordSummary } from "@/src/features/events/types/keywords";
+import type { PublicSameBrandLink } from "@/src/lib/companies/sameBrandPublicLink";
 import {
   getEventEditionsBySeriesId,
   getEventSeriesById,
@@ -18,6 +23,8 @@ export type SeriesHubData = {
   series: PublicEventSeriesSummary;
   editions: PublicEditionSummary[];
   topics: PublicKeywordSummary[];
+  /** Safe public same-brand Company profile link; null when absent or not publicly resolvable. */
+  sameBrandCompanyLink: PublicSameBrandLink | null;
 };
 
 export async function getSeriesHubData(
@@ -31,9 +38,12 @@ export async function getSeriesHubData(
   const series = mapPublicEventSeries(rawSeries);
   if (!series) return null;
 
-  const [rows, topics] = await Promise.all([
+  const [rows, topics, sameBrandCompanyLink] = await Promise.all([
     getEventEditionsBySeriesId(series.id),
     getPublicKeywordsForSeriesId(series.id),
+    loadPublicSameBrandCompanyLinkForSeries(
+      readCompanyProfileIdFromSeriesRow(rawSeries),
+    ),
   ]);
 
   const editions: PublicEditionSummary[] = [];
@@ -42,5 +52,5 @@ export async function getSeriesHubData(
     if (mapped) editions.push(mapped);
   }
 
-  return { series, editions, topics };
+  return { series, editions, topics, sameBrandCompanyLink };
 }

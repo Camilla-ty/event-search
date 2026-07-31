@@ -1,8 +1,9 @@
 # Phase — Event Series ↔ Company Same-Brand Link (ADR-004)
 
-**Status:** SB0 complete · SB1 complete (Admin same-brand link) · SB2–SB4 not started
+**Status:** SB0–SB3 complete (schema · Admin · public reciprocal links · tests/docs/regressions) · **SB4 pending** (manual candidate review — ops only)
 **Version:** v1
-**Last updated:** 2026-07-31  
+**Last updated:** 2026-07-31
+**Implementation:** Shipped in code for SB0–SB3; SB4 is intentionally not automated.
 
 Thin implementation scope for the optional 1:1 same-brand link per **[ADR-004](./adr/ADR-004-event-series-company-same-brand-link.md)**. Defines the smallest V1 deliverable, phased work, acceptance criteria, verification, and stop points — **not** SQL, migrations, or application code.
 
@@ -194,24 +195,24 @@ Anonymous-visible (not buried only inside gated sponsorship history).
 
 Do **not** render the public reciprocal link when any of:
 
-- Company `restricted_at` is set  
-- Company `status` is merged / not active  
-- `buildSponsorProfilePath` would return null  
-- Series fails public access / is unresolved merged tombstone  
-- Linked company row missing  
+- Company `restricted_at` is set
+- Company `status` is merged / not active
+- `buildSponsorProfilePath` would return null
+- Series fails public access / is unresolved merged tombstone
+- Linked company row missing
 
 Series hub and Company profile otherwise render as today.
 
 ### 5.3 Copy / terminology
 
-- Public Series side: may say the brand also has an organization/sponsor profile — **do not** label the Company page as a second “Event Brand.”  
+- Public Series side: may say the brand also has an organization/sponsor profile — **do not** label the Company page as a second “Event Brand.”
 - Follow [terminology.md](./terminology.md): Admin = Event Series; Public = Event Brand for the series hub only.
 
 ### 5.4 Non-goals on public surfaces
 
-- No shared hero/logo sync  
-- No metadata/canonical/JSON-LD merge  
-- No changes to edition organizer/sponsor roster link targets  
+- No shared hero/logo sync
+- No metadata/canonical/JSON-LD merge
+- No changes to edition organizer/sponsor roster link targets
 
 ### 5.5 Likely areas affected (SB2)
 
@@ -259,24 +260,24 @@ Admins manually decide which dual profiles deserve a same-brand link, using the 
 
 Exact/near name overlaps (non-exhaustive; re-query at review time):
 
-- Blockchain Futurist Conference  
-- Consensus by CoinDesk  
-- Consensus Hong Kong  
-- ETHGlobal  
-- European Blockchain Convention  
-- Istanbul Blockchain Week  
-- Korea Blockchain Week  
-- London Blockchain Conference  
-- Singapore FinTech Festival  
-- TOKEN2049  
+- Blockchain Futurist Conference
+- Consensus by CoinDesk
+- Consensus Hong Kong
+- ETHGlobal
+- European Blockchain Convention
+- Istanbul Blockchain Week
+- Korea Blockchain Week
+- London Blockchain Conference
+- Singapore FinTech Festival
+- TOKEN2049
 
 ### 7.3 Review procedure
 
-1. Open Series admin → Same-brand section.  
-2. Search candidate Company by name/domain.  
-3. Confirm same brand (not merely similar name / parent org).  
-4. Link or skip; record skips if useful for ops notes.  
-5. Spot-check public reciprocal links (and restricted hiding if applicable).  
+1. Open Series admin → Same-brand section.
+2. Search candidate Company by name/domain.
+3. Confirm same brand (not merely similar name / parent org).
+4. Link or skip; record skips if useful for ops notes.
+5. Spot-check public reciprocal links (and restricted hiding if applicable).
 
 **Stop:** Do not script bulk `UPDATE event_series SET company_profile_id = …` from name matches.
 
@@ -341,28 +342,29 @@ Exact/near name overlaps (non-exhaustive; re-query at review time):
 
 V1 is done when:
 
-1. `event_series.company_profile_id` exists with FK RESTRICT + reverse uniqueness.  
-2. Admins can search, link, replace, and unlink from Series (Company shows reverse).  
-3. Merged/unavailable companies cannot be newly linked; restricted can be linked with warning; public never exposes unsafe Company targets.  
-4. Public reciprocal links work for safe pairs and hide otherwise.  
-5. Focused tests pass; role/import regressions checked.  
-6. Manual candidate review has been run or explicitly scheduled with owners — **not** automated.  
-7. `project-state.md` updated for the shipped behavior.  
+1. `event_series.company_profile_id` exists with FK RESTRICT + reverse uniqueness.
+2. Admins can search, link, replace, and unlink from Series (Company shows reverse).
+3. Merged/unavailable companies cannot be newly linked; restricted can be linked with warning; public never exposes unsafe Company targets.
+4. Public reciprocal links work for safe pairs and hide otherwise.
+5. Focused tests pass; role/import regressions checked.
+6. Manual candidate review has been run or explicitly scheduled with owners — **not** automated. (**SB4 — still pending.**)
+7. `project-state.md` updated for the shipped behavior.
 
 ---
 
 ## 10. Verification checklist (engineering)
 
-- [ ] Migration applied in intended environment (or clearly pending user action)  
-- [ ] Unique + FK behavior verified  
-- [ ] Admin link / replace / unlink QA  
-- [ ] Restricted company: Admin warning + public link hidden  
-- [ ] Merged company: Admin reject on link/replace  
-- [ ] 1:1 conflict when Company already linked  
-- [ ] Public Series → Company and Company → Series for a safe fixture  
-- [ ] Focused tests + lint/tsc for touched paths  
-- [ ] Confirm sponsor/exhibitor/organizer/PA import paths do not set `company_profile_id`  
-- [ ] Documentation Impact Review (`project-state`, this scope status → Implemented when done)  
+- [x] Migration applied in intended environment (or clearly pending user action) — `20260731120000_event_series_company_profile_id.sql`
+- [x] Unique + FK behavior verified (migration + validation uniqueness conflict coverage)
+- [x] Admin link / replace / unlink QA (validation + Admin UI + PATCH wiring tests)
+- [x] Restricted company: Admin warning + public link hidden
+- [x] Merged company: Admin reject on link/replace
+- [x] 1:1 conflict when Company already linked
+- [x] Public Series → Company and Company → Series for a safe fixture (component + builder tests)
+- [x] Focused tests + lint/tsc for touched paths
+- [x] Confirm sponsor/exhibitor/organizer/PA import paths do not set `company_profile_id`
+- [x] Documentation Impact Review (`project-state`, this scope status → SB0–SB3 complete; SB4 pending)
+- [ ] **SB4:** Manual candidate review (ops) — not part of SB3 code complete
 
 ---
 
@@ -386,10 +388,10 @@ No schema contradiction with ADR-004. No requirement to reopen audit options A�
 
 Per repository rules and Definition of Done:
 
-1. **Stop before commit** at each phase boundary until DoD for that slice is met and the user asks to commit.  
-2. **Never push** unless the user explicitly requests push.  
-3. Do not combine unrelated refactors with SB0–SB3.  
-4. Do not commit `.env` or secrets.  
+1. **Stop before commit** at each phase boundary until DoD for that slice is met and the user asks to commit.
+2. **Never push** unless the user explicitly requests push.
+3. Do not combine unrelated refactors with SB0–SB3.
+4. Do not commit `.env` or secrets.
 
 This scope document itself is documentation-only until implementation is requested.
 
@@ -429,6 +431,8 @@ Do **not** rewrite the historical audit; add ship notes only if needed.
 | 2026-07-31 | Initial thin implementation scope (SB0–SB4) for ADR-004 |
 | 2026-07-31 | SB0: migration `20260731120000_event_series_company_profile_id.sql` + migration test; admin/public still deferred |
 | 2026-07-31 | SB1: Admin Series link/replace/unlink + Company reverse view; public still deferred |
+| 2026-07-31 | SB2: Public reciprocal Series hub ↔ Company profile links with availability gating |
+| 2026-07-31 | SB3: Focused tests + regression wiring + documentation accuracy pass; **SB4 remains pending** |
 
 ---
 
