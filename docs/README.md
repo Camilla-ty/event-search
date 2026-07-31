@@ -28,6 +28,7 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 |----------|-------------|
 | [Navigation & data fetching](./architecture/navigation-and-data-fetching.md) | Category A–D policy, shared `src/lib/navigation` utilities, PR checklist, phased rollout |
 | [Side-effect ownership](./architecture/side-effect-ownership.md) | One event / one owner policy, auth refresh provider, audit checklist |
+| [Linked Event Series & Company Profiles — Architecture Audit](./audits/event-series-company-same-brand-architecture-audit.md) | Documentation-only audit (Phase 1 data/admin + Phase 2 public UI/search/SEO/permissions/V1 scope); 2026-07-31 |
 
 ## Implementation
 

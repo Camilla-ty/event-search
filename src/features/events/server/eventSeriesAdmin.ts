@@ -58,6 +58,7 @@ export type UpdateEventSeriesInput = {
 
 export type EventSeriesListItem = EventSeriesRow & {
   edition_count: number;
+  has_keywords: boolean;
 };
 
 function normalizeMergedIntoSeries(raw: unknown): MergedIntoSeriesSummary | null {
@@ -107,11 +108,14 @@ export async function listEventSeriesAdmin(search?: string): Promise<EventSeries
   );
   if (series.length === 0) return [];
 
-  const { data: editionRows, error: editionError } = await supabase
-    .from("event_editions")
-    .select("series_id");
+  const [{ data: editionRows, error: editionError }, { data: keywordRows, error: keywordError }] =
+    await Promise.all([
+      supabase.from("event_editions").select("series_id"),
+      supabase.from("event_series_keyword").select("series_id"),
+    ]);
 
   if (editionError) throw new Error(editionError.message);
+  if (keywordError) throw new Error(keywordError.message);
 
   const countBySeries = new Map<string, number>();
   for (const row of editionRows ?? []) {
@@ -121,9 +125,18 @@ export async function listEventSeriesAdmin(search?: string): Promise<EventSeries
     }
   }
 
+  const seriesIdsWithKeywords = new Set<string>();
+  for (const row of keywordRows ?? []) {
+    const sid = row.series_id;
+    if (typeof sid === "string" && sid !== "") {
+      seriesIdsWithKeywords.add(sid);
+    }
+  }
+
   return series.map((item) => ({
     ...item,
     edition_count: countBySeries.get(item.id) ?? 0,
+    has_keywords: seriesIdsWithKeywords.has(item.id),
   }));
 }
 

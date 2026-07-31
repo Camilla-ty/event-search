@@ -47,6 +47,9 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | PROD-001 | Admin global search promised in v1 IA but not present | admin / discoverability | High | Medium | Open | 2026-07 | 2026-07 | [Product 2026-07 §PROD-001](./product/2026-07-product.md) |
 | PROD-002 | Public /exhibitors module is a roadmap stub with live product framing | public / polish | Medium | Small | Open | 2026-07 | 2026-07 | [Product 2026-07 §PROD-002](./product/2026-07-product.md) |
 | PROD-003 | Partner Alumni imports missing from Dashboard resume surface | admin / workflows | Medium | Medium | Open | 2026-07 | 2026-07 | [Product 2026-07 §PROD-003](./product/2026-07-product.md) |
+| DQ-001 | Sponsor companies lack official website/domain identity at scale | data / company-identity | High | Large | Open | 2026-07 | 2026-07 | [Data Quality 2026-07 §DQ-001](./data-quality/2026-07-data-quality.md) |
+| DQ-002 | Public event editions missing `city_id` | data / editions | Medium | Small | Open | 2026-07 | 2026-07 | [Data Quality 2026-07 §DQ-002](./data-quality/2026-07-data-quality.md) |
+| DQ-003 | Active orphan and bogus company shells from import/curation residue | data / companies | Medium | Medium | Open | 2026-07 | 2026-07 | [Data Quality 2026-07 §DQ-003](./data-quality/2026-07-data-quality.md) |
 
 **Security topics owned by Security but tracked under existing IDs (cross-referenced, not duplicated):** `ARC-001` (RLS/service-role bypass), `ARC-007` (rate limiting + input validation), `ARC-009` (RLS/grant regression tests), `ARC-015` (email enumeration), `ARC-016` (security headers), `ARC-017` (middleware auth). See [Security 2026-07](./security/2026-07-security.md).
 
@@ -80,3 +83,4 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-07-24 | Baseline Roadmap Review (`roadmap/2026-07-roadmap.md`): added `ROAD-001`–`ROAD-002` (all `Open`). Cross-referenced `PROD-001` / `PROD-002` / `ARC-011`; did not invent features or reprioritize work. |
 | 2026-07-24 | Resolved `ROAD-002` (removed from open findings; retired). Closing report: `roadmap/2026-08-roadmap.md`. `ROAD-001` remains `Open`. |
 | 2026-07-24 | Resolved `ROAD-001` (removed from open findings; retired). Closing report: `roadmap/2026-09-roadmap.md`. Closing evidence: `docs/implementation-roadmap-v1.md` Phases 2–4 complete. |
+| 2026-07-23 | Baseline Data Quality Audit (`data-quality/2026-07-data-quality.md`): added `DQ-001`–`DQ-003` (all `Open`). Cross-referenced `ARC-001/003/011`, `HYG-003`, `PROD-003`, `SEC-002/003`; did not duplicate ownership. |

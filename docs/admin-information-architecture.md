@@ -441,7 +441,9 @@ Export edition list CSV
 
 ### 7.2 Series list (E-S02)
 
-**Filters:** Search name/slug · has editions · no editions
+**Columns:** Event Series (links to detail) · Website (hostname) · Lifecycle · Logo · SEO (keyword presence) · Editions
+
+**Filters (planned; not yet on the list UI):** Search name/slug · has editions · no editions
 
 **Bulk actions:** None v1
 
