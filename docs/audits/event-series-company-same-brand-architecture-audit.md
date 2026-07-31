@@ -23,7 +23,9 @@ What is **missing** is any first-class same-brand relationship between `event_se
 
 **Phase 2 (public surfaces):** Dual profiles are already **separate public destinations** with incomplete reciprocity. Edition → Company links work for roles; Series hub → Company and Company → Series hub do **not**. Search scopes are siloed (Events vs Sponsors) with no same-name disambiguation. SEO treats Event Brand and Sponsor Organization as independent entities; series merge redirects exist, company merge redirects are DB-only and unused in app code. Restricted-company scrubbing is strong on sponsor/exhibitor paths and weaker on organizer mapping.
 
-**Verdict:** The current architecture **broadly supports** the proposed direction. The smallest practical V1 is an optional, **admin-verified** Series↔Company link plus **minimal public reciprocal navigation** and lifecycle safety — not search unification, not polymorphic sponsors, not shared logo/metadata merging. The natural next step remains a focused **design doc** (cardinality + V1 public/SEO rules), then a thin phase scope — not schema work yet.
+**Verdict:** The current architecture **broadly supports** the proposed direction. The smallest practical V1 is an optional, **admin-verified** Series↔Company link plus **minimal public reciprocal navigation** and lifecycle safety — not search unification, not polymorphic sponsors, not shared logo/metadata merging.
+
+**Decision lock (2026-07-31):** Product decisions from this audit are recorded in **[ADR-004 — Event Series ↔ Company same-brand link](../adr/ADR-004-event-series-company-same-brand-link.md)** (`event_series.company_profile_id`, optional 1:1, admin verify-on-save, public reciprocal links, no merge auto-repoint, polymorphic sponsors superseded). Remaining open items are limited to deferred work and implementation prerequisites in that ADR — not re-litigation of the audit’s core model.
 
 ---
 
@@ -609,41 +611,38 @@ Aligned with ADR-001:
 
 ## 15. Remaining Product Decisions
 
-Carry-forward from Phase 1, narrowed by Phase 2:
+**Core model decisions from this section are locked in [ADR-004](../adr/ADR-004-event-series-company-same-brand-link.md).** Historical open list retained for audit trail:
 
-### Must decide before design lock
+### Locked by ADR-004 (was “must decide before design lock”)
 
-1. **Cardinality** — V1 default recommendation to evaluate: **at most one** verified same-brand Company per Series and **at most one** Series per Company; multi-brand parent orgs stay unlinked or link only the matching brand.
-2. **Public reciprocal copy & placement** — Series hub and/or Company header; anonymous-visible or not.
-3. **Restricted companies** — Link may exist in admin but **never** publicize; or refuse link entirely while restricted.
-4. **Merged entities** — Auto-repoint vs require re-verification after company merge / series merge.
-5. **Backlog polymorphic sponsors** — Formally supersede, defer, or rewrite problem statement to “dual profile + link.”
-6. **Organizer-only Companies** — Should a Company that only organizes (0 sponsorships) remain noindex after linking? Separate SEO product call.
+1. **Cardinality** — Optional **1:1** (at most one Company per Series; at most one Series per Company via unique `company_profile_id`).
+2. **Public reciprocal links** — Simple anonymous-safe reciprocal nav when Company is publicly safe.
+3. **Restricted companies** — Do **not** show a public link to restricted/unavailable Company.
+4. **Merged entities** — Do **not** auto-repoint; require Admin review.
+5. **Backlog polymorphic sponsors** — **Superseded** by ADR-004.
+6. **Schema** — Nullable `event_series.company_profile_id` (audit Option A family; column name `company_profile_id`).
+7. **Verification** — Admin save **is** verified; no separate approval workflow in V1.
 
-### Can defer past V1 design
+### Still open / deferred (not blocking ADR acceptance)
 
-7. Creation policy (auto-create Company when creating Series).
-8. Suggestion rule richness beyond exact name / shared domain.
-9. Admin ownership preference if bidirectional UI is accepted.
-10. Shared logo / single canonical website.
-11. City / regional brand taxonomy.
-12. Partner Alumni / Exhibitor special cases (likely none — pure Company membership).
-13. Organizer import same-brand hints.
-14. Unified search disambiguation UX.
-15. Company public merge redirects (can ship independently).
+8. **Organizer-only Company indexability** after link — separate SEO product call.
+9. Creation policy (auto-create Company when creating Series).
+10. Suggestion rule richness beyond exact name / shared domain.
+11. Shared logo / single canonical website.
+12. City / regional brand taxonomy.
+13. Partner Alumni / Exhibitor special cases (likely none).
+14. Organizer import same-brand hints.
+15. Unified search disambiguation UX.
+16. Company public merge redirects (independent).
+17. Whether an admin-side FK may remain while Company is restricted (public always hidden).
 
 ---
 
 ## 16. Recommended Next Steps
 
-1. **Design document** — *Event Series ↔ Company same-brand link (design)* that:
-   - Locks Phase 1 confirmed decisions + Phase 2 V1 required list (§14.2).
-   - Chooses cardinality and schema option family (A–D) without writing migrations yet.
-   - Specifies admin verify UX, public reciprocal link rules, and merge/restrict matrices.
-   - Explicitly rejects polymorphic sponsor targets for the confirmed model.
-   - Adds terminology notes for dual public destinations (no table renames).
-2. **Optional parallel hygiene** (can be separate small scopes): organizer `restricted_at` mapping; company slug redirect consumption.
-3. **Only after design approval** — open a thin implementation phase (migration + admin + minimal public links).
+1. **Implement SB0–SB3** per [phase-event-series-company-same-brand-scope.md](../phase-event-series-company-same-brand-scope.md) when explicitly requested — migration, admin link UI, public reciprocal links, tests/docs.
+2. **SB4** — Manual Admin review of dual-profile candidates after deploy (no auto-backfill).
+3. **Optional parallel hygiene** (separate scopes): organizer `restricted_at` mapping; company slug redirect consumption.
 
 Do **not** start with search unification or SEO graph merging.
 
@@ -657,6 +656,7 @@ Do **not** start with search unification or SEO graph merging.
 | Terminology | `docs/terminology.md` |
 | Company identity | `docs/adr/ADR-001-company-identity.md` |
 | Website identity | `docs/adr/ADR-002-company-website-canonical-identity.md` |
+| Same-brand link (**Accepted**) | `docs/adr/ADR-004-event-series-company-same-brand-link.md` |
 | Organizer design | `docs/organizer-design.md` |
 | Exhibitor design | `docs/exhibitor-design.md` |
 | Partner Alumni | `docs/partner-alumni-design.md` |
@@ -666,7 +666,7 @@ Do **not** start with search unification or SEO graph merging.
 | Domain matching plan | `docs/implementation/company-domain-matching-v1.md` |
 | Indexability policy | `docs/plans/indexability-policy.md` |
 | SEO foundation | `docs/plans/seo-foundation.md` |
-| Backlog (competing idea) | `docs/backlog.md` § Event sponsor entity expansion |
+| Backlog (polymorphic sponsors — **superseded**) | `docs/backlog.md` § Event sponsor entity expansion → ADR-004 |
 | Data quality baseline | `docs/health/data-quality/2026-07-data-quality.md` |
 | Linkability gate | `src/lib/companies/assertCompanyLinkable.ts` |
 | Restriction helpers | `src/lib/companies/companyPublicRestriction.ts` |

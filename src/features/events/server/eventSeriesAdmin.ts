@@ -16,14 +16,29 @@ const EVENT_SERIES_ADMIN_SELECT = `
   logo_url,
   lifecycle_status,
   merged_into_series_id,
+  company_profile_id,
   created_at,
-  merged_into_series:merged_into_series_id ( id, name, slug )
+  merged_into_series:merged_into_series_id ( id, name, slug ),
+  company_profile:company_profile_id (
+    id, name, slug, domain, status, merged_into_company_id, restricted_at
+  )
 `;
 
 export type MergedIntoSeriesSummary = {
   id: string;
   name: string;
   slug: string;
+};
+
+/** Linked same-brand company summary for Admin Series detail (ADR-004). */
+export type SameBrandCompanyProfileSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string | null;
+  status: string;
+  merged_into_company_id: string | null;
+  restricted_at: string | null;
 };
 
 export type EventSeriesRow = {
@@ -34,8 +49,11 @@ export type EventSeriesRow = {
   logo_url: string | null;
   lifecycle_status: string | null;
   merged_into_series_id: string | null;
+  /** Optional same-brand Company (ADR-004). */
+  company_profile_id: string | null;
   created_at: string;
   merged_into_series?: MergedIntoSeriesSummary | null;
+  company_profile?: SameBrandCompanyProfileSummary | null;
 };
 
 export type CreateEventSeriesInput = {
@@ -54,6 +72,8 @@ export type UpdateEventSeriesInput = {
   logo_url?: string | null;
   lifecycle_status?: string | null;
   merged_into_series_id?: string | null;
+  /** Set to a company id to link/replace; `null` to unlink (ADR-004 SB1). */
+  company_profile_id?: string | null;
 };
 
 export type EventSeriesListItem = EventSeriesRow & {
@@ -73,6 +93,32 @@ function normalizeMergedIntoSeries(raw: unknown): MergedIntoSeriesSummary | null
   return { id, name, slug };
 }
 
+function normalizeSameBrandCompanyProfile(
+  raw: unknown,
+): SameBrandCompanyProfileSummary | null {
+  if (raw === null || raw === undefined) return null;
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (row === null || typeof row !== "object") return null;
+  const record = row as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id : "";
+  const name = typeof record.name === "string" ? record.name : "";
+  const slug = typeof record.slug === "string" ? record.slug : "";
+  if (id === "" || name === "" || slug === "") return null;
+  return {
+    id,
+    name,
+    slug,
+    domain: typeof record.domain === "string" ? record.domain : null,
+    status: typeof record.status === "string" ? record.status : "active",
+    merged_into_company_id:
+      typeof record.merged_into_company_id === "string"
+        ? record.merged_into_company_id
+        : null,
+    restricted_at:
+      typeof record.restricted_at === "string" ? record.restricted_at : null,
+  };
+}
+
 function mapEventSeriesRow(raw: Record<string, unknown>): EventSeriesRow {
   return {
     id: String(raw.id),
@@ -83,8 +129,11 @@ function mapEventSeriesRow(raw: Record<string, unknown>): EventSeriesRow {
     lifecycle_status: typeof raw.lifecycle_status === "string" ? raw.lifecycle_status : null,
     merged_into_series_id:
       typeof raw.merged_into_series_id === "string" ? raw.merged_into_series_id : null,
+    company_profile_id:
+      typeof raw.company_profile_id === "string" ? raw.company_profile_id : null,
     created_at: typeof raw.created_at === "string" ? raw.created_at : "",
     merged_into_series: normalizeMergedIntoSeries(raw.merged_into_series),
+    company_profile: normalizeSameBrandCompanyProfile(raw.company_profile),
   };
 }
 
@@ -199,6 +248,9 @@ export async function updateEventSeries(
   if (input.merged_into_series_id !== undefined) {
     patch.merged_into_series_id = input.merged_into_series_id;
   }
+  if (input.company_profile_id !== undefined) {
+    patch.company_profile_id = input.company_profile_id;
+  }
 
   const { data, error } = await supabase
     .from("event_series")
@@ -207,8 +259,54 @@ export async function updateEventSeries(
     .select(EVENT_SERIES_ADMIN_SELECT)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (
+      error.code === "23505" ||
+      (/company_profile_id/i.test(error.message) &&
+        /unique|duplicate/i.test(error.message))
+    ) {
+      throw new Error(
+        "This company is already linked as the same-brand profile for another event series.",
+      );
+    }
+    throw new Error(error.message);
+  }
   return mapEventSeriesRow(data as Record<string, unknown>);
+}
+
+export async function getCompanyForSameBrandLinkAdmin(
+  companyId: string,
+): Promise<SameBrandCompanyProfileSummary | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, name, slug, domain, status, merged_into_company_id, restricted_at")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return normalizeSameBrandCompanyProfile(data as Record<string, unknown>);
+}
+
+/** Series that currently claims this company as same-brand (0 or 1). */
+export async function findSeriesByCompanyProfileIdAdmin(
+  companyId: string,
+): Promise<{ id: string; name: string; slug: string } | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("event_series")
+    .select("id, name, slug")
+    .eq("company_profile_id", companyId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    id: String(data.id),
+    name: typeof data.name === "string" ? data.name : "",
+    slug: typeof data.slug === "string" ? data.slug : "",
+  };
 }
 
 export function defaultSeriesSlug(name: string): string {

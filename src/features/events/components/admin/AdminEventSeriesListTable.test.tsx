@@ -18,6 +18,7 @@ function seriesRow(overrides: Partial<EventSeriesListItem> = {}): EventSeriesLis
     logo_url: "event-series/series-1/logo.png",
     lifecycle_status: "active",
     merged_into_series_id: null,
+    company_profile_id: null,
     created_at: "2026-01-01T00:00:00.000Z",
     edition_count: 3,
     has_keywords: true,

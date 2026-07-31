@@ -28,6 +28,8 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 |----------|-------------|
 | [Navigation & data fetching](./architecture/navigation-and-data-fetching.md) | Category A–D policy, shared `src/lib/navigation` utilities, PR checklist, phased rollout |
 | [Side-effect ownership](./architecture/side-effect-ownership.md) | One event / one owner policy, auth refresh provider, audit checklist |
+| [ADR-004 — Event Series ↔ Company same-brand link](./adr/ADR-004-event-series-company-same-brand-link.md) | **Accepted** — optional 1:1 `event_series.company_profile_id`; roles stay Company-only; supersedes polymorphic sponsors |
+| [Phase — Event Series ↔ Company same-brand scope](./phase-event-series-company-same-brand-scope.md) | Thin V1 implementation scope (SB0–SB4) for ADR-004 — **not started** |
 | [Linked Event Series & Company Profiles — Architecture Audit](./audits/event-series-company-same-brand-architecture-audit.md) | Documentation-only audit (Phase 1 data/admin + Phase 2 public UI/search/SEO/permissions/V1 scope); 2026-07-31 |
 
 ## Implementation

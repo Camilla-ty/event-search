@@ -7,6 +7,7 @@ import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { SeriesPartnerAlumniPanel } from "@/src/features/partner-alumni/components/admin/SeriesPartnerAlumniPanel";
 import { loadPartnerAlumniAdminForSeriesPage } from "@/src/features/partner-alumni/server/partnerAlumniAdminPageLoad";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
+import { SameBrandCompanyProfileSection } from "@/src/features/events/components/admin/SameBrandCompanyProfileSection";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getEventSeriesAdminById } from "@/src/features/events/server/eventSeriesAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
@@ -87,6 +88,13 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
               }
             : null
         }
+      />
+
+      <SameBrandCompanyProfileSection
+        seriesId={series.id}
+        seriesLifecycleStatus={series.lifecycle_status}
+        initialCompanyProfileId={series.company_profile_id}
+        initialCompanyProfile={series.company_profile ?? null}
       />
 
       <SeriesPartnerAlumniPanel

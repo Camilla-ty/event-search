@@ -10,6 +10,7 @@ import { CompanyPublicVisibilitySection } from "@/src/features/companies/compone
 import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
+import { CompanySameBrandSeriesSection } from "@/src/features/companies/components/admin/CompanySameBrandSeriesSection";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { listCompanyDomainsForAdmin } from "@/src/features/companies/server/companyDomainsAdmin";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
@@ -19,6 +20,7 @@ import {
 } from "@/src/features/companies/server/companyAdmin";
 import { listOrganizerRolesForCompanyAdmin } from "@/src/features/organizers/server/companyOrganizerAdmin";
 import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
+import { findSeriesByCompanyProfileIdAdmin } from "@/src/features/events/server/eventSeriesAdmin";
 import { feedbackWarningClass } from "@/src/lib/design/classes";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +33,15 @@ type PageProps = {
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { logoWarning, merged, merge_id: mergeId } = await searchParams;
-  const [company, cities, sponsorships, organizerRoles, domains] = await Promise.all([
-    getCompanyAdminById(id),
-    getCityOptions(),
-    listSponsorshipsForCompanyAdmin(id),
-    listOrganizerRolesForCompanyAdmin(id),
-    listCompanyDomainsForAdmin(id),
-  ]);
+  const [company, cities, sponsorships, organizerRoles, domains, sameBrandSeries] =
+    await Promise.all([
+      getCompanyAdminById(id),
+      getCityOptions(),
+      listSponsorshipsForCompanyAdmin(id),
+      listOrganizerRolesForCompanyAdmin(id),
+      listCompanyDomainsForAdmin(id),
+      findSeriesByCompanyProfileIdAdmin(id),
+    ]);
 
   if (!company) notFound();
 
@@ -149,6 +153,8 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
         </p>
         <CompanyOrganizerRolesTable organizerRoles={organizerRoles} />
       </div>
+
+      <CompanySameBrandSeriesSection series={sameBrandSeries} />
 
       <CompanyPublicVisibilitySection
         companyId={company.id}

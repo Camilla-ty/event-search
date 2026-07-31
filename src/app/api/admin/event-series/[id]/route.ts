@@ -4,9 +4,12 @@ import { requireAdminApi } from "@/src/lib/auth/requireAdminApi";
 import { slugify } from "@/src/lib/slugify";
 import { isValidHttpUrl } from "@/src/lib/validation/url";
 import { validateSeriesLifecycleUpdate } from "@/src/lib/validation/eventSeriesLifecycle";
+import { validateSameBrandCompanyProfileAssignment } from "@/src/lib/companies/sameBrandCompanyProfile";
 import { resolveEventManualLogoUrl } from "@/src/features/events/server/resolveEventManualLogoUrl";
 import { scheduleEventSeriesLogoCleanupAfterPersist } from "@/src/features/events/server/eventSeriesLogoStorage";
 import {
+  findSeriesByCompanyProfileIdAdmin,
+  getCompanyForSameBrandLinkAdmin,
   getEventSeriesAdminById,
   updateEventSeries,
 } from "@/src/features/events/server/eventSeriesAdmin";
@@ -44,7 +47,17 @@ type PatchSeriesBody = {
   keyword_ids?: string[];
   lifecycle_status?: string | null;
   merged_into_series_id?: string | null;
+  company_profile_id?: string | null;
 };
+
+function parseOptionalUuid(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return trimmed;
+}
 
 export async function PATCH(request: Request, context: RouteContext) {
   const auth = await requireAdminApi();
@@ -130,6 +143,38 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
+  if (body.company_profile_id !== undefined) {
+    const companyProfileId = parseOptionalUuid(body.company_profile_id);
+    if (companyProfileId === undefined) {
+      errors.push("company_profile_id must be a uuid string or null");
+    } else if (companyProfileId === null) {
+      patch.company_profile_id = null;
+    } else {
+      try {
+        const [company, occupyingSeries] = await Promise.all([
+          getCompanyForSameBrandLinkAdmin(companyProfileId),
+          findSeriesByCompanyProfileIdAdmin(companyProfileId),
+        ]);
+        const validation = validateSameBrandCompanyProfileAssignment({
+          seriesId: id,
+          seriesLifecycleStatus: existing.lifecycle_status,
+          companyProfileId,
+          company,
+          occupyingSeries,
+        });
+        if (!validation.ok) {
+          errors.push(validation.error);
+        } else {
+          patch.company_profile_id = companyProfileId;
+          warnings.push(...validation.warnings);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        errors.push(message);
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return NextResponse.json({ ok: false, error: errors.join("; ") }, { status: 400 });
   }
@@ -163,6 +208,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const status = /already linked as the same-brand/i.test(message) ? 409 : 500;
+    return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

@@ -65,10 +65,35 @@ async function fetchAliasSearchCandidates(
   excludeIds: ReadonlySet<string>,
 ): Promise<CompanyAdminRow[]> {
   const supabase = createAdminClient();
+  const { data: idRows, error: rpcError } = await supabase.rpc(
+    "admin_company_ids_matching_alias",
+    {
+      p_term: term,
+      p_limit: 1000,
+    },
+  );
+
+  if (rpcError) throw new Error(rpcError.message);
+
+  const matchedIds: string[] = [];
+  for (const row of idRows ?? []) {
+    const id =
+      typeof row === "string"
+        ? row
+        : row && typeof row === "object" && "id" in row
+          ? String((row as { id: unknown }).id)
+          : "";
+    if (id === "" || excludeIds.has(id)) continue;
+    matchedIds.push(id);
+  }
+
+  if (matchedIds.length === 0) return [];
+
   const { data, error } = await supabase
     .from("companies")
     .select(COMPANY_ADMIN_SEARCH_SELECT)
-    .eq("status", "active");
+    .eq("status", "active")
+    .in("id", matchedIds);
 
   if (error) throw new Error(error.message);
 
@@ -77,6 +102,7 @@ async function fetchAliasSearchCandidates(
     const company = mapCompanyAdminRow(row as Record<string, unknown>);
     if (excludeIds.has(company.id)) continue;
     if (company.aliases.length === 0) continue;
+    // Preserve exact TS alias semantics after the SQL prefilter.
     if (!companyMatchesAdminSearchByAliasOnly(company, term)) continue;
     matches.push(company);
   }

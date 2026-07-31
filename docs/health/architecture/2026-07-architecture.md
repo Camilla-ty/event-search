@@ -1,263 +1,186 @@
-# Architecture Audit — 2026-07
+# Architecture Audit — 2026-08
 
 **Review type:** Architecture Audit
 **Cadence:** Monthly
-**Cycle:** 2026-07
-**Date:** 2026-07-20
-**Reviewer:** Principal Software Architect (read-only audit)
-**Baseline:** true
+**Cycle:** 2026-08
+**Date:** 2026-07-31
+**Reviewer:** Architecture (Automated)
+**Baseline:** false
 **Status:** Immutable historical record — do not edit after publication.
 
-> This is the baseline Architecture Audit for the Engineering Health Check system. It is preserved verbatim as the evidence-of-record. Outstanding findings with long-term memory value were extracted into [`../findings-register.md`](../findings-register.md) as `ARC-001`…`ARC-019`; each register row links back to the corresponding section below.
->
-> **Preservation note:** the audit text is unchanged. The only formatting normalization is that inline code excerpts (originally rendered in the chat's `startLine:endLine:filepath` citation format) are shown here as standard fenced code blocks with a file/line caption. No wording, findings, severities, efforts, or recommendations were altered.
+> Recurring Architecture Health Check under Framework v1.1. Prior report: [`2026-07-architecture.md`](./2026-07-architecture.md) (immutable baseline). This run was requested with review date **2026-07-31**; the cycle token is **2026-08** because `architecture/2026-07-architecture.md` already exists and must not be overwritten. No new `ARC` IDs. Existing `ARC-001`…`ARC-020` reconciled — all remain `Open`. Delta evidence recorded for import-subsystem sprawl (`ARC-011`).
 
 ---
 
-# Architecture Audit — HandShakes / "eventpixels"
+## Executive summary
 
-**System under review:** Next.js 16 (App Router) + React 19 + Supabase (Postgres/PostgREST/Auth/Storage) marketing + admin platform for events, editions, sponsors, companies, venues, organizers, and partner/alumni import pipelines. ~850 source files, 167 test files, 56 SQL migrations, 86 API routes.
+Second Architecture cycle for EventPixels. Methods: reconcile all open `ARC` Findings against current `src/` and `.github/workflows/`; re-check trust-boundary / data-access / import / App Router / CI patterns named in the baseline; scan for untracked structural root causes (prefer under-tracking).
 
-I evaluated the actual code, not the docs. Findings are grouped by your 15 categories, then the three summary lists.
-
----
-
-## 1. Overall Architecture
-
-The app is a **feature-modular monolith**: `src/features/<domain>/{server,client,components,lib}` + shared `src/lib/*`, with Supabase as the single datastore. The separation of server modules (data access) from route handlers (HTTP) from components (UI) is genuinely good and consistent.
-
-**Issue 1.1 — The security boundary is ambiguous: RLS exists but the app routinely bypasses it with the service-role client.**
-`createAdminClient()` (service role, bypasses all RLS) is referenced in **257 places across ~50 files**, including *public read paths* (`src/lib/queries/companies.ts`, `publicStats.ts`, `partnerAlumniPublic.ts`, `bitcoinAsiaHubPublic.ts`). Worse, public getters *fail open* to it:
-
-**`src/lib/queries/companies.ts` (lines 101–120):**
-```ts
-export async function getCompanyById(id: string): Promise<CompanyPublicRow | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_PUBLIC_SELECT)
-    .eq("id", id)
-    .is("restricted_at", null)
-    .maybeSingle();
-
-  if (error) {
-    const row = await getCompanyByIdAdmin(id);   // escalates to service role on ANY error
-    return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
-  }
-```
-
-The effective enforcement of "what's public" moves from Postgres RLS into scattered JS filters (`isCompanyRestricted`, `.is("restricted_at", null)`). One forgotten filter = data leak, and RLS can no longer be trusted as a backstop.
-- **Why it matters:** With millions of companies and multiple engineers, defense-in-depth (RLS as the true boundary) is the only scalable way to prevent leaks. Today RLS is decorative on read paths.
-- **Severity:** Critical · **Effort:** Large · **Fix:** Now (contain the spread before more features copy the pattern).
-
-**Issue 1.2 — Two nearly-identical import subsystems.**
-`src/features/sponsor-import/*` and `src/features/partner-alumni-import/*` are parallel trees with duplicated `matchRows.ts`, `materializeCompanies.ts`, `enrichImportRows.ts`, `actionLog.ts`, `storage.ts`, `importUiData.ts`. Divergence risk is high.
-- **Severity:** Medium · **Effort:** Large · **Fix:** Later (extract a shared import-pipeline kernel when a third importer appears).
+Net change: **0 resolved**, **0 new**, **20 still open**. Highest-severity structural risks are unchanged (`ARC-001` service-role fail-open on public reads; `ARC-002`/`ARC-003` unbounded catalog scans; `ARC-004` force-dynamic public SSR). Material delta: exhibitor import shipped as a **third** parallel import tree, strengthening `ARC-011` (not a new Finding — same root cause). Strengths from the baseline (feature-modular layout; consistent `requireAdminApi` route shape; transactional SECURITY DEFINER RPCs for critical mutations) still hold.
 
 ---
 
-## 2. Project Structure
+## Since last cycle
 
-Clean feature-based layout with per-feature `server`/`client`/`components`/`lib` and a shared `src/lib`. This is the strongest part of the codebase and will support parallel teams well.
-
-**Issue 2.1 — God modules.** `sponsorImportAdmin.ts` (1,881 lines), `SeriesPartnerAlumniPanel.tsx` (1,075), `partnerAlumniImportAdmin.ts` (1,005), plus several 600–900-line files. These become merge-conflict magnets and are hard to reason about.
-- **Severity:** Medium · **Effort:** Medium · **Fix:** Later, opportunistically.
-
----
-
-## 3. Next.js App Router Architecture
-
-Correct use of route groups (`(marketing)`), `loading.tsx`/`error.tsx`/`not-found.tsx`, async `params`/`searchParams` (Next 16), and server components by default.
-
-**Issue 3.1 — Every marketing/public page is `export const dynamic = "force-dynamic"`.**
-All 30+ public pages opt out of static rendering and caching; only `sitemap.ts` and `/api/public/stats` set `revalidate`.
-- **Why it matters:** These SEO pages (sponsors, events, series, topics, cities) are the ones meant to serve millions of anonymous visitors. Forcing SSR-per-request means every hit runs live DB queries with zero cache — the exact opposite of what you want at scale, and it caps you at DB throughput rather than CDN throughput.
-- **Severity:** High · **Effort:** Medium (move to ISR / `revalidateTag` on writes) · **Fix:** Now-ish.
-
-**Issue 3.2 — No request-level dedup (`React cache()` is used nowhere).**
-On `events/[id]`, `getEventDetailData(id)` and `getTotalSponsorCount(id)` are each called in **both** `generateMetadata` and the page body → duplicate queries per render (Next dedups `fetch()`, not raw Supabase calls).
-- **Severity:** High (amplified by 3.1 and 11.1) · **Effort:** Small · **Fix:** Now.
-
-**Issue 3.3 — Middleware calls `supabase.auth.getUser()` (a network round-trip) on essentially every non-asset request** even though auth is only enforced under `/admin`.
-- **Severity:** Medium · **Effort:** Small (narrow the matcher, or only refresh where needed) · **Fix:** Later.
+| Change | Finding IDs | Notes / links |
+|---|---|---|
+| Resolved (removed from register) | — | none |
+| Still open | `ARC-001`…`ARC-020` | all root causes still present in code; see Findings deltas |
+| In progress | — | none (no linked PR/branch for ARC work) |
+| Deferred | — | none |
+| New this cycle | — | none |
+| Reopened (same ID) | — | none |
 
 ---
 
-## 4. API Architecture
+## Findings
 
-86 route handlers with a **consistent, good** shape: `requireAdminApi()` guard → JSON parse → validate → try/catch → `{ ok, ... }` response (see `event-sponsors/[linkId]/route.ts`). Critical mutations (company merge, import publish, set-primary-domain) correctly go through **SECURITY DEFINER RPCs** that run transactionally, and a migration explicitly revokes RPC EXECUTE from `anon`/`authenticated`.
+Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-architecture.md`](./2026-07-architecture.md)).
 
-**Issue 4.1 — No rate limiting anywhere, and no schema-validation library.**
-Public/unauthenticated endpoints (`/api/auth/check-email`, `/api/sponsors/suggest`, `/api/sponsors/discovery`, `/api/events/explorer`, `/api/companies`) have no throttling. Validation is hand-rolled per route (no zod/valibot), so guarantees vary route-to-route.
-- **Why it matters:** At millions of users these are DoS/abuse/enumeration vectors, and hand-rolled validation across 86 routes drifts.
-- **Severity:** High · **Effort:** Small–Medium · **Fix:** Now (rate limiting), Later (schema lib).
+### ARC-001 — Service-role client bypasses RLS on read paths, with fail-open fallback
 
-**Issue 4.2 — Per-route boilerplate duplication.** Auth+parse+validate+error-mapping is copy-pasted into every handler; no shared `withAdmin(handler)` wrapper. Error→HTTP mapping is ad hoc (`500` for anything thrown).
-- **Severity:** Medium · **Effort:** Medium · **Fix:** Later.
+- **Status:** Open
+- **Delta:** Still present. `getCompanyById` / `getCompanyBySlug` fail open to admin client (`src/lib/queries/companies.ts`). Public/hub helpers continue to use `createAdminClient` (e.g. `publicStats.ts`, `publicSponsorRoster.ts`, `topicRegionHubData.ts`, `partnerAlumniPublic.ts`). No containment PR.
 
-**Issue 4.3 — Extreme route nesting.** e.g. `/api/admin/event-series/[id]/partner-alumni/versions/[versionId]/import/batches/[batchId]/materialize-companies/chunk`. 12+ dynamic segments couple the URL to the full resource hierarchy and make refactors painful.
-- **Severity:** Medium · **Effort:** Medium · **Fix:** Later.
+### ARC-002 — Hot-path full-table scans for sponsor counts (`getSponsorCountsByEditionIds`)
 
----
+- **Status:** Open
+- **Delta:** Still paginates all `event_sponsors` then filters in JS (`src/lib/queries/companies.ts`). Still on explorer/home/hub/admin call paths. No query-shape fix.
 
-## 5. Database Boundaries
+### ARC-003 — Import matching loads entire `companies` / `company_domains` into memory
 
-RLS is enabled on core tables with a clear intended model (anon sees `tier_rank=1` sponsors; companies/editions/series public read; writes only via service role). Migrations are sequential and readable.
+- **Status:** Open
+- **Delta:** Same full-directory match pattern in `sponsor-import`, `partner-alumni-import`, **and** `exhibitor-import` `server/matchRows.ts`. Scope of call-sites grew with the third importer (same root cause).
 
-**Issue 5.1 — No generated database types.** There is no `Database` type; `createClient()`/`createServerClient()` are untyped, so every `.from("table").select(...)` returns `any` and the code is littered with `as CompanyPublicRow` / `as Record<string, unknown>` casts.
-- **Why it matters:** With millions of rows and many engineers, the compiler is your cheapest defense against schema/column drift. Right now a renamed column fails silently at runtime, not at build.
-- **Severity:** High · **Effort:** Medium (generate types, thread `SupabaseClient<Database>`) · **Fix:** Now-ish.
+### ARC-004 — Public pages `force-dynamic`; no caching/ISR; no request-level dedup (`React cache()`)
 
-**Issue 5.2 — Reactive security hardening on the DB boundary.** `20260718120000_revoke_admin_rpc_execute_from_public_roles.sql` documents that admin SECURITY DEFINER RPCs were **live-callable by anon/member JWTs in production** until an emergency hotfix. Also `getProfileRoleForUserId` falls back to a service-role read "when profiles RLS policies are missing." These indicate the DB boundary is being discovered in production rather than designed up front.
-- **Severity:** High (process signal) · **Effort:** Medium (RLS/grant test harness — one integration test exists, `adminRpcPermissions.integration.test.ts`; expand it) · **Fix:** Now.
+- **Status:** Open
+- **Delta:** Marketing pages still export `force-dynamic` (e.g. `(marketing)/page.tsx`, `events/page.tsx`, `sponsors/page.tsx`). No `import { cache } from "react"`. Narrow `revalidate` remains limited (e.g. `sitemap.ts`, `/api/public/stats`).
 
----
+### ARC-005 — No CI gate (typecheck / lint / test / build) on PRs
 
-## 6. React Component Architecture
+- **Status:** Open
+- **Delta:** `.github/workflows/` still only `backup-database.yml` and `backup-storage.yml`. No PR quality gate.
 
-Server components for data, client components for interactivity, feature-scoped. Reasonable. Main issue is the god components noted in 2.1 (e.g. `SeriesPartnerAlumniPanel.tsx` at 1,075 lines mixing data orchestration, state, and rendering).
-- **Severity:** Medium · **Effort:** Medium · **Fix:** Later.
+### ARC-006 — Untyped database access — no generated `Database` types
 
----
+- **Status:** Open
+- **Delta:** Supabase clients remain unparameterized; no generated `Database` types module in tree.
 
-## 7. Custom Hooks
+### ARC-007 — No rate limiting on public/auth endpoints; no schema-validation library
 
-Genuinely good: a consistent `use<Feature>Collection` family (`useAdminCompaniesCollection`, `useEventExplorerCollection`, `useAdminVenuesCollection`, etc.) plus focused hooks (`useUrlSyncedState`, `useEmailOtpAuth`). Encapsulation is clean and feature-local.
+- **Status:** Open
+- **Delta:** No zod/valibot/yup or rate-limit dependency in app usage. Hand-rolled validation and unthrottled public routes unchanged. (Security continues to observe; ID stays `ARC-007`.)
 
-**Issue 7.1 — Hand-rolled fetching inside hooks (no dedup/caching/retry/cancellation guarantees).** See §10.
+### ARC-008 — No observability — no error tracking / structured logging / metrics
 
----
+- **Status:** Open
+- **Delta:** No Sentry/OTel/Datadog-style stack; import pipelines still rely on ad-hoc console/action logs.
 
-## 8. Context Usage
+### ARC-009 — Reactive DB security hardening — no RLS/grant regression-test harness
 
-Well done. `createContext` appears in only 7 places, all **narrowly scoped** to a feature/wizard (import wizard step, edition live sponsor count, explorer filter bridge, tab navigation). No god-context, no global provider soup. This is the correct pattern and will scale.
-- No issues worth reporting.
+- **Status:** Open
+- **Delta:** Manual verify SQL and env-gated RPC permission integration test remain; not a CI RLS/grant harness.
 
----
+### ARC-010 — Client-orchestrated, non-transactional chunked materialization (no durable job queue)
 
-## 9. State Management
+- **Status:** Open
+- **Delta:** Chunk materialize client loops + `/materialize-*/chunk` routes remain for sponsor, partner-alumni, and exhibitor imports.
 
-No global state library, which is appropriate here — server state dominates and is fetched server-side; local UI state is in feature hooks/context. That's a sound choice.
+### ARC-011 — Two nearly-identical import subsystems (sponsor-import / partner-alumni-import)
 
-**Issue 9.1 — Client server-state is manual.** Collection hooks manage `loading/error/data` by hand with `fetch()` and `useEffect`. No cache, no revalidation-on-focus, no request dedup/abort standardization. Fine at current size; friction grows with more interactive admin surfaces.
-- **Severity:** Low–Medium · **Effort:** Medium · **Fix:** Later.
+- **Status:** Open
+- **Delta (title/scope):** Root cause unchanged; evidence now includes **`exhibitor-import`** as a third parallel tree (~72 files) alongside sponsor-import and partner-alumni-import, with duplicated match/materialize/enrich/storage/UI patterns. Register title refreshed to “Three parallel import subsystems…”. Prefer shared import-pipeline kernel before a fourth.
 
----
+### ARC-012 — God modules / components (1,000+ line files)
 
-## 10. Data Fetching Architecture
+- **Status:** Open
+- **Delta:** Still present and worse at the top end: `exhibitorImportAdmin.ts` (~1914), `sponsorImportAdmin.ts` (~1881), `SeriesPartnerAlumniPanel.tsx` (~1075), `partnerAlumniImportAdmin.ts` (~1005).
 
-Server-side reads are centralized in `features/*/server` and `lib/queries` — good. Sponsor **discovery** correctly uses a paginated RPC (`sponsor_discovery_page`, page size capped at 50) — the right model.
+### ARC-013 — Per-route boilerplate duplication; no shared handler wrapper
 
-**Issue 10.1 — No `fetch`/query caching layer and no request memoization** (ties to 3.1/3.2). Every public render is uncached DB work.
-- **Severity:** High · **Effort:** Medium · **Fix:** Now-ish.
+- **Status:** Open
+- **Delta:** `requireAdminApi()` still copy-pasted across admin routes; no `withAdmin(handler)` (or equivalent) wrapper.
 
----
+### ARC-014 — Extreme API route nesting (12+ dynamic segments)
 
-## 11. Performance Architecture
+- **Status:** Open
+- **Delta:** Partner-alumni import batch routes still nest to ~11–13 path segments under `/api/admin/event-series/[id]/partner-alumni/versions/.../batches/...`.
 
-**Issue 11.1 (CRITICAL) — Hot-path full-table scans for counts.**
-`getTotalSponsorCount(editionId)` → `getSponsorCountsByEditionIds()` fetches **every row** of `event_sponsors` (via `fetchAllPaginatedSupabaseRows`, 1,000 at a time) and filters in JS:
+### ARC-015 — Email enumeration via unauthenticated `/api/auth/check-email`
 
-**`src/lib/queries/companies.ts` (lines 276–293):**
-```ts
-    const supabase = createAdminClient();
-    const editionIdSet = new Set(uniqueEditionIds);
-    const links = await fetchAllPaginatedSupabaseRows<{ event_editions_id?: unknown }>(
-      async ({ from, to }) =>
-        supabase.from("event_sponsors").select("event_editions_id").range(from, to),
-    );
-    const filteredLinks = links.filter((link) => { /* ... in JS ... */ });
-    return buildSponsorCountByEditionId(filteredLinks);
-```
+- **Status:** Open
+- **Delta:** Route still returns existence boolean for unauthenticated POST; client helper unchanged.
 
-This runs on **every event detail page render** (twice — metadata + body), even though an index `event_sponsors_edition_tier_index` exists. A single event page view scans the entire sponsors table. At hundreds of thousands of events this is a guaranteed outage under load.
-- **Fix:** `select('*', { count: 'exact', head: true }).eq('event_editions_id', id)` or a small RPC/materialized count.
-- **Severity:** Critical · **Effort:** Small · **Fix:** Now.
+### ARC-016 — Thin security headers (no CSP / HSTS / X-Content-Type-Options / frame-ancestors)
 
-**Issue 11.2 (CRITICAL) — Import matching loads entire directories into memory.**
-`matchRows.ts` / `partnerAlumniBulkImport.ts` load the **full** `companies` and `company_domains` tables via `fetchAllPaginatedSupabaseRows` to match import rows in JS. At millions of companies this OOMs the serverless function long before then.
-- **Severity:** Critical · **Effort:** Large (push matching into SQL / trigram/FTS indexes) · **Fix:** Now for the pattern's blast radius; plan the rewrite.
+- **Status:** Open
+- **Delta:** `next.config.ts` headers still essentially `Referrer-Policy` only.
 
-**Issue 11.3 — Potential N+1 in hydration.** `mergeCompaniesOntoEventSponsorLinks` batches by id (good) but then does a *second* admin round for "missing" ids; acceptable, but the double-path adds latency on every edition render.
-- **Severity:** Medium · **Effort:** Small · **Fix:** Later.
+### ARC-017 — Middleware runs `getUser()` on nearly every non-asset request
 
----
+- **Status:** Open
+- **Delta:** Root middleware matcher + `updateSession` → `getUser()` still runs broadly outside `/admin`-only needs.
 
-## 12. Security Architecture
+### ARC-018 — N+1 / double-path hydration in `mergeCompaniesOntoEventSponsorLinks`
 
-Positives: separate anon/server/admin clients; admin guard centralized in `requireAdminApi`; role read prefers RLS then falls back to service role only *after* `getUser()` verifies identity; middleware protects `/admin`; SECURITY DEFINER RPCs now locked to `service_role`; PKCE OAuth handled server-side; `Referrer-Policy` header set.
+- **Status:** Open
+- **Delta:** Session then admin miss-path hydration pattern still in `src/lib/queries/companies.ts`.
 
-Beyond 1.1 / 5.2:
+### ARC-019 — Manual client server-state (no cache / dedup / retry / abort)
 
-**Issue 12.1 — Email enumeration.** `/api/auth/check-email` returns `{ exists: true|false }`, unauthenticated and unthrottled → lets anyone enumerate registered users.
-- **Severity:** Medium · **Effort:** Small · **Fix:** Later (at minimum rate-limit + consider removing the oracle).
+- **Status:** Open
+- **Delta:** No TanStack Query/SWR; explorer and import wizards still hand-roll loading/fetch state.
 
-**Issue 12.2 — Thin security headers.** Only `Referrer-Policy`. No CSP, HSTS, `X-Content-Type-Options`, `X-Frame-Options`/frame-ancestors.
-- **Severity:** Medium · **Effort:** Small · **Fix:** Later.
+### ARC-020 — Thin end-to-end coverage (single Playwright spec)
+
+- **Status:** Open
+- **Delta:** Still a single Playwright file: `e2e/events-navigation.spec.ts`.
 
 ---
 
-## 13. Scalability
+## Cross-audit references (not duplicated this cycle)
 
-Read scalability is the top risk, driven by 11.1, 11.2, and 3.1 (uncached dynamic pages). Write pipelines are **client-orchestrated**: the browser drives multi-step materialization by POSTing `.../materialize-companies/chunk` repeatedly, with `recoverStaleMaterializePhase` cleaning up abandoned runs.
-- **Why it matters:** A batch job shaped as browser-driven HTTP chunks has no transactional envelope, no retry/backoff, and leaves partial state if the tab closes. This belongs in a durable job queue (or a single server-driven orchestration with idempotent steps).
-- **Severity:** Medium–High · **Effort:** Large · **Fix:** Later, but before importing at real volume.
-
----
-
-## 14. Maintainability
-
-Strong signals: 167 test files (including domain/matching/validation logic), ADRs (`docs/adr`), architecture and phase docs, `project-state.md`, consistent module conventions. This is above-average discipline.
-
-**Issue 14.1 (HIGH) — No CI.** The only GitHub Actions are `backup-database.yml` and `backup-storage.yml`. There is **no workflow that runs typecheck, lint, unit tests, or build on PRs.** 167 tests exist but nothing enforces them.
-- **Why it matters:** With multiple engineers working simultaneously, the absence of a merge gate means regressions (including the untyped-DB and RLS classes above) land in `main` unchecked. This is the single cheapest high-leverage fix.
-- **Severity:** High · **Effort:** Small · **Fix:** Now.
-
-**Issue 14.2 — Thin E2E.** One Playwright spec (`events-navigation.spec.ts`) for a large admin+public surface.
-- **Severity:** Low–Medium · **Effort:** Medium · **Fix:** Later.
+| Topic observed | Existing ID | Notes |
+|---|---|---|
+| Runtime cost of full-scan counts / force-dynamic SSR | `ARC-002`, `ARC-004` | PERF should reference these IDs; no PERF clones opened here |
+| Service-role / RLS trust | `ARC-001` | SEC observes; ownership remains this ID |
+| Dead `EditionImportsStub` after live panel | `HYG-002` | Hygiene leftover; not structural duplication of live importers (`ARC-011`) |
+| Partner Alumni Dashboard resume gap | `PROD-003` | Product workflow; structural import duplication stays `ARC-011` |
+| Exhibitor public marketing stub | `PROD-002` | Product polish; not architecture |
 
 ---
 
-## 15. Technical Debt
+## Observations (not tracked)
 
-Highest-interest debt, in order: RLS-bypass sprawl (1.1), full-scan counts/matching (11.1/11.2), untyped DB (5.1), no CI (14.1), force-dynamic everywhere (3.1), duplicated import subsystems (1.2), god modules (2.1), client-orchestrated materialization (13). None are cosmetic; all compound as data and team size grow.
+**Mode / cycle note**
+- Recurring review. Baseline report preserved untouched at `architecture/2026-07-architecture.md`.
+- Cycle token **2026-08** used for this publication to satisfy immutability (requested review date 2026-07-31).
 
----
+**Methods / scope**
+- Reconciled `ARC-001`…`ARC-020` against current tree (loaders, marketing pages, import features, middleware, `next.config.ts`, workflows, e2e).
+- Confirmed feature layout still `src/features/<domain>/{server,client,components,lib}` plus shared `src/lib`.
+- Exclusions: no production latency measurement (PERF); no RLS policy rewrite audit (SEC/DB); no product workflow completeness (PROD).
 
-## A. Top 10 Architectural Strengths
+**Strengths**
+- Feature-modular monolith layout remains coherent and is still the strongest structural asset.
+- Admin API routes continue to use a recognizable `requireAdminApi` → validate → try/catch shape.
+- Critical mutations (merge, import publish, domain primary) still go through transactional SECURITY DEFINER RPCs with revoked anon/authenticated EXECUTE (baseline observation holds).
 
-1. **Feature-modular structure** (`features/<domain>/{server,client,components,lib}`) — clean seams for parallel teams.
-2. **Disciplined client separation** — distinct anon browser / SSR cookie / service-role clients with fail-closed env checks.
-3. **Centralized, consistent API contract** — `requireAdminApi` guard + uniform `{ ok, ... }` responses across 86 routes.
-4. **Transactional integrity where it counts** — critical merges/publishes use SECURITY DEFINER RPCs, now grant-locked to `service_role`.
-5. **RLS present with an explicit, documented model** (tiered sponsor visibility, public reads, service-role writes).
-6. **Excellent context hygiene** — 7 tiny feature-scoped contexts, no global state sprawl.
-7. **Strong, consistent custom-hook layer** (`use*Collection` family, `useUrlSyncedState`).
-8. **Real unit-test culture** — 167 test files covering domain/matching/validation logic.
-9. **Mature documentation** — ADRs, phase scopes, migration designs, `project-state.md`.
-10. **Operational backups** — automated daily DB + weekly storage backups with retention.
+**Deliberate / acceptable**
+- Keeping three import UIs temporarily is understandable product-wise, but structurally it deepens `ARC-011` — tracked there, not as a fourth ID.
 
-## B. Top 10 Architectural Weaknesses
+**New Finding gate**
+- No new ARC Finding passed the memory-value test. Triple import trees and larger god modules are deltas on existing IDs.
 
-1. **Service-role client bypassing RLS on read paths, with fail-open fallback** (1.1) — RLS is not the real boundary.
-2. **Full-table scans on hot pages** — sponsor counts scan all of `event_sponsors` per event render (11.1).
-3. **In-memory full-directory import matching** — loads entire `companies`/`company_domains` (11.2); won't survive scale.
-4. **No CI gate** for typecheck/lint/test/build with multiple engineers (14.1).
-5. **All public pages `force-dynamic`, no caching/ISR** (3.1) + **no `React cache()` dedup** (3.2).
-6. **Untyped database access** — no generated `Database` types; `any` + casts everywhere (5.1).
-7. **No rate limiting** on public/auth endpoints; **no schema-validation library** (4.1).
-8. **No observability** — no error tracking / structured logging / metrics (only ~33 `console.*`).
-9. **Client-orchestrated, non-transactional chunked materialization** instead of a durable job queue (13).
-10. **Duplicated import subsystems + god modules** (1.2, 2.1) — divergence and merge-conflict risk.
-
-## C. Top 5 Highest-ROI Improvements
-
-1. **Replace count/scan queries with `count`/`.eq` (and add `React cache()` + ISR on public pages).** Kills the worst outage risk (11.1/3.1/3.2). *Effort: Small–Medium; impact: immediate throughput + cost.*
-2. **Stand up CI** (typecheck + lint + `npm test` + build on every PR). *Effort: Small; impact: protects everything else and enables parallel teams.* (14.1)
-3. **Generate Supabase `Database` types and thread `SupabaseClient<Database>` everywhere.** *Effort: Medium; impact: compile-time safety against schema drift across millions of rows.* (5.1)
-4. **Re-establish RLS as the true boundary:** stop reading via service role on public paths, remove fail-open fallbacks, and add an RLS/grant integration-test suite (extend `adminRpcPermissions.integration.test.ts`). *Effort: Medium–Large; impact: closes the widest data-leak class.* (1.1/5.2)
-5. **Add edge rate limiting + a minimal observability layer** (error tracking + structured logs on API routes). *Effort: Small–Medium; impact: abuse/DoS protection + you can actually see failures in prod.* (4.1/12/§14)
+**Limitations**
+- Call-site counts are sampled, not a full dependency-graph tool run.
+- No linked PR search beyond local `main` tree evidence for “In Progress.”
 
 ---
 
-I did not modify any code, create commits, or refactor anything — this is analysis only.
+## Change log
+
+| Date | Note |
+|------|------|
+| 2026-07-31 | Recurring Architecture Audit published (`2026-08` cycle token). Reconciled `ARC-001`…`ARC-020` — all still Open. Updated `ARC-011` evidence for third import pipeline (`exhibitor-import`). No new ARC IDs. No resolutions. Baseline `2026-07` report untouched. |
