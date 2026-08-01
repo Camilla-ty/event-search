@@ -19,6 +19,14 @@ import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySe
 import { feedbackSuccessClass, feedbackWarningClass, formInputClass } from "@/src/lib/design/classes";
 import { slugify } from "@/src/lib/slugify";
 
+const MAX_LOGO_UPLOAD_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_UPLOAD_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+] as const;
+
 type CreateSubmitIntent = "another" | "edit";
 
 type CompanyFormValues = {
@@ -62,6 +70,44 @@ type ApiResponse = {
   warnings?: string[];
 };
 
+type UploadLogoResponse = {
+  ok: boolean;
+  error?: string;
+  company?: {
+    logo_url?: string | null;
+    logo_source?: string | null;
+    logo_status?: string | null;
+    logo_fetched_at?: string | null;
+  };
+};
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function validateLogoUploadFile(file: File): string | null {
+  if (file.size === 0) {
+    return "Logo file is empty.";
+  }
+
+  if (file.size > MAX_LOGO_UPLOAD_BYTES) {
+    return "Logo must be 2 MB or smaller.";
+  }
+
+  const mimeType = file.type.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (
+    !ALLOWED_LOGO_UPLOAD_MIME_TYPES.includes(
+      mimeType as (typeof ALLOWED_LOGO_UPLOAD_MIME_TYPES)[number],
+    )
+  ) {
+    return "Please upload a PNG, JPG, or WebP image.";
+  }
+
+  return null;
+}
+
 export function CompanyAdminForm({
   mode,
   companyId,
@@ -88,6 +134,15 @@ export function CompanyAdminForm({
   );
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoFileInputKey, setLogoFileInputKey] = useState(0);
+  const [logoUploadResult, setLogoUploadResult] = useState<{
+    ok: boolean;
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<FormResult | null>(() => {
     const notice = initialNotice?.trim();
     if (!notice) return null;
@@ -95,7 +150,8 @@ export function CompanyAdminForm({
   });
   const [slugModalOpen, setSlugModalOpen] = useState(false);
 
-  const fieldsDisabled = isSubmitting || readOnly;
+  const fieldsDisabled = isSubmitting || isUploadingLogo || readOnly;
+  const logoUploadDisabled = selectedLogoFile === null || fieldsDisabled;
 
   const autoSlug = useMemo(() => slugify(values.name), [values.name]);
   const effectiveSlug = slugTouched ? values.slug : autoSlug;
@@ -241,8 +297,75 @@ export function CompanyAdminForm({
     }
   }
 
+  async function handleLogoUpload() {
+    if (!companyId || !selectedLogoFile) {
+      return;
+    }
+
+    const validationError = validateLogoUploadFile(selectedLogoFile);
+    if (validationError) {
+      setLogoUploadResult({
+        ok: false,
+        message: validationError,
+        variant: "error",
+      });
+      return;
+    }
+
+    setLogoUploadResult(null);
+    setIsUploadingLogo(true);
+
+    try {
+      const form = new FormData();
+      form.append("file", selectedLogoFile);
+
+      const response = await fetch(`/api/admin/companies/${companyId}/logo`, {
+        method: "POST",
+        body: form,
+      });
+      const data = (await response.json()) as UploadLogoResponse;
+
+      if (!response.ok || !data.ok || !data.company) {
+        setLogoUploadResult({
+          ok: false,
+          message: data.error ?? "Logo upload failed.",
+          variant: "error",
+        });
+        return;
+      }
+
+      const nextLogoUrl = data.company.logo_url ?? "";
+      setValues((prev) => ({ ...prev, logo_url: nextLogoUrl }));
+      setLogoMetadata({
+        logo_url: nextLogoUrl,
+        logo_source: data.company.logo_source ?? null,
+        logo_status: data.company.logo_status ?? null,
+        logo_fetched_at: data.company.logo_fetched_at ?? null,
+      });
+      setSelectedLogoFile(null);
+      setLogoFileInputKey((current) => current + 1);
+      if (logoFileInputRef.current) {
+        logoFileInputRef.current.value = "";
+      }
+      setLogoUploadResult({
+        ok: true,
+        message: "Logo uploaded.",
+        variant: "success",
+      });
+      router.refresh();
+    } catch {
+      setLogoUploadResult({
+        ok: false,
+        message: "Logo upload failed.",
+        variant: "error",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
+
   const logoUrlHelper =
-    "Manual override. Paste an external logo URL from a sponsor page; a stored copy is saved when import succeeds.";
+    "Import from URL. Paste an external logo URL from a sponsor page; a stored copy is saved when import succeeds.";
 
   return (
     <>
@@ -306,21 +429,65 @@ export function CompanyAdminForm({
         />
 
         {mode === "edit" ? (
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Logo URL</span>
-            <input
-              type="text"
-              value={values.logo_url}
-              onChange={(e) => updateField("logo_url", e.target.value)}
-              disabled={fieldsDisabled}
-              className={formInputClass}
-              placeholder="https://…"
-            />
-            <p className="text-xs text-slate-500">{logoUrlHelper}</p>
-          </label>
-        ) : null}
+          <>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-slate-700">Logo URL</span>
+              <input
+                type="text"
+                value={values.logo_url}
+                onChange={(e) => updateField("logo_url", e.target.value)}
+                disabled={fieldsDisabled}
+                className={formInputClass}
+                placeholder="https://…"
+              />
+              <p className="text-xs text-slate-500">{logoUrlHelper}</p>
+            </label>
 
-        {mode === "edit" ? <CompanyLogoPreview metadata={logoMetadata} /> : null}
+            <section className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+              <h3 className="text-sm font-medium text-slate-900">Upload logo file</h3>
+              <input
+                key={logoFileInputKey}
+                ref={logoFileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                disabled={fieldsDisabled}
+                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-200 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-50"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  setSelectedLogoFile(file);
+                  if (file) {
+                    setLogoUploadResult(null);
+                  }
+                }}
+              />
+              {selectedLogoFile ? (
+                <p className="text-sm text-slate-600">
+                  Selected: {selectedLogoFile.name} ({formatFileSize(selectedLogoFile.size)})
+                </p>
+              ) : null}
+              <p className="text-xs text-slate-500">
+                Choose a PNG, JPG, or WebP image up to 2 MB, then click Upload logo.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={logoUploadDisabled}
+                onClick={() => void handleLogoUpload()}
+              >
+                {isUploadingLogo ? "Uploading…" : "Upload logo"}
+              </Button>
+              {logoUploadResult ? (
+                <InlineErrorBanner
+                  message={logoUploadResult.message}
+                  variant={logoUploadResult.variant}
+                />
+              ) : null}
+            </section>
+
+            <CompanyLogoPreview metadata={logoMetadata} />
+          </>
+        ) : null}
 
         {mode === "edit" ? (
           <>
@@ -360,7 +527,7 @@ export function CompanyAdminForm({
             </Button>
           </div>
         ) : readOnly ? null : (
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={fieldsDisabled}>
             {isSubmitting ? "Saving…" : "Save changes"}
           </Button>
         )}
