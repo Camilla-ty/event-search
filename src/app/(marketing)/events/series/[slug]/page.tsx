@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 
-import { SeriesEditionsList } from "@/src/features/events/components/series/SeriesEditionsList";
+import {
+  parseSeriesHubTab,
+  SeriesHubBody,
+} from "@/src/features/events/components/series/SeriesHubBody";
 import { SeriesHubHeader } from "@/src/features/events/components/series/SeriesHubHeader";
 import { getSeriesHubData } from "@/src/features/events/server/getSeriesHubData";
 import { buildEventSeriesSummary } from "@/src/lib/content/factualSummary";
@@ -19,6 +22,7 @@ export const dynamic = "force-dynamic";
 
 type SeriesHubPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 };
 
 export async function generateMetadata({
@@ -77,8 +81,12 @@ export async function generateMetadata({
   });
 }
 
-export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
+export default async function SeriesHubPage({
+  params,
+  searchParams,
+}: SeriesHubPageProps) {
   const { slug } = await params;
+  const query = await searchParams;
   const access = await resolveSeriesPublicAccess(slug);
 
   if (!access) {
@@ -126,6 +134,12 @@ export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
     topics: data.topics.map((topic) => topic.name),
   });
 
+  const rawTab = Array.isArray(query.tab) ? query.tab[0] : query.tab;
+  const activeTab = parseSeriesHubTab(
+    rawTab,
+    data.participatedEvents.length > 0,
+  );
+
   return (
     <section className="space-y-6">
       <Link href="/events" className={`text-sm ${brandLinkClass}`}>
@@ -136,9 +150,13 @@ export default async function SeriesHubPage({ params }: SeriesHubPageProps) {
         series={data.series}
         topics={data.topics}
         factualSummary={factualSummary}
-        sameBrandCompanyLink={data.sameBrandCompanyLink}
       />
-      <SeriesEditionsList editions={data.editions} />
+      <SeriesHubBody
+        series={data.series}
+        editions={data.editions}
+        participatedEvents={data.participatedEvents}
+        activeTab={activeTab}
+      />
     </section>
   );
 }

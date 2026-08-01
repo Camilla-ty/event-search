@@ -51,10 +51,19 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | DQ-002 | Public event editions missing `city_id` | data / editions | Medium | Small | Open | 2026-07 | 2026-07 | [Data Quality 2026-07 §DQ-002](./data-quality/2026-07-data-quality.md) |
 | DQ-003 | Active orphan and bogus company shells from import/curation residue | data / companies | Medium | Medium | Open | 2026-07 | 2026-07 | [Data Quality 2026-07 §DQ-003](./data-quality/2026-07-data-quality.md) |
 | SCALE-001 | Admin company alias search loads all active companies without pagination | scalability / admin-search | High | Medium | Open | 2026-07 | 2026-07 | [Scalability 2026-07 §SCALE-001](./scalability/2026-07-scalability.md) |
+| SEO-001 | Empty topic hubs remain indexable and sitemap-included | seo / topics | Medium | Small | Open | 2026-07 | 2026-07 | [SEO 2026-07 §SEO-001](./seo/2026-07-seo.md) |
+| UX-001 | Event Explorer “Clear all” / “Reset Filters” controls disagree | ux / events-explorer | High | Small | Open | 2026-07 | 2026-07 | [UX 2026-07 §UX-001](./ux/2026-07-ux.md) |
+| UX-002 | Events global search clears after submit and desyncs from the applied query | ux / global-search | High | Small | Open | 2026-07 | 2026-07 | [UX 2026-07 §UX-002](./ux/2026-07-ux.md) |
+| UX-003 | Edition roster reorder uses incompatible save models (sponsors vs exhibitors) | ux / admin-rosters | High | Medium | Open | 2026-07 | 2026-07 | [UX 2026-07 §UX-003](./ux/2026-07-ux.md) |
+| UX-004 | Create-new company acknowledgment exists only on Partner Alumni imports | ux / imports | High | Medium | Open | 2026-07 | 2026-07 | [UX 2026-07 §UX-004](./ux/2026-07-ux.md) |
 
 **Security topics owned by Security but tracked under existing IDs (cross-referenced, not duplicated):** `ARC-001` (RLS/service-role bypass), `ARC-007` (rate limiting + input validation), `ARC-009` (RLS/grant regression tests), `ARC-015` (email enumeration), `ARC-016` (security headers), `ARC-017` (middleware auth). See [Security 2026-07](./security/2026-07-security.md) and [Security 2026-09](./security/2026-09-security.md).
 
 **Scalability topics owned by Scalability but already tracked under Architecture (cross-referenced, not duplicated):** `ARC-002` (full-scan counts), `ARC-003` (import full-directory match), `ARC-004` (force-dynamic / no read cache), `ARC-010` (no durable job queue), `ARC-011` (parallel import trees). See [Scalability 2026-07](./scalability/2026-07-scalability.md).
+
+**SEO topics owned by SEO but already tracked under other prefixes (cross-referenced, not duplicated):** `PROD-002` (public `/exhibitors` stub framing / indexability residual), `ARC-004` (force-dynamic crawl/cache cost). See [SEO 2026-07](./seo/2026-07-seo.md).
+
+**UX topics owned by UX but already tracked under other prefixes (cross-referenced, not duplicated):** `PROD-001` (admin global search missing), `PROD-002` (`/exhibitors` stub framing), `PROD-003` (PA Dashboard resume), `ARC-011` (parallel import trees — structure), `ARC-004` (force-dynamic wait), `SCALE-001` (alias search pagination). See [UX 2026-07](./ux/2026-07-ux.md).
 
 ---
 
@@ -90,3 +99,5 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-07-31 | Recurring Architecture Audit (`architecture/2026-08-architecture.md`): reconciled `ARC-001`…`ARC-020` — all remain `Open`. Refreshed `ARC-011` title/evidence for third import pipeline (`exhibitor-import`). No new ARC IDs; none resolved. Baseline `architecture/2026-07-architecture.md` untouched. |
 | 2026-07-31 | Recurring Security Audit (`security/2026-09-security.md`): reconciled `SEC-002`/`SEC-003` — both remain `Open` (manual upload SVG MIME allowlist tightened; residual client-MIME + ingest SVG; SSRF unchanged). `SEC-001` stays retired. No new SEC IDs. Cross-referenced `ARC-001/007/009/015/016/017`. Baseline `security/2026-07-security.md` and closeout `security/2026-08-security.md` untouched (restored from HEAD if missing in working tree). |
 | 2026-07-31 | Baseline Scalability Audit (`scalability/2026-07-scalability.md`): added `SCALE-001` (`Open`). Cross-referenced `ARC-002/003/004/008/010/011/017`; did not duplicate import/full-scan/force-dynamic/job-queue roots. Cadence Quarterly per Framework v1.1; cycle token `2026-07` as requested. |
+| 2026-07-31 | Baseline SEO Audit (`seo/2026-07-seo.md`): added `SEO-001` (`Open`). Cross-referenced `PROD-002`, `ARC-004`, `DQ-001`/`DQ-003`; did not clone exhibitor stub or force-dynamic roots. Cadence Quarterly per Framework v1.1; cycle token `2026-07` as requested. |
+| 2026-07-31 | Baseline UX Audit (`ux/2026-07-ux.md`): added `UX-001`–`UX-004` (all `Open`). Cross-referenced `PROD-001`/`002`/`003`, `ARC-011`/`004`, `SCALE-001`; did not clone product stubs or import-structure roots. Cadence Quarterly per Framework v1.1; cycle token `2026-07` as requested. |

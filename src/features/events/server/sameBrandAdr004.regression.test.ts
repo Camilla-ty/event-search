@@ -86,39 +86,30 @@ describe("ADR-004 SB3 regressions — roles and imports untouched", () => {
 });
 
 describe("ADR-004 SB3 regressions — public + admin wiring intact", () => {
-  it("series hub loads a safe same-brand company link only", () => {
+  it("series hub loads participated events from the same-brand company id", () => {
     const loader = readRepo("src/features/events/server/getSeriesHubData.ts");
-    const publicLinks = readRepo("src/features/events/server/sameBrandPublicLinks.ts");
     const header = readRepo(
       "src/features/events/components/series/SeriesHubHeader.tsx",
     );
     const page = readRepo("src/app/(marketing)/events/series/[slug]/page.tsx");
 
-    assert.match(loader, /loadPublicSameBrandCompanyLinkForSeries/);
-    assert.match(loader, /sameBrandCompanyLink/);
-    assert.match(publicLinks, /\.eq\("status", "active"\)/);
-    assert.match(publicLinks, /\.is\("restricted_at", null\)/);
-    assert.match(publicLinks, /buildPublicSameBrandCompanyLink/);
-    assert.match(header, /Company profile/);
-    assert.doesNotMatch(header, /organizer|owner/i);
-    assert.match(page, /sameBrandCompanyLink=\{data\.sameBrandCompanyLink\}/);
+    assert.match(loader, /loadSeriesParticipatedEvents/);
+    assert.match(loader, /participatedEvents/);
+    assert.match(loader, /readCompanyProfileIdFromSeriesRow/);
+    assert.doesNotMatch(header, /Company profile/);
+    assert.doesNotMatch(header, /sameBrandCompanyLink/);
+    assert.match(page, /SeriesHubBody/);
+    assert.match(page, /participatedEvents/);
   });
 
-  it("company profile loads a safe same-brand series link for anonymous users", () => {
-    const loader = readRepo("src/features/sponsors/server/getSponsorDetailData.ts");
+  it("company profile keeps sponsor history and hides reciprocal Event profile chrome", () => {
     const view = readRepo(
       "src/features/sponsors/components/detail/SponsorDetailView.tsx",
     );
 
-    assert.match(loader, /loadPublicSameBrandSeriesLinkForCompany/);
-    assert.match(loader, /sameBrandSeriesLink/);
-    // Anonymous branch must still carry the reciprocal link.
-    assert.match(
-      loader,
-      /isAuthenticated:\s*false[\s\S]*?sameBrandSeriesLink/m,
-    );
-    assert.match(view, /Event profile/);
-    assert.match(view, /sameBrandSeriesLink/);
+    assert.match(view, /Sponsorship history/);
+    assert.doesNotMatch(view, /Event profile/);
+    assert.doesNotMatch(view, /sameBrandSeriesLink/);
   });
 
   it("admin PATCH remains the only mutation path and stays admin-gated", () => {
@@ -128,12 +119,13 @@ describe("ADR-004 SB3 regressions — public + admin wiring intact", () => {
     assert.match(route, /company_profile_id/);
   });
 
-  it("series hub metadata path does not depend on same-brand payloads", () => {
+  it("series hub metadata path does not depend on participated-events payloads", () => {
     const page = readRepo("src/app/(marketing)/events/series/[slug]/page.tsx");
     const metadataFn = page.slice(
       page.indexOf("export async function generateMetadata"),
       page.indexOf("export default async function SeriesHubPage"),
     );
+    assert.doesNotMatch(metadataFn, /participated/);
     assert.doesNotMatch(metadataFn, /sameBrand/);
     assert.match(metadataFn, /resolveSeriesPublicAccess/);
   });

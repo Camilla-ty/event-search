@@ -12,6 +12,8 @@ Canonical, paste-ready execution prompts for Engineering Health Check reviews.
 | Data Quality Audit | Monthly | `DQ` | [`data-quality.md`](./data-quality.md) |
 | Performance Audit | Monthly | `PERF` | [`performance.md`](./performance.md) |
 | Scalability Audit | Quarterly | `SCALE` | [`scalability.md`](./scalability.md) |
+| SEO Audit | Quarterly | `SEO` | [`seo.md`](./seo.md) |
+| UX Audit | Quarterly | `UX` | [`ux.md`](./ux.md) |
 
 Prompts inherit Framework **v1.1** rules from [`../README.md`](../README.md) and ownership from [`../audit-catalog.md`](../audit-catalog.md). Reports use [`../_templates/report-template.md`](../_templates/report-template.md).
 

@@ -2,17 +2,15 @@ import {
   mapPublicEditionRow,
   mapPublicEventSeries,
 } from "@/src/features/events/server/mapPublicEditionRow";
-import {
-  loadPublicSameBrandCompanyLinkForSeries,
-  readCompanyProfileIdFromSeriesRow,
-} from "@/src/features/events/server/sameBrandPublicLinks";
+import { loadSeriesParticipatedEvents } from "@/src/features/events/server/loadSeriesParticipatedEvents";
+import { readCompanyProfileIdFromSeriesRow } from "@/src/features/events/server/sameBrandPublicLinks";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import type {
   PublicEditionSummary,
   PublicEventSeriesSummary,
 } from "@/src/features/events/types/publicEdition";
 import type { PublicKeywordSummary } from "@/src/features/events/types/keywords";
-import type { PublicSameBrandLink } from "@/src/lib/companies/sameBrandPublicLink";
+import type { SeriesParticipatedEvent } from "@/src/features/events/types/seriesParticipatedEvents";
 import {
   getEventEditionsBySeriesId,
   getEventSeriesById,
@@ -23,8 +21,11 @@ export type SeriesHubData = {
   series: PublicEventSeriesSummary;
   editions: PublicEditionSummary[];
   topics: PublicKeywordSummary[];
-  /** Safe public same-brand Company profile link; null when absent or not publicly resolvable. */
-  sameBrandCompanyLink: PublicSameBrandLink | null;
+  /**
+   * Sponsor appearances of the same-brand Company (Participated Events prototype).
+   * Empty when unlinked or no public rows.
+   */
+  participatedEvents: SeriesParticipatedEvent[];
 };
 
 export async function getSeriesHubData(
@@ -38,12 +39,12 @@ export async function getSeriesHubData(
   const series = mapPublicEventSeries(rawSeries);
   if (!series) return null;
 
-  const [rows, topics, sameBrandCompanyLink] = await Promise.all([
+  const companyProfileId = readCompanyProfileIdFromSeriesRow(rawSeries);
+
+  const [rows, topics, participatedEvents] = await Promise.all([
     getEventEditionsBySeriesId(series.id),
     getPublicKeywordsForSeriesId(series.id),
-    loadPublicSameBrandCompanyLinkForSeries(
-      readCompanyProfileIdFromSeriesRow(rawSeries),
-    ),
+    loadSeriesParticipatedEvents(companyProfileId),
   ]);
 
   const editions: PublicEditionSummary[] = [];
@@ -52,5 +53,5 @@ export async function getSeriesHubData(
     if (mapped) editions.push(mapped);
   }
 
-  return { series, editions, topics, sameBrandCompanyLink };
+  return { series, editions, topics, participatedEvents };
 }

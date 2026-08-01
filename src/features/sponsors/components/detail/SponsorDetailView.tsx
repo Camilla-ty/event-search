@@ -37,13 +37,7 @@ export function SponsorDetailView({
   data: SponsorDetailData;
   exhibitorHistoryGroups?: ExhibitorHistorySeriesGroup[];
 }) {
-  const {
-    company,
-    isAuthenticated,
-    summary,
-    eventSeriesGroups,
-    sameBrandSeriesLink,
-  } = data;
+  const { company, isAuthenticated, summary, eventSeriesGroups } = data;
   const locationLabel = formatLocationFromCityEmbed(company.cities);
   const websiteDisplay = formatPublicCompanyWebsite({
     website: company.website,
@@ -111,18 +105,6 @@ export function SponsorDetailView({
                   >
                     {websiteDisplay.label}
                   </a>
-                </dd>
-              </div>
-            ) : null}
-            {sameBrandSeriesLink ? (
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Event profile
-                </dt>
-                <dd>
-                  <Link href={sameBrandSeriesLink.href} className={brandLinkClass}>
-                    {sameBrandSeriesLink.name}
-                  </Link>
                 </dd>
               </div>
             ) : null}

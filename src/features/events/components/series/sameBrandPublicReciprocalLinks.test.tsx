@@ -9,7 +9,6 @@ import type { PublicEventSeriesSummary } from "@/src/features/events/types/publi
 import {
   buildPublicSameBrandCompanyLink,
   buildPublicSameBrandSeriesLink,
-  type PublicSameBrandLink,
 } from "@/src/lib/companies/sameBrandPublicLink";
 
 const SERIES: PublicEventSeriesSummary = {
@@ -23,7 +22,7 @@ const SERIES: PublicEventSeriesSummary = {
 };
 
 function sponsorDetailData(
-  sameBrandSeriesLink: PublicSameBrandLink | null,
+  sameBrandSeriesLink: ReturnType<typeof buildPublicSameBrandSeriesLink>,
 ): SponsorDetailData {
   return {
     company: {
@@ -49,29 +48,14 @@ function sponsorDetailData(
   };
 }
 
-describe("same-brand public reciprocal UI (SB2)", () => {
-  it("shows Series → Company profile link with company wording", () => {
-    const link = buildPublicSameBrandCompanyLink({
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      slug: "token2049",
-      name: "TOKEN2049 Ltd",
-      status: "active",
-      restricted_at: null,
-      merged_into_company_id: null,
-    });
-    assert.ok(link);
-
-    const html = renderToStaticMarkup(
-      <SeriesHubHeader series={SERIES} sameBrandCompanyLink={link} />,
-    );
-
-    assert.match(html, /Company profile/);
-    assert.match(html, /href="\/sponsors\/token2049"/);
-    assert.match(html, /TOKEN2049 Ltd/);
-    assert.doesNotMatch(html, /organizer|owner/i);
+describe("same-brand public reciprocal UI (Participated Events prototype)", () => {
+  it("does not show Series → Company reciprocal chrome on the Series hub header", () => {
+    const html = renderToStaticMarkup(<SeriesHubHeader series={SERIES} />);
+    assert.doesNotMatch(html, /Company profile/);
+    assert.doesNotMatch(html, /\/sponsors\//);
   });
 
-  it("shows Company → Series event profile link", () => {
+  it("does not show Company → Series reciprocal chrome on the Sponsor detail header", () => {
     const link = buildPublicSameBrandSeriesLink({
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       slug: "token2049",
@@ -83,13 +67,11 @@ describe("same-brand public reciprocal UI (SB2)", () => {
     const html = renderToStaticMarkup(
       <SponsorDetailView data={sponsorDetailData(link)} />,
     );
-
-    assert.match(html, /Event profile/);
-    assert.match(html, /href="\/events\/series\/token2049"/);
-    assert.match(html, /TOKEN2049/);
+    assert.doesNotMatch(html, /Event profile/);
+    assert.doesNotMatch(html, /\/events\/series\//);
   });
 
-  it("hides the Series → Company link when the target is restricted", () => {
+  it("still hides restricted company payloads at the builder layer", () => {
     const link = buildPublicSameBrandCompanyLink({
       id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       slug: "secret-corp",
@@ -99,67 +81,5 @@ describe("same-brand public reciprocal UI (SB2)", () => {
       merged_into_company_id: null,
     });
     assert.equal(link, null);
-
-    const html = renderToStaticMarkup(
-      <SeriesHubHeader series={SERIES} sameBrandCompanyLink={link} />,
-    );
-
-    assert.doesNotMatch(html, /Company profile/);
-    assert.doesNotMatch(html, /Secret Restricted Corp/);
-    assert.doesNotMatch(html, /secret-corp/);
-    assert.doesNotMatch(html, /\/sponsors\//);
-  });
-
-  it("hides the Company → Series link when the series is merged / unavailable", () => {
-    const link = buildPublicSameBrandSeriesLink({
-      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      slug: "old-merged-brand",
-      name: "Old Merged Brand",
-      lifecycle_status: "merged",
-    });
-    assert.equal(link, null);
-
-    const html = renderToStaticMarkup(
-      <SponsorDetailView data={sponsorDetailData(link)} />,
-    );
-
-    assert.doesNotMatch(html, /Event profile/);
-    assert.doesNotMatch(html, /Old Merged Brand/);
-    assert.doesNotMatch(html, /old-merged-brand/);
-    assert.doesNotMatch(html, /\/events\/series\//);
-  });
-
-  it("renders neither reciprocal link when there is no relationship", () => {
-    const seriesHtml = renderToStaticMarkup(
-      <SeriesHubHeader series={SERIES} sameBrandCompanyLink={null} />,
-    );
-    const companyHtml = renderToStaticMarkup(
-      <SponsorDetailView data={sponsorDetailData(null)} />,
-    );
-
-    assert.doesNotMatch(seriesHtml, /Company profile/);
-    assert.doesNotMatch(companyHtml, /Event profile/);
-  });
-
-  it("does not leak restricted company fields through a public same-brand payload", () => {
-    const restrictedCandidate = {
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      slug: "leaky-restricted",
-      name: "Leaky Restricted Name",
-      status: "active",
-      restricted_at: "2026-07-01T00:00:00.000Z",
-      merged_into_company_id: null,
-    };
-    const link = buildPublicSameBrandCompanyLink(restrictedCandidate);
-    assert.equal(link, null);
-
-    const payload = {
-      sameBrandCompanyLink: link,
-      sameBrandSeriesLink: null,
-    };
-    const serialized = JSON.stringify(payload);
-    assert.doesNotMatch(serialized, /Leaky Restricted Name/);
-    assert.doesNotMatch(serialized, /leaky-restricted/);
-    assert.doesNotMatch(serialized, /restricted_at/);
   });
 });

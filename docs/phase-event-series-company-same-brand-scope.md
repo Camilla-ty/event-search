@@ -1,9 +1,9 @@
 # Phase — Event Series ↔ Company Same-Brand Link (ADR-004)
 
-**Status:** SB0–SB3 complete (schema · Admin · public reciprocal links · tests/docs/regressions) · **SB4 pending** (manual candidate review — ops only)
+**Status:** SB0–SB3 complete · **SB4 in progress** (manual linking + Participated Events UX prototype) · final redirect/hide decision **not** locked
 **Version:** v1
-**Last updated:** 2026-07-31
-**Implementation:** Shipped in code for SB0–SB3; SB4 is intentionally not automated.
+**Last updated:** 2026-08-01
+**Implementation:** Shipped in code for SB0–SB3; SB4 ops ongoing. A reversible **Participated Events** Series-hub tab prototype uses the same-brand FK to list sponsor appearances of the linked Company — **not** a final decision to hide or redirect Company profiles.
 
 Thin implementation scope for the optional 1:1 same-brand link per **[ADR-004](./adr/ADR-004-event-series-company-same-brand-link.md)**. Defines the smallest V1 deliverable, phased work, acceptance criteria, verification, and stop points — **not** SQL, migrations, or application code.
 
@@ -281,6 +281,23 @@ Exact/near name overlaps (non-exhaustive; re-query at review time):
 
 **Stop:** Do not script bulk `UPDATE event_series SET company_profile_id = …` from name matches.
 
+### 7.4 UX prototype — Participated Events tab (refined 2026-08-01)
+
+Reversible Series-hub experiment (not ADR-final product; **not** a Company redirect/hide decision):
+
+| Item | Behavior |
+|------|----------|
+| Tab | **Participated Events** on `/events/series/[slug]` only when ≥1 public participated row exists |
+| Data | `event_series.company_profile_id` → `event_sponsors.company_id` → `event_editions` (+ `tier_label` / `tier_rank`) |
+| Row UI | Compact full-row link (Related Editions pattern): title · year · dates · city · secondary “Sponsor role · {label}”; newest first |
+| Own editions | Default **Events** tab unchanged |
+| Company `/sponsors/...` | **Still visible**; no redirects; no `public_profile_mode` |
+| Reciprocal profile chrome | Remains **hidden** on Series hub + Company header while this UX is evaluated |
+| Exclusions | Merged-series editions, missing slug/unresolvable public paths |
+| Out of prototype | Search/SEO changes; batch linking; hiding/redirecting Company profiles; Edition-level tab |
+
+UX test fixture: Singapore FinTech Festival → Digital Assets Week Singapore 2024 (Premier Event Partner); Nordic Blockchain Conference 2023 (Community and Media Partner).
+
 ---
 
 ## 8. Implementation phases
@@ -433,6 +450,8 @@ Do **not** rewrite the historical audit; add ship notes only if needed.
 | 2026-07-31 | SB1: Admin Series link/replace/unlink + Company reverse view; public still deferred |
 | 2026-07-31 | SB2: Public reciprocal Series hub ↔ Company profile links with availability gating |
 | 2026-07-31 | SB3: Focused tests + regression wiring + documentation accuracy pass; **SB4 remains pending** |
+| 2026-08-01 | SB4 ops + Participated Events Series-hub tab UX prototype (Company profiles remain; reciprocal chrome hidden for experiment) |
+| 2026-08-01 | Participated Events row UI refined (full-row links, secondary sponsor role, newest-first); still Series-hub-only prototype |
 
 ---
 
