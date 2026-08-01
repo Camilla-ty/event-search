@@ -1,4 +1,8 @@
 import type { EventSponsorCompany } from "@/src/features/events/components/detail/types";
+import {
+  getEventBrandPublicDestinationIndex,
+  withPublicCompanyRoleHref,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 export type PublicOrganizerRow = {
@@ -24,6 +28,11 @@ function mapOrganizerCompany(raw: unknown): EventSponsorCompany | null {
     logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
     logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
+    restricted_at: typeof row.restricted_at === "string" ? row.restricted_at : null,
+    event_brand_public_profile_approved_at:
+      typeof row.event_brand_public_profile_approved_at === "string"
+        ? row.event_brand_public_profile_approved_at
+        : null,
   };
 }
 
@@ -72,4 +81,18 @@ export function mapPublicOrganizersFromEditionRow(
   });
 
   return rows;
+}
+
+/** Attach ADR-005 EB4 public role hrefs after mapping organizers from the edition embed. */
+export async function attachPublicOrganizerRoleHrefs(
+  organizers: readonly PublicOrganizerRow[],
+): Promise<PublicOrganizerRow[]> {
+  if (organizers.length === 0) return [];
+  const index = await getEventBrandPublicDestinationIndex();
+  return organizers.map((organizer) => ({
+    ...organizer,
+    company: organizer.company
+      ? withPublicCompanyRoleHref(organizer.company, index)
+      : null,
+  }));
 }

@@ -25,7 +25,7 @@ import { searchCompaniesAdmin, type AdminCompanySearchHit } from "./companyAdmin
 import { syncCompanyPrimaryDomainWithClient } from "./syncCompanyPrimaryDomain";
 
 const COMPANY_ADMIN_SELECT =
-  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at";
+  "id, name, slug, domain, website, logo_url, logo_source, logo_status, logo_fetched_at, logo_fetch_error, city_id, created_at, aliases, status, merged_into_company_id, merged_at, restricted_at, event_brand_public_profile_approved_at";
 
 export const RESTRICTED_AT_IMMUTABLE_MESSAGE =
   "restricted_at cannot be updated directly; use restrict or unrestrict routes.";
@@ -50,6 +50,10 @@ function mapCompanyAdminRow(row: Record<string, unknown>): CompanyAdminRow {
       typeof row.merged_into_company_id === "string" ? row.merged_into_company_id : null,
     merged_at: typeof row.merged_at === "string" ? row.merged_at : null,
     restricted_at: typeof row.restricted_at === "string" ? row.restricted_at : null,
+    event_brand_public_profile_approved_at:
+      typeof row.event_brand_public_profile_approved_at === "string"
+        ? row.event_brand_public_profile_approved_at
+        : null,
   };
 }
 
@@ -71,6 +75,7 @@ export type CompanyAdminRow = {
   merged_into_company_id: string | null;
   merged_at: string | null;
   restricted_at: string | null;
+  event_brand_public_profile_approved_at: string | null;
 };
 
 export type CompanyListItem = CompanyAdminRow & {

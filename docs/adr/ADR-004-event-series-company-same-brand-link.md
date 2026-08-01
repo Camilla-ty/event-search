@@ -4,6 +4,7 @@
 **Date:** 2026-07-31  
 **Related:**
 - [Architecture Audit — Linked Event Series & Company Profiles](../audits/event-series-company-same-brand-architecture-audit.md) (**source of truth for exploration**)
+- [ADR-005 — Event Brand Public Profile Policy](./ADR-005-event-brand-public-profile-policy.md) (**amends** public dual-destination V1 for approved Event Brand Companies; link + Company-only roles unchanged)
 - [ADR-001 — Company Identity & Multi-Domain Matching](./ADR-001-company-identity.md)
 - [Terminology](../terminology.md)
 - [Project state](../project-state.md)
@@ -293,6 +294,7 @@ Do not implement polymorphic sponsor (or organizer/exhibitor) FKs toward `event_
 | 2026-07-31 | Accepted — locks optional 1:1 `event_series.company_profile_id`, admin verify-on-save, public reciprocal links, no merge auto-repoint, supersedes polymorphic sponsors |
 | 2026-07-31 | Linked thin implementation scope [phase-event-series-company-same-brand-scope.md](../phase-event-series-company-same-brand-scope.md) |
 | 2026-07-31 | Implementation status note: SB0–SB3 complete; SB4 manual candidate review pending |
+| 2026-08-01 | Related: [ADR-005](./ADR-005-event-brand-public-profile-policy.md) amends public dual-destination / reciprocal-link V1 for **approved Event Brand Companies** (Series-first public identity; Company public profile retirement over time). Same-brand FK, Company-only roles, and never-guess linking unchanged. |
 
 ---
 

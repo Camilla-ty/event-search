@@ -12,6 +12,7 @@ import {
   isCompanyRestrictedForSameBrand,
   isSameBrandCompanyProfileStale,
 } from "@/src/lib/companies/sameBrandCompanyProfile";
+import { isEventBrandPublicProfileApproved } from "@/src/lib/companies/eventBrandPublicProfile";
 import { feedbackWarningClass, formInputClass } from "@/src/lib/design/classes";
 
 const SEARCH_MIN_CHARS = 2;
@@ -67,6 +68,9 @@ export function SameBrandCompanyProfileSection({
     seriesLifecycleStatus.trim().toLowerCase() === "merged";
   const stale = linkedCompanyId !== null && isSameBrandCompanyProfileStale(linkedCompany);
   const linkedRestricted = isCompanyRestrictedForSameBrand(linkedCompany);
+  const publicProfileApproved = isEventBrandPublicProfileApproved(
+    linkedCompany?.event_brand_public_profile_approved_at,
+  );
 
   useEffect(() => {
     if (term.length < SEARCH_MIN_CHARS) {
@@ -211,10 +215,23 @@ export function SameBrandCompanyProfileSection({
             {stale ? (
               <p className={`${feedbackWarningClass} text-sm`}>{SAME_BRAND_STALE_LINK_MESSAGE}</p>
             ) : null}
+            {publicProfileApproved ? (
+              <p className={`${feedbackWarningClass} text-sm`}>
+                Event Brand public-profile approval is active for this company. Revoke it on the{" "}
+                <Link
+                  href={`/admin/companies/${linkedCompany.id}`}
+                  className="font-medium text-brand-primary hover:underline"
+                >
+                  Company admin page
+                </Link>{" "}
+                before unlinking or replacing. Approval affects future public routing only — not
+                Sponsor, Organizer, Exhibitor, or Partner Alumni data.
+              </p>
+            ) : null}
             <Button
               type="button"
               variant="secondary"
-              disabled={saving || isMergedSeries}
+              disabled={saving || isMergedSeries || publicProfileApproved}
               onClick={handleUnlink}
             >
               Unlink
@@ -302,7 +319,7 @@ export function SameBrandCompanyProfileSection({
 
           <Button
             type="button"
-            disabled={saving || !selectedCompany}
+            disabled={saving || !selectedCompany || publicProfileApproved}
             onClick={handleLinkOrReplace}
           >
             {linkedCompanyId ? "Replace link" : "Link company profile"}

@@ -10,7 +10,6 @@ import {
 import {
   buildEventDetailPath,
   buildSeriesHubPath,
-  buildSponsorProfilePath,
 } from "@/src/lib/routes/explorerUrls";
 
 type TopicRegionHubViewProps = {
@@ -177,7 +176,7 @@ export function TopicRegionHubView({ data }: TopicRegionHubViewProps) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data.sponsors.map((sponsor) => {
-                const href = buildSponsorProfilePath(sponsor);
+                const href = sponsor.publicHref;
                 return (
                   <tr key={sponsor.id}>
                     <td className="px-4 py-3">
@@ -216,7 +215,7 @@ export function TopicRegionHubView({ data }: TopicRegionHubViewProps) {
 
         <ul className="space-y-3 md:hidden">
           {data.sponsors.map((sponsor) => {
-            const href = buildSponsorProfilePath(sponsor);
+            const href = sponsor.publicHref;
             return (
               <li
                 key={sponsor.id}

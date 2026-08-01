@@ -1,3 +1,5 @@
+import type { EventBrandPublicProfileSeriesCandidate } from "@/src/lib/companies/eventBrandPublicProfile";
+import { isEventBrandCompanyPublicProfileSoftRetired } from "@/src/lib/companies/resolvePublicCompanyDestination";
 import type { Metadata } from "next";
 
 import { bitcoinAsiaHubPassesGate } from "@/src/features/events/lib/bitcoinAsiaHub";
@@ -43,13 +45,40 @@ export function robotsForIndexability(
 
 /**
  * Authoritative company gate: restricted never indexable;
+ * EB2 soft-retires approved Event Brand Companies with a public-safe Series;
  * otherwise require sponsored_edition_count >= 1 (same signal as public total).
  */
 export function getCompanyIndexability(input: {
   restricted: boolean;
   sponsoredEditionCount: number;
+  /** ADR-005 EB0 approval timestamp; optional for callers that omit EB2 context. */
+  eventBrandPublicProfileApprovedAt?: string | null;
+  /** Reverse same-brand Series candidate; optional. */
+  sameBrandSeries?: EventBrandPublicProfileSeriesCandidate | null;
+  id?: string | null;
+  slug?: string | null;
+  status?: string | null;
+  merged_into_company_id?: string | null;
 }): IndexabilityDecision {
   if (input.restricted) return NOINDEX_FOLLOW;
+
+  if (
+    isEventBrandCompanyPublicProfileSoftRetired({
+      company: {
+        id: input.id,
+        slug: input.slug,
+        status: input.status ?? "active",
+        restricted_at: null,
+        merged_into_company_id: input.merged_into_company_id ?? null,
+        event_brand_public_profile_approved_at:
+          input.eventBrandPublicProfileApprovedAt ?? null,
+      },
+      sameBrandSeries: input.sameBrandSeries ?? null,
+    })
+  ) {
+    return NOINDEX_FOLLOW;
+  }
+
   const count = normalizeNonNegativeInt(input.sponsoredEditionCount);
   if (count < 1) return NOINDEX_FOLLOW;
   return INDEXABLE;

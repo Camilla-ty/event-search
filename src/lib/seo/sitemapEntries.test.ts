@@ -40,6 +40,24 @@ describe("sitemap inclusion predicates", () => {
     );
   });
 
+  it("excludes soft-retired Event Brand Companies from the company sitemap (EB2)", () => {
+    assert.equal(
+      getCompanyIndexability({
+        restricted: false,
+        sponsoredEditionCount: 5,
+        slug: "singapore-fintech-festival",
+        status: "active",
+        eventBrandPublicProfileApprovedAt: "2026-08-01T11:19:34.191394+00",
+        sameBrandSeries: {
+          id: "78232c5b-7ef2-4cda-a23a-941387e1a9c1",
+          slug: "singapore-fintech-festival",
+          lifecycle_status: "active",
+        },
+      }).includeInSitemap,
+      false,
+    );
+  });
+
   it("excludes zero-sponsor editions and includes editions with sponsors", () => {
     assert.equal(
       getEventEditionIndexability({ sponsorCount: 0 }).includeInSitemap,

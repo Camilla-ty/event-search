@@ -2,16 +2,18 @@ import Link from "next/link";
 
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
+import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 
 import type { PublicOrganizerRow } from "@/src/features/events/server/mapPublicOrganizers";
 
 export function EventOrganizerListItem({ organizer }: { organizer: PublicOrganizerRow }) {
   const company = organizer.company;
   const heading = company?.name?.trim() || "Unknown organizer";
-  const profileHref = company
-    ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
-    : null;
+  const profileHref =
+    company && !isCompanyRestricted(company)
+      ? buildPublicCompanyRoleHref(company)
+      : null;
 
   const content = (
     <div className="flex items-center gap-3">

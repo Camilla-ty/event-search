@@ -20,7 +20,8 @@ const EVENT_SERIES_ADMIN_SELECT = `
   created_at,
   merged_into_series:merged_into_series_id ( id, name, slug ),
   company_profile:company_profile_id (
-    id, name, slug, domain, status, merged_into_company_id, restricted_at
+    id, name, slug, domain, status, merged_into_company_id, restricted_at,
+    event_brand_public_profile_approved_at
   )
 `;
 
@@ -39,6 +40,7 @@ export type SameBrandCompanyProfileSummary = {
   status: string;
   merged_into_company_id: string | null;
   restricted_at: string | null;
+  event_brand_public_profile_approved_at: string | null;
 };
 
 export type EventSeriesRow = {
@@ -116,6 +118,10 @@ function normalizeSameBrandCompanyProfile(
         : null,
     restricted_at:
       typeof record.restricted_at === "string" ? record.restricted_at : null,
+    event_brand_public_profile_approved_at:
+      typeof record.event_brand_public_profile_approved_at === "string"
+        ? record.event_brand_public_profile_approved_at
+        : null,
   };
 }
 
@@ -280,7 +286,9 @@ export async function getCompanyForSameBrandLinkAdmin(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("companies")
-    .select("id, name, slug, domain, status, merged_into_company_id, restricted_at")
+    .select(
+      "id, name, slug, domain, status, merged_into_company_id, restricted_at, event_brand_public_profile_approved_at",
+    )
     .eq("id", companyId)
     .maybeSingle();
 
@@ -292,11 +300,16 @@ export async function getCompanyForSameBrandLinkAdmin(
 /** Series that currently claims this company as same-brand (0 or 1). */
 export async function findSeriesByCompanyProfileIdAdmin(
   companyId: string,
-): Promise<{ id: string; name: string; slug: string } | null> {
+): Promise<{
+  id: string;
+  name: string;
+  slug: string;
+  lifecycle_status: string | null;
+} | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("event_series")
-    .select("id, name, slug")
+    .select("id, name, slug, lifecycle_status")
     .eq("company_profile_id", companyId)
     .maybeSingle();
 
@@ -306,6 +319,8 @@ export async function findSeriesByCompanyProfileIdAdmin(
     id: String(data.id),
     name: typeof data.name === "string" ? data.name : "",
     slug: typeof data.slug === "string" ? data.slug : "",
+    lifecycle_status:
+      typeof data.lifecycle_status === "string" ? data.lifecycle_status : null,
   };
 }
 

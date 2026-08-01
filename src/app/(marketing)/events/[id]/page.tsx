@@ -28,7 +28,10 @@ import {
   editionHasVenueId,
   mapPublicVenueFromEditionRow,
 } from "@/src/features/events/server/mapPublicVenue";
-import { mapPublicOrganizersFromEditionRow } from "@/src/features/events/server/mapPublicOrganizers";
+import {
+  attachPublicOrganizerRoleHrefs,
+  mapPublicOrganizersFromEditionRow,
+} from "@/src/features/events/server/mapPublicOrganizers";
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
 import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
@@ -220,7 +223,9 @@ export default async function EventDetailPage({
   const sponsors = tier1PageResult.rows;
   const cityLabel = formatLocationFromCityEmbed(edition.cities) || "";
   const venue = mapPublicVenueFromEditionRow(editionRecord);
-  const organizers = mapPublicOrganizersFromEditionRow(editionRecord);
+  const organizers = await attachPublicOrganizerRoleHrefs(
+    mapPublicOrganizersFromEditionRow(editionRecord),
+  );
   const hasVenueId = editionHasVenueId(editionRecord);
   const seriesLogoUrl = resolveSeriesDisplayLogo(
     edition.event_series && typeof edition.event_series === "object"

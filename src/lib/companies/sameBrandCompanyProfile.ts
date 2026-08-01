@@ -3,6 +3,10 @@ import {
   isCompanyLinkable,
   type CompanyLinkabilityRow,
 } from "@/src/lib/companies/assertCompanyLinkable";
+import {
+  EVENT_BRAND_PUBLIC_PROFILE_UNLINK_BLOCKED_MESSAGE,
+  isEventBrandPublicProfileApproved,
+} from "@/src/lib/companies/eventBrandPublicProfile";
 
 /** Admin warning when linking a restricted company as same-brand (ADR-004 / SB1). */
 export const SAME_BRAND_RESTRICTED_COMPANY_WARNING =
@@ -57,6 +61,12 @@ export type ValidateSameBrandCompanyProfileAssignmentInput = {
   company: SameBrandCompanyRow | null;
   /** Another series that already owns this company_profile_id, if any. */
   occupyingSeries: SameBrandOccupyingSeries | null;
+  /**
+   * Currently linked company on this series (before the change), if any.
+   * Used to block unlink/replace while Event Brand public-profile approval is active (ADR-005 EB0).
+   */
+  currentlyLinkedCompanyId?: string | null;
+  currentlyLinkedCompanyApprovedAt?: string | null;
 };
 
 export type ValidateSameBrandCompanyProfileAssignmentResult =
@@ -65,11 +75,28 @@ export type ValidateSameBrandCompanyProfileAssignmentResult =
 
 /**
  * Validates Admin link / replace / unlink for `event_series.company_profile_id`.
- * Unlink (`companyProfileId === null`) always succeeds.
+ * Unlink/replace is blocked while the currently linked company has Event Brand
+ * public-profile approval (revoke approval first).
  */
 export function validateSameBrandCompanyProfileAssignment(
   input: ValidateSameBrandCompanyProfileAssignmentInput,
 ): ValidateSameBrandCompanyProfileAssignmentResult {
+  const currentlyLinkedId =
+    typeof input.currentlyLinkedCompanyId === "string" &&
+    input.currentlyLinkedCompanyId.trim() !== ""
+      ? input.currentlyLinkedCompanyId.trim()
+      : null;
+  const nextId = input.companyProfileId;
+  const removesOrReplacesCurrent =
+    currentlyLinkedId !== null && currentlyLinkedId !== nextId;
+
+  if (
+    removesOrReplacesCurrent &&
+    isEventBrandPublicProfileApproved(input.currentlyLinkedCompanyApprovedAt)
+  ) {
+    return { ok: false, error: EVENT_BRAND_PUBLIC_PROFILE_UNLINK_BLOCKED_MESSAGE };
+  }
+
   if (input.companyProfileId === null) {
     return { ok: true, warnings: [] };
   }

@@ -7,7 +7,11 @@ import {
   isCompanyRestricted,
   RESTRICTED_COMPANY_ROSTER_LABEL,
 } from "@/src/lib/companies/companyPublicRestriction";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
+import {
+  buildPublicCompanyRoleHref,
+  getEventBrandPublicDestinationIndex,
+  type EventBrandPublicDestinationIndex,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 import { createClient } from "@/src/lib/supabase/server";
 
 export type PublicSponsorSearchCompanyPublic = {
@@ -53,6 +57,7 @@ type RpcCompany = {
   logo_source?: unknown;
   logo_status?: unknown;
   restricted_at?: unknown;
+  event_brand_public_profile_approved_at?: unknown;
 };
 
 type RpcRow = {
@@ -85,6 +90,7 @@ function asNullableNumber(value: unknown): number | null {
  */
 export function mapPublicSponsorSearchItem(
   row: RpcRow,
+  destinationIndex?: EventBrandPublicDestinationIndex | null,
 ): PublicSponsorSearchItem | null {
   const id = asTrimmedString(row.id);
   const companyId =
@@ -127,11 +133,18 @@ export function mapPublicSponsorSearchItem(
   }
 
   const slug = asTrimmedString(row.company?.slug);
-  const href = buildSponsorProfilePath({
-    id: companyId,
-    slug,
-    restricted_at: null,
-  });
+  const approvedAt = asTrimmedString(
+    row.company?.event_brand_public_profile_approved_at,
+  );
+  const href = buildPublicCompanyRoleHref(
+    {
+      id: companyId,
+      slug,
+      restricted_at: null,
+      event_brand_public_profile_approved_at: approvedAt,
+    },
+    destinationIndex,
+  );
 
   return {
     id,
@@ -192,10 +205,13 @@ export async function searchPublicEditionSponsors(
   }
 
   try {
-    const { data, error } = await supabase.rpc("event_edition_sponsor_search", {
-      p_edition_id: editionId,
-      p_query: parsed.query,
-    });
+    const [{ data, error }, destinationIndex] = await Promise.all([
+      supabase.rpc("event_edition_sponsor_search", {
+        p_edition_id: editionId,
+        p_query: parsed.query,
+      }),
+      getEventBrandPublicDestinationIndex(),
+    ]);
 
     if (error) {
       if (process.env.NODE_ENV === "development") {
@@ -206,7 +222,7 @@ export async function searchPublicEditionSponsors(
 
     const items: PublicSponsorSearchItem[] = [];
     for (const row of parseRpcRows(data)) {
-      const mapped = mapPublicSponsorSearchItem(row);
+      const mapped = mapPublicSponsorSearchItem(row, destinationIndex);
       if (mapped !== null) items.push(mapped);
       if (items.length >= PUBLIC_SPONSOR_SEARCH_MAX_RESULTS) break;
     }

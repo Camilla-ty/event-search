@@ -21,6 +21,13 @@ type CompanySitemapRow = {
   created_at?: string | null;
   status?: string | null;
   restricted_at?: string | null;
+  event_brand_public_profile_approved_at?: string | null;
+};
+
+type SameBrandSeriesSitemapRow = {
+  company_profile_id: string | null;
+  slug: string | null;
+  lifecycle_status?: string | null;
 };
 
 type EditionSitemapRow = {
@@ -148,16 +155,51 @@ export async function fetchEditionIdsWithSponsorsSet(): Promise<Set<string>> {
   return ids;
 }
 
+/** Reverse same-brand Series keyed by company id (for ADR-005 EB2 soft retirement). */
+export async function fetchSameBrandSeriesByCompanyIdMap(): Promise<
+  Map<string, { slug: string | null; lifecycle_status: string | null }>
+> {
+  const supabase = createAnonSupabaseClient();
+  const rows = await fetchAllPaginatedSupabaseRows<SameBrandSeriesSitemapRow>(
+    async ({ from, to }) =>
+      supabase
+        .from("event_series")
+        .select("company_profile_id, slug, lifecycle_status")
+        .not("company_profile_id", "is", null)
+        .order("company_profile_id", { ascending: true })
+        .range(from, to),
+  );
+
+  const map = new Map<
+    string,
+    { slug: string | null; lifecycle_status: string | null }
+  >();
+  for (const row of rows) {
+    if (typeof row.company_profile_id !== "string") continue;
+    const key = normalizeUuidKey(row.company_profile_id);
+    if (key === "") continue;
+    map.set(key, {
+      slug: typeof row.slug === "string" ? row.slug : null,
+      lifecycle_status:
+        typeof row.lifecycle_status === "string" ? row.lifecycle_status : null,
+    });
+  }
+  return map;
+}
+
 export async function fetchPublicCompanySitemapEntries(): Promise<
   MetadataRoute.Sitemap
 > {
   const supabase = createAnonSupabaseClient();
-  const [indexableIds, rows] = await Promise.all([
+  const [indexableIds, sameBrandSeriesByCompanyId, rows] = await Promise.all([
     fetchIndexableSponsoredCompanyIdSet(),
+    fetchSameBrandSeriesByCompanyIdMap(),
     fetchAllPaginatedSupabaseRows<CompanySitemapRow>(async ({ from, to }) =>
       supabase
         .from("companies")
-        .select("id, slug, created_at, status, restricted_at")
+        .select(
+          "id, slug, created_at, status, restricted_at, event_brand_public_profile_approved_at",
+        )
         .eq("status", "active")
         .is("restricted_at", null)
         .not("slug", "is", null)
@@ -175,9 +217,18 @@ export async function fetchPublicCompanySitemapEntries(): Promise<
       typeof row.id === "string" ? normalizeUuidKey(row.id) : "";
     const restricted = row.restricted_at != null;
     const sponsoredEditionCount = indexableIds.has(companyId) ? 1 : 0;
+    const sameBrandSeries = sameBrandSeriesByCompanyId.get(companyId) ?? null;
     const decision = getCompanyIndexability({
       restricted,
       sponsoredEditionCount,
+      id: row.id,
+      slug,
+      status: typeof row.status === "string" ? row.status : "active",
+      eventBrandPublicProfileApprovedAt:
+        typeof row.event_brand_public_profile_approved_at === "string"
+          ? row.event_brand_public_profile_approved_at
+          : null,
+      sameBrandSeries,
     });
     if (!decision.includeInSitemap) continue;
     entries.push(

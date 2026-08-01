@@ -112,6 +112,65 @@ describe("getCompanyIndexability", () => {
     assert.equal(decision.indexable, false);
     assert.equal(decision.includeInSitemap, false);
   });
+
+  it("noindexes approved Event Brand Companies with a public-safe Series (EB2)", () => {
+    const decision = getCompanyIndexability({
+      restricted: false,
+      sponsoredEditionCount: 5,
+      id: "f85bff6d-f25a-40c5-839f-4a395fbb3d37",
+      slug: "singapore-fintech-festival",
+      status: "active",
+      eventBrandPublicProfileApprovedAt: "2026-08-01T11:19:34.191394+00",
+      sameBrandSeries: {
+        id: "78232c5b-7ef2-4cda-a23a-941387e1a9c1",
+        slug: "singapore-fintech-festival",
+        lifecycle_status: "active",
+      },
+    });
+    assert.equal(decision.indexable, false);
+    assert.equal(decision.includeInSitemap, false);
+    assert.deepEqual(decision.robots, { index: false, follow: true });
+  });
+
+  it("falls back to normal indexability when approved but Series is invalid", () => {
+    const withSponsors = getCompanyIndexability({
+      restricted: false,
+      sponsoredEditionCount: 2,
+      slug: "singapore-fintech-festival",
+      status: "active",
+      eventBrandPublicProfileApprovedAt: "2026-08-01T11:19:34.191394+00",
+      sameBrandSeries: {
+        id: "78232c5b-7ef2-4cda-a23a-941387e1a9c1",
+        slug: "singapore-fintech-festival",
+        lifecycle_status: "merged",
+      },
+    });
+    assert.equal(withSponsors.indexable, true);
+    assert.equal(withSponsors.includeInSitemap, true);
+
+    const missingSeries = getCompanyIndexability({
+      restricted: false,
+      sponsoredEditionCount: 2,
+      slug: "singapore-fintech-festival",
+      status: "active",
+      eventBrandPublicProfileApprovedAt: "2026-08-01T11:19:34.191394+00",
+      sameBrandSeries: null,
+    });
+    assert.equal(missingSeries.indexable, true);
+  });
+
+  it("keeps normal Companies indexable when not Event Brand–approved", () => {
+    const decision = getCompanyIndexability({
+      restricted: false,
+      sponsoredEditionCount: 3,
+      slug: "acme-corp",
+      status: "active",
+      eventBrandPublicProfileApprovedAt: null,
+      sameBrandSeries: null,
+    });
+    assert.equal(decision.indexable, true);
+    assert.equal(decision.includeInSitemap, true);
+  });
 });
 
 describe("getEventEditionIndexability", () => {

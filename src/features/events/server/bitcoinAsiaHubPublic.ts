@@ -31,6 +31,7 @@ export type BitcoinAsiaHubSponsorRow = {
   logoUrl: string | null;
   hubEventCount: number;
   globalEditionCount: number;
+  publicHref: string | null;
 };
 
 export type BitcoinAsiaHubPageData = {

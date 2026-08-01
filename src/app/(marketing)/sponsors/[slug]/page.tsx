@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { JsonLd } from "@/src/components/seo/JsonLd";
 import { getPublicExhibitorHistoryForCompany } from "@/src/features/exhibitors/server/exhibitorHistoryPublic";
 import { SponsorDetailView } from "@/src/features/sponsors/components/detail/SponsorDetailView";
 import { getSponsorDetailData } from "@/src/features/sponsors/server/getSponsorDetailData";
+import {
+  isEventBrandCompanyPublicProfileSoftRetired,
+  resolveEventBrandSponsorProfileRedirect,
+} from "@/src/lib/companies/resolvePublicCompanyDestination";
 import { buildCompanySummary } from "@/src/lib/content/factualSummary";
 import { locationInputFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import {
@@ -25,6 +29,23 @@ type SponsorDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+function eventBrandDestinationInput(
+  data: NonNullable<Awaited<ReturnType<typeof getSponsorDetailData>>>,
+) {
+  return {
+    company: {
+      id: data.company.id,
+      slug: data.company.slug,
+      status: "active" as const,
+      restricted_at: data.company.restricted_at ?? null,
+      merged_into_company_id: null,
+      event_brand_public_profile_approved_at:
+        data.company.event_brand_public_profile_approved_at ?? null,
+    },
+    sameBrandSeries: data.sameBrandSeries,
+  };
+}
+
 export async function generateMetadata({
   params,
 }: SponsorDetailPageProps): Promise<Metadata> {
@@ -44,19 +65,31 @@ export async function generateMetadata({
       data.summary.sponsoredEditionCountUnknown === true,
   });
   const profileSlug = data.company.slug?.trim() || slug;
+  const destinationInput = eventBrandDestinationInput(data);
+  const softRetired = isEventBrandCompanyPublicProfileSoftRetired(destinationInput);
   const decision = getCompanyIndexability({
     restricted: false,
     sponsoredEditionCount: data.summary.sponsoredEditionCount,
+    id: data.company.id,
+    slug: data.company.slug,
+    status: "active",
+    eventBrandPublicProfileApprovedAt:
+      data.company.event_brand_public_profile_approved_at ?? null,
+    sameBrandSeries: data.sameBrandSeries,
   });
   // Fail open: a stats query failure means the count is unknown, not zero.
   // Never emit noindex off an unknown count (indexability-policy §IR1 review).
+  // Soft-retired Event Brand Companies (ADR-005 EB2) always noindex regardless.
   const countUnknown = data.summary.sponsoredEditionCountUnknown === true;
 
   return createPageMetadata({
     title: name,
     description,
     path: `/sponsors/${profileSlug}`,
-    robots: countUnknown ? undefined : robotsForIndexability(decision),
+    robots:
+      softRetired || !countUnknown
+        ? robotsForIndexability(decision)
+        : undefined,
   });
 }
 
@@ -74,6 +107,14 @@ export default async function SponsorDetailPage({
 
   if (!data) {
     notFound();
+  }
+
+  // ADR-005 EB3: temporary redirect approved Event Brand Companies to Series hub.
+  const seriesHubRedirect = resolveEventBrandSponsorProfileRedirect(
+    eventBrandDestinationInput(data),
+  );
+  if (seriesHubRedirect !== null) {
+    redirect(seriesHubRedirect);
   }
 
   // Independent of Sponsor History auth gate: full exhibitor list for all visitors.

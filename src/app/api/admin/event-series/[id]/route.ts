@@ -147,26 +147,51 @@ export async function PATCH(request: Request, context: RouteContext) {
     const companyProfileId = parseOptionalUuid(body.company_profile_id);
     if (companyProfileId === undefined) {
       errors.push("company_profile_id must be a uuid string or null");
-    } else if (companyProfileId === null) {
-      patch.company_profile_id = null;
     } else {
       try {
-        const [company, occupyingSeries] = await Promise.all([
-          getCompanyForSameBrandLinkAdmin(companyProfileId),
-          findSeriesByCompanyProfileIdAdmin(companyProfileId),
-        ]);
-        const validation = validateSameBrandCompanyProfileAssignment({
-          seriesId: id,
-          seriesLifecycleStatus: existing.lifecycle_status,
-          companyProfileId,
-          company,
-          occupyingSeries,
-        });
-        if (!validation.ok) {
-          errors.push(validation.error);
+        const currentlyLinkedCompanyId = existing.company_profile_id;
+        const currentlyLinkedCompany =
+          currentlyLinkedCompanyId !== null
+            ? await getCompanyForSameBrandLinkAdmin(currentlyLinkedCompanyId)
+            : null;
+
+        if (companyProfileId === null) {
+          const validation = validateSameBrandCompanyProfileAssignment({
+            seriesId: id,
+            seriesLifecycleStatus: existing.lifecycle_status,
+            companyProfileId: null,
+            company: null,
+            occupyingSeries: null,
+            currentlyLinkedCompanyId,
+            currentlyLinkedCompanyApprovedAt:
+              currentlyLinkedCompany?.event_brand_public_profile_approved_at ?? null,
+          });
+          if (!validation.ok) {
+            errors.push(validation.error);
+          } else {
+            patch.company_profile_id = null;
+          }
         } else {
-          patch.company_profile_id = companyProfileId;
-          warnings.push(...validation.warnings);
+          const [company, occupyingSeries] = await Promise.all([
+            getCompanyForSameBrandLinkAdmin(companyProfileId),
+            findSeriesByCompanyProfileIdAdmin(companyProfileId),
+          ]);
+          const validation = validateSameBrandCompanyProfileAssignment({
+            seriesId: id,
+            seriesLifecycleStatus: existing.lifecycle_status,
+            companyProfileId,
+            company,
+            occupyingSeries,
+            currentlyLinkedCompanyId,
+            currentlyLinkedCompanyApprovedAt:
+              currentlyLinkedCompany?.event_brand_public_profile_approved_at ?? null,
+          });
+          if (!validation.ok) {
+            errors.push(validation.error);
+          } else {
+            patch.company_profile_id = companyProfileId;
+            warnings.push(...validation.warnings);
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";

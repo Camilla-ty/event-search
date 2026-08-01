@@ -27,6 +27,10 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
+import {
+  getEventBrandPublicDestinationIndex,
+  buildPublicCompanyRoleHref,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 
 export type TopicRegionHubEventCard = {
   id: string;
@@ -53,6 +57,8 @@ export type TopicRegionHubSponsorRow = {
   logoUrl: string | null;
   hubEventCount: number;
   globalEditionCount: number;
+  /** ADR-005 EB4: resolved public Company destination. */
+  publicHref: string | null;
 };
 
 export type TopicRegionHubPageData = {
@@ -299,30 +305,35 @@ export async function getTopicRegionHubPageData(
   }
 
   const companyIds = [...hubEditionIdsByCompany.keys()];
-  const companyRows = await fetchAllByIdInBatches<{
-    id: string;
-    name: string;
-    slug: string;
-    domain: string | null;
-    logo_url: string | null;
-    restricted_at: string | null;
-  }>(companyIds, (batchIds) =>
-    admin
-      .from("companies")
-      .select("id, name, slug, domain, logo_url, restricted_at")
-      .in("id", batchIds)
-      .is("restricted_at", null),
-  );
-
-  const statsRows = await fetchAllByIdInBatches<{
-    company_id: string;
-    sponsored_edition_count: number | null;
-  }>(companyIds, (batchIds) =>
-    admin
-      .from("company_sponsor_stats")
-      .select("company_id, sponsored_edition_count")
-      .in("company_id", batchIds),
-  );
+  const [companyRows, destinationIndex, statsRows] = await Promise.all([
+    fetchAllByIdInBatches<{
+      id: string;
+      name: string;
+      slug: string;
+      domain: string | null;
+      logo_url: string | null;
+      restricted_at: string | null;
+      event_brand_public_profile_approved_at: string | null;
+    }>(companyIds, (batchIds) =>
+      admin
+        .from("companies")
+        .select(
+          "id, name, slug, domain, logo_url, restricted_at, event_brand_public_profile_approved_at",
+        )
+        .in("id", batchIds)
+        .is("restricted_at", null),
+    ),
+    getEventBrandPublicDestinationIndex(),
+    fetchAllByIdInBatches<{
+      company_id: string;
+      sponsored_edition_count: number | null;
+    }>(companyIds, (batchIds) =>
+      admin
+        .from("company_sponsor_stats")
+        .select("company_id, sponsored_edition_count")
+        .in("company_id", batchIds),
+    ),
+  ]);
 
   const globalCountByCompany = new Map<string, number>();
   for (const row of statsRows) {
@@ -348,6 +359,16 @@ export async function getTopicRegionHubPageData(
         logoUrl: mapPublicLogoUrl(company.logo_url),
         hubEventCount,
         globalEditionCount: globalCountByCompany.get(company.id) ?? 0,
+        publicHref: buildPublicCompanyRoleHref(
+          {
+            id: company.id,
+            slug: company.slug,
+            restricted_at: company.restricted_at,
+            event_brand_public_profile_approved_at:
+              company.event_brand_public_profile_approved_at,
+          },
+          destinationIndex,
+        ),
       };
     })
     .filter((row): row is TopicRegionHubSponsorRow => row !== null)

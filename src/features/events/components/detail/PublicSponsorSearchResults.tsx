@@ -22,6 +22,7 @@ function searchItemToSponsorRow(item: PublicSponsorSearchItem): EventSponsorRow 
       logo_status: item.company.logo_status,
       // Sentinel for isCompanyRestricted — API already scrubbed sensitive fields.
       restricted_at: item.company.restricted ? "restricted" : null,
+      public_href: item.company.href,
     },
   };
 }

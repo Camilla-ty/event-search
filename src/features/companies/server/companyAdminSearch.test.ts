@@ -28,6 +28,7 @@ function adminCompany(
     merged_into_company_id: null,
     merged_at: null,
     restricted_at: null,
+    event_brand_public_profile_approved_at: null,
     ...overrides,
   };
 }

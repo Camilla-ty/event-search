@@ -55,6 +55,8 @@ describe("same-brand Admin assignment (SB1 behaviors)", () => {
       companyProfileId: null,
       company: null,
       occupyingSeries: { id: SERIES_A, name: "Acme" },
+      currentlyLinkedCompanyId: COMPANY_A,
+      currentlyLinkedCompanyApprovedAt: null,
     });
     assert.deepEqual(result, { ok: true, warnings: [] });
   });

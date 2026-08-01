@@ -1,4 +1,5 @@
 import type { PublicSameBrandLink } from "@/src/lib/companies/sameBrandPublicLink";
+import type { EventBrandPublicProfileSeriesCandidate } from "@/src/lib/companies/eventBrandPublicProfile";
 import type { getCompanyById } from "@/src/lib/queries/companies";
 import type { getEventEditions } from "@/src/lib/queries/events";
 
@@ -45,4 +46,6 @@ export type SponsorDetailData = {
   eventSeriesGroups: SponsorDetailSeriesGroup[];
   /** Safe public same-brand Event Series hub link; null when absent or not publicly resolvable. */
   sameBrandSeriesLink: PublicSameBrandLink | null;
+  /** Raw reverse same-brand Series (for ADR-005 indexability / future routing). */
+  sameBrandSeries: EventBrandPublicProfileSeriesCandidate | null;
 };

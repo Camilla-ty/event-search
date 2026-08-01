@@ -306,6 +306,12 @@ describe("Series Participated Events refined prototype", () => {
       summary: { sponsoredEditionCount: 2 },
       eventSeriesGroups: [],
       sameBrandSeriesLink: link,
+      sameBrandSeries: {
+        id: SERIES.id,
+        slug: SERIES.slug,
+        name: "Singapore Fintech Festival",
+        lifecycle_status: "active",
+      },
     };
     const companyHtml = renderToStaticMarkup(
       <SponsorDetailView data={companyData} />,

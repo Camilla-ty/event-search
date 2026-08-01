@@ -11,6 +11,7 @@ import { CompanyDomainsSection } from "@/src/features/companies/components/admin
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
 import { CompanySameBrandSeriesSection } from "@/src/features/companies/components/admin/CompanySameBrandSeriesSection";
+import { CompanyEventBrandPublicProfileSection } from "@/src/features/companies/components/admin/CompanyEventBrandPublicProfileSection";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { listCompanyDomainsForAdmin } from "@/src/features/companies/server/companyDomainsAdmin";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
@@ -155,6 +156,14 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
       </div>
 
       <CompanySameBrandSeriesSection series={sameBrandSeries} />
+
+      <CompanyEventBrandPublicProfileSection
+        companyId={company.id}
+        companyName={company.name}
+        approvedAt={company.event_brand_public_profile_approved_at}
+        sameBrandSeries={sameBrandSeries}
+        canEdit={isEditable}
+      />
 
       <CompanyPublicVisibilitySection
         companyId={company.id}

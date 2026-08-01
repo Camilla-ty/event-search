@@ -32,6 +32,8 @@ describe("validateSameBrandCompanyProfileAssignment", () => {
       companyProfileId: null,
       company: null,
       occupyingSeries: null,
+      currentlyLinkedCompanyId: COMPANY_ID,
+      currentlyLinkedCompanyApprovedAt: null,
     });
     assert.deepEqual(result, { ok: true, warnings: [] });
   });

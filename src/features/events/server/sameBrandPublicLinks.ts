@@ -1,4 +1,5 @@
 import { createClient } from "@/src/lib/supabase/server";
+import type { EventBrandPublicProfileSeriesCandidate } from "@/src/lib/companies/eventBrandPublicProfile";
 import {
   buildPublicSameBrandCompanyLink,
   buildPublicSameBrandSeriesLink,
@@ -30,13 +31,10 @@ export async function loadPublicSameBrandCompanyLinkForSeries(
   return buildPublicSameBrandCompanyLink(data);
 }
 
-/**
- * Load a public-safe same-brand Event Brand (series) link for a company profile.
- * Merged series rows are filtered by the pure builder (no destination href).
- */
-export async function loadPublicSameBrandSeriesLinkForCompany(
+/** Raw reverse same-brand Series row for a Company (may be merged / non-public). */
+export async function loadSameBrandSeriesCandidateForCompany(
   companyId: string | null | undefined,
-): Promise<PublicSameBrandLink | null> {
+): Promise<EventBrandPublicProfileSeriesCandidate | null> {
   const id = typeof companyId === "string" ? companyId.trim() : "";
   if (id === "") return null;
 
@@ -48,7 +46,24 @@ export async function loadPublicSameBrandSeriesLinkForCompany(
     .maybeSingle();
 
   if (error || !data) return null;
-  return buildPublicSameBrandSeriesLink(data);
+  return {
+    id: typeof data.id === "string" ? data.id : null,
+    name: typeof data.name === "string" ? data.name : null,
+    slug: typeof data.slug === "string" ? data.slug : null,
+    lifecycle_status:
+      typeof data.lifecycle_status === "string" ? data.lifecycle_status : null,
+  };
+}
+
+/**
+ * Load a public-safe same-brand Event Brand (series) link for a company profile.
+ * Merged series rows are filtered by the pure builder (no destination href).
+ */
+export async function loadPublicSameBrandSeriesLinkForCompany(
+  companyId: string | null | undefined,
+): Promise<PublicSameBrandLink | null> {
+  const row = await loadSameBrandSeriesCandidateForCompany(companyId);
+  return buildPublicSameBrandSeriesLink(row);
 }
 
 export function readCompanyProfileIdFromSeriesRow(

@@ -22,9 +22,9 @@ describe("SameBrandCompanyProfileSection wiring (SB1/SB3)", () => {
     assert.match(source, /company_profile_id:\s*nextId/);
   });
 
-  it("surfaces restricted-company admin warning without calling it ownership", () => {
-    assert.match(source, /isCompanyRestrictedForSameBrand/);
-    assert.match(source, /restricted from public profiles/);
-    assert.doesNotMatch(source, /organizer of this series/i);
+  it("surfaces Event Brand public-profile unlink lock (ADR-005 EB0)", () => {
+    assert.match(source, /isEventBrandPublicProfileApproved/);
+    assert.match(source, /Event Brand public-profile approval is active/);
+    assert.match(source, /future public routing only/);
   });
 });

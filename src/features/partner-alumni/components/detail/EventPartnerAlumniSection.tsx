@@ -6,7 +6,8 @@ import type { PublicPartnerAlumniCurrentVersion } from "@/src/features/partner-a
 import { formatPrimarySourceLink } from "@/src/features/events/lib/formatEventResearchMetadata";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
 import { brandLinkClass } from "@/src/lib/design/classes";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
+import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 
 type EventPartnerAlumniSectionProps = {
   partnerAlumni: PublicPartnerAlumniCurrentVersion;
@@ -85,9 +86,10 @@ function EventPartnerAlumniListItem({
 }) {
   const company = member.company;
   const heading = company?.name?.trim() || "Unknown company";
-  const profileHref = company
-    ? buildSponsorProfilePath({ slug: company.slug, id: company.id })
-    : null;
+  const profileHref =
+    company && !isCompanyRestricted(company)
+      ? buildPublicCompanyRoleHref(company)
+      : null;
 
   const content = (
     <div className="flex gap-3">

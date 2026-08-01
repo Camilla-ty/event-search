@@ -6,7 +6,7 @@ import {
   isCompanyRestricted,
   RESTRICTED_COMPANY_ROSTER_LABEL,
 } from "@/src/lib/companies/companyPublicRestriction";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
+import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 
 import type { EventSponsorRow } from "./types";
 
@@ -19,7 +19,7 @@ export function PublicSponsorRosterRow({ sponsor }: PublicSponsorRosterRowProps)
   const restricted = isCompanyRestricted(company);
   const companyName = company?.name?.trim() || "Unknown sponsor";
   const domain = restricted ? null : company?.domain?.trim() || null;
-  const profileHref = company ? buildSponsorProfilePath(company) : null;
+  const profileHref = restricted ? null : buildPublicCompanyRoleHref(company);
   const logoFields = companyLogoFieldsFromRow(
     restricted && company
       ? {

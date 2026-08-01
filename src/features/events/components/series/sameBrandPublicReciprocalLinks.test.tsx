@@ -45,6 +45,14 @@ function sponsorDetailData(
     summary: { sponsoredEditionCount: 0 },
     eventSeriesGroups: [],
     sameBrandSeriesLink,
+    sameBrandSeries: sameBrandSeriesLink
+      ? {
+          id: SERIES.id,
+          slug: SERIES.slug,
+          name: SERIES.name,
+          lifecycle_status: SERIES.lifecycle_status,
+        }
+      : null,
   };
 }
 

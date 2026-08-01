@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PublicExhibitorRosterRow } from "@/src/features/exhibitors/components/detail/PublicExhibitorRosterRow";
 import type { PublicExhibitorRow } from "@/src/features/exhibitors/server/exhibitorsPublic";
 import { RESTRICTED_COMPANY_ROSTER_LABEL } from "@/src/lib/companies/companyPublicRestriction";
-import { buildSponsorProfilePath } from "@/src/lib/routes/explorerUrls";
+import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 
 function renderRow(exhibitor: PublicExhibitorRow): string {
   return renderToStaticMarkup(
@@ -29,7 +29,7 @@ describe("PublicExhibitorRosterRow", () => {
       logo_source: null,
       logo_status: null,
     };
-    const expectedProfileHref = buildSponsorProfilePath(company);
+    const expectedProfileHref = buildPublicCompanyRoleHref(company);
     assert.equal(expectedProfileHref, "/sponsors/acme-corp");
 
     const html = renderRow({
@@ -67,7 +67,7 @@ describe("PublicExhibitorRosterRow", () => {
       logo_source: null,
       logo_status: null,
     };
-    const expectedProfileHref = buildSponsorProfilePath(company);
+    const expectedProfileHref = buildPublicCompanyRoleHref(company);
     assert.equal(expectedProfileHref, `/sponsors/${company.id}`);
 
     const html = renderRow({

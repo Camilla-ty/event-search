@@ -56,4 +56,24 @@ describe("mapPublicOrganizersFromEditionRow", () => {
 
     assert.equal(rows[0]?.role_label, "Organizer");
   });
+
+  it("maps restricted_at onto organizer companies so public links can gate", () => {
+    const rows = mapPublicOrganizersFromEditionRow({
+      event_edition_organizers: [
+        {
+          id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          role_label: "Organizer",
+          display_order: 1,
+          companies: {
+            id: "11111111-1111-1111-1111-111111111111",
+            name: "Restricted Host",
+            slug: "restricted-host",
+            restricted_at: "2026-07-11T00:00:00.000Z",
+          },
+        },
+      ],
+    });
+
+    assert.equal(rows[0]?.company?.restricted_at, "2026-07-11T00:00:00.000Z");
+  });
 });

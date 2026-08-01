@@ -2,7 +2,7 @@
 
 **Status:** Canonical
 **Role:** Project-wide implementation roadmap **index** only
-**Last updated:** 2026-07-31
+**Last updated:** 2026-08-01
 **Purpose:** Point engineers to the authoritative phase, design, and plan documents for each major domain. This file does **not** define phase sequencing, timelines, or new priorities.
 
 For current shipped product state, see [project-state.md](./project-state.md).
@@ -40,6 +40,7 @@ Statuses below summarize what existing documents and shipped code already establ
 | **Edition research metadata** | [phase-edition-last-reviewed-automation-scope.md](./phase-edition-last-reviewed-automation-scope.md) | |
 | **Company identity & merge** | [adr/ADR-001-company-identity.md](./adr/ADR-001-company-identity.md), [adr/ADR-002-company-website-canonical-identity.md](./adr/ADR-002-company-website-canonical-identity.md), [phase-company-website-identity-scope.md](./phase-company-website-identity-scope.md), [implementation/company-domain-matching-v1.md](./implementation/company-domain-matching-v1.md) | |
 | **Event Series ↔ Company same-brand** | [adr/ADR-004-event-series-company-same-brand-link.md](./adr/ADR-004-event-series-company-same-brand-link.md), [phase-event-series-company-same-brand-scope.md](./phase-event-series-company-same-brand-scope.md), [audits/event-series-company-same-brand-architecture-audit.md](./audits/event-series-company-same-brand-architecture-audit.md) | ADR accepted; **SB0–SB3 complete**; **SB4 in progress** (manual links + Participated Events Series-hub UX prototype; Company profiles not redirected/hidden) |
+| **Event Brand public profile (ADR-005)** | [adr/ADR-005-event-brand-public-profile-policy.md](./adr/ADR-005-event-brand-public-profile-policy.md), [phase-event-brand-public-profile-scope.md](./phase-event-brand-public-profile-scope.md), [audits/adr-005-event-brand-public-profile-implementation-audit.md](./audits/adr-005-event-brand-public-profile-implementation-audit.md) | ADR accepted; **EB0–EB4** in repo (SFF-only); stop before EB5 until discovery/suggest product lock |
 | **Restricted companies** | [plans/protection-v1.md](./plans/protection-v1.md), [plans/indexability-policy.md](./plans/indexability-policy.md) | Public restriction / discovery exclusion |
 | **Event Explorer / public discovery** | [phase-event-explorer-sort-scope.md](./phase-event-explorer-sort-scope.md) | Sort scope + Active Filters v1 locked decisions (§11) |
 | **Public sponsor roster** | [adr/ADR-003-tier-lazy-loaded-event-sponsors.md](./adr/ADR-003-tier-lazy-loaded-event-sponsors.md), [phase-public-sponsor-roster-lazy-load-scope.md](./phase-public-sponsor-roster-lazy-load-scope.md) | |

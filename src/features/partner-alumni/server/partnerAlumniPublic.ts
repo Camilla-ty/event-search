@@ -1,9 +1,12 @@
 import type { EventSponsorCompany } from "@/src/features/events/components/detail/types";
+import {
+  getEventBrandPublicDestinationIndex,
+  withPublicCompanyRoleHref,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { COMPANY_PUBLIC_COLUMNS } from "@/src/lib/queries/companies";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
-
-const COMPANY_PUBLIC_SELECT = "id, slug, name, logo_url, logo_source, logo_status";
 
 export type PublicPartnerAlumniMember = {
   id: string;
@@ -35,6 +38,11 @@ function mapVersionMemberCompany(raw: unknown): EventSponsorCompany | null {
     logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
     logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
     logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
+    restricted_at: typeof row.restricted_at === "string" ? row.restricted_at : null,
+    event_brand_public_profile_approved_at:
+      typeof row.event_brand_public_profile_approved_at === "string"
+        ? row.event_brand_public_profile_approved_at
+        : null,
   };
 }
 
@@ -127,7 +135,7 @@ export async function getPublicPartnerAlumniForSeriesId(
         : "";
     if (versionId === "") return null;
 
-    const [versionResult, memberRows] = await Promise.all([
+    const [versionResult, memberRows, destinationIndex] = await Promise.all([
       admin
         .from("event_partner_alumni_versions")
         .select("id, recognition_label, primary_source_url, source_checked_at")
@@ -136,12 +144,13 @@ export async function getPublicPartnerAlumniForSeriesId(
       fetchAllPaginatedSupabaseRows<VersionMemberRow>(async ({ from, to }) =>
         admin
           .from("event_partner_alumni_version_companies")
-          .select(`id, display_order, company_id, companies ( ${COMPANY_PUBLIC_SELECT} )`)
+          .select(`id, display_order, company_id, companies ( ${COMPANY_PUBLIC_COLUMNS} )`)
           .eq("event_partner_alumni_version_id", versionId)
           .order("display_order", { ascending: true })
           .order("id", { ascending: true })
           .range(from, to),
       ),
+      getEventBrandPublicDestinationIndex(),
     ]);
 
     if (versionResult.error) {
@@ -151,7 +160,12 @@ export async function getPublicPartnerAlumniForSeriesId(
     if (!versionResult.data) return null;
 
     const versionRow = versionResult.data as Record<string, unknown>;
-    const members = mapPublicPartnerAlumniMembers(memberRows);
+    const members = mapPublicPartnerAlumniMembers(memberRows).map((member) => ({
+      ...member,
+      company: member.company
+        ? withPublicCompanyRoleHref(member.company, destinationIndex)
+        : null,
+    }));
     if (members.length === 0) return null;
 
     return {
@@ -174,4 +188,3 @@ export async function getPublicPartnerAlumniForSeriesId(
     return null;
   }
 }
-

@@ -4,6 +4,10 @@ import {
   groupExhibitorsByTier,
 } from "@/src/features/exhibitors/lib/groupExhibitorsByTier";
 import {
+  getEventBrandPublicDestinationIndex,
+  withPublicCompanyRoleHref,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import {
   COMPANY_PUBLIC_COLUMNS,
   getCompaniesByIds,
   type CompanyPublicRow,
@@ -50,6 +54,10 @@ function mapPublicExhibitorCompany(
     logo_source: typeof raw.logo_source === "string" ? raw.logo_source : null,
     logo_status: typeof raw.logo_status === "string" ? raw.logo_status : null,
     restricted_at: typeof raw.restricted_at === "string" ? raw.restricted_at : null,
+    event_brand_public_profile_approved_at:
+      typeof raw.event_brand_public_profile_approved_at === "string"
+        ? raw.event_brand_public_profile_approved_at
+        : null,
   };
 }
 
@@ -140,7 +148,10 @@ export async function getPublicExhibitorsForEditionId(
       ),
     ];
 
-    const companyRows = await getCompaniesByIds(companyIds);
+    const [companyRows, destinationIndex] = await Promise.all([
+      getCompaniesByIds(companyIds),
+      getEventBrandPublicDestinationIndex(),
+    ]);
     const companyById = new Map<string, CompanyPublicRow>(
       companyRows.map((row) => [companyIdKey(row.id), row]),
     );
@@ -157,8 +168,9 @@ export async function getPublicExhibitorsForEditionId(
             : "";
       if (id === "" || companyId === "") continue;
 
-      const company = mapPublicExhibitorCompany(companyById.get(companyIdKey(companyId)));
-      if (!company) continue;
+      const mapped = mapPublicExhibitorCompany(companyById.get(companyIdKey(companyId)));
+      if (!mapped) continue;
+      const company = withPublicCompanyRoleHref(mapped, destinationIndex);
 
       rows.push({
         id,

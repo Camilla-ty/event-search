@@ -5,6 +5,10 @@ import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPagina
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
+import {
+  getEventBrandPublicDestinationIndex,
+  withPublicCompanyRoleHref,
+} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
 function companyIdKey(raw: unknown): string {
@@ -37,7 +41,8 @@ export const COMPANY_PUBLIC_COLUMNS = `
   logo_fetch_error,
   city_id,
   created_at,
-  restricted_at
+  restricted_at,
+  event_brand_public_profile_approved_at
 `;
 
 /** Public company profile fields + city/country for detail pages. */
@@ -63,6 +68,7 @@ export type CompanyPublicRow = {
   city_id: string | null;
   created_at: string | null;
   restricted_at?: string | null;
+  event_brand_public_profile_approved_at?: string | null;
   cities?: unknown;
   industry?: string | null;
 };
@@ -213,13 +219,20 @@ export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id
     }
   }
 
+  const destinationIndex = await getEventBrandPublicDestinationIndex();
+
   return links.map((link) => {
     if (link.company_id === null || link.company_id === undefined) {
       return { ...link, companies: null };
     }
     const key = companyIdKey(link.company_id);
     const company = key !== "" ? byId.get(key) ?? null : null;
-    return { ...link, companies: company };
+    return {
+      ...link,
+      companies: company
+        ? withPublicCompanyRoleHref(company, destinationIndex)
+        : null,
+    };
   });
 }
 

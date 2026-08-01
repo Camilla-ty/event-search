@@ -1,9 +1,10 @@
-import { loadPublicSameBrandSeriesLinkForCompany } from "@/src/features/events/server/sameBrandPublicLinks";
+import { loadSameBrandSeriesCandidateForCompany } from "@/src/features/events/server/sameBrandPublicLinks";
 import { getCompanyById, getCompanyBySlug } from "@/src/lib/queries/companies";
 import {
   getCompanySponsorStats,
   getSponsorLinksWithEditionsForCompany,
 } from "@/src/lib/queries/sponsors";
+import { buildPublicSameBrandSeriesLink } from "@/src/lib/companies/sameBrandPublicLink";
 
 import type {
   SponsorDetailData,
@@ -165,11 +166,11 @@ export async function getSponsorDetailData(
 
   let stats: Awaited<ReturnType<typeof getCompanySponsorStats>> = null;
   let statsUnavailable = false;
-  const [statsResult, sameBrandSeriesLink] = await Promise.all([
+  const [statsResult, sameBrandSeries] = await Promise.all([
     getCompanySponsorStats(company.id)
       .then((value) => ({ ok: true as const, value }))
       .catch((error: unknown) => ({ ok: false as const, error })),
-    loadPublicSameBrandSeriesLinkForCompany(company.id),
+    loadSameBrandSeriesCandidateForCompany(company.id),
   ]);
   if (statsResult.ok) {
     stats = statsResult.value;
@@ -180,6 +181,7 @@ export async function getSponsorDetailData(
   const summary = buildSponsorDetailSummary(stats, isAuthenticated, {
     statsUnavailable,
   });
+  const sameBrandSeriesLink = buildPublicSameBrandSeriesLink(sameBrandSeries);
 
   if (!isAuthenticated) {
     return {
@@ -188,6 +190,7 @@ export async function getSponsorDetailData(
       summary,
       eventSeriesGroups: [],
       sameBrandSeriesLink,
+      sameBrandSeries,
     };
   }
 
@@ -221,5 +224,6 @@ export async function getSponsorDetailData(
     summary,
     eventSeriesGroups,
     sameBrandSeriesLink,
+    sameBrandSeries,
   };
 }
