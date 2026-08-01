@@ -5,6 +5,7 @@ import { JsonLd } from "@/src/components/seo/JsonLd";
 import { getPublicExhibitorHistoryForCompany } from "@/src/features/exhibitors/server/exhibitorHistoryPublic";
 import { SponsorDetailView } from "@/src/features/sponsors/components/detail/SponsorDetailView";
 import { getSponsorDetailData } from "@/src/features/sponsors/server/getSponsorDetailData";
+import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import {
   isEventBrandCompanyPublicProfileSoftRetired,
   resolveEventBrandSponsorProfileRedirect,
@@ -122,6 +123,14 @@ export default async function SponsorDetailPage({
     data.company.id,
   );
 
+  const viewerRole =
+    user !== null ? await getProfileRoleForUserId(supabase, user.id) : null;
+  const companyId =
+    typeof data.company.id === "string" && data.company.id.trim() !== ""
+      ? data.company.id.trim()
+      : null;
+  const showAdminEditLink = isAdminRole(viewerRole) && companyId !== null;
+
   const company = data.company;
   const companyName =
     typeof company.name === "string" && company.name.trim() !== ""
@@ -154,6 +163,7 @@ export default async function SponsorDetailPage({
       <SponsorDetailView
         data={data}
         exhibitorHistoryGroups={exhibitorHistoryGroups}
+        showAdminEditLink={showAdminEditLink}
       />
     </>
   );

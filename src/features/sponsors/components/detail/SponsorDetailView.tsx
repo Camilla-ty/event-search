@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 
 import { Badge } from "@/src/components/common";
 import { CompanyLogo } from "@/src/components/companies/CompanyLogo";
@@ -33,9 +34,11 @@ function formatTierLabel(tierRank: number | null, tierLabel: string | null): str
 export function SponsorDetailView({
   data,
   exhibitorHistoryGroups = [],
+  showAdminEditLink = false,
 }: {
   data: SponsorDetailData;
   exhibitorHistoryGroups?: ExhibitorHistorySeriesGroup[];
+  showAdminEditLink?: boolean;
 }) {
   const { company, isAuthenticated, summary, eventSeriesGroups } = data;
   const locationLabel = formatLocationFromCityEmbed(company.cities);
@@ -51,6 +54,8 @@ export function SponsorDetailView({
     typeof company.name === "string" && company.name.trim() !== ""
       ? company.name.trim()
       : "Company profile";
+  const companyId =
+    typeof company.id === "string" && company.id.trim() !== "" ? company.id.trim() : null;
   const factualSummary = buildCompanySummary({
     name: companyName,
     website: company.website,
@@ -78,7 +83,21 @@ export function SponsorDetailView({
             <Badge variant="neutral">Sponsor</Badge>
             {company.industry ? <Badge variant="success">{company.industry}</Badge> : null}
           </div>
-          <h1 className="text-2xl font-semibold text-slate-900">{companyName}</h1>
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+            <h1 className="min-w-0 flex-1 text-2xl font-semibold text-slate-900">
+              {companyName}
+            </h1>
+            {showAdminEditLink && companyId !== null ? (
+              <Link
+                href={`/admin/companies/${companyId}`}
+                className={`${secondaryCtaClass} h-9 shrink-0 gap-1.5 px-3`}
+                aria-label={`Edit ${companyName} in admin`}
+              >
+                <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Edit
+              </Link>
+            ) : null}
+          </div>
           {factualSummary ? (
             <FactualSummaryParagraph summary={factualSummary} />
           ) : null}
