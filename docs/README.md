@@ -36,6 +36,7 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 | [Linked Event Series & Company Profiles — Architecture Audit](./audits/event-series-company-same-brand-architecture-audit.md) | Documentation-only audit (Phase 1 data/admin + Phase 2 public UI/search/SEO/permissions/V1 scope); 2026-07-31 |
 | [Participated Events Tab Placement Audit](./audits/participated-events-tab-placement-audit.md) | Documentation-only (2026-08-01) — Series hub vs Edition tab placement for ADR-004 Participated Events prototype; **no implementation authorized** |
 | [Same-Brand Company Public Redirect Audit](./audits/same-brand-company-public-redirect-audit.md) | Documentation-only (2026-08-01) — whether linked Event Companies should redirect/hide `/sponsors/...` toward Series Participated Events; **no implementation authorized** |
+| [Same-brand Admin Section Placement Audit](./audits/same-brand-admin-section-placement-audit.md) | Placement/prominence audit (2026-08-01); **Option B implemented** (collapse-by-default on Series Admin) |
 | [Series Hub vs Edition Tabs Reuse Audit](./audits/series-hub-vs-edition-tabs-reuse-audit.md) | Documentation-only (2026-08-01) — whether Series hub should reuse public Event Edition tab component/style; **no implementation authorized** |
 
 ## Implementation
