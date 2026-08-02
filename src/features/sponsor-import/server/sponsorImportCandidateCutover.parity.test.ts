@@ -1,0 +1,190 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import { buildImportMatchContext } from "@/src/lib/companies/companyImportMatching";
+import {
+  createMemoryImportMatchCandidateSource,
+  loadImportMatchContextFromCandidateSource,
+} from "@/src/lib/companies/importMatchCandidateLoader";
+import {
+  assertImportMatchShadowEqual,
+} from "@/src/lib/companies/importMatchShadow/compare";
+import { runImportMatchShadowRow } from "@/src/lib/companies/importMatchShadow/runShadowRow";
+import type { ImportMatchShadowPersistedDecision } from "@/src/lib/companies/importMatchShadow/types";
+import {
+  PHASE0_PARITY_FIXTURES,
+  directoryForFixture,
+} from "@/src/lib/companies/importMatchParity/fixtures";
+
+import {
+  matchRow,
+  resolveSponsorImportMatchLoaderMode,
+  type MatchResult,
+} from "./matchRows";
+
+function persistedFromMatchResult(
+  rowId: string,
+  result: MatchResult,
+): ImportMatchShadowPersistedDecision {
+  return {
+    row_id: rowId,
+    importer: "sponsor",
+    status: result.status,
+    match_method: result.match_method,
+    match_confidence: result.match_confidence,
+    proposed_company_id: result.proposed_company_id,
+    conflict_type: result.conflict_type,
+    intended_link_action: result.intended_link_action,
+    already_on_live_sponsor_id: result.already_on_live_sponsor_id,
+    already_on_live_exhibitor_id: null,
+    already_on_live_tier_rank: result.already_on_live_tier_rank,
+    intended_member_action: null,
+    already_on_version_member_id: null,
+    bulk_preview_status: null,
+  };
+}
+
+describe("resolveSponsorImportMatchLoaderMode", () => {
+  it("defaults to candidate (Phase 3 cutover)", () => {
+    assert.equal(resolveSponsorImportMatchLoaderMode({}), "candidate");
+  });
+
+  it("rolls back to full_directory via env", () => {
+    assert.equal(
+      resolveSponsorImportMatchLoaderMode({ SPONSOR_IMPORT_MATCH_LOADER: "full_directory" }),
+      "full_directory",
+    );
+    assert.equal(
+      resolveSponsorImportMatchLoaderMode({ SPONSOR_IMPORT_MATCH_LOADER: "full-directory" }),
+      "full_directory",
+    );
+  });
+});
+
+describe("ARC-003 Phase 3 sponsor candidate cutover parity", () => {
+  it("requires 100% persisted-field equality vs full-directory for all sponsor fixtures", async () => {
+    const sponsorFixtures = PHASE0_PARITY_FIXTURES.filter(
+      (fixture) => fixture.expectedByImporter.sponsor !== undefined,
+    );
+    assert.ok(sponsorFixtures.length > 0, "expected sponsor fixtures");
+
+    for (const fixture of sponsorFixtures) {
+      const directory = directoryForFixture(fixture.id);
+      const catalog = {
+        companies: directory.companies,
+        companyDomains: directory.companyDomains ?? [],
+      };
+
+      const row = {
+        id: fixture.id,
+        status: "needs_review" as const,
+        normalized_domain: fixture.input.row.normalized_domain,
+        normalized_website: fixture.input.row.normalized_website,
+        normalized_company_name: fixture.input.row.normalized_company_name,
+        mapped_tier_rank: fixture.input.row.mapped_tier_rank ?? null,
+        has_blocking_validation: fixture.input.row.has_blocking_validation ?? false,
+      };
+
+      const liveByCompanyId = new Map(fixture.input.liveSponsorsByCompanyId ?? []);
+
+      const fullContext = buildImportMatchContext(
+        catalog.companies,
+        catalog.companyDomains,
+      );
+      const candidateContext = await loadImportMatchContextFromCandidateSource(
+        createMemoryImportMatchCandidateSource(catalog),
+        [row],
+      );
+
+      const fullResult = await matchRow(row, fullContext, liveByCompanyId);
+      const candidateResult = await matchRow(row, candidateContext, liveByCompanyId);
+
+      assertImportMatchShadowEqual(
+        persistedFromMatchResult(fixture.id, candidateResult),
+        persistedFromMatchResult(fixture.id, fullResult),
+        `sponsor cutover ${fixture.id}`,
+      );
+
+      // Also lock via shadow row helper (same persisted shape used in Phase 2).
+      const fullShadow = await runImportMatchShadowRow({
+        importer: "sponsor",
+        row: {
+          id: fixture.id,
+          normalized_domain: row.normalized_domain,
+          normalized_website: row.normalized_website,
+          normalized_company_name: row.normalized_company_name,
+          mapped_tier_rank: row.mapped_tier_rank,
+          has_blocking_validation: row.has_blocking_validation,
+        },
+        context: fullContext,
+        overlays: { liveSponsorsByCompanyId: liveByCompanyId },
+      });
+      const candidateShadow = await runImportMatchShadowRow({
+        importer: "sponsor",
+        row: {
+          id: fixture.id,
+          normalized_domain: row.normalized_domain,
+          normalized_website: row.normalized_website,
+          normalized_company_name: row.normalized_company_name,
+          mapped_tier_rank: row.mapped_tier_rank,
+          has_blocking_validation: row.has_blocking_validation,
+        },
+        context: candidateContext,
+        overlays: { liveSponsorsByCompanyId: liveByCompanyId },
+      });
+      assertImportMatchShadowEqual(
+        candidateShadow,
+        fullShadow,
+        `sponsor shadow cutover ${fixture.id}`,
+      );
+    }
+  });
+
+  it("batch-level candidate context (union of keys) matches full-directory for sponsor fixtures", async () => {
+    const sponsorFixtures = PHASE0_PARITY_FIXTURES.filter(
+      (fixture) => fixture.expectedByImporter.sponsor !== undefined,
+    );
+
+    // Shared catalog: use Phase 0 active directory for fixtures that share it.
+    const shared = directoryForFixture("exact-domain-canonical-name");
+    const sharedFixtures = sponsorFixtures.filter(
+      (fixture) => directoryForFixture(fixture.id) === shared ||
+        directoryForFixture(fixture.id).companies === shared.companies,
+    );
+
+    const catalog = {
+      companies: shared.companies,
+      companyDomains: shared.companyDomains ?? [],
+    };
+    const rows = sharedFixtures.map((fixture) => ({
+      id: fixture.id,
+      status: "needs_review" as const,
+      normalized_domain: fixture.input.row.normalized_domain,
+      normalized_website: fixture.input.row.normalized_website,
+      normalized_company_name: fixture.input.row.normalized_company_name,
+      mapped_tier_rank: fixture.input.row.mapped_tier_rank ?? null,
+      has_blocking_validation: fixture.input.row.has_blocking_validation ?? false,
+    }));
+
+    const fullContext = buildImportMatchContext(
+      catalog.companies,
+      catalog.companyDomains,
+    );
+    const candidateContext = await loadImportMatchContextFromCandidateSource(
+      createMemoryImportMatchCandidateSource(catalog),
+      rows,
+    );
+
+    for (const row of rows) {
+      const fixture = sharedFixtures.find((item) => item.id === row.id);
+      const liveByCompanyId = new Map(fixture?.input.liveSponsorsByCompanyId ?? []);
+      const fullResult = await matchRow(row, fullContext, liveByCompanyId);
+      const candidateResult = await matchRow(row, candidateContext, liveByCompanyId);
+      assertImportMatchShadowEqual(
+        persistedFromMatchResult(row.id, candidateResult),
+        persistedFromMatchResult(row.id, fullResult),
+        `sponsor batch-context ${row.id}`,
+      );
+    }
+  });
+});
