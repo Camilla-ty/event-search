@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import type { EventEditionAdminRow } from "@/src/features/events/server/eventEditionAdmin";
@@ -34,6 +33,33 @@ const sampleEdition: EventEditionAdminRow = {
   },
 };
 
+/** Enough for createAdminClient; URL is intentionally unreachable so fetch fails. */
+const UNREACHABLE_ADMIN_ENV = {
+  NEXT_PUBLIC_SUPABASE_URL: "https://invalid.example.test",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.test",
+  SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.test",
+} as const;
+
+async function withProcessEnv(
+  patch: Record<string, string>,
+  run: () => Promise<void>,
+): Promise<void> {
+  const previous: Record<string, string | undefined> = {};
+  for (const key of Object.keys(patch)) {
+    previous[key] = process.env[key];
+    process.env[key] = patch[key];
+  }
+  try {
+    await run();
+  } finally {
+    for (const key of Object.keys(patch)) {
+      const value = previous[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
 describe("formatAdminEditionLoadError", () => {
   it("uses Error.message when present", () => {
     assert.equal(
@@ -49,59 +75,69 @@ describe("formatAdminEditionLoadError", () => {
 
 describe("loadAdminEditionRequired", () => {
   it("returns loadError instead of throwing when edition lookup fails", async () => {
-    const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim();
-    }
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://invalid.example.test";
-
-    try {
-      const result = await loadAdminEditionRequired(sampleEdition.id);
-      assert.equal(result.edition, null);
-      assert.equal(result.loadError, "TypeError: fetch failed");
-    } finally {
-      if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-      else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
-    }
+    await withProcessEnv({ ...UNREACHABLE_ADMIN_ENV }, async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () =>
+        new Response(
+          JSON.stringify({
+            message: "TypeError: fetch failed",
+            code: "PGRST000",
+            details: null,
+            hint: null,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        )) as typeof fetch;
+      try {
+        const result = await loadAdminEditionRequired(sampleEdition.id);
+        assert.equal(result.edition, null);
+        assert.equal(result.loadError, "TypeError: fetch failed");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 });
 
 describe("loadAdminEditionOptionalPanels", () => {
   it("returns empty fallbacks and panelErrors when optional loaders throw fetch failed", async () => {
-    const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim();
-    }
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://invalid.example.test";
+    await withProcessEnv({ ...UNREACHABLE_ADMIN_ENV }, async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () =>
+        new Response(
+          JSON.stringify({
+            message: "TypeError: fetch failed",
+            code: "PGRST000",
+            details: null,
+            hint: null,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        )) as typeof fetch;
+      try {
+        const result = await loadAdminEditionOptionalPanels(sampleEdition);
 
-    try {
-      const result = await loadAdminEditionOptionalPanels(sampleEdition);
+        assert.deepEqual(result.cities, []);
+        assert.deepEqual(result.series, []);
+        assert.equal(result.liveSponsorCount, 0);
+        assert.deepEqual(result.sponsors, []);
+        assert.deepEqual(result.exhibitors, []);
+        assert.equal(result.exhibitorImportsData.editionId, sampleEdition.id);
+        assert.equal(result.exhibitorImportsData.activeBatch, null);
+        assert.deepEqual(result.exhibitorImportsData.batches, []);
+        assert.deepEqual(result.organizers, []);
+        assert.deepEqual(result.inheritedKeywords, []);
+        assert.equal(result.importsData.editionId, sampleEdition.id);
+        assert.equal(result.importsData.activeBatch, null);
+        assert.deepEqual(result.importsData.batches, []);
 
-      assert.deepEqual(result.cities, []);
-      assert.deepEqual(result.series, []);
-      assert.equal(result.liveSponsorCount, 0);
-      assert.deepEqual(result.sponsors, []);
-      assert.deepEqual(result.exhibitors, []);
-      assert.equal(result.exhibitorImportsData.editionId, sampleEdition.id);
-      assert.equal(result.exhibitorImportsData.activeBatch, null);
-      assert.deepEqual(result.exhibitorImportsData.batches, []);
-      assert.deepEqual(result.organizers, []);
-      assert.deepEqual(result.inheritedKeywords, []);
-      assert.equal(result.importsData.editionId, sampleEdition.id);
-      assert.equal(result.importsData.activeBatch, null);
-      assert.deepEqual(result.importsData.batches, []);
-
-      for (const key of Object.keys(ADMIN_EDITION_PANEL_LABELS) as Array<
-        keyof typeof ADMIN_EDITION_PANEL_LABELS
-      >) {
-        assert.equal(result.panelErrors[key], "TypeError: fetch failed");
+        for (const key of Object.keys(ADMIN_EDITION_PANEL_LABELS) as Array<
+          keyof typeof ADMIN_EDITION_PANEL_LABELS
+        >) {
+          assert.equal(result.panelErrors[key], "TypeError: fetch failed");
+        }
+      } finally {
+        globalThis.fetch = originalFetch;
       }
-    } finally {
-      if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-      else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
-    }
+    });
   });
 });
 

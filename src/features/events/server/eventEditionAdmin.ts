@@ -164,8 +164,8 @@ function companyIdKey(raw: unknown): string {
 /** Live sponsor roster for admin QA — includes company aliases (not used on public pages). */
 export async function getLiveSponsorsForEditionAdmin(
   eventEditionId: string,
+  supabase: ReturnType<typeof createAdminClient> = createAdminClient(),
 ): Promise<LiveSponsorRow[]> {
-  const supabase = createAdminClient();
   const editionKey = eventEditionId.trim();
 
   type SponsorLinkRow = {
