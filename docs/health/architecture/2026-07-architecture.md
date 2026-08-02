@@ -225,7 +225,7 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
   - Local verification: `npm run typecheck`, `npm run lint`, `npm test` (1945 pass / 0 fail), `npm run build` (with same public placeholders) — all exit 0. Focused `arc005.ciWorkflow.test.ts` asserts workflow shape.
   - YAML: workflow parses as valid GitHub Actions structure (local `python`/`node` syntax check as applicable).
 - **Why criteria pass:** Repo now has a PR/`main` quality gate that runs all four required commands and fails the job on any failure. Repo-verifiable acceptance is met.
-- **Residual (ops / not ARC-005 code):** GitHub Branch Protection must separately require the CI check (`Typecheck, lint, test, build` / workflow `CI`) — cannot be set from this repo alone. Logo-upload tests skip when Node lacks `mock.module`. React Compiler eslint rules remain deferred.
+- **Residual (ops / not ARC-005 code):** GitHub Branch Protection must separately require the CI check (`Typecheck, lint, test, build` / workflow `CI`) — cannot be set from this repo alone. React Compiler eslint rules remain deferred.
 
 ---
 

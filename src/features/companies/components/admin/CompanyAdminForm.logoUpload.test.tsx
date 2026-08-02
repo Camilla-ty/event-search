@@ -5,30 +5,14 @@ GlobalRegistrator.register();
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 import assert from "node:assert/strict";
-import { afterEach, before, describe, it, mock } from "node:test";
-import { act, type ComponentType } from "react";
+import { after, afterEach, before, describe, it } from "node:test";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 
-type CompanyAdminFormComponent = ComponentType<{
-  mode: "create" | "edit";
-  companyId?: string;
-  cities: [];
-  initial: {
-    name: string;
-    website: string;
-    slug: string;
-    city_id: string;
-    logo_url: string;
-    aliases: string[];
-  };
-  initialLogoMetadata?: {
-    logo_url: string;
-    logo_source: string | null;
-    logo_status: string | null;
-    logo_fetched_at: string | null;
-  };
-}>;
+import { CompanyAdminForm } from "@/src/features/companies/components/admin/CompanyAdminForm";
+import { setAppRouterForTests } from "@/src/lib/navigation/appRouter";
 
 const COMPANY_ID = "11111111-1111-1111-1111-111111111111";
 const EXISTING_LOGO_URL = `companies/${COMPANY_ID}/logo.png`;
@@ -49,6 +33,17 @@ const initialLogoMetadata = {
   logo_status: "error",
   logo_fetched_at: EXISTING_FETCHED_AT,
 };
+
+function stubAppRouter(): AppRouterInstance {
+  return {
+    push: () => {},
+    refresh: () => {},
+    replace: () => {},
+    prefetch: async () => {},
+    back: () => {},
+    forward: () => {},
+  } as AppRouterInstance;
+}
 
 function findButton(container: HTMLElement, label: string): HTMLButtonElement {
   const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
@@ -80,29 +75,20 @@ async function flushClientUpdates() {
   });
 }
 
-describe("CompanyAdminForm logo file upload", { skip: typeof mock.module !== "function" }, () => {
-  let CompanyAdminForm: CompanyAdminFormComponent;
+describe("CompanyAdminForm logo file upload", () => {
   let container: HTMLDivElement | null = null;
   let root: Root | null = null;
   const originalFetch = globalThis.fetch;
 
-  before(async () => {
+  before(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-    mock.module("next/navigation", {
-      namedExports: {
-        useRouter: () => ({
-          push: () => {},
-          refresh: () => {},
-          replace: () => {},
-          prefetch: () => {},
-          back: () => {},
-          forward: () => {},
-        }),
-      },
-    });
-    ({ CompanyAdminForm } = (await import(
-      "@/src/features/companies/components/admin/CompanyAdminForm"
-    )) as { CompanyAdminForm: CompanyAdminFormComponent });
+    // Avoid node:test mock.module: on Node 20 (CI) it empties CompanyAdminForm
+    // exports and cancels the suite (cancelledByParent / hookFailed).
+    setAppRouterForTests(stubAppRouter());
+  });
+
+  after(() => {
+    setAppRouterForTests(null);
   });
 
   afterEach(() => {

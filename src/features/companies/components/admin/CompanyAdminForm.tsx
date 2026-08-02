@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-
 import { Button, InlineErrorBanner } from "@/src/components/common";
+import { useAppRouter } from "@/src/lib/navigation/appRouter";
 import { SlugChangeModal } from "@/src/features/admin/components/SlugChangeModal";
 import {
   CompanyLogoPreview,
@@ -118,7 +117,7 @@ export function CompanyAdminForm({
   initialNotice,
   initialLogoMetadata,
 }: CompanyAdminFormProps) {
-  const router = useRouter();
+  const router = useAppRouter();
   const aliasesInputRef = useRef<CompanyAliasesInputHandle>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const createIntentRef = useRef<CreateSubmitIntent>("another");
