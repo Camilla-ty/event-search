@@ -80,7 +80,7 @@ async function flushClientUpdates() {
   });
 }
 
-describe("CompanyAdminForm logo file upload", () => {
+describe("CompanyAdminForm logo file upload", { skip: typeof mock.module !== "function" }, () => {
   let CompanyAdminForm: CompanyAdminFormComponent;
   let container: HTMLDivElement | null = null;
   let root: Root | null = null;

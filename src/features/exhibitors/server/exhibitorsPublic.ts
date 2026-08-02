@@ -4,9 +4,9 @@ import {
   groupExhibitorsByTier,
 } from "@/src/features/exhibitors/lib/groupExhibitorsByTier";
 import {
-  getEventBrandPublicDestinationIndex,
   withPublicCompanyRoleHref,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 import {
   COMPANY_PUBLIC_COLUMNS,
   getCompaniesByIds,

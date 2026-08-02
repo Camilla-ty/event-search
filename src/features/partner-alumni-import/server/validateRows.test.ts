@@ -145,6 +145,10 @@ describe("partner alumni assignDuplicateClusters", () => {
       validation_issues: [],
       has_blocking_validation: false,
       status: "needs_review",
+      duplicate_cluster_key: null,
+      duplicate_role: null,
+      duplicate_of_row_id: null,
+      duplicate_resolution: null,
     };
 
     const rows = assignDuplicateClusters([

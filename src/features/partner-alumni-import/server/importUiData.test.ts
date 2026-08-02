@@ -95,7 +95,10 @@ describe("loadPartnerAlumniImportNewPage", () => {
         memberCount: 0,
         warnings: ["This is the current public version."],
       }),
-      getActiveBatchForVersion: async () => ({ id: "batch-123" }),
+      getActiveBatchForVersion: async () =>
+        ({ id: "batch-123" }) as Awaited<
+          ReturnType<NonNullable<Parameters<typeof loadPartnerAlumniImportNewPage>[1]>["getActiveBatchForVersion"]>
+        >,
     };
 
     const result = await loadPartnerAlumniImportNewPage({ seriesId, versionId }, loaders);

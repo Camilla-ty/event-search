@@ -1,11 +1,8 @@
-import { cache } from "react";
-
 import type { EventBrandPublicProfileSeriesCandidate } from "@/src/lib/companies/eventBrandPublicProfile";
 import {
   buildPublicCompanyHref,
   type PublicCompanyDestinationCompany,
 } from "@/src/lib/companies/resolvePublicCompanyDestination";
-import { createClient } from "@/src/lib/supabase/server";
 
 /** Stable map key for UUID company ids. */
 function companyIdKey(raw: unknown): string {
@@ -78,46 +75,6 @@ export function buildEventBrandPublicDestinationIndexFromRows(
 
   return index;
 }
-
-/**
- * Loads approved Event Brand Companies and their reverse same-brand Series.
- * Reads `event_brand_public_destinations` via the session client (no service_role).
- * Approval set is intentionally small (manual allowlist); safe per request.
- */
-export async function loadEventBrandPublicDestinationIndex(): Promise<EventBrandPublicDestinationIndex> {
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("event_brand_public_destinations")
-      .select(
-        "company_id, approved_at, series_id, series_slug, series_name, series_lifecycle_status",
-      );
-
-    if (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error(
-          "[event-brand] destination index load failed:",
-          error.message,
-        );
-      }
-      return new Map();
-    }
-
-    return buildEventBrandPublicDestinationIndexFromRows(
-      (data ?? []) as EventBrandPublicDestinationRow[],
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[event-brand] destination index load failed:", error);
-    }
-    return new Map();
-  }
-}
-
-/** Dedupes index loads within a single React server request. */
-export const getEventBrandPublicDestinationIndex = cache(
-  loadEventBrandPublicDestinationIndex,
-);
 
 /**
  * Public role-surface href via EB1 resolver + optional destination index.

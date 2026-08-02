@@ -59,7 +59,7 @@ describe("parseVenueLogoStoragePathFromUrl", () => {
 
 describe("verifyVenueLogoStorageObject", () => {
   it("is exported for pre-DB verification of uploaded objects", async () => {
-    const module = await import("./venueLogoStorage");
-    assert.equal(typeof module.verifyVenueLogoStorageObject, "function");
+    const storage = await import("./venueLogoStorage");
+    assert.equal(typeof storage.verifyVenueLogoStorageObject, "function");
   });
 });

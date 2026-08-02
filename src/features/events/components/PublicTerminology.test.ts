@@ -16,7 +16,7 @@ const PUBLIC_COPY_FILES = [
     expected: "Event brands and events tagged with this topic on EventPixels.",
   },
   {
-    path: "./bitcoin-asia/BitcoinAsiaHubView.tsx",
+    path: "./topic-region/TopicRegionHubView.tsx",
     expected: "Event brand:",
   },
 ] as const;

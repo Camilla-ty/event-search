@@ -84,7 +84,7 @@ function buildIssues(input: RowValidationInput): {
     });
   }
 
-  let mapped_display_order: number | null = parseDisplayOrder(input.raw_display_order);
+  const mapped_display_order: number | null = parseDisplayOrder(input.raw_display_order);
   if (input.raw_display_order?.trim() && mapped_display_order === null) {
     issues.push({
       type: "invalid_display_order",

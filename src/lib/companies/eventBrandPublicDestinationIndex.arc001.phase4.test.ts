@@ -14,6 +14,10 @@ const sourcePath = join(
   process.cwd(),
   "src/lib/companies/eventBrandPublicDestinationIndex.ts",
 );
+const serverSourcePath = join(
+  process.cwd(),
+  "src/lib/companies/eventBrandPublicDestinationIndex.server.ts",
+);
 const migrationPath = join(
   process.cwd(),
   "supabase/migrations/20260802140000_event_brand_public_destinations.sql",
@@ -27,12 +31,17 @@ const SFF_SERIES_ID = "78232c5b-7ef2-4cda-a23a-941387e1a9c1";
 describe("eventBrandPublicDestinationIndex wiring (ARC-001 Phase 4)", () => {
   it("destination-index helpers no longer use createAdminClient", () => {
     const source = readFileSync(sourcePath, "utf8");
-    assert.match(source, /createClient/);
-    assert.match(source, /event_brand_public_destinations/);
+    const serverSource = readFileSync(serverSourcePath, "utf8");
+    assert.doesNotMatch(source, /createClient/);
+    assert.doesNotMatch(source, /from "@\/src\/lib\/supabase\/server"/);
+    assert.match(serverSource, /createClient/);
+    assert.match(serverSource, /event_brand_public_destinations/);
     assert.match(source, /buildEventBrandPublicDestinationIndexFromRows/);
     assert.doesNotMatch(source, /createAdminClient/);
+    assert.doesNotMatch(serverSource, /createAdminClient/);
     assert.doesNotMatch(source, /from "@\/src\/lib\/supabase\/admin"/);
-    assert.doesNotMatch(source, /fetchAllByIdInBatches/);
+    assert.doesNotMatch(serverSource, /from "@\/src\/lib\/supabase\/admin"/);
+    assert.doesNotMatch(serverSource, /fetchAllByIdInBatches/);
   });
 
   it("migration exposes only destination routing fields with SELECT grants", () => {

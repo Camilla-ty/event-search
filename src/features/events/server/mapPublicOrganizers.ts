@@ -1,8 +1,8 @@
 import type { EventSponsorCompany } from "@/src/features/events/components/detail/types";
 import {
-  getEventBrandPublicDestinationIndex,
   withPublicCompanyRoleHref,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 
 export type PublicOrganizerRow = {

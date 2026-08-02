@@ -27,10 +27,8 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { createClient } from "@/src/lib/supabase/server";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
-import {
-  getEventBrandPublicDestinationIndex,
-  buildPublicCompanyRoleHref,
-} from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 
 export type TopicRegionHubEventCard = {
   id: string;

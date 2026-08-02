@@ -1,6 +1,8 @@
 /*
   Admin RPC execute grant verification — run after applying
   20260718120000_revoke_admin_rpc_execute_from_public_roles.sql
+  and DB-001 follow-up
+  20260802170000_restrict_exhibitor_import_publish_batch_execute.sql
 
   Expected:
     - has_function_privilege('anon', ...) = false for admin/internal RPCs
@@ -23,6 +25,7 @@ WHERE n.nspname = 'public'
       'company_merge_preview',
       'merge_companies',
       'sponsor_import_publish_batch',
+      'exhibitor_import_publish_batch',
       'set_company_primary_domain'
     )
     OR p.proname LIKE '\_company_merge\_%' ESCAPE '\'

@@ -109,6 +109,14 @@ async function main(): Promise<void> {
         }),
     },
     {
+      label: "anon:exhibitor_import_publish_batch",
+      fn: () =>
+        anon.rpc("exhibitor_import_publish_batch", {
+          p_batch_id: FAKE_BATCH,
+          p_published_by: FAKE_USER,
+        }),
+    },
+    {
       label: "anon:set_company_primary_domain",
       fn: () =>
         anon.rpc("set_company_primary_domain", {
@@ -153,6 +161,21 @@ async function main(): Promise<void> {
       ok: isRpcPermissionDenied(error) && !isRpcBusinessRuleError(error),
       detail: describeRpcPermissionExpectation(error),
     });
+
+    const { error: authExhibitorError } = await authClient.rpc(
+      "exhibitor_import_publish_batch",
+      {
+        p_batch_id: FAKE_BATCH,
+        p_published_by: FAKE_USER,
+      },
+    );
+    checks.push({
+      label: "authenticated:exhibitor_import_publish_batch",
+      ok:
+        isRpcPermissionDenied(authExhibitorError) &&
+        !isRpcBusinessRuleError(authExhibitorError),
+      detail: describeRpcPermissionExpectation(authExhibitorError),
+    });
   }
 
   const { error: adminMergeError } = await admin.rpc("merge_companies", {
@@ -166,6 +189,21 @@ async function main(): Promise<void> {
     label: "service_role:merge_companies_reaches_business_validation",
     ok: isRpcBusinessRuleError(adminMergeError),
     detail: describeRpcPermissionExpectation(adminMergeError),
+  });
+
+  const { error: adminExhibitorError } = await admin.rpc(
+    "exhibitor_import_publish_batch",
+    {
+      p_batch_id: FAKE_BATCH,
+      p_published_by: FAKE_USER,
+    },
+  );
+  checks.push({
+    label: "service_role:exhibitor_import_publish_batch_reaches_business_validation",
+    ok:
+      isRpcBusinessRuleError(adminExhibitorError) &&
+      (adminExhibitorError?.message ?? "").includes("batch_not_found"),
+    detail: describeRpcPermissionExpectation(adminExhibitorError),
   });
 
   const { data: previewData, error: previewError } = await admin.rpc("company_merge_preview", {

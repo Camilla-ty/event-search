@@ -4,10 +4,10 @@ import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 import {
-  getEventBrandPublicDestinationIndex,
   withPublicCompanyRoleHref,
   type EventBrandPublicDestinationIndex,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
 function companyIdKey(raw: unknown): string {

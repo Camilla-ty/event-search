@@ -12,7 +12,7 @@ describe("sortPartnerAlumniBulkCommitEntries", () => {
       { row_number: 3, display_order: null, name: "c" },
       { row_number: 1, display_order: 2, name: "a" },
       { row_number: 2, display_order: 10, name: "b" },
-    ] as never[]);
+    ]);
 
     assert.deepEqual(
       sorted.map((row) => row.row_number),

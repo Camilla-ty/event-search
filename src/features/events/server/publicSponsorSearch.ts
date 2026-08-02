@@ -9,9 +9,9 @@ import {
 } from "@/src/lib/companies/companyPublicRestriction";
 import {
   buildPublicCompanyRoleHref,
-  getEventBrandPublicDestinationIndex,
   type EventBrandPublicDestinationIndex,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
+import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 import { createClient } from "@/src/lib/supabase/server";
 
 export type PublicSponsorSearchCompanyPublic = {

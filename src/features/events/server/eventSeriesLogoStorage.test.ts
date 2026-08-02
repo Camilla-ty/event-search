@@ -85,7 +85,7 @@ describe("parseEventSeriesLogoStoragePathFromUrl", () => {
 
 describe("verifyEventSeriesLogoStorageObject", () => {
   it("is exported for pre-DB verification of uploaded objects", async () => {
-    const module = await import("./eventSeriesLogoStorage");
-    assert.equal(typeof module.verifyEventSeriesLogoStorageObject, "function");
+    const storage = await import("./eventSeriesLogoStorage");
+    assert.equal(typeof storage.verifyEventSeriesLogoStorageObject, "function");
   });
 });

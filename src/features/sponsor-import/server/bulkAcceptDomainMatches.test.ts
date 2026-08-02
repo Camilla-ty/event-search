@@ -15,8 +15,8 @@ const ACTOR_ID = "00000000-0000-4000-8000-000000000001";
 const COMPANY_ID = "00000000-0000-4000-8000-0000000000aa";
 
 describe("AUTO_READY_MATCH_METHODS", () => {
-  it("includes domain and alias auto-ready match methods", () => {
-    assert.deepEqual([...AUTO_READY_MATCH_METHODS], ["domain", "alias"]);
+  it("includes domain, alias, and website auto-ready match methods", () => {
+    assert.deepEqual([...AUTO_READY_MATCH_METHODS], ["domain", "alias", "website"]);
   });
 });
 

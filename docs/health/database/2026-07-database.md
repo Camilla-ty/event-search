@@ -16,11 +16,24 @@
 
 First Database cycle for EventPixels. Methods: read-only review of `supabase/migrations/` (68 files), live catalog checks via linked Supabase (RPC privileges, FK definitions, legacy table presence/counts), and cross-check against product design docs for roster join delete semantics.
 
-Net change: **3 new** Findings (`DB-001`…`DB-003`). **0 resolved**. Highest risk: `exhibitor_import_publish_batch` reintroduced the known SECURITY DEFINER grant bug (anon/authenticated EXECUTE) after the July 18 service-role restriction hotfix. Additional integrity/maintainability gaps: `event_sponsors` edition FK uses `ON DELETE CASCADE` while sibling roster joins use `RESTRICT`; rejected legacy `organizers` / `event_organizers` tables still exist outside the migration chain.
+**At publication (2026-08-02):** **3 new** Findings (`DB-001`…`DB-003`). **0 resolved**. Highest risk: `exhibitor_import_publish_batch` reintroduced the known SECURITY DEFINER grant bug (anon/authenticated EXECUTE) after the July 18 service-role restriction hotfix. Additional integrity/maintainability gaps: `event_sponsors` edition FK uses `ON DELETE CASCADE` while sibling roster joins use `RESTRICT`; rejected legacy `organizers` / `event_organizers` tables still exist outside the migration chain.
 
 Strengths: join UNIQUEs on sponsors/exhibitors/organizers/PA version members; consistent `SET search_path = public` on SECURITY DEFINER functions; admin RPCs covered by `__restrict_rpc_execute_to_service_role` (sponsor publish, merge, set primary) remain service-role-only in live catalog.
 
+**After remediation (2026-08-02):** `DB-001` **Resolved** (`exhibitor_import_publish_batch` restricted via `__restrict_rpc_execute_to_service_role`). `DB-002` and `DB-003` remain Open. Closing evidence in **Resolution History**.
+
 ---
+
+## Since last cycle
+
+| Change | Finding IDs | Notes / links |
+|---|---|---|
+| Resolved (removed from register) | `DB-001` | Resolved 2026-08-02 — see Resolution History |
+| Still open | `DB-002`, `DB-003` | see Findings |
+| In progress | — | none |
+| Deferred | — | none |
+| New this cycle | — | none (baseline) |
+| Reopened (same ID) | — | none |
 
 ## Surfaces in scope
 
@@ -53,18 +66,15 @@ Strengths: join UNIQUEs on sponsors/exhibitors/organizers/PA version members; co
 
 ### DB-001 — `exhibitor_import_publish_batch` executable by anon/authenticated after grant hotfix
 
-- **Why it matters:** A SECURITY DEFINER publish RPC writes live `event_exhibitors` and mutates import batch status. After `20260718120000_revoke_admin_rpc_execute_from_public_roles.sql` documented that `REVOKE FROM PUBLIC` alone is insufficient and introduced `__restrict_rpc_execute_to_service_role`, the later exhibitor import migration created `exhibitor_import_publish_batch` with only `REVOKE … FROM PUBLIC` + `GRANT … TO service_role` — **without** explicit revoke from `anon`/`authenticated`. Live catalog shows `anon` and `authenticated` still have EXECUTE. PostgREST can therefore expose an admin publish path that sibling `sponsor_import_publish_batch` correctly closed.
+- **Why it matters:** A SECURITY DEFINER publish RPC writes live `event_exhibitors` and mutates import batch status. After `20260718120000_revoke_admin_rpc_execute_from_public_roles.sql` documented that `REVOKE FROM PUBLIC` alone is insufficient and introduced `__restrict_rpc_execute_to_service_role`, the later exhibitor import migration created `exhibitor_import_publish_batch` with only `REVOKE … FROM PUBLIC` + `GRANT … TO service_role` — **without** explicit revoke from `anon`/`authenticated`. Live catalog showed `anon` and `authenticated` still had EXECUTE. PostgREST could therefore expose an admin publish path that sibling `sponsor_import_publish_batch` correctly closed.
 - **Severity:** High · **Effort:** Small
-- **Evidence:**
+- **Evidence (at discovery):**
   - Migration `supabase/migrations/20260726120000_exhibitor_import_v1.sql` — `CREATE OR REPLACE FUNCTION public.exhibitor_import_publish_batch(uuid, uuid)` SECURITY DEFINER + `SET search_path = public`; grants at end: `REVOKE ALL … FROM PUBLIC` + `GRANT EXECUTE … TO service_role` only (no `__restrict_rpc_execute_to_service_role`, no `REVOKE … FROM anon, authenticated`)
   - Contrast: `supabase/migrations/20260718120000_revoke_admin_rpc_execute_from_public_roles.sql` — helper + hard-fix list including `sponsor_import_publish_batch`
   - Later migrations correctly call `__restrict_rpc_execute_to_service_role` for new admin RPCs (e.g. `20260731130000_admin_company_ids_matching_alias.sql`, exhibitor reorder helpers in `20260725130000_event_exhibitors_v1.sql`)
-  - Live (2026-08-02): `has_function_privilege` — `exhibitor_import_publish_batch` anon_exec=true, auth_exec=true; `sponsor_import_publish_batch` / `merge_companies` / `set_company_primary_domain` anon_exec=false
-- **Status:** Open
-- **Recommended action:** Apply `__restrict_rpc_execute_to_service_role('public.exhibitor_import_publish_batch(uuid, uuid)')` (or equivalent explicit REVOKEs) in a new migration; make that helper mandatory in the exhibitor-import DEFINER template; keep `ARC-009` as the missing regression harness.
-- **Scope:** `exhibitor_import_publish_batch` privileges; exhibitor import publish path.
-- **Validation / acceptance criteria:** Live `has_function_privilege('anon'|'authenticated', exhibitor_import_publish_batch, 'EXECUTE') = false`; service_role retains EXECUTE; PostgREST anon/member cannot invoke publish; migration uses the shared restrict helper.
-- **Uncertainty / false-positive risk:** Low on privileges (live-verified). App may already gate via `requireAdminApi` — does not remove PostgREST/RPC exposure.
+  - Live (pre-fix, 2026-08-02): `has_function_privilege` — `exhibitor_import_publish_batch` anon_exec=true, auth_exec=true; `sponsor_import_publish_batch` / `merge_companies` / `set_company_primary_domain` anon_exec=false
+- **Status:** Resolved (2026-08-02) — see Resolution History
+- **Acceptance criteria:** Live `has_function_privilege('anon'|'authenticated', exhibitor_import_publish_batch, 'EXECUTE') = false`; service_role retains EXECUTE; PostgREST anon/member cannot invoke publish; migration uses the shared restrict helper.
 - **Related:** `ARC-009` (harness); not a clone of `ARC-001`.
 
 ---
@@ -120,7 +130,8 @@ Strengths: join UNIQUEs on sponsors/exhibitors/organizers/PA version members; co
 
 - **`companies` RLS `USING (true)` vs `restricted_at`:** Restriction is app/RPC-filtered today; public fail-open service-role reliance under `ARC-001` was resolved 2026-08-02 — not a separate DB constraint Finding this cycle (`companies_restricted_active_only` CHECK exists for active-only restriction).
 - **Primary domain dual-store (`companies.domain` vs `company_domains`):** Sync is RPC-mediated; repair migrations exist; live drift was not filed (under-track vs opening a fourth Finding).
-- **`__company_matches_verified_domain_search` / `handle_new_user` DEFINER EXECUTE for anon:** Intentional helpers (discovery / auth trigger) — not admin publish RPCs.
+- **`__company_matches_verified_domain_search` DEFINER EXECUTE for anon:** Intentional discovery helper for public `sponsor_discovery_page` — not an admin publish RPC; left unchanged by DB-001 remediation.
+- **`handle_new_user` DEFINER EXECUTE for anon/authenticated:** Adjacent residual (auth trigger recreated without re-restrict); out of DB-001 scope — track separately if remediating.
 - **Import draft retention:** No archival model; live volumes small — speculative archival rejected without ops evidence.
 - **Rejected without Finding:** further normalization of roster tables; renaming columns for taste; “add more CHECK constraints” without evidenced invalid writes.
 
@@ -132,8 +143,24 @@ Strengths: join UNIQUEs on sponsors/exhibitors/organizers/PA version members; co
 
 ---
 
+## Resolution History
+
+### 2026-08-02 — DB-001 resolved
+
+- **Acceptance criteria:** Live `has_function_privilege('anon'|'authenticated', exhibitor_import_publish_batch, 'EXECUTE') = false`; service_role retains EXECUTE; PostgREST anon/member cannot invoke publish; migration uses the shared restrict helper.
+- **Closing evidence (verified 2026-08-02):**
+  - Migration `supabase/migrations/20260802170000_restrict_exhibitor_import_publish_batch_execute.sql` calls `__restrict_rpc_execute_to_service_role('public.exhibitor_import_publish_batch(uuid, uuid)')` (explicit revoke from anon/authenticated + grant service_role — not `REVOKE FROM PUBLIC` alone).
+  - Verify SQL: `supabase/verify/exhibitor_import_publish_batch_execute_grants.sql` (+ `admin_rpc_execute_grants_post_migration.sql` includes exhibitor publish). Live: anon_execute=false, auth_execute=false, service_role_execute=true.
+  - PostgREST: anon `rpc('exhibitor_import_publish_batch')` → permission denied; service_role reaches `batch_not_found` business validation (`scripts/verify-admin-rpc-permissions.ts`; `adminRpcPermissions.integration.test.ts` with `RUN_ADMIN_RPC_SECURITY_TESTS=1`).
+  - Admin publish path unchanged: `publishBatch` → `createAdminClient().rpc("exhibitor_import_publish_batch")` (`exhibitorImportAdmin.ts`); wiring guard `exhibitorImportPublishBatch.db001.test.ts`.
+- **Why criteria pass:** Public roles can no longer EXECUTE the DEFINER publish RPC; intended admin path still uses service role only.
+- **Residual (not DB-001):** `ARC-009` (missing CI grant harness) remains Open. Adjacent: `handle_new_user` still executable by anon/authenticated — report separately if remediating. `__company_matches_verified_domain_search` intentionally left public for discovery.
+
+---
+
 ## Change log
 
 | Date | Note |
 |------|------|
 | 2026-08-02 | Baseline Database Audit published. Added `DB-001`…`DB-003` (all `Open`). Cross-referenced `ARC-001`/`009`, `SEC-003`, `DQ-001`–`003`, `ARC-002`/`003`/`006`/`010`. Cadence Monthly; cycle token `2026-07` as requested. |
+| 2026-08-02 | Resolved `DB-001` after `__restrict_rpc_execute_to_service_role` on `exhibitor_import_publish_batch`. Closing evidence in Resolution History. `DB-002`/`DB-003` remain Open. No companion closeout report (Framework v1.2). |

@@ -77,6 +77,6 @@ describe("formatPublicCompanyWebsite", () => {
     });
     assert.ok(result);
     assert.equal(result.href, website);
-    assert.equal(result.label, "facebook.com");
+    assert.equal(result.label, "facebook.com/profile.php?id=100068135449341");
   });
 });

@@ -141,6 +141,7 @@ describe("Partner Alumni bulk matching integration", { skip: !process.env.SUPABA
       id: String(row.id),
       name: String(row.name),
       domain: typeof row.domain === "string" ? row.domain.trim().toLowerCase() : null,
+      website: null,
       aliases: parseCompanyAliasesFromRow(row.aliases),
     }));
     const importCompanyDomains = companyDomains
@@ -153,7 +154,11 @@ describe("Partner Alumni bulk matching integration", { skip: !process.env.SUPABA
     const matchContext = buildImportMatchContext(importCompanies, importCompanyDomains);
 
     const moonpayDecision = matchImportRowIdentity(
-      { normalized_domain: null, normalized_company_name: "MoonPay" },
+      {
+        normalized_domain: null,
+        normalized_website: null,
+        normalized_company_name: "MoonPay",
+      },
       matchContext,
     );
     assert.equal(moonpayDecision.proposed_company_id, "911c2d26-6942-483b-9dc1-c47cf13f91fa");
@@ -163,6 +168,7 @@ describe("Partner Alumni bulk matching integration", { skip: !process.env.SUPABA
     const moonpayDomainDecision = matchImportRowIdentity(
       {
         normalized_domain: normalizeWebsiteDomain("moonpay.com"),
+        normalized_website: null,
         normalized_company_name: "MoonPay",
       },
       matchContext,

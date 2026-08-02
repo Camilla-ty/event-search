@@ -299,7 +299,7 @@ export async function createBatchFromUpload(input: {
     input.fileBytes.byteOffset + input.fileBytes.byteLength,
   ) as ArrayBuffer;
 
-  let mapping = input.columnMapping ?? resolveUploadColumnMapping(buffer);
+  const mapping = input.columnMapping ?? resolveUploadColumnMapping(buffer);
 
   const { rows, sheetName, headerRowIndex } = parseWithColumnMapping(buffer, mapping);
 

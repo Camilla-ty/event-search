@@ -119,6 +119,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
         id: VNTR_ID,
         name: "VNTR Capital",
         domain: null,
+        website: null,
         aliases: [],
       },
     ];
@@ -169,6 +170,7 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
           id: NINE_CAT_ID,
           name: "9 CAT DIGITAL",
           domain: "9catdigital.com",
+          website: null,
           aliases: [],
         },
       ],

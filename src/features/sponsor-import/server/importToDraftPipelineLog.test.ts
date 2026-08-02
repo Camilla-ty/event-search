@@ -48,16 +48,19 @@ describe("withImportToDraftPipelineLog", () => {
     assert.equal(result.done, false);
     assert.equal(infoCalls.length, 2);
     assert.equal(infoCalls[0]?.[0], "[sponsor-import/import-to-draft]");
-    assert.deepEqual(infoCalls[0]?.[1], {
+    assert.deepEqual(infoCalls[0]?.[1] as Record<string, unknown>, {
       event: "start",
       batchId: "batch-1",
       phase: "materialize_companies_chunk",
       actorId: "user-1",
       cursor: 10,
       limit: 25,
-      startedAt: infoCalls[0]?.[1]?.startedAt,
+      startedAt: (infoCalls[0]?.[1] as Record<string, unknown> | undefined)?.startedAt,
     });
-    assert.match(String(infoCalls[0]?.[1]?.startedAt), /^\d{4}-\d{2}-\d{2}T/);
+    assert.match(
+      String((infoCalls[0]?.[1] as Record<string, unknown> | undefined)?.startedAt),
+      /^\d{4}-\d{2}-\d{2}T/,
+    );
 
     const successPayload = infoCalls[1]?.[1] as Record<string, unknown>;
     assert.equal(successPayload.event, "success");

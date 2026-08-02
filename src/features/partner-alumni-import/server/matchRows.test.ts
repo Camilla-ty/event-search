@@ -9,7 +9,15 @@ import {
 describe("partner alumni matchRows", () => {
   it("matches by domain and flags existing version members", async () => {
     const context = buildImportMatchContextFromDirectory(
-      [{ id: "company-1", name: "MoonPay", domain: "moonpay.com", aliases: null }],
+      [
+        {
+          id: "company-1",
+          name: "MoonPay",
+          domain: "moonpay.com",
+          website: null,
+          aliases: null,
+        },
+      ],
       [{ company_id: "company-1", domain: "moonpay.com" }],
     );
 
@@ -22,6 +30,7 @@ describe("partner alumni matchRows", () => {
         id: "row-1",
         status: "needs_review",
         normalized_domain: "moonpay.com",
+        normalized_website: null,
         normalized_company_name: "MoonPay",
         mapped_display_order: 5,
         has_blocking_validation: false,
@@ -45,6 +54,7 @@ describe("partner alumni matchRows", () => {
         id: "row-2",
         status: "needs_review",
         normalized_domain: null,
+        normalized_website: null,
         normalized_company_name: "Unknown",
         mapped_display_order: null,
         has_blocking_validation: true,

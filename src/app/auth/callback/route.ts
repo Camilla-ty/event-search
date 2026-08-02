@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   const oauthErrorDescription = url.searchParams.get("error_description");
 
   const successRedirect = new URL(next, url.origin);
-  let response = NextResponse.redirect(successRedirect);
+  const response = NextResponse.redirect(successRedirect);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
