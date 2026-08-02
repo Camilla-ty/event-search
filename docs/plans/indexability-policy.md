@@ -1,11 +1,14 @@
 # Indexability Policy
 
-**Status:** Confirmed product policy — documentation only (not yet fully implemented)  
-**Date:** 2026-07-16  
-**Audience:** Product and engineering  
+**Status:** Confirmed product policy — **partially implemented** (core IR1 gates ship in code)
+**Date:** 2026-07-16
+**Last status refresh:** 2026-08-02
+**Audience:** Product and engineering
 **Host:** `https://app.eventpx.com`
 
 **Related:** `docs/plans/seo-foundation.md`, `docs/plans/seo-implementation-roadmap.md`, `docs/plans/protection-v1.md`
+
+**Implementation (as of 2026-08-02):** Shared gates live in `src/lib/seo/indexability.ts` and drive `generateMetadata` / sitemap membership (`src/app/sitemap.ts`, `src/lib/seo/sitemapEntries.ts`). Company (≥1 sponsored edition, not restricted), edition (≥1 sponsor), series (merged → noindex), collection filter URLs (noindex), login/admin noindex, and research hubs (published + quality gate) are enforced. **Residual:** empty topic hubs may still be indexable/sitemap-included contrary to §3.4 empty-shell guidance (tracked as Health Check `SEO-001`). Optional `robots.txt` path Disallow for admin remains an implementation choice (§3.7).
 
 ---
 
@@ -104,7 +107,7 @@ Topic hubs are strategic SEO assets. Empty or unpublished topic shells, if they 
 
 Research-oriented public pages are strategic SEO assets. Exact URL inventory is product-defined; once a research URL is a published public destination, it is indexable and sitemap-eligible.
 
-**IR1 deferral:** No dedicated public research routes exist in the app yet. Do **not** invent placeholder `/research` URLs in sitemap or metadata. Track under SEO roadmap **IR4**.
+**Shipped routes (IR4 MVP):** Topic × region hubs at `/events/topics/{topicSlug}/regions/{regionSlug}` and optional year-scoped `/events/topics/{topicSlug}/regions/{regionSlug}/years/{year}`. Published pages render when approved; indexability and sitemap inclusion require the research quality gate. Do **not** invent placeholder `/research` URLs in sitemap or metadata.
 
 ### 3.6 Hubs and other public surfaces
 
@@ -239,11 +242,11 @@ Redirects establish the preferred public URL; sitemap and index signals must fol
 |-------|------|
 | **Stricter sponsor quality filter** | Optional later: require stronger public signal than “≥ 1 sponsored event” (e.g. recency, verified stats) before indexing companies |
 | **Series value gate** | Today active/discontinued series are indexable without a sponsor-count floor; revisit if thin series hubs dilute search |
-| **Topic/research emptiness** | Formalize automated detection of empty shells → `noindex` + sitemap exclude |
+| **Topic emptiness** | Empty `/topics/{slug}` shells still need automated `noindex` + sitemap exclude (`SEO-001`); research hubs already gate on quality |
 | **Merged companies** | Align public redirect + tombstone SEO with admin merge once public successor URLs are stable |
-| **Auth indexing mechanism** | Choose meta `noindex` vs `robots.txt` `Disallow` (or both) for login/signup/admin |
+| **Auth indexing mechanism** | Meta `noindex` applied for login/admin; optional `robots.txt` `Disallow` still open |
 | **GEO / AI crawlers** | Separate policy if answer-engine visibility diverges from Google indexability |
-| **Implementation** | Enforce via shared metadata `robots`, sitemap query filters, and merge redirects—see `seo-implementation-roadmap.md` IR1 |
+| **Implementation** | Core IR1 enforcement is in `src/lib/seo/indexability.ts` + sitemap builders; residuals above |
 
 ---
 
@@ -252,3 +255,4 @@ Redirects establish the preferred public URL; sitemap and index signals must fol
 | Date | Note |
 |------|------|
 | 2026-07-16 | Initial confirmed indexability policy (companies, editions, series, topics, research + global rules) |
+| 2026-08-02 | Status → partially implemented; research routes shipped note; residual empty-topic gap (`SEO-001`); DOC-001 |

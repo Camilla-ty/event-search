@@ -24,7 +24,7 @@ import {
   readSponsorCountForEdition,
 } from "@/src/lib/queries/companies";
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
-import { createAdminClient } from "@/src/lib/supabase/admin";
+import { createClient } from "@/src/lib/supabase/server";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 import {
@@ -193,9 +193,9 @@ export async function getTopicRegionHubPageData(
   regionSlug: string,
   year: number | null = null,
 ): Promise<TopicRegionHubPageData | null> {
-  const admin = createAdminClient();
+  const supabase = await createClient();
 
-  const keywordResult = await admin
+  const keywordResult = await supabase
     .from("keyword")
     .select("id, name, slug")
     .eq("slug", topicSlug)
@@ -204,7 +204,7 @@ export async function getTopicRegionHubPageData(
   const topic = mapKeywordRow(keywordResult.data);
   if (!topic) return null;
 
-  const regionResult = await admin
+  const regionResult = await supabase
     .from("regions")
     .select("id, name, slug")
     .eq("slug", regionSlug)
@@ -213,7 +213,7 @@ export async function getTopicRegionHubPageData(
   const region = regionResult.data as { id: string; name: string; slug: string } | null;
   if (!region) return null;
 
-  const seriesLinksResult = await admin
+  const seriesLinksResult = await supabase
     .from("event_series_keyword")
     .select("series_id")
     .eq("keyword_id", topic.id);
@@ -221,7 +221,7 @@ export async function getTopicRegionHubPageData(
   const seriesIds = readSeriesIdsFromKeywordLinks(seriesLinksResult.data ?? []);
   if (seriesIds.length === 0) return null;
 
-  let editionsQuery = admin
+  let editionsQuery = supabase
     .from("event_editions")
     .select(EVENT_EDITION_LIST_SELECT)
     .in("series_id", seriesIds);
@@ -286,12 +286,19 @@ export async function getTopicRegionHubPageData(
   const sponsorLinks = await fetchAllByIdInBatches<{
     company_id: string | null;
     event_editions_id: string | null;
-  }>(editionIds, (batchIds) =>
-    admin
-      .from("event_sponsors")
+  }>(editionIds, async (batchIds) => {
+    const result = await supabase
+      .from("event_edition_sponsor_companies")
       .select("company_id, event_editions_id")
-      .in("event_editions_id", batchIds),
-  );
+      .in("event_editions_id", batchIds);
+    return {
+      data: (result.data ?? null) as {
+        company_id: string | null;
+        event_editions_id: string | null;
+      }[] | null,
+      error: result.error,
+    };
+  });
 
   const hubEditionIdsByCompany = new Map<string, Set<string>>();
   for (const link of sponsorLinks) {
@@ -314,25 +321,44 @@ export async function getTopicRegionHubPageData(
       logo_url: string | null;
       restricted_at: string | null;
       event_brand_public_profile_approved_at: string | null;
-    }>(companyIds, (batchIds) =>
-      admin
+    }>(companyIds, async (batchIds) => {
+      const result = await supabase
         .from("companies")
         .select(
           "id, name, slug, domain, logo_url, restricted_at, event_brand_public_profile_approved_at",
         )
         .in("id", batchIds)
-        .is("restricted_at", null),
-    ),
+        .is("restricted_at", null);
+      return {
+        data: (result.data ?? null) as {
+          id: string;
+          name: string;
+          slug: string;
+          domain: string | null;
+          logo_url: string | null;
+          restricted_at: string | null;
+          event_brand_public_profile_approved_at: string | null;
+        }[] | null,
+        error: result.error,
+      };
+    }),
     getEventBrandPublicDestinationIndex(),
     fetchAllByIdInBatches<{
       company_id: string;
       sponsored_edition_count: number | null;
-    }>(companyIds, (batchIds) =>
-      admin
+    }>(companyIds, async (batchIds) => {
+      const result = await supabase
         .from("company_sponsor_stats")
         .select("company_id, sponsored_edition_count")
-        .in("company_id", batchIds),
-    ),
+        .in("company_id", batchIds);
+      return {
+        data: (result.data ?? null) as {
+          company_id: string;
+          sponsored_edition_count: number | null;
+        }[] | null,
+        error: result.error,
+      };
+    }),
   ]);
 
   const globalCountByCompany = new Map<string, number>();

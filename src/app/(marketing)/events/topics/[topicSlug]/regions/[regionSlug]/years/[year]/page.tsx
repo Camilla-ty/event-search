@@ -5,7 +5,7 @@ import { TopicRegionHubView } from "@/src/features/events/components/topic-regio
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 import { parseResearchPageYearParam } from "@/src/features/research-pages/lib/parseResearchPageYearParam";
-import { getPublishedResearchPageBySlugs } from "@/src/features/research-pages/server/researchPageAdmin";
+import { getPublishedResearchPageBySlugsPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import {
   createNotFoundPageMetadata,
   createPageMetadata,
@@ -21,7 +21,7 @@ async function loadPublishedYearPage(params: {
   regionSlug: string;
   year: number;
 }) {
-  const published = await getPublishedResearchPageBySlugs(
+  const published = await getPublishedResearchPageBySlugsPublic(
     params.topicSlug,
     params.regionSlug,
     params.year,

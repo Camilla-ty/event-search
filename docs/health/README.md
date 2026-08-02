@@ -1,7 +1,7 @@
 # Engineering Health Check
 
-**Status:** Active — Framework v1.1
-**Date:** 2026-07-23
+**Status:** Active — Framework v1.2
+**Date:** 2026-08-02
 **Scope:** Recurring engineering reviews of this repository and the long-term knowledge they produce.
 
 The Engineering Health Check preserves long-term engineering knowledge with minimal maintenance. It is **not** an issue tracker.
@@ -10,6 +10,8 @@ The Engineering Health Check preserves long-term engineering knowledge with mini
 > Reports preserve history. The live Findings Register is the current engineering work queue.
 > A Finding exists only if it has long-term memory value.
 > The Register answers exactly one question: **"What engineering problems still require attention?"**
+>
+> **One audit cycle = one report.** Never create companion closeout reports for the same cycle. Remediation updates the existing cycle report. A new report is created only when a new audit cycle is explicitly started with a new Cycle token.
 
 ---
 
@@ -17,8 +19,8 @@ The Engineering Health Check preserves long-term engineering knowledge with mini
 
 | Part | File(s) | Nature |
 |---|---|---|
-| **Reports** | `<review-type>/<cycle>-<review-type>.md` | Immutable. Written once per review run, never edited afterward. |
-| **Findings Register** | [`findings-register.md`](./findings-register.md) | Living. The only mutable document. Holds outstanding work only. |
+| **Reports** | `<review-type>/<cycle>-<review-type>.md` | One file per audit cycle. Updated in place for remediation within that cycle; never replaced by a sibling “closeout” report. |
+| **Findings Register** | [`findings-register.md`](./findings-register.md) | Living work queue. Holds outstanding Findings only. |
 | **Report template** | [`_templates/report-template.md`](./_templates/report-template.md) | One shared template for every review. |
 | **Execution prompts** | [`_prompts/`](./_prompts/) | Canonical paste-ready prompts per review type. Created when a review is formalized. |
 
@@ -92,7 +94,7 @@ Severity and Effort are recorded on a Finding as **descriptive metadata** for pr
 - **Reuse the same ID whenever the underlying root cause is the same.** Never mint a new ID just because a new cycle started.
 - One root cause with many call-sites is **one** Finding (list call-sites as evidence).
 - Decision test: *"If we fixed the other Finding, would this one disappear?"* If yes, it is the same Finding.
-- **Reopening:** a resolved Finding that reappears is re-added to the register under its **original ID** (look it up in the immutable report or Git history).
+- **Reopening:** a resolved Finding that reappears is re-added to the register under its **original ID** (look it up in the cycle report or Git history).
 
 ### 5a. Cross-audit ownership (applies across all prefixes)
 
@@ -118,8 +120,8 @@ The live register contains only these three statuses:
 **Resolved is not a live status — it is an exit.** When a Finding is resolved:
 
 1. **Remove its row** from `findings-register.md`.
-2. Record the resolution in that cycle's report (`Since last cycle → Resolved`, with the closing PR / commit / migration link).
-3. It remains permanently discoverable through the immutable reports and Git history, PRs, commits, ADRs, and implementation links.
+2. **Update that Finding’s cycle report in place** — set Finding Status to Resolved; add closing evidence under **Resolution History** (or equivalent), with the closing PR / commit / migration / verified-docs link. Do **not** create a new report file for remediation alone.
+3. It remains permanently discoverable through the cycle report and Git history, PRs, commits, ADRs, and implementation links.
 
 The register therefore reflects only outstanding work. There is **no separate archive process** — resolved history already lives in the reports and Git. An archive would be introduced only if it ever becomes necessary years from now.
 
@@ -127,20 +129,29 @@ The register therefore reflects only outstanding work. There is **no separate ar
 
 ---
 
-## 7. Reports are immutable
+## 7. One audit cycle = one report
 
-- A report is written once per review run and **never edited afterward**. Corrections go in the next cycle's report or in the register — never by rewriting a completed report.
-- The **canonical full description of a Finding is born in the report where it was first discovered**; the register row points back to it.
-- Later reports reference existing Findings **by ID** and record only the delta — they must not restate a Finding's full body.
+**Applies to every Health Check type** (Product, Roadmap, Architecture, Performance, Security, Data Quality, Code Hygiene, Scalability, SEO, UX, Documentation, Dependency Vulnerability Monitoring, and any future review).
 
-Each report contains: a header block, a 5–10 line **Executive summary**, a **Since last cycle** delta by ID (omitted on baseline reports), **Findings** (full write-ups for new Findings; ID-reference + delta for existing ones), and untracked **Observations**.
+| Rule | Meaning |
+|---|---|
+| **One cycle, one file** | Exactly one report path per `(review-type, cycle)`: `<slug>/<cycle>-<slug>.md`. |
+| **No companion closeouts** | Never create an extra report (e.g. `2026-08-…`) solely to close Findings from an earlier cycle. |
+| **Remediation in place** | When Findings from a cycle are remediated, update **that cycle’s existing report** (Status fields + **Resolution History** / closing evidence + change log). |
+| **New report only for a new cycle** | Create a new report file only when a new audit cycle is **explicitly started** with a new Cycle token (e.g. human provides `2026-10` or `2027-Q1`). |
+| **Prior cycles** | Do not rewrite prior-cycle reports merely to modernize terminology. A new cycle’s report references existing Findings **by ID** and records only the delta. |
 
-**Baseline vs recurring detection (automatic, shared by every review).** Each review determines its own mode with no prompt-specific logic, by checking whether a prior report already exists in its review folder:
+- The **canonical full description of a Finding is born in the report where it was first discovered**; the register row points back to it. Resolution evidence for that Finding is appended to the **same** cycle report.
+- Later **new-cycle** reports reference existing Findings **by ID** and record only the delta — they must not restate a Finding's full body.
+
+Each report contains: a header block, a 5–10 line **Executive summary**, a **Since last cycle** delta by ID (omitted on baseline reports), **Findings** (full write-ups for new Findings; ID-reference + delta for existing ones), untracked **Observations**, and (when remediations land) **Resolution History**.
+
+**Baseline vs recurring detection (automatic, shared by every review).** When starting a **new** cycle (new Cycle token), each review determines its mode by checking whether a prior report already exists in its review folder:
 
 - **No prior report → Baseline Review:** `Baseline: true`, no *Since last cycle* section, allocate the first IDs for that prefix.
 - **A prior report exists → Recurring Review:** `Baseline: false`, reconcile existing Findings first, and include the *Since last cycle* delta by ID.
 
-This detection is part of the shared workflow (Step 0 below); reviews inherit it and never hard-code a baseline flag.
+This detection is part of the shared workflow (Step 0 below); reviews inherit it and never hard-code a baseline flag. Remediating Findings without a new Cycle token is **not** a new review run — update the existing cycle report instead.
 
 ---
 
@@ -154,7 +165,7 @@ When a Live report is written:
 1. **Reconcile open `DEP` Findings** in the register (same status options as monthly).
 2. **Triage current Dependabot / advisory state** and capture observations.
 3. **Apply the memory-value test** → Finding (`DEP`) or report-only narrative.
-4. **Write the immutable report** from the template (`Cadence: Live`, cycle token `YYYY-MM`).
+4. **Write or update the cycle report** from the template (`Cadence: Live`, cycle token `YYYY-MM`) — one file per cycle; remediations update in place.
 5. **Update the register** as needed.
 
 Transient alert noise that does not pass the memory-value test stays out of the register.
@@ -167,7 +178,7 @@ Transient alert noise that does not pass the memory-value test stays out of the 
 1. **Reconcile the register first** — for each open Finding of this review type, decide: still Open / In Progress / Deferred / **Resolved (remove row)** / Reopened.
 2. **Run the review** and capture observations.
 3. **Apply the memory-value test** to each observation → Finding (Open) or report-only narrative.
-4. **Write the immutable report** from the template.
+4. **Write the cycle report** from the template when this is a newly started Cycle; otherwise update the existing cycle report for remediations.
 5. **Update the register** — add new Findings (new IDs), update statuses, remove any that became Resolved, refresh `Last updated`.
 
 ## 10. Quarterly workflow
@@ -183,10 +194,10 @@ Same mechanics as monthly, plus:
 ## 11. Governance rules (keep the system healthy for years)
 
 1. The live register is the source of truth for **what is still open**; reports are the source of truth for **what was found and what was resolved**.
-2. Reports reference Finding IDs — they never restate a Finding's full body.
-3. Never edit a completed report.
+2. Reports reference Finding IDs — they never restate a Finding's full body (except the originating cycle report, which holds the canonical write-up and Resolution History).
+3. **One audit cycle = one report.** Never create companion closeout reports. Remediation updates the existing cycle report. Create a new report only when a new Cycle is explicitly started.
 4. IDs are permanent and never reused; reuse the same ID for the same root cause across its entire life.
-5. No Finding leaves as Resolved without a closing link recorded in the report.
+5. No Finding leaves as Resolved without closing evidence recorded in that Finding’s cycle report.
 6. No invented scores or grades — only Severity (Critical / High / Medium / Low) and Effort (Small / Medium / Large).
 7. Deferred is time-boxed, not a parking lot — every Deferred carries a reason and is revisited each quarter.
 8. Under-track by default: when in doubt, it is an observation, not a Finding.
@@ -203,3 +214,4 @@ Same mechanics as monthly, plus:
 | 2026-07-20 | **Framework v1.0.** Added cross-audit Finding ownership (§5a, governance rule 10) with `audit-catalog.md` as ownership authority; moved automatic Baseline-vs-Recurring detection into the shared workflow (§7, §8 step 0); referenced `audit-catalog.md` as a core governance document (§1). |
 | 2026-07-23 | **Framework v1.1.** Cadence restructured: Live Dependency Vulnerability Monitoring; Data Quality moved to Monthly; Dead Code renamed Code Hygiene (`code-hygiene` / `HYG`); Future Scalability renamed Scalability; added quarterly UX and Documentation; no separate Tech Debt Audit. Live workflow §8 added; monthly/quarterly sections renumbered. |
 | 2026-07-23 | Added `_prompts/` for canonical execution prompts; published Monthly Code Hygiene prompt (`_prompts/code-hygiene.md`). |
+| 2026-08-02 | **Framework v1.2.** One audit cycle = one report. Remediation updates the existing cycle report (Resolution History); never create companion closeout reports. New report only when a new Cycle is explicitly started. Documentation 2026-07 consolidated; redundant `2026-08`/`2026-09` DOC closeouts removed. |

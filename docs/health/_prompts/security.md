@@ -1,10 +1,10 @@
 # Monthly Security Health Check — Execution Prompt
 
-**Status:** Canonical execution prompt — Framework v1.1  
-**Review type:** Security Audit  
-**Cadence:** Monthly  
-**Slug / folder:** `security`  
-**Finding prefix:** `SEC`  
+**Status:** Canonical execution prompt — Framework v1.2
+**Review type:** Security Audit
+**Cadence:** Monthly
+**Slug / folder:** `security`
+**Finding prefix:** `SEC`
 **Report path:** `docs/health/security/{{CYCLE}}-security.md`
 
 This file is the **canonical** prompt to paste (or attach) when running the Monthly Security Health Check. It evaluates **application security and trust boundaries only** — authentication, authorization, RLS reliance, service-role usage, secrets, API protection, input validation, rate limiting, session handling, security headers, sensitive-data exposure, and secure operational practices — not module-boundary redesign, runtime speed, schema modeling, product completeness, or Dependabot triage as a standing stream.
@@ -52,11 +52,17 @@ HARD CONSTRAINTS (override any other instinct)
    grants; do not attempt live privilege-escalation against production beyond
    documented read-only diagnostics the human already allows.
 5. Do NOT commit or push. Never stage files. Stop before any git commit.
-6. Do NOT rewrite, edit, or delete any existing Health Check report. Published
-   reports are immutable. Never rewrite prior reports to newer terminology.
-7. When (and only when) publication is explicitly requested, the ONLY files you may
-   create or modify are:
-   - the new immutable report: docs/health/security/{{CYCLE}}-security.md
+6. ONE AUDIT CYCLE = ONE REPORT (Framework v1.2). Never create companion
+   closeout/remediation reports for the same cycle.
+   - Create a new report file ONLY when the human explicitly starts a new audit
+     cycle (provides a new Cycle token) and that cycle's report does not yet exist.
+   - Remediation of Findings from an existing cycle MUST update that cycle's
+     report in place (Finding Status → Resolved; add Resolution History / closing
+     evidence; refresh Executive summary and Change log as needed).
+   - Do not rewrite prior-cycle reports merely to modernize terminology.
+7. When (and only when) publication or remediation closeout is explicitly
+   requested, the ONLY Health Check files you may create or modify are:
+   - the cycle report: docs/health/security/{{CYCLE}}-security.md
    - the live register:        docs/health/findings-register.md
 8. PRESERVE all unrelated working-tree changes. Do not touch, stage, revert, or
    include unrelated modified/untracked files.
@@ -199,7 +205,7 @@ Import pipelines (security of privileged materialization — not product UX):
 
 STEP 0 — LOAD GOVERNING CONTEXT (before anything else)
 Read and follow in full:
-- docs/health/README.md              (Framework v1.1 operating rules)
+- docs/health/README.md              (Framework v1.2 operating rules)
 - docs/health/audit-catalog.md       (ownership; Security vs ARC/DB/DEP/…)
 - docs/health/findings-register.md   (ALL prefixes — especially SEC/ARC/DEP/HYG)
 - docs/health/_templates/report-template.md
@@ -417,23 +423,23 @@ Present in chat:
 STOP. Do not write REPORT_FILE or edit findings-register.md until the human explicitly
 asks to publish / write the report and update the register.
 
-STEP 6 — WRITE THE IMMUTABLE MONTHLY REPORT (only after explicit request)
-Create docs/health/security/{{CYCLE}}-security.md from
-docs/health/_templates/report-template.md. Do not overwrite an existing report.
+STEP 6 — WRITE OR UPDATE THE CYCLE REPORT (only after explicit request)
+Write docs/health/security/{{CYCLE}}-security.md from
+docs/health/_templates/report-template.md. If this is a new Cycle token, create the report; if remediating an existing cycle, update that cycle's report in place (never mint a companion closeout).
 - Header: Review type = Security Audit; Cadence = Monthly; Cycle = {{CYCLE}};
   Date = {{REVIEW_DATE}}; Reviewer = {{REVIEWER}}; Baseline = (from STEP 0b);
-  Status = immutable historical record.
+  Status = Cycle report — remediations update this file; one cycle = one report.
 - Executive summary: 5–10 lines; methods briefly; net change; no invented scores.
 - Include trust model / surfaces inspected and exclusions (summary and/or
   Observations).
 - "Since last cycle" (RECURRING only): delta by ID.
 - Findings: FULL write-up for NEW SEC Findings (all fields from STEP 4); existing
-  SEC Findings by ID + delta only — never restate full bodies; never rewrite old
-  reports.
+  SEC Findings by ID + delta only — never restate full bodies; never create companion closeout reports.
 - Explicit cross-audit section or Observations listing ARC/DEP IDs Security
   continues to observe without duplicating.
 - Observations: non-Finding notes, strengths, trade-offs, limitations.
 - Change log: publication entry dated {{REVIEW_DATE}}.
+- If remediating Findings for this cycle (not a new Cycle): update Finding Status to Resolved; add **Resolution History** with acceptance criteria and closing evidence; refresh the Executive summary. Never create a companion closeout report.
 
 STEP 7 — UPDATE THE LIVE FINDINGS REGISTER (only after explicit request)
 Edit docs/health/findings-register.md for outstanding work only:
@@ -447,7 +453,7 @@ STEP 8 — VALIDATE, THEN STOP (do NOT commit)
 Non-mutating checks: report naming/path; Baseline flag correct; links; register only
 Open/In Progress/Deferred; no duplicate/renumbered ids; no cross-prefix duplicates
 for the same root cause; Resolved removed with closing links; terminology uses
-Security / security / SEC; no published reports altered; no application code
+Security / security / SEC; prior-cycle reports not rewritten for terminology; no application code
 mutated; unrelated files untouched. Run `git diff --check` on touched docs if any,
 and `git status` (read-only).
 
@@ -485,9 +491,9 @@ STOP. Await human review before any commit or push.
 
 | Document | Role |
 |---|---|
-| [`../README.md`](../README.md) | Framework v1.1 operating rules |
+| [`../README.md`](../README.md) | Framework v1.2 operating rules |
 | [`../audit-catalog.md`](../audit-catalog.md) | Ownership authority (Security vs ARC / DB / DEP / …) |
 | [`../findings-register.md`](../findings-register.md) | Live work queue |
 | [`../_templates/report-template.md`](../_templates/report-template.md) | Shared report template |
 | [`../../project-state.md`](../../project-state.md) | Current system / domain model summary |
-| [`../security/2026-07-security.md`](../security/2026-07-security.md) | Baseline Security evidence (immutable; reference by ID) |
+| [`../security/2026-07-security.md`](../security/2026-07-security.md) | Baseline Security evidence (cycle report; reference by ID) |

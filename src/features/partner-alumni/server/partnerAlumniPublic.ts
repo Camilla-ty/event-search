@@ -3,9 +3,8 @@ import {
   getEventBrandPublicDestinationIndex,
   withPublicCompanyRoleHref,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
-import { COMPANY_PUBLIC_COLUMNS } from "@/src/lib/queries/companies";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
-import { createAdminClient } from "@/src/lib/supabase/admin";
+import { createClient } from "@/src/lib/supabase/server";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 
 export type PublicPartnerAlumniMember = {
@@ -22,30 +21,96 @@ export type PublicPartnerAlumniCurrentVersion = {
   members: PublicPartnerAlumniMember[];
 };
 
-function mapVersionMemberCompany(raw: unknown): EventSponsorCompany | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return null;
-  }
+/** Row from `event_partner_alumni_public_versions`. */
+export type PublicPartnerAlumniVersionRow = {
+  event_series_id?: unknown;
+  recognition_label?: unknown;
+  primary_source_url?: unknown;
+  source_checked_at?: unknown;
+};
 
-  const row = raw as Record<string, unknown>;
-  const id = typeof row.id === "string" ? row.id : row.id != null ? String(row.id) : null;
+/** Row from `event_partner_alumni_public_members`. */
+export type PublicPartnerAlumniMemberRow = {
+  event_series_id?: unknown;
+  member_id?: unknown;
+  display_order?: unknown;
+  company_id?: unknown;
+  company_name?: unknown;
+  company_slug?: unknown;
+  company_domain?: unknown;
+  company_website?: unknown;
+  company_logo_url?: unknown;
+  company_logo_source?: unknown;
+  company_logo_status?: unknown;
+  company_restricted_at?: unknown;
+  company_event_brand_public_profile_approved_at?: unknown;
+};
+
+function asNullableString(raw: unknown): string | null {
+  return typeof raw === "string" ? raw : null;
+}
+
+function mapPublicMemberCompany(
+  row: PublicPartnerAlumniMemberRow,
+): EventSponsorCompany | null {
+  const id = asNullableString(row.company_id);
   if (!id) return null;
 
   return {
     id,
-    slug: typeof row.slug === "string" ? row.slug : null,
-    name: typeof row.name === "string" ? row.name : null,
-    logo_url: mapPublicLogoUrl(typeof row.logo_url === "string" ? row.logo_url : null),
-    logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
-    logo_status: typeof row.logo_status === "string" ? row.logo_status : null,
-    restricted_at: typeof row.restricted_at === "string" ? row.restricted_at : null,
-    event_brand_public_profile_approved_at:
-      typeof row.event_brand_public_profile_approved_at === "string"
-        ? row.event_brand_public_profile_approved_at
-        : null,
+    slug: asNullableString(row.company_slug),
+    name: asNullableString(row.company_name),
+    domain: asNullableString(row.company_domain),
+    website: asNullableString(row.company_website),
+    logo_url: mapPublicLogoUrl(asNullableString(row.company_logo_url)),
+    logo_source: asNullableString(row.company_logo_source),
+    logo_status: asNullableString(row.company_logo_status),
+    restricted_at: asNullableString(row.company_restricted_at),
+    event_brand_public_profile_approved_at: asNullableString(
+      row.company_event_brand_public_profile_approved_at,
+    ),
   };
 }
 
+/**
+ * Map public member view rows into sorted roster members.
+ * Exported for focused regression tests (ARC-001 Phase 5).
+ */
+export function mapPublicPartnerAlumniMemberRows(
+  rows: readonly PublicPartnerAlumniMemberRow[],
+): PublicPartnerAlumniMember[] {
+  const members: PublicPartnerAlumniMember[] = [];
+
+  for (const row of rows) {
+    const id = asNullableString(row.member_id);
+    if (!id) continue;
+
+    const displayOrder =
+      typeof row.display_order === "number" && Number.isFinite(row.display_order)
+        ? Math.trunc(row.display_order)
+        : Number.MAX_SAFE_INTEGER;
+
+    members.push({
+      id,
+      display_order: displayOrder,
+      company: mapPublicMemberCompany(row),
+    });
+  }
+
+  members.sort((a, b) => {
+    if (a.display_order !== b.display_order) {
+      return a.display_order - b.display_order;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  return members;
+}
+
+/**
+ * Legacy mapper for embed-shaped rows (`companies` nest). Kept for tests that
+ * still exercise the previous member payload shape.
+ */
 export function mapPublicPartnerAlumniMembers(
   rows: readonly unknown[],
 ): PublicPartnerAlumniMember[] {
@@ -67,10 +132,34 @@ export function mapPublicPartnerAlumniMembers(
         ? record.display_order
         : Number.MAX_SAFE_INTEGER;
 
+    const companyRaw = record.companies;
+    let company: EventSponsorCompany | null = null;
+    if (companyRaw && typeof companyRaw === "object" && !Array.isArray(companyRaw)) {
+      const row = companyRaw as Record<string, unknown>;
+      const companyId =
+        typeof row.id === "string" ? row.id : row.id != null ? String(row.id) : null;
+      if (companyId) {
+        company = {
+          id: companyId,
+          slug: asNullableString(row.slug),
+          name: asNullableString(row.name),
+          domain: asNullableString(row.domain),
+          website: asNullableString(row.website),
+          logo_url: mapPublicLogoUrl(asNullableString(row.logo_url)),
+          logo_source: asNullableString(row.logo_source),
+          logo_status: asNullableString(row.logo_status),
+          restricted_at: asNullableString(row.restricted_at),
+          event_brand_public_profile_approved_at: asNullableString(
+            row.event_brand_public_profile_approved_at,
+          ),
+        };
+      }
+    }
+
     members.push({
       id,
       display_order: displayOrder,
-      company: mapVersionMemberCompany(record.companies),
+      company,
     });
   }
 
@@ -84,19 +173,34 @@ export function mapPublicPartnerAlumniMembers(
   return members;
 }
 
+/** Assemble the public current-version payload (or null when empty / unusable). */
+export function assemblePublicPartnerAlumniCurrentVersion(
+  version: PublicPartnerAlumniVersionRow | null | undefined,
+  memberRows: readonly PublicPartnerAlumniMemberRow[],
+  attachHref: (company: EventSponsorCompany) => EventSponsorCompany,
+): PublicPartnerAlumniCurrentVersion | null {
+  if (!version) return null;
+
+  const members = mapPublicPartnerAlumniMemberRows(memberRows).map((member) => ({
+    ...member,
+    company: member.company ? attachHref(member.company) : null,
+  }));
+  if (members.length === 0) return null;
+
+  return {
+    recognition_label: asNullableString(version.recognition_label),
+    primary_source_url: asNullableString(version.primary_source_url),
+    source_checked_at: asNullableString(version.source_checked_at),
+    members,
+  };
+}
+
 /** Tab is shown only when the series current version exists with ≥1 company. */
 export function shouldShowPublicPartnerAlumniTab(
   currentVersion: PublicPartnerAlumniCurrentVersion | null,
 ): boolean {
   return currentVersion !== null && currentVersion.members.length >= 1;
 }
-
-type VersionMemberRow = {
-  id: unknown;
-  display_order: unknown;
-  company_id: unknown;
-  companies: unknown;
-};
 
 function logPublicPartnerAlumniLoadFailure(context: string, error: unknown): void {
   if (process.env.NODE_ENV !== "development") return;
@@ -105,8 +209,8 @@ function logPublicPartnerAlumniLoadFailure(context: string, error: unknown): voi
 
 /**
  * Current Partner Alumni for a series — public edition surfaces only.
- * Resolves event_partner_alumni.current_version_id → version header → version members
- * via service role (v2 tables are not publicly readable). Never reads draft/v1 tables.
+ * Reads published-only views via the session client (ARC-001 Phase 5).
+ * Never reads draft/historical version tables directly.
  *
  * Returns null when data is absent or when the load fails so event pages still render.
  */
@@ -117,39 +221,44 @@ export async function getPublicPartnerAlumniForSeriesId(
   if (trimmedSeriesId === "") return null;
 
   try {
-    const admin = createAdminClient();
-    const { data: program, error: programError } = await admin
-      .from("event_partner_alumni")
-      .select("current_version_id")
-      .eq("event_series_id", trimmedSeriesId)
-      .maybeSingle();
-
-    if (programError) {
-      logPublicPartnerAlumniLoadFailure("program lookup", programError.message);
-      return null;
-    }
-
-    const versionId =
-      program && typeof program.current_version_id === "string"
-        ? program.current_version_id.trim()
-        : "";
-    if (versionId === "") return null;
+    const supabase = await createClient();
 
     const [versionResult, memberRows, destinationIndex] = await Promise.all([
-      admin
-        .from("event_partner_alumni_versions")
-        .select("id, recognition_label, primary_source_url, source_checked_at")
-        .eq("id", versionId)
+      supabase
+        .from("event_partner_alumni_public_versions")
+        .select("event_series_id, recognition_label, primary_source_url, source_checked_at")
+        .eq("event_series_id", trimmedSeriesId)
         .maybeSingle(),
-      fetchAllPaginatedSupabaseRows<VersionMemberRow>(async ({ from, to }) =>
-        admin
-          .from("event_partner_alumni_version_companies")
-          .select(`id, display_order, company_id, companies ( ${COMPANY_PUBLIC_COLUMNS} )`)
-          .eq("event_partner_alumni_version_id", versionId)
+      fetchAllPaginatedSupabaseRows<PublicPartnerAlumniMemberRow>(async ({ from, to }) => {
+        const result = await supabase
+          .from("event_partner_alumni_public_members")
+          .select(
+            [
+              "event_series_id",
+              "member_id",
+              "display_order",
+              "company_id",
+              "company_name",
+              "company_slug",
+              "company_domain",
+              "company_website",
+              "company_logo_url",
+              "company_logo_source",
+              "company_logo_status",
+              "company_restricted_at",
+              "company_event_brand_public_profile_approved_at",
+            ].join(", "),
+          )
+          .eq("event_series_id", trimmedSeriesId)
           .order("display_order", { ascending: true })
-          .order("id", { ascending: true })
-          .range(from, to),
-      ),
+          .order("member_id", { ascending: true })
+          .range(from, to);
+
+        return {
+          data: (result.data ?? null) as PublicPartnerAlumniMemberRow[] | null,
+          error: result.error,
+        };
+      }),
       getEventBrandPublicDestinationIndex(),
     ]);
 
@@ -157,32 +266,12 @@ export async function getPublicPartnerAlumniForSeriesId(
       logPublicPartnerAlumniLoadFailure("version lookup", versionResult.error.message);
       return null;
     }
-    if (!versionResult.data) return null;
 
-    const versionRow = versionResult.data as Record<string, unknown>;
-    const members = mapPublicPartnerAlumniMembers(memberRows).map((member) => ({
-      ...member,
-      company: member.company
-        ? withPublicCompanyRoleHref(member.company, destinationIndex)
-        : null,
-    }));
-    if (members.length === 0) return null;
-
-    return {
-      recognition_label:
-        typeof versionRow.recognition_label === "string"
-          ? versionRow.recognition_label
-          : null,
-      primary_source_url:
-        typeof versionRow.primary_source_url === "string"
-          ? versionRow.primary_source_url
-          : null,
-      source_checked_at:
-        typeof versionRow.source_checked_at === "string"
-          ? versionRow.source_checked_at
-          : null,
-      members,
-    };
+    return assemblePublicPartnerAlumniCurrentVersion(
+      versionResult.data as PublicPartnerAlumniVersionRow | null,
+      memberRows,
+      (company) => withPublicCompanyRoleHref(company, destinationIndex),
+    );
   } catch (error) {
     logPublicPartnerAlumniLoadFailure("unexpected", error);
     return null;

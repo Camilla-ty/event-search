@@ -9,7 +9,7 @@ import {
   normalizeSeriesLifecycle,
 } from "@/src/lib/seo/indexability";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
-import { listResearchPagesAdmin } from "@/src/features/research-pages/server/researchPageAdmin";
+import { listPublishedResearchPagesPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createClient } from "@supabase/supabase-js";
 
@@ -357,8 +357,7 @@ export function buildStaticSitemapEntries(): MetadataRoute.Sitemap {
 export async function fetchResearchPageSitemapEntries(): Promise<
   MetadataRoute.Sitemap
 > {
-  const pages = await listResearchPagesAdmin();
-  const published = pages.filter((p) => p.status === "published");
+  const published = await listPublishedResearchPagesPublic();
 
   const entries: MetadataRoute.Sitemap = [];
   for (const page of published) {

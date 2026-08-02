@@ -6,8 +6,11 @@ How to use:
   e.g. architecture/2026-08-architecture.md  or  seo/2026-Q3-seo.md
        or dependency-vulns/2026-08-dependency-vulns.md (Live)
 - Fill in the header block and each section.
-- Reports are IMMUTABLE once written. Do not edit a completed report.
-- Reference existing Findings by ID; never restate a Finding's full body.
+- ONE AUDIT CYCLE = ONE REPORT. Never create companion closeout reports.
+- Remediation updates THIS file (Finding Status + Resolution History).
+- Create a new report only when a new Cycle is explicitly started.
+- Reference existing Findings by ID; never restate a Finding's full body
+  in a later cycle's report.
 - Delete this comment block and any unused optional lines before saving.
 -->
 
@@ -19,13 +22,13 @@ How to use:
 **Date:** <YYYY-MM-DD>
 **Reviewer:** <name / role>
 **Baseline:** <true | false>
-**Status:** Immutable historical record — do not edit after publication.
+**Status:** Cycle report — remediations update this file; one cycle = one report (do not create separate closeout reports).
 
 ---
 
 ## Executive summary
 
-<5–10 lines. What is the net change this cycle? Highlight resolved / new / still-open counts and anything that needs a decision. No invented scores or grades.>
+<5–10 lines. What is the net change this cycle? Highlight resolved / new / still-open counts and anything that needs a decision. No invented scores or grades. Refresh when remediations land.>
 
 ---
 
@@ -35,7 +38,7 @@ How to use:
 
 | Change | Finding IDs | Notes / links |
 |---|---|---|
-| Resolved (removed from register) | | closing PR / commit / migration link required |
+| Resolved (removed from register) | | closing evidence in Resolution History / link required |
 | Still open | | |
 | In progress | | |
 | Deferred | | reason / revisit |
@@ -60,8 +63,23 @@ How to use:
 - **Why it matters:** <impact>
 - **Severity:** <Critical | High | Medium | Low>  ·  **Effort:** <Small | Medium | Large>  (descriptive only)
 - **Evidence:** <files / paths / line ranges / query names>
-- **Status:** <Open | In Progress | Deferred>
+- **Status:** <Open | In Progress | Deferred | Resolved (YYYY-MM-DD) — see Resolution History>
 - **Links:** <plan / ADR / migration / PR / commit, where relevant>
+
+---
+
+## Resolution History
+
+<!--
+Add when Findings from this cycle are remediated. Do not create a new report file.
+Preserve discovery-time Finding bodies above; record closing evidence here.
+-->
+
+### <YYYY-MM-DD> — <FINDING-ID(s) resolved>
+
+- **Acceptance criteria:** <from Finding>
+- **Closing evidence:** <verified paths / PRs / commits>
+- **Why criteria pass:** <brief>
 
 ---
 
@@ -76,3 +94,4 @@ How to use:
 | Date | Note |
 |------|------|
 | <YYYY-MM-DD> | Report published. |
+| <YYYY-MM-DD> | Resolved <FINDING-ID>(s); evidence in Resolution History. |

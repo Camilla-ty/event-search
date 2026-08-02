@@ -1,16 +1,18 @@
 # IR1 Indexability Audit
 
-**Status:** Audit only — no code changes  
-**Date:** 2026-07-17  
-**Compared against:** `docs/plans/indexability-policy.md` (confirmed IR1 rules)  
-**Also reviewed:** `docs/plans/seo-implementation-roadmap.md` (IR1), `docs/plans/seo-foundation.md`  
-**Code baseline:** `src/app/sitemap.ts`, `src/app/robots.ts`, `src/lib/metadata/site.ts`, public marketing routes
+**Status:** Historical point-in-time audit (2026-07-17) — **superseded for implementation status**
+**Date:** 2026-07-17
+**Compared against:** `docs/plans/indexability-policy.md` (confirmed IR1 rules)
+**Also reviewed:** `docs/plans/seo-implementation-roadmap.md` (IR1), `docs/plans/seo-foundation.md`
+**Code baseline (at audit time):** `src/app/sitemap.ts`, `src/app/robots.ts`, `src/lib/metadata/site.ts`, public marketing routes
+
+> **Do not treat the findings below as current.** As of 2026-08-02, core IR1 gates ship in `src/lib/seo/indexability.ts` with sitemap alignment, research hub routes, and JSON-LD on key templates. For live policy and residuals, see `docs/plans/indexability-policy.md` (Status: partially implemented) and Health Check `SEO-001` (empty topic shells). This document is preserved as the pre-implementation gap baseline.
 
 ---
 
 ## Executive summary
 
-IR1 indexability is **not implemented**. The shared metadata helper cannot emit `robots: noindex`. The sitemap includes many URLs that fail the confirmed public-value gate, and omits strategic assets (topics). Merged series are not redirected. Filter/search URLs are only partially compliant (clean canonical, but still indexable).
+*(Historical — 2026-07-17.)* IR1 indexability is **not implemented**. The shared metadata helper cannot emit `robots: noindex`. The sitemap includes many URLs that fail the confirmed public-value gate, and omits strategic assets (topics). Merged series are not redirected. Filter/search URLs are only partially compliant (clean canonical, but still indexable).
 
 **Live catalog snapshot (Supabase, 2026-07-17)** — URLs that would be wrong under current sitemap rules:
 

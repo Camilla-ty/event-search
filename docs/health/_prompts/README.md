@@ -10,11 +10,13 @@ Canonical, paste-ready execution prompts for Engineering Health Check reviews.
 | Product Audit | Monthly | `PROD` | [`product.md`](./product.md) |
 | Roadmap Review | Monthly | `ROAD` | [`roadmap.md`](./roadmap.md) |
 | Data Quality Audit | Monthly | `DQ` | [`data-quality.md`](./data-quality.md) |
+| Database Audit | Monthly | `DB` | [`database.md`](./database.md) |
 | Performance Audit | Monthly | `PERF` | [`performance.md`](./performance.md) |
 | Scalability Audit | Quarterly | `SCALE` | [`scalability.md`](./scalability.md) |
 | SEO Audit | Quarterly | `SEO` | [`seo.md`](./seo.md) |
 | UX Audit | Quarterly | `UX` | [`ux.md`](./ux.md) |
+| Documentation Audit | Quarterly | `DOC` | [`documentation.md`](./documentation.md) |
 
-Prompts inherit Framework **v1.1** rules from [`../README.md`](../README.md) and ownership from [`../audit-catalog.md`](../audit-catalog.md). Reports use [`../_templates/report-template.md`](../_templates/report-template.md).
+Prompts inherit Framework **v1.2** rules from [`../README.md`](../README.md) and ownership from [`../audit-catalog.md`](../audit-catalog.md). Reports use [`../_templates/report-template.md`](../_templates/report-template.md).
 
 There is no legacy Dead Code prompt to preserve — Code Hygiene replaces that review type.

@@ -1,10 +1,10 @@
 # Monthly Product Health Check — Execution Prompt
 
-**Status:** Canonical execution prompt — Framework v1.1  
-**Review type:** Product Audit  
-**Cadence:** Monthly  
-**Slug / folder:** `product`  
-**Finding prefix:** `PROD`  
+**Status:** Canonical execution prompt — Framework v1.2
+**Review type:** Product Audit
+**Cadence:** Monthly
+**Slug / folder:** `product`
+**Finding prefix:** `PROD`
 **Report path:** `docs/health/product/{{CYCLE}}-product.md`
 
 This file is the **canonical** prompt to paste (or attach) when running the Monthly Product Health Check. It evaluates **product quality only** — product value, workflows, consistency, and vision alignment — not engineering implementation quality.
@@ -43,11 +43,17 @@ HARD CONSTRAINTS (override any other instinct)
 2. Do NOT modify application code, configs, tests, scripts, copy, or dependencies
    as part of this review. No product redesigns and no drive-by UI edits.
 3. Do NOT commit or push. Never stage files. Stop before any git commit.
-4. Do NOT rewrite, edit, or delete any existing Health Check report. Published
-   reports are immutable. Never rewrite prior reports to newer terminology.
-5. When (and only when) publication is explicitly requested, the ONLY files you may
-   create or modify are:
-   - the new immutable report: docs/health/product/{{CYCLE}}-product.md
+4. ONE AUDIT CYCLE = ONE REPORT (Framework v1.2). Never create companion
+   closeout/remediation reports for the same cycle.
+   - Create a new report file ONLY when the human explicitly starts a new audit
+     cycle (provides a new Cycle token) and that cycle's report does not yet exist.
+   - Remediation of Findings from an existing cycle MUST update that cycle's
+     report in place (Finding Status → Resolved; add Resolution History / closing
+     evidence; refresh Executive summary and Change log as needed).
+   - Do not rewrite prior-cycle reports merely to modernize terminology.
+5. When (and only when) publication or remediation closeout is explicitly
+   requested, the ONLY Health Check files you may create or modify are:
+   - the cycle report: docs/health/product/{{CYCLE}}-product.md
    - the live register:        docs/health/findings-register.md
 6. PRESERVE all unrelated working-tree changes. Do not touch, stage, revert, or
    include unrelated modified/untracked files.
@@ -105,7 +111,7 @@ owner) — do not mint a parallel PROD Finding for the same root cause.
 
 STEP 0 — LOAD GOVERNING CONTEXT (before anything else)
 Read and follow in full:
-- docs/health/README.md              (Framework v1.1 operating rules)
+- docs/health/README.md              (Framework v1.2 operating rules)
 - docs/health/audit-catalog.md       (ownership; Product vs UX and related rows)
 - docs/health/findings-register.md   (ALL prefixes)
 - docs/health/_templates/report-template.md
@@ -277,19 +283,20 @@ Present in chat:
 STOP. Do not write REPORT_FILE or edit findings-register.md until the human explicitly
 asks to publish / write the report and update the register.
 
-STEP 6 — WRITE THE IMMUTABLE MONTHLY REPORT (only after explicit request)
-Create docs/health/product/{{CYCLE}}-product.md from
-docs/health/_templates/report-template.md. Do not overwrite an existing report.
+STEP 6 — WRITE OR UPDATE THE CYCLE REPORT (only after explicit request)
+Write docs/health/product/{{CYCLE}}-product.md from
+docs/health/_templates/report-template.md. If this is a new Cycle token, create the report; if remediating an existing cycle, update that cycle's report in place (never mint a companion closeout).
 - Header: Review type = Product Audit; Cadence = Monthly; Cycle = {{CYCLE}};
   Date = {{REVIEW_DATE}}; Reviewer = {{REVIEWER}}; Baseline = (from STEP 0b);
-  Status = immutable historical record.
+  Status = Cycle report — remediations update this file; one cycle = one report.
 - Executive summary: 5–10 lines; methods briefly; net change; no invented scores.
 - Include audiences/surfaces inspected and exclusions (summary and/or Observations).
 - "Since last cycle" (RECURRING only): delta by ID.
 - Findings: FULL write-up for NEW PROD Findings (all fields from STEP 4); existing
-  Findings by ID + delta only — never restate full bodies; never rewrite old reports.
+  Findings by ID + delta only — never restate full bodies; never create companion closeout reports.
 - Observations: non-Finding notes, strengths, trade-offs, limitations, cross-audit refs.
 - Change log: publication entry dated {{REVIEW_DATE}}.
+- If remediating Findings for this cycle (not a new Cycle): update Finding Status to Resolved; add **Resolution History** with acceptance criteria and closing evidence; refresh the Executive summary. Never create a companion closeout report.
 
 STEP 7 — UPDATE THE LIVE FINDINGS REGISTER (only after explicit request)
 Edit docs/health/findings-register.md for outstanding work only:
@@ -303,7 +310,7 @@ STEP 8 — VALIDATE, THEN STOP (do NOT commit)
 Non-mutating checks: report naming/path; Baseline flag correct; links; register only
 Open/In Progress/Deferred; no duplicate/renumbered ids; no cross-prefix duplicates;
 Resolved removed with closing links; terminology uses Product / product / PROD;
-no published reports altered; unrelated files untouched. Run `git diff --check` on
+prior-cycle reports not rewritten for terminology; unrelated files untouched. Run `git diff --check` on
 touched docs if any, and `git status` (read-only).
 
 Produce a final summary:
@@ -336,7 +343,7 @@ STOP. Await human review before any commit or push.
 
 | Document | Role |
 |---|---|
-| [`../README.md`](../README.md) | Framework v1.1 operating rules |
+| [`../README.md`](../README.md) | Framework v1.2 operating rules |
 | [`../audit-catalog.md`](../audit-catalog.md) | Ownership authority (Product vs UX) |
 | [`../findings-register.md`](../findings-register.md) | Live work queue |
 | [`../_templates/report-template.md`](../_templates/report-template.md) | Shared report template |

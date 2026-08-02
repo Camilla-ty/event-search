@@ -5,9 +5,7 @@ import { filterDisplayableSponsors } from "@/src/features/events/components/deta
 import {
   mergeCompaniesOntoEventSponsorLinks,
 } from "@/src/lib/queries/companies";
-import { createAdminClient } from "@/src/lib/supabase/admin";
 import { createClient } from "@/src/lib/supabase/server";
-import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 
 /** Hard page size for public sponsor tier pages (ADR-003). */
 export const PUBLIC_SPONSOR_TIER_PAGE_SIZE = 20 as const;
@@ -108,6 +106,55 @@ function compareTierRanks(a: number | null, b: number | null): number {
   return a - b;
 }
 
+type SponsorTierAggregateRow = {
+  tier_rank?: number | null;
+  tier_label?: string | null;
+  sponsor_count?: number | null;
+};
+
+/**
+ * Build identity-free tier summaries from aggregate rows (no company columns).
+ * Exported for unit tests.
+ */
+export function buildPublicSponsorTierSummariesFromAggregates(
+  editionId: string,
+  aggregates: readonly SponsorTierAggregateRow[],
+  options: { isAuthenticated: boolean; totalSponsorCount?: number },
+): PublicSponsorTierSummary {
+  const tiers = aggregates
+    .map((row) => {
+      const tierRank =
+        typeof row.tier_rank === "number" && Number.isFinite(row.tier_rank)
+          ? Math.trunc(row.tier_rank)
+          : null;
+      const rawCount = row.sponsor_count;
+      const count =
+        typeof rawCount === "number" && Number.isFinite(rawCount)
+          ? Math.max(0, Math.trunc(rawCount))
+          : 0;
+      return {
+        tierRank,
+        tierLabel: trimLabel(row.tier_label),
+        count,
+        locked: !options.isAuthenticated && tierRank !== 1,
+      };
+    })
+    .filter((tier) => tier.count > 0)
+    .sort((a, b) => compareTierRanks(a.tierRank, b.tierRank));
+
+  const summed = tiers.reduce((sum, tier) => sum + tier.count, 0);
+  const totalSponsorCount =
+    typeof options.totalSponsorCount === "number" && Number.isFinite(options.totalSponsorCount)
+      ? Math.max(0, Math.trunc(options.totalSponsorCount))
+      : summed;
+
+  return {
+    editionId,
+    totalSponsorCount,
+    tiers,
+  };
+}
+
 /**
  * Build identity-free tier summaries from link tier fields only (no company columns).
  * Exported for unit tests.
@@ -119,7 +166,7 @@ export function buildPublicSponsorTierSummariesFromLinks(
 ): PublicSponsorTierSummary {
   const byRank = new Map<
     string,
-    { tierRank: number | null; tierLabel: string | null; count: number }
+    { tier_rank: number | null; tier_label: string | null; sponsor_count: number }
   >();
 
   for (const link of links) {
@@ -130,38 +177,24 @@ export function buildPublicSponsorTierSummariesFromLinks(
     const key = tierRank === null ? "__null__" : String(tierRank);
     const existing = byRank.get(key);
     if (existing) {
-      existing.count += 1;
-      if (existing.tierLabel === null) {
-        existing.tierLabel = trimLabel(link.tier_label);
+      existing.sponsor_count += 1;
+      if (existing.tier_label === null) {
+        existing.tier_label = trimLabel(link.tier_label);
       }
       continue;
     }
     byRank.set(key, {
-      tierRank,
-      tierLabel: trimLabel(link.tier_label),
-      count: 1,
+      tier_rank: tierRank,
+      tier_label: trimLabel(link.tier_label),
+      sponsor_count: 1,
     });
   }
 
-  const tiers = Array.from(byRank.values())
-    .map((tier) => ({
-      tierRank: tier.tierRank,
-      tierLabel: tier.tierLabel,
-      count: tier.count,
-      locked: !options.isAuthenticated && tier.tierRank !== 1,
-    }))
-    .sort((a, b) => compareTierRanks(a.tierRank, b.tierRank));
-
-  const totalSponsorCount =
-    typeof options.totalSponsorCount === "number" && Number.isFinite(options.totalSponsorCount)
-      ? Math.max(0, Math.trunc(options.totalSponsorCount))
-      : links.length;
-
-  return {
+  return buildPublicSponsorTierSummariesFromAggregates(
     editionId,
-    totalSponsorCount,
-    tiers,
-  };
+    Array.from(byRank.values()),
+    options,
+  );
 }
 
 export function countTiersFromPublicSponsorSummaries(
@@ -171,8 +204,8 @@ export function countTiersFromPublicSponsorSummaries(
 }
 
 /**
- * Identity-free tier chrome for SSR. Uses admin client for all-tier counts only
- * (no company_id / company fields selected).
+ * Identity-free tier chrome for SSR. Reads `event_edition_sponsor_tier_stats`
+ * (all-tier counts/labels, no company fields) via the session client.
  */
 export async function getPublicSponsorTierSummaries(
   editionId: string,
@@ -188,23 +221,25 @@ export async function getPublicSponsorTierSummaries(
   }
 
   try {
-    const supabase = createAdminClient();
-    const links = await fetchAllPaginatedSupabaseRows<SponsorLinkTierFields>(
-      async ({ from, to }) =>
-        supabase
-          .from("event_sponsors")
-          .select("id, tier_rank, tier_label, display_order")
-          .eq("event_editions_id", editionKey)
-          .order("tier_rank", { ascending: true, nullsFirst: false })
-          .order("display_order", { ascending: true, nullsFirst: false })
-          .order("id", { ascending: true })
-          .range(from, to),
-    );
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("event_edition_sponsor_tier_stats")
+      .select("tier_rank, tier_label, sponsor_count")
+      .eq("event_editions_id", editionKey)
+      .order("tier_rank", { ascending: true, nullsFirst: false });
 
-    return buildPublicSponsorTierSummariesFromLinks(editionKey, links, {
-      isAuthenticated: options.isAuthenticated,
-      totalSponsorCount: options.totalSponsorCount,
-    });
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return buildPublicSponsorTierSummariesFromAggregates(
+      editionKey,
+      (data ?? []) as SponsorTierAggregateRow[],
+      {
+        isAuthenticated: options.isAuthenticated,
+        totalSponsorCount: options.totalSponsorCount,
+      },
+    );
   } catch (error) {
     if (process.env.NODE_ENV === "development") {
       console.error("[events] public sponsor tier summaries failed:", error);

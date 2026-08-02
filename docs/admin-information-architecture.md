@@ -1,10 +1,10 @@
 # EventPixels — Admin Information Architecture
 
-**Status:** Approved — reflects shipped v1 including Venues and Organizers  
-**Version:** v1  
-**Last updated:** 2026-07-04 (Organizer UX amendment — Profile embed)  
+**Status:** Approved — reflects shipped v1 including Venues, Organizers, Exhibitors, and company merge
+**Version:** v1
+**Last updated:** 2026-08-02 (Exhibitors edition tab + company merge inventory; DOC-003)
 
-Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), organizer admin ([phase-organizer-scope.md](./phase-organizer-scope.md)), and approved database/migration design.
+Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), organizer admin ([phase-organizer-scope.md](./phase-organizer-scope.md)), exhibitor admin ([exhibitor-design.md](./exhibitor-design.md)), and approved database/migration design.
 
 Describes navigation and screens; implementation lives in `src/app/admin/` and related feature modules.
 
@@ -14,7 +14,7 @@ Describes navigation and screens; implementation lives in `src/app/admin/` and r
 
 | Principle | Meaning for admins |
 |-----------|------------------|
-| **Edition-centric** | Most work lands on an Event Edition — profile, sponsors, imports |
+| **Edition-centric** | Most work lands on an Event Edition — profile, sponsors, exhibitors, imports |
 | **Import is the heavy lift** | Navigation optimizes for create edition → import → publish |
 | **Resume over restart** | In-progress imports surface everywhere (dashboard, edition, imports list) |
 | **Warnings, not walls** | Missing dates/city never blocks; incomplete work is visible, not hidden |
@@ -55,9 +55,10 @@ When viewing `/admin/events/editions/[id]`:
 |-----|---------|
 | **Profile** | Edition fields (optional venue picker, **Organizers** section, research metadata) |
 | **Live sponsors** | `event_sponsors` roster + edit drawer |
-| **Imports** | Batches for this edition |
+| **Exhibitors** | `event_exhibitors` roster + edit drawer; **Bulk Upload** for edition-scoped exhibitor import |
+| **Imports** | Sponsor-import batches for this edition |
 
-Organizers are **edition metadata** on Profile (like venue and website), not a separate operational tab. See [phase-organizer-ux-amendment-scope.md](./phase-organizer-ux-amendment-scope.md).
+Organizers are **edition metadata** on Profile (like venue and website), not a separate operational tab. See [phase-organizer-ux-amendment-scope.md](./phase-organizer-ux-amendment-scope.md). Exhibitor bulk import lives under the **Exhibitors** tab (not the sponsor **Imports** tab).
 
 ### 2.4 Sponsor import sub-nav (in-flow stepper)
 
@@ -168,7 +169,7 @@ flowchart TB
 | C-01 | Companies list | `/admin/companies` |
 | C-02 | Create company | `/admin/companies/new` |
 | C-03 | Company detail / edit | `/admin/companies/[id]` |
-| C-04 | Merge duplicates | v1.1 placeholder |
+| C-04 | Merge companies | `/admin/companies/merge` |
 
 ### 3.6 Venues (3)
 
@@ -207,7 +208,8 @@ flowchart TB
 │       └── /[id] (E-E03)
 │           ├── Tab: Profile (includes Organizers section)
 │           ├── Tab: Live sponsors
-│           └── Tab: Imports
+│           ├── Tab: Exhibitors (roster + Bulk Upload)
+│           └── Tab: Imports (sponsor-import batches)
 ├── /sponsor-imports
 │   ├── List (I-01)
 │   ├── /new (I-02 … I-12 flow)
@@ -215,7 +217,8 @@ flowchart TB
 ├── /companies
 │   ├── List (C-01)
 │   ├── /new (C-02)
-│   └── /[id] (C-03)
+│   ├── /[id] (C-03)
+│   └── /merge (C-04)
 ├── /venues
 │   ├── List (V-A01)
 │   ├── /new (V-A02)
@@ -519,9 +522,13 @@ Resume · View · Download report
 
 View · Edit
 
+**Company merge (v1 — shipped)**
+
+Merge wizard at `/admin/companies/merge` (C-04). Entry from company detail merge actions (and optional query prefill: `canonical`, `duplicate`, `mode`). Preview impact before execute; resolves sponsorship / organizer / exhibitor / draft-link conflicts.
+
 **Bulk actions (v1.1)**
 
-Export · merge duplicates
+Export
 
 ---
 
@@ -573,7 +580,31 @@ None — server-managed `display_order`.
 
 None — live edits are post-publish manual or via re-import tier update.
 
-**v1.1:** Unlink sponsor from edition (admin tool; additive policy aware)
+**Row actions (v1)**
+
+Add sponsor · Edit tier · Move Up / Down (draft order + Save) · Remove from edition · Logo
+
+---
+
+### 7.10 Exhibitors tab (edition detail)
+
+**Location:** Edition detail → **Exhibitors** tab (always present in admin; distinct from public hide-when-empty).
+
+**Filters:** Grouped by tier
+
+**Row actions (v1)**
+
+Add exhibitor · Edit tier · Move Up / Down (draft order + Save) · Remove from edition
+
+**Bulk Upload (v1 — shipped)**
+
+Edition-scoped exhibitor import panel on the same tab (`exhibitor-import` pipeline; writes `event_exhibitors` only — never `event_sponsors`). No global exhibitor-imports hub in primary nav.
+
+**Notes**
+
+- Orthogonal to Live sponsors and Profile organizers; same company may hold multiple roles independently.
+- Exhibitor mutations do **not** auto-touch edition `last_reviewed_at` (manual-only).
+- See [exhibitor-design.md](./exhibitor-design.md).
 
 ---
 
@@ -652,10 +683,11 @@ All authenticated admin users can perform every v1 operation:
 | Event series | ✓ | ✓ | ✓ | — | — |
 | Event editions | ✓ | ✓ | ✓ | — | — |
 | Sponsor imports | ✓ | ✓ | ✓ | Discard batch | Publish sponsors |
-| Companies | ✓ | ✓ | ✓ | — | — |
+| Companies | ✓ | ✓ | ✓ (incl. merge C-04) | — | — |
 | Venues | ✓ | ✓ | ✓ | Archive only | — |
 | Edition organizers | ✓ | ✓ | ✓ | Remove link only | — |
-| Live sponsors | ✓ | — | via import | — | via import |
+| Live sponsors | ✓ | ✓ | ✓ | Remove link only | via import |
+| Edition exhibitors | ✓ | ✓ | ✓ | Remove link only | via exhibitor import |
 | Admin search | ✓ | — | — | — | — |
 
 Deletion of series, editions, or companies is **out of scope for v1** (no delete UI).
@@ -756,6 +788,7 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 | 2026-06-25 | Venues nav (§2.1), screen inventory (§3.6), hierarchy, permissions, venue journey |
 | 2026-07-04 | Organizers edition tab (§2.3), journey §7, filters §7.8, permissions matrix |
 | 2026-07-04 | Organizer UX amendment: Profile embed; remove Organizers tab (§2.3, §7.8, journey §7) |
+| 2026-08-02 | Exhibitors edition tab + company merge shipped inventory (§2.3, §3.5 C-04, hierarchy, §7.10, permissions); Admin search remains v1 capability (`PROD-001`) |
 
 ---
 
@@ -771,5 +804,6 @@ Admin IA screens ship across phases 1, 4, and 5 — not by role, but by dependen
 | Organizer design | [organizer-design.md](./organizer-design.md) |
 | Organizer v1 scope | [phase-organizer-scope.md](./phase-organizer-scope.md) |
 | Organizer UX amendment | [phase-organizer-ux-amendment-scope.md](./phase-organizer-ux-amendment-scope.md) |
+| Exhibitor design | [exhibitor-design.md](./exhibitor-design.md) |
 | Sponsor import DB design | [sponsor-import-database-design.md](./sponsor-import-database-design.md) |
 | Sponsor import migrations | [sponsor-import-migration-design.md](./sponsor-import-migration-design.md) |

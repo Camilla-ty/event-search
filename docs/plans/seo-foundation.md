@@ -1,8 +1,8 @@
 # SEO Foundation
 
-**Status:** Foundation started (crawl basics live); rich SEO and scale architecture planned  
-**Primary host:** `https://app.eventpx.com`  
-**Audience:** Product, engineering, and content operations  
+**Status:** Foundation in progress — crawl basics, IR1 indexability helpers, research hubs, and core JSON-LD ship; scale/health architecture still planned
+**Primary host:** `https://app.eventpx.com`
+**Audience:** Product, engineering, and content operations
 **Horizon:** Multi-year roadmap for EventPixels public discovery (events, series, sponsors)
 
 ---
@@ -16,17 +16,19 @@
 
 ---
 
-## Current state (as of 2026-07)
+## Current state (as of 2026-08-02)
 
 | Capability | State |
 |------------|--------|
 | Google Search Console | Configured |
-| `robots.txt` | Configured (`Allow: /`, sitemap reference) |
-| `sitemap.xml` | Single sitemap via `src/app/sitemap.ts` (~3,500 URLs) |
+| `robots.txt` | Configured (`Allow: /`, sitemap reference); optional admin Disallow still open |
+| `sitemap.xml` | Single sitemap via `src/app/sitemap.ts` / `sitemapEntries.ts` — membership aligned to indexability gates |
 | Canonical URLs | `https://app.eventpx.com/...` |
 | Open Graph / Twitter URLs | Same production origin (no `*.vercel.app`) |
-| Metadata helper | `createPageMetadata` / `rootSiteMetadata` in `src/lib/metadata/site.ts` |
-| JSON-LD | Not implemented |
+| Metadata helper | `createPageMetadata` / `rootSiteMetadata` in `src/lib/metadata/site.ts` (supports `robots`) |
+| Indexability (IR1) | **Implemented** in `src/lib/seo/indexability.ts` (company/edition/series/collection/research gates); **residual:** empty topic shells (`SEO-001`) |
+| Research hubs | **Shipped** — `/events/topics/{topic}/regions/{region}` (± `/years/{year}`) with quality gate |
+| JSON-LD | **Partially implemented** — Event + BreadcrumbList on event detail; Organization on sponsor detail (`src/lib/seo/*JsonLd.ts`) |
 | Per-entity social images | Not implemented (shared wordmark) |
 | SEO health admin reporting | Not implemented |
 
@@ -115,7 +117,7 @@ Fallbacks when fields missing: omit empty segments; always keep a one-sentence p
 
 **Purpose:** Brand hubs that collect editions.
 
-**Title:** `{seriesName}`  
+**Title:** `{seriesName}`
 **Description preference order**
 
 1. Length-capped factual series summary from `buildEventSeriesSummary` / `buildSeriesMetadataDescription` (~150–160 chars for SERP).
@@ -132,7 +134,7 @@ Public body copy uses the same factual summary engine (no curated or AI-generate
 
 **Purpose:** Company/sponsor identity pages.
 
-**Title:** `{companyName}`  
+**Title:** `{companyName}`
 **Description preference order**
 
 1. Public short description / about blurb (when allowed on public surface).
@@ -523,3 +525,4 @@ Allowed as **draft assist**, not silent publish:
 | Date | Note |
 |------|------|
 | 2026-07-15 | Initial SEO foundation architecture and phased roadmap |
+| 2026-08-02 | Current-state table refreshed (IR1, research hubs, JSON-LD); Status wording (`DOC-001`) |

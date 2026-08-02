@@ -1,13 +1,12 @@
 import { createClient } from "@/src/lib/supabase/server";
-import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
-import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_PUBLIC_EMBED } from "@/src/lib/location/cityEmbedSelect";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { isCompanyRestricted } from "@/src/lib/companies/companyPublicRestriction";
 import {
   getEventBrandPublicDestinationIndex,
   withPublicCompanyRoleHref,
+  type EventBrandPublicDestinationIndex,
 } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 
 /** Stable map key for UUID `company_id` / `companies.id` comparisons (Postgres may emit mixed cases). */
@@ -89,137 +88,31 @@ function mapCompanyPublicRowsForDisplay(rows: CompanyPublicRow[]): CompanyPublic
   return rows.map(mapCompanyPublicRowForDisplay);
 }
 
-async function getCompanyByIdAdmin(id: string): Promise<CompanyPublicRow | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("companies")
-      .select(COMPANY_PUBLIC_SELECT)
-      .eq("id", id)
-      .maybeSingle();
-    if (error) return null;
-    return data as CompanyPublicRow;
-  } catch {
+/**
+ * Fail-closed mapping for public company profile queries (ARC-001 Phase 1).
+ * Error or empty → null; restricted rows → null; never implies a service-role retry.
+ */
+export function resolvePublicCompanyProfileQueryResult(
+  data: CompanyPublicRow | null | undefined,
+  error: { message?: string } | null | undefined,
+): CompanyPublicRow | null {
+  if (error || !data) {
     return null;
   }
-}
-
-export async function getCompanyById(id: string): Promise<CompanyPublicRow | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_PUBLIC_SELECT)
-    .eq("id", id)
-    .is("restricted_at", null)
-    .maybeSingle();
-
-  if (error) {
-    const row = await getCompanyByIdAdmin(id);
-    return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
-  }
-  if (data) {
-    return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
-  }
-
-  const row = await getCompanyByIdAdmin(id);
-  return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
-}
-
-async function getCompanyBySlugAdmin(slug: string): Promise<CompanyPublicRow | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("companies")
-      .select(COMPANY_PUBLIC_SELECT)
-      .eq("slug", slug)
-      .maybeSingle();
-    if (error) return null;
-    return data as CompanyPublicRow;
-  } catch {
-    return null;
-  }
-}
-
-export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow | null> {
-  const key = slug.trim();
-  if (!key) return null;
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_PUBLIC_SELECT)
-    .eq("slug", key)
-    .is("restricted_at", null)
-    .maybeSingle();
-
-  if (error) {
-    const row = await getCompanyBySlugAdmin(key);
-    return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
-  }
-  if (data) {
-    return mapCompanyPublicRowForDisplay(data as CompanyPublicRow);
-  }
-
-  const row = await getCompanyBySlugAdmin(key);
-  return isPublicCompanyProfileRow(row) ? mapCompanyPublicRowForDisplay(row) : null;
-}
-
-export async function getCompaniesByIds(ids: readonly string[]) {
-  const unique = [...new Set(ids.filter((id) => id.trim() !== ""))];
-  if (unique.length === 0) {
-    return [];
-  }
-
-  const supabase = await createClient();
-  const rows = await fetchAllByIdInBatches(unique, (batchIds) =>
-    supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
-  );
-
-  return mapCompanyPublicRowsForDisplay(rows as CompanyPublicRow[]);
-}
-
-async function getCompaniesByIdsAdmin(ids: readonly string[]) {
-  const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => id !== ""))];
-  if (unique.length === 0) return [];
-
-  try {
-    const supabase = createAdminClient();
-    return (await fetchAllByIdInBatches(unique, (batchIds) =>
-      supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
-    )) as CompanyPublicRow[];
-  } catch {
-    return [];
-  }
+  return isPublicCompanyProfileRow(data) ? mapCompanyPublicRowForDisplay(data) : null;
 }
 
 /**
- * Hydrate `event_sponsors` rows with authoritative `companies` rows keyed by `company_id`.
+ * Attach batch-loaded companies onto sponsor links. Missing ids stay null (no admin fill).
  */
-export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id?: unknown }>(
+export function attachCompaniesToEventSponsorLinks<L extends { company_id?: unknown }>(
   links: readonly L[],
-): Promise<Array<L & { companies: CompanyPublicRow | null }>> {
-  const ids: string[] = [];
-  for (const link of links) {
-    if (link.company_id === null || link.company_id === undefined) continue;
-    const trimmed = String(link.company_id).trim();
-    if (trimmed !== "") ids.push(trimmed);
-  }
-
-  const rows = await getCompaniesByIds(ids);
-  const byId = new Map<string, CompanyPublicRow>(rows.map((r) => [companyIdKey(r.id), r]));
-
-  const missingCompanyIds = [...new Set(ids.map((id) => companyIdKey(id)))].filter(
-    (key) => key !== "" && !byId.has(key),
+  companies: readonly CompanyPublicRow[],
+  destinationIndex: EventBrandPublicDestinationIndex,
+): Array<L & { companies: CompanyPublicRow | null }> {
+  const byId = new Map<string, CompanyPublicRow>(
+    companies.map((row) => [companyIdKey(row.id), row]),
   );
-
-  if (missingCompanyIds.length > 0) {
-    const adminRows = await getCompaniesByIdsAdmin(missingCompanyIds);
-    for (const row of adminRows) {
-      byId.set(companyIdKey(row.id), row as CompanyPublicRow);
-    }
-  }
-
-  const destinationIndex = await getEventBrandPublicDestinationIndex();
 
   return links.map((link) => {
     if (link.company_id === null || link.company_id === undefined) {
@@ -237,10 +130,83 @@ export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id
 }
 
 /**
+ * Public company profile by id (ARC-001 Phase 1).
+ * Uses the RLS-bound session client only — fail closed on error/empty (no service-role fallback).
+ */
+export async function getCompanyById(id: string): Promise<CompanyPublicRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select(COMPANY_PUBLIC_SELECT)
+    .eq("id", id)
+    .is("restricted_at", null)
+    .maybeSingle();
+
+  return resolvePublicCompanyProfileQueryResult(data as CompanyPublicRow | null, error);
+}
+
+/**
+ * Public company profile by slug (ARC-001 Phase 1).
+ * Uses the RLS-bound session client only — fail closed on error/empty (no service-role fallback).
+ */
+export async function getCompanyBySlug(slug: string): Promise<CompanyPublicRow | null> {
+  const key = slug.trim();
+  if (!key) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select(COMPANY_PUBLIC_SELECT)
+    .eq("slug", key)
+    .is("restricted_at", null)
+    .maybeSingle();
+
+  return resolvePublicCompanyProfileQueryResult(data as CompanyPublicRow | null, error);
+}
+
+/** Batch-load companies via the RLS-bound session client. Fail closed to [] on error. */
+export async function getCompaniesByIds(ids: readonly string[]) {
+  const unique = [...new Set(ids.filter((id) => id.trim() !== ""))];
+  if (unique.length === 0) {
+    return [];
+  }
+
+  try {
+    const supabase = await createClient();
+    const rows = await fetchAllByIdInBatches(unique, (batchIds) =>
+      supabase.from("companies").select(COMPANY_PUBLIC_SELECT).in("id", batchIds),
+    );
+
+    return mapCompanyPublicRowsForDisplay(rows as CompanyPublicRow[]);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Hydrate `event_sponsors` rows with authoritative `companies` rows keyed by `company_id`.
+ * ARC-001 Phase 1: session/RLS client only — missing companies stay null (no admin fill).
+ */
+export async function mergeCompaniesOntoEventSponsorLinks<L extends { company_id?: unknown }>(
+  links: readonly L[],
+): Promise<Array<L & { companies: CompanyPublicRow | null }>> {
+  const ids: string[] = [];
+  for (const link of links) {
+    if (link.company_id === null || link.company_id === undefined) continue;
+    const trimmed = String(link.company_id).trim();
+    if (trimmed !== "") ids.push(trimmed);
+  }
+
+  const rows = await getCompaniesByIds(ids);
+  const destinationIndex = await getEventBrandPublicDestinationIndex();
+  return attachCompaniesToEventSponsorLinks(links, rows, destinationIndex);
+}
+
+/**
  * Total count of all sponsor links for an edition across all tiers.
- * Uses the admin client so the result is auth-independent — safe to call from
- * server components only. Returns a number (0 when the edition has no sponsors
- * or does not exist). Never exposes company names, tiers, or any other detail.
+ * Reads the public aggregate view (all tiers, identity-free) via the session
+ * client — auth-independent totals without service_role. Returns 0 when the
+ * edition has no sponsors or does not exist.
  */
 export async function getTotalSponsorCount(eventEditionId: string): Promise<number> {
   const editionKey = normalizeEditionIdForQuery(eventEditionId);
@@ -267,9 +233,35 @@ export function buildSponsorCountByEditionId(
   return countByEdition;
 }
 
+/** Map identity-free aggregate view rows into per-edition totals. */
+export function buildSponsorCountByEditionIdFromStats(
+  rows: readonly {
+    event_editions_id?: unknown;
+    sponsor_count?: unknown;
+  }[],
+): Map<string, number> {
+  const countByEdition = new Map<string, number>();
+
+  for (const row of rows) {
+    if (typeof row.event_editions_id !== "string") continue;
+    const editionKey = normalizeEditionIdForQuery(row.event_editions_id);
+    if (editionKey === "") continue;
+
+    const raw = row.sponsor_count;
+    const count =
+      typeof raw === "number" && Number.isFinite(raw)
+        ? Math.max(0, Math.trunc(raw))
+        : 0;
+    countByEdition.set(editionKey, count);
+  }
+
+  return countByEdition;
+}
+
 /**
- * Total sponsor counts for many editions in one query (all tiers, auth-independent).
- * Uses the admin client — server-only. Returns 0 for editions with no links.
+ * Total sponsor counts for many editions (all tiers, identity-free).
+ * Uses `event_edition_sponsor_counts` via the RLS-bound session client
+ * (view is security_invoker=false). Returns 0 for editions with no links.
  */
 export async function getSponsorCountsByEditionIds(
   editionIds: readonly string[],
@@ -287,19 +279,18 @@ export async function getSponsorCountsByEditionIds(
   }
 
   try {
-    const supabase = createAdminClient();
-    const editionIdSet = new Set(uniqueEditionIds);
-    const links = await fetchAllPaginatedSupabaseRows<{ event_editions_id?: unknown }>(
-      async ({ from, to }) =>
-        supabase.from("event_sponsors").select("event_editions_id").range(from, to),
+    const supabase = await createClient();
+    const rows = await fetchAllByIdInBatches<{
+      event_editions_id?: unknown;
+      sponsor_count?: unknown;
+    }>(uniqueEditionIds, (batchIds) =>
+      supabase
+        .from("event_edition_sponsor_counts")
+        .select("event_editions_id, sponsor_count")
+        .in("event_editions_id", batchIds),
     );
 
-    const filteredLinks = links.filter((link) => {
-      if (typeof link.event_editions_id !== "string") return false;
-      return editionIdSet.has(normalizeEditionIdForQuery(link.event_editions_id));
-    });
-
-    return buildSponsorCountByEditionId(filteredLinks);
+    return buildSponsorCountByEditionIdFromStats(rows);
   } catch {
     return new Map();
   }

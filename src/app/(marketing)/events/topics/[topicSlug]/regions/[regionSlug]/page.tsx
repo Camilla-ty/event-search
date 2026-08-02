@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { TopicRegionHubView } from "@/src/features/events/components/topic-region/TopicRegionHubView";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
-import { getPublishedResearchPageBySlugs } from "@/src/features/research-pages/server/researchPageAdmin";
+import { getPublishedResearchPageBySlugsPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import {
   createNotFoundPageMetadata,
   createPageMetadata,
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 type Params = { topicSlug: string; regionSlug: string };
 
 async function loadPublishedPage(params: Params) {
-  const published = await getPublishedResearchPageBySlugs(
+  const published = await getPublishedResearchPageBySlugsPublic(
     params.topicSlug,
     params.regionSlug,
     null,

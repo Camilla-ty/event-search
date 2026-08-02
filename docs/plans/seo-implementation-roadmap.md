@@ -1,19 +1,23 @@
 # SEO Implementation Roadmap
 
-**Status:** Roadmap only — no implementation  
-**Date:** 2026-07-16  
-**Audience:** Product and engineering  
+**Status:** Partially implemented — delivery order still authoritative; phase statuses below refreshed 2026-08-02
+**Date:** 2026-07-16
+**Last status refresh:** 2026-08-02
+**Audience:** Product and engineering
 **Authority stack:**
 
 | Doc | Role |
 |-----|------|
 | `docs/plans/seo-foundation.md` | Architecture, templates, phases S0–S6, constraints |
-| `docs/plans/seo-gap-audit.md` | Live vs plan gaps (2026-07-15) |
+| `docs/plans/seo-gap-audit.md` | Live vs plan gaps (2026-07-15) — historical snapshot |
 | `docs/plans/seo-copy-examples.md` | Illustrative S1 metadata examples |
+| `docs/plans/indexability-policy.md` | Confirmed IR1 rules + current implementation status |
 | **This document** | **Delivery order** incorporating confirmed product decisions |
 
-**Host:** `https://app.eventpx.com`  
+**Host:** `https://app.eventpx.com`
 **Constraint:** SEO output reflects **anonymous-visible** content only (align with `docs/plans/protection-v1.md`). Never invent claims; never surface gated roster detail in public metadata or summaries.
+
+**Implementation snapshot (2026-08-02):** **IR1** largely shipped (`src/lib/seo/indexability.ts`, sitemap membership, collection noindex, soft-404/login/admin noindex). **IR4** MVP research hubs shipped (topic × region ± year). **IR5** core JSON-LD shipped (Event, Organization, BreadcrumbList). Residual: empty `/topics/{slug}` shells (`SEO-001`); optional admin `robots.txt` Disallow; later IR health/sharding and richer IR4 lenses.
 
 ---
 
@@ -119,11 +123,13 @@ A public entity page may be indexable only if all of the following hold:
 
 ### Acceptance criteria
 
-- [ ] Written public-value gate table approved (v1 above or refined).
-- [ ] Soft-404 and non-public entity metadata are `noindex`.
-- [ ] Sitemap includes only pages that pass the gate (decision 7).
-- [ ] Restricted companies remain excluded from sitemap and public index targets.
-- [ ] Auth/admin indexing policy documented and applied.
+- [x] Written public-value gate table approved (v1 above or refined) — see `indexability-policy.md`.
+- [x] Soft-404 and non-public entity metadata are `noindex`.
+- [x] Sitemap includes only pages that pass the gate (decision 7) — **residual:** empty topic hubs may still be listed (`SEO-001`).
+- [x] Restricted companies remain excluded from sitemap and public index targets.
+- [x] Auth/admin indexing policy documented and applied (meta `noindex`; optional `robots.txt` Disallow still open).
+
+**Implementation status (2026-08-02):** **Largely shipped** via `src/lib/seo/indexability.ts` + sitemap builders. Do not re-plan IR1 as greenfield.
 
 ---
 
@@ -222,11 +228,13 @@ Ship **indexable hub pages** that answer real search intent — geo + topic even
 
 ### Acceptance criteria
 
-- [ ] No `/research/sponsors/most-active` or equivalent global leaderboard URL.
+- [x] No `/research/sponsors/most-active` or equivalent global leaderboard URL.
 - [ ] At least one topic hub ships with sponsor-intelligence module or lens.
-- [ ] Geo + topic event hub pattern documented with minimum edition gate.
-- [ ] Qualifying hub URLs in sitemap; filter URLs remain `noindex`.
+- [x] Geo + topic event hub pattern documented with minimum edition gate — Bitcoin × Asia / topic×region hubs + quality gate.
+- [x] Qualifying hub URLs in sitemap; filter URLs remain `noindex` — research hubs gated; **residual:** empty `/topics/{slug}` shells (`SEO-001`).
 - [ ] Internal-linking pattern from events/series to topic hubs documented.
+
+**Implementation status (2026-08-02):** **Partially shipped** — public research routes at `/events/topics/.../regions/...` (± `/years/...`); further topic-lens polish may remain.
 
 ---
 
@@ -251,10 +259,12 @@ Add machine-readable and share-friendly signals that match **visible public cont
 
 ### Acceptance criteria
 
-- [ ] Sample event + sponsor pass Rich Results / schema validation for core types.
-- [ ] JSON-LD contains no gated or restricted data.
+- [x] Sample event + sponsor emit core JSON-LD types in markup (`Event`, `Organization`; plus `BreadcrumbList` on events) — validate in Rich Results as needed.
+- [x] JSON-LD builders omit gated/restricted graphs (restricted companies emit no Organization graph).
 - [ ] Default share image is raster PNG/JPG (not SVG-only wordmark).
-- [ ] Schema fields are a subset of publicly visible facts.
+- [x] Schema fields are a subset of publicly visible facts (builders skip incomplete graphs).
+
+**Implementation status (2026-08-02):** **Partially shipped** — Event / Organization / BreadcrumbList via `src/lib/seo/*JsonLd.ts` + `JsonLd` component. `WebSite` home schema and raster OG defaults may still be open.
 
 ---
 
@@ -385,3 +395,4 @@ summaries      SEO (primary)    assets
 |------|------|
 | 2026-07-16 | Initial implementation roadmap from foundation, gap audit, copy examples + seven confirmed product decisions |
 | 2026-07-17 | IR3B (Most Active Sponsors research page) cancelled; IR3 scoped to profiles + discovery; IR4 redefined as topic/geo lens hubs (`ir3-revised-plan.md`) |
+| 2026-08-02 | Status → partially implemented; IR1/IR4/IR5 acceptance + implementation notes refreshed against shipped code (`DOC-001`) |

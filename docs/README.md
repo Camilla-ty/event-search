@@ -29,9 +29,9 @@ Immutable review reports live under `docs/health/<review-type>/`; the baseline i
 | [Navigation & data fetching](./architecture/navigation-and-data-fetching.md) | Category A–D policy, shared `src/lib/navigation` utilities, PR checklist, phased rollout |
 | [Side-effect ownership](./architecture/side-effect-ownership.md) | One event / one owner policy, auth refresh provider, audit checklist |
 | [ADR-004 — Event Series ↔ Company same-brand link](./adr/ADR-004-event-series-company-same-brand-link.md) | **Accepted** — optional 1:1 `event_series.company_profile_id`; roles stay Company-only; supersedes polymorphic sponsors. **Implemented through SB3** (SB4 manual review pending). Public dual-destination V1 for Event Brand Companies **amended by ADR-005**. |
-| [ADR-005 — Event Brand Public Profile Policy](./adr/ADR-005-event-brand-public-profile-policy.md) | **Accepted** (2026-08-01) — Series hub is public Event Brand identity; Participated Events for brand activity elsewhere; Event Brand Company public profiles retire over time under per-Company approval; normal Sponsor Profiles unchanged. **Documentation only — no implementation authorized by the ADR alone.** |
-| [Phase — Event Brand Public Profile (ADR-005)](./phase-event-brand-public-profile-scope.md) | Thin implementation scope (EB0–EB6); **EB0–EB4** in repo (SFF approved, soft SEO, temporary Series redirect, public role hrefs); EB5–EB6 not started |
-| [ADR-005 Event Brand Public Profile — Implementation Audit](./audits/adr-005-event-brand-public-profile-implementation-audit.md) | Documentation-only (2026-08-01) — Company public URL producers/consumers, retarget map, EB0–EB6 phase order; **no implementation authorized** |
+| [ADR-005 — Event Brand Public Profile Policy](./adr/ADR-005-event-brand-public-profile-policy.md) | **Accepted** architectural decision (2026-08-01) — Series hub is public Event Brand identity; Participated Events for brand activity elsewhere; Event Brand Company public profiles retire over time under per-Company approval; normal Sponsor Profiles unchanged. The ADR records policy only; it does **not** by itself authorize schema/route work. |
+| [Phase — Event Brand Public Profile (ADR-005)](./phase-event-brand-public-profile-scope.md) | **Implementation tracker** for ADR-005 (EB0–EB6). **Shipped:** EB0–EB4 (SFF approved, soft SEO, temporary Series redirect, public role hrefs). **Not started:** EB5–EB6 |
+| [ADR-005 Event Brand Public Profile — Implementation Audit](./audits/adr-005-event-brand-public-profile-implementation-audit.md) | Point-in-time planning audit (2026-08-01) — Company public URL producers/consumers, retarget map, EB0–EB6 phase order; historical inventory baseline for the phase scope |
 | [Phase — Event Series ↔ Company same-brand scope](./phase-event-series-company-same-brand-scope.md) | Thin V1 implementation scope (SB0–SB4) for ADR-004 — **SB0–SB3 complete; SB4 pending** |
 | [Linked Event Series & Company Profiles — Architecture Audit](./audits/event-series-company-same-brand-architecture-audit.md) | Documentation-only audit (Phase 1 data/admin + Phase 2 public UI/search/SEO/permissions/V1 scope); 2026-07-31 |
 | [Participated Events Tab Placement Audit](./audits/participated-events-tab-placement-audit.md) | Documentation-only (2026-08-01) — Series hub vs Edition tab placement for ADR-004 Participated Events prototype; **no implementation authorized** |
@@ -102,7 +102,7 @@ See [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
 | [Phase — Venue v1 Scope](./phase-venue-scope.md) | **Implemented** — database, admin, edition integration, public tabs, QA |
 | [Venue Migration Design](./venue-migration-design.md) | **Approved and applied** — `20260704120000_venues_v1.sql` |
 
-**Locked highlights:** `venues` + nullable `event_editions.venue_id`; city retained; archive-only (no delete); public edition tabs **Overview / Sponsors / Venue** only; no standalone `/venues/...` pages. Logo: HTTP URL paste (stored as-is) or file upload to `COMPANY_LOGO_BUCKET` on venue edit. External URL ingest into Storage deferred to a future enhancement.
+**Locked highlights:** `venues` + nullable `event_editions.venue_id`; city retained; archive-only (no delete); public Event Detail includes a **Venue** tab (always present alongside Overview, Sponsors, and Organizers; Exhibitors and Partner Alumni appear when non-empty); no standalone `/venues/...` pages. Logo: HTTP URL paste (stored as-is) or file upload to `COMPANY_LOGO_BUCKET` on venue edit. External URL ingest into Storage deferred to a future enhancement.
 
 ---
 
@@ -125,7 +125,7 @@ See [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
 | [Phase — Organizer UX Amendment](./phase-organizer-ux-amendment-scope.md) | **Implemented** (O5) — Profile embed + public Organizers tab |
 | [Organizer Migration Design](./organizer-migration-design.md) | **Approved and applied** — `20260708120000_organizers_v1.sql`, `20260709120000_company_merge_organizers.sql` |
 
-**Locked highlights:** `event_edition_organizers` join table (companies-only; no legacy `organizers` / `event_organizers` tables); admin **Organizers section on edition Profile** (metadata alongside venue); public tabs **Overview / Sponsors / Venue / Organizers** — Organizers tab always visible with in-tab empty state when none; company merge repoints organizer links; `last_reviewed_at` auto-touch on add/remove/role edit (not reorder).
+**Locked highlights:** `event_edition_organizers` join table (companies-only; no legacy `organizers` / `event_organizers` tables); admin **Organizers section on edition Profile** (metadata alongside venue); public Event Detail tabs always include **Overview / Sponsors / Venue / Organizers** (Organizers always visible with in-tab empty state when none); **Exhibitors** and **Partner Alumni** tabs appear when non-empty; company merge repoints organizer links; `last_reviewed_at` auto-touch on add/remove/role edit (not reorder).
 
 ---
 
@@ -136,13 +136,13 @@ See [Implementation Roadmap v1 (Historical)](./implementation-roadmap-v1.md):
 | [Partner Alumni Design](./partner-alumni-design.md) | **Approved (v2)** — series-level **versioned** roster; current version public |
 | [Phase — Partner Alumni v2 Scope](./phase-partner-alumni-scope.md) | **Approved (v2)** — PA0′–PA5 deliverables |
 | [Partner Alumni Import Redesign](./partner-alumni-import-redesign.md) | **Approved (v1.1)** — batch workflow modeled on Sponsor Import (replaces PA3′ drawer); locked decisions §2; golden QA file §19 |
-| [Partner Alumni Migration Design](./partner-alumni-migration-design.md) | **Approved (v2)** — PA1′ migration authored; apply + verify next |
+| [Partner Alumni Migration Design](./partner-alumni-migration-design.md) | **Approved (v2)** — PA1′ versions migration design; applied as `20260711120000_partner_alumni_v2_versions.sql` (+ company-merge follow-on) |
 
-**Status:** **PA0′ complete**; **PA1′ migration authored** (OQ1–OQ4, OQ7 locked; OQ8–OQ9 locked for PA2′/PA3′). v1 draft/Verify/snapshot model **deprecated**.
+**Status:** **v2 shipped** — PA0′–PA5 program/admin complete; **version-scoped batch import shipped** (full-page stepper under version import routes). v1 draft/Verify/snapshot model **deprecated**. Legacy PA3′ **drawer** bulk upload still present in series admin (deprecation incomplete — PA-IMP-5).
 
-**Next step:** Apply **`20260711120000_partner_alumni_v2_versions.sql`** + run verify script, then PA2′ admin.
+**Next step:** Finish **PA-IMP-5** (deprecate/remove legacy drawer + old preview/commit paths; keep batch import as the only bulk path). Dashboard resume for Partner Alumni imports remains a product gap (`PROD-003`).
 
-**Locked highlights (v2):** `event_partner_alumni` program + **`event_partner_alumni_versions`** + **version members**; **`current_version_id`** public pointer; **no draft table**; **no Verify**; **Create New Version copies current by default**; **cannot delete current version**; **cannot set empty version as current** (OQ8); **bulk import does not auto-set current** (OQ9); **rename snapshot→version tables** (no parallel system); **discard v1 draft rows**; **server-side public resolution**; versions **editable/deletable**; **version-scoped bulk import** (400+ companies); public edition tab shows **current version only**; historical versions **admin-only**; separate from sponsors; sponsor counts unaffected; series hub out of scope.
+**Locked highlights (v2):** `event_partner_alumni` program + **`event_partner_alumni_versions`** + **version members**; **`current_version_id`** public pointer; **no draft table**; **no Verify**; **Create New Version copies current by default**; **cannot delete current version**; **cannot set empty version as current** (OQ8); **bulk import does not auto-set current** (OQ9); **rename snapshot→version tables** (no parallel system); **discard v1 draft rows**; **server-side public resolution**; versions **editable/deletable**; **version-scoped bulk import** (400+ companies); public edition tab shows **current version only** (hide-when-empty); historical versions **admin-only**; separate from sponsors; sponsor counts unaffected; series hub out of scope.
 
 **Deprecated (v1):** `event_partner_alumni_companies`, Verify, `latest_snapshot_id`, immutable snapshots.
 

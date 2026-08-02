@@ -6,9 +6,9 @@
 **Date:** 2026-07-31
 **Reviewer:** Scalability (Automated)
 **Baseline:** true
-**Status:** Immutable historical record — do not edit after publication.
+**Status:** Cycle report — remediations update this file; one cycle = one report (do not create separate closeout reports).
 
-> Baseline Scalability Health Check under Framework v1.1. No prior Scalability report existed, so this run is Baseline. Cadence is **Quarterly** per `docs/health/README.md` / `audit-catalog.md` (requested cycle token `2026-07` retained). New Finding: `SCALE-001`. Growth ceilings already tracked under Architecture (`ARC-002`, `ARC-003`, `ARC-004`, `ARC-010`, `ARC-011`, and related) are cross-referenced, not duplicated.
+> Baseline Scalability Health Check under Framework v1.1 (lifecycle clarified under Framework v1.2). No prior Scalability report existed, so this run is Baseline. Cadence is **Quarterly** per `docs/health/README.md` / `audit-catalog.md` (requested cycle token `2026-07` retained). New Finding: `SCALE-001` (later remediated — see **Resolution History**). Growth ceilings already tracked under Architecture (`ARC-002`, `ARC-003`, `ARC-004`, `ARC-010`, `ARC-011`, and related) are cross-referenced, not duplicated.
 
 ---
 
@@ -18,7 +18,9 @@ First Scalability cycle for EventPixels. Methods: read-only magnitude counts (co
 
 Current approximate magnitudes: **~4,583 companies** (~4,561 active), **~6,409 company_domains**, **~7,286 event_sponsors**, **~4,493 company_sponsor_stats**, **~4,136** `company-logos` Storage objects, **93** editions / **38** series. At these sizes, several ceilings already matter operationally; at **10×–100×** they become hard stoppers.
 
-Net change: **1 new** Finding (`SCALE-001`). **0 resolved**. Primary growth risks remain owned by existing Architecture IDs (`ARC-002`/`003`/`004`/`010`/`011`) — referenced only. Strengths: derived `company_sponsor_stats` exists and is populated near company count; import materialization is already chunked (though still client-orchestrated — `ARC-010`); sitemap uses ranged fetch-all with `revalidate = 3600`.
+**At publication (2026-07-31):** **1 new** Finding (`SCALE-001`). **0 resolved**. Primary growth risks remain owned by existing Architecture IDs (`ARC-002`/`003`/`004`/`010`/`011`) — referenced only. Strengths: derived `company_sponsor_stats` exists and is populated near company count; import materialization is already chunked (though still client-orchestrated — `ARC-010`); sitemap uses ranged fetch-all with `revalidate = 3600`.
+
+**After remediation (2026-08-02):** `SCALE-001` **Resolved** (alias search via `admin_company_ids_matching_alias` RPC — no full active-company load). Closing evidence in **Resolution History**. Architecture-owned growth ceilings unchanged.
 
 ---
 
@@ -44,11 +46,11 @@ No `PERF` or `DB` Findings exist yet in the register; measured “slow today” 
 
 - **Why it matters:** Alias matching in admin company search selects every `status = active` company into the Node process with **no `.range()` / keyset pagination** (`fetchAliasSearchCandidates` in `src/features/companies/server/companyAdminSearch.ts`). PostgREST’s default page cap (~1,000 rows) already silently truncates relative to **~4,561** active companies — alias hits beyond the first page are missed today. At **10×–100×** catalog size the path becomes both incorrect and untenable (memory, latency, Function limits) for a core operator identity workflow (merge/search/pickers).
 - **Severity:** High · **Effort:** Medium
-- **Evidence:**
+- **Evidence (at discovery, 2026-07-31):**
   - `fetchAliasSearchCandidates` — `.from("companies").select(...).eq("status", "active")` with in-memory alias filter; no pagination
   - Contrast: domain branch uses `fetchAllPaginatedSupabaseRows` (unbounded but paged); primary name/slug/domain branch uses filtered `.or(ilike…)` (bounded by match set, still subject to default max rows)
   - Magnitude: ~4,561 active companies (read-only count, 2026-07-31)
-- **Status:** Open
+- **Status:** Resolved (2026-08-02) — see Resolution History
 - **Recommended action:** Replace full-table alias scan with a scalable strategy (e.g. normalized alias table / GIN / RPC search; or server-side filtered query that never loads the full directory). Enforce explicit pagination or a hard candidate cap with deterministic ranking.
 - **Scope:** Admin company identity search and any callers of `searchCompaniesAdmin` (merge pickers, drawers, admin company UI).
 - **Validation / acceptance criteria:** Alias search never loads the full active companies set into memory; results remain correct as active companies grow past PostgREST default page size; paged or indexed path documented.
@@ -81,8 +83,23 @@ No `PERF` or `DB` Findings exist yet in the register; measured “slow today” 
 
 ---
 
+## Resolution History
+
+### 2026-08-02 — SCALE-001 resolved
+
+- **Acceptance criteria:** Alias search never loads the full active companies set into memory; results remain correct as active companies grow past PostgREST default page size; paged or indexed path documented.
+- **Closing evidence (verified 2026-08-02):**
+  - `fetchAliasSearchCandidates` (`companyAdminSearch.ts`) calls RPC `admin_company_ids_matching_alias`, then `.in("id", matchedIds)` — no select of all active companies.
+  - Migration `supabase/migrations/20260731130000_admin_company_ids_matching_alias.sql` — SQL alias filter with `LIMIT` (capped at 1000); `service_role` execute only.
+  - Guard test `companyAdminSearch.scale001.test.ts` asserts RPC usage and migration presence.
+  - Commit: `a0419fb` (*fix: move admin alias search to database RPC*).
+- **Why criteria pass:** Full active-company directory is never loaded into Node for alias search; matching is server-side with a hard candidate cap. Distinct from `ARC-003` (import full-directory match), which remains Open.
+
+---
+
 ## Change log
 
 | Date | Note |
 |------|------|
 | 2026-07-31 | Baseline Scalability Audit published. Added `SCALE-001`. Cross-referenced `ARC-002/003/004/008/010/011/017` (no duplicates). No issues fixed during the review. |
+| 2026-08-02 | Resolved `SCALE-001` after alias RPC shipped. Closing evidence in Resolution History. |

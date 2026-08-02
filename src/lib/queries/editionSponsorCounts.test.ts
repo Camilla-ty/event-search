@@ -8,6 +8,7 @@ import {
 
 import {
   buildSponsorCountByEditionId,
+  buildSponsorCountByEditionIdFromStats,
   readSponsorCountForEdition,
 } from "@/src/lib/queries/companies";
 
@@ -51,10 +52,52 @@ describe("buildSponsorCountByEditionId", () => {
   });
 });
 
+describe("buildSponsorCountByEditionIdFromStats", () => {
+  it("maps aggregate view rows into per-edition totals", () => {
+    const counts = buildSponsorCountByEditionIdFromStats([
+      {
+        event_editions_id: "11111111-1111-1111-1111-111111111111",
+        sponsor_count: 12,
+      },
+      {
+        event_editions_id: "22222222-2222-2222-2222-222222222222",
+        sponsor_count: 3,
+      },
+    ]);
+
+    assert.equal(
+      readSponsorCountForEdition(counts, "11111111-1111-1111-1111-111111111111"),
+      12,
+    );
+    assert.equal(
+      readSponsorCountForEdition(counts, "22222222-2222-2222-2222-222222222222"),
+      3,
+    );
+    assert.equal(readSponsorCountForEdition(counts, "33333333-3333-3333-3333-333333333333"), 0);
+  });
+
+  it("truncates non-finite counts and ignores bad edition ids", () => {
+    const counts = buildSponsorCountByEditionIdFromStats([
+      { event_editions_id: null, sponsor_count: 9 },
+      { event_editions_id: "  ", sponsor_count: 9 },
+      {
+        event_editions_id: "11111111-1111-1111-1111-111111111111",
+        sponsor_count: -4.8,
+      },
+    ]);
+
+    assert.equal(counts.size, 1);
+    assert.equal(
+      readSponsorCountForEdition(counts, "11111111-1111-1111-1111-111111111111"),
+      0,
+    );
+  });
+});
+
 const TARGET_EDITION_ID = "11111111-1111-1111-1111-111111111111";
 
 describe("edition sponsor count pagination regressions", () => {
-  it("counts sponsor links beyond the first 1,000 event_sponsors rows", () => {
+  it("still aggregates link rows beyond a single Supabase page when given full input", () => {
     const allLinks = [
       ...Array.from({ length: SUPABASE_DEFAULT_PAGE_SIZE }, (_, index) => ({
         event_editions_id: `filler-edition-${index}`,
@@ -73,7 +116,7 @@ describe("edition sponsor count pagination regressions", () => {
     assert.equal(readSponsorCountForEdition(full, TARGET_EDITION_ID), 3);
   });
 
-  it("loads all event_sponsors pages before aggregating edition counts", async () => {
+  it("loads all pages from a paginated source before aggregating", async () => {
     const allLinks = Array.from({ length: 1001 }, (_, index) => ({
       event_editions_id:
         index < 1000 ? `filler-edition-${index}` : TARGET_EDITION_ID,

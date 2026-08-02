@@ -6,17 +6,19 @@
 **Date:** 2026-07-31
 **Reviewer:** Security (Automated)
 **Baseline:** false
-**Status:** Immutable historical record — do not edit after publication.
+**Status:** Cycle report — remediations update this file; one cycle = one report (do not create separate closeout reports).
 
-> Recurring Security Health Check under Framework v1.1. Prior reports: [`2026-07-security.md`](./2026-07-security.md) (baseline), [`2026-08-security.md`](./2026-08-security.md) (`SEC-001` closeout). This run was requested with review date **2026-07-31**; the cycle token is **2026-09** because `security/2026-07-security.md` and `security/2026-08-security.md` already exist and must not be overwritten. No new `SEC` IDs. `SEC-002` and `SEC-003` remain `Open` with evidence deltas. Security topics already tracked under `ARC` IDs are referenced, not duplicated.
+> Recurring Security Health Check under Framework v1.1 (lifecycle clarified under Framework v1.2). File path retained as `2026-07-security.md`; cycle token for this write-up is **2026-09**. No new `SEC` IDs. `SEC-002` was later remediated in-repo and resolved in this same report (see **Resolution History**). `SEC-003` remains Open. Security topics already tracked under `ARC` IDs are referenced, not duplicated.
 
 ---
 
 ## Executive summary
 
-Second full Security cycle for EventPixels (after the narrow `SEC-001` closeout in 2026-08). Methods: reconcile open/retired `SEC` Findings against current `src/` upload/ingest/auth/header surfaces; re-check ARC security cross-refs without cloning; scan for untracked trust-boundary defects (prefer under-tracking).
+Second full Security cycle for EventPixels (after the narrow `SEC-001` closeout). Methods: reconcile open/retired `SEC` Findings against current `src/` upload/ingest/auth/header surfaces; re-check ARC security cross-refs without cloning; scan for untracked trust-boundary defects (prefer under-tracking).
 
-Net change: **0 resolved**, **0 new**, **2 SEC still open** (`SEC-002`, `SEC-003`). `SEC-001` remains retired (Dependabot alerts control). Highest residual application-security risk continues to sit under Architecture IDs — especially `ARC-001` (service-role fail-open public reads). Material delta: manual logo upload MIME allowlist now rejects SVG (`validateCompanyLogoUpload`), but client MIME is still trusted without magic-byte sniffing, and company/event-series **ingest** paths still accept `image/svg+xml` onto the public Storage bucket — so `SEC-002` is **not** closed. `SEC-003` unchanged (parse-only URL checks; no private-host blocking).
+**At publication (2026-07-31):** **0 resolved**, **0 new**, **2 SEC open** (`SEC-002`, `SEC-003`). Manual logo MIME allowlist rejected SVG on admin upload, but client MIME was still trusted without magic-byte sniffing and ingest paths still accepted SVG — `SEC-002` not closed. `SEC-003` unchanged (parse-only URL checks; no private-host blocking). Highest residual application-security risk continues under Architecture IDs — especially `ARC-001`.
+
+**After remediation (2026-08-02):** `SEC-002` **Resolved** (shared `validateLogoBinary` magic-byte gate on upload + ingest/storage write paths). `SEC-003` still Open. Closing evidence in **Resolution History**. Cross-audit: `ARC-001` public fail-open service-role reads later **Resolved** the same day (Architecture Resolution History).
 
 ---
 
@@ -24,8 +26,8 @@ Net change: **0 resolved**, **0 new**, **2 SEC still open** (`SEC-002`, `SEC-003
 
 | Change | Finding IDs | Notes / links |
 |---|---|---|
-| Resolved (removed from register) | — | none this cycle (`SEC-001` already retired in [2026-08](./2026-08-security.md)) |
-| Still open | `SEC-002`, `SEC-003` | evidence deltas below |
+| Resolved (removed from register) | `SEC-002` | Resolved 2026-08-02 — see Resolution History (`SEC-001` already retired) |
+| Still open | `SEC-003` | evidence below; SSRF unchanged |
 | In progress | — | none |
 | Deferred | — | none |
 | New this cycle | — | none |
@@ -39,7 +41,7 @@ Per `audit-catalog.md`, Security remains the primary owner of these topics going
 
 | ID | Topic | 2026-09 check |
 |---|---|---|
-| `ARC-001` | RLS / service-role bypass with fail-open reads | Still present — `getCompanyById` / `getCompanyBySlug` fail open to `createAdminClient` (`src/lib/queries/companies.ts`) |
+| `ARC-001` | RLS / service-role bypass with fail-open reads | Resolved 2026-08-02 — [Architecture Resolution History](../architecture/2026-07-architecture.md); residual admin/import service-role use is out of that Finding’s public scope |
 | `ARC-007` | No rate limiting; no schema-validation library | Still present — no zod/valibot/yup or rate-limit usage; auth/public routes unthrottled |
 | `ARC-009` | No RLS/grant regression-test harness | Still present — no harness in tree |
 | `ARC-015` | Email enumeration via `/api/auth/check-email` | Still present — unauthenticated `exists` boolean (`src/app/api/auth/check-email/route.ts`) |
@@ -56,11 +58,11 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
 
 ### SEC-002 — Logo uploads trust client MIME and allow public SVG
 
-- **Status:** Open
-- **Delta:** Partially mitigated on **manual admin upload** paths; residual risk remains — **not resolved**.
-  - **Improved:** Manual uploads go through `validateCompanyLogoUpload` (`src/lib/companies/companyLogoUploadValidation.ts`) — allowlist is PNG/JPEG/WebP only (SVG MIME rejected). Wired from `uploadCompanyLogoFileAdmin` and admin logo routes (`src/app/api/admin/companies|venues|event-series/[id]/logo/route.ts`). Venue URL ingest now reuses the same MIME allowlist (`isAllowedVenueLogoIngestContentType`).
-  - **Still open:** Routes still pass **client** `file.type` with **no magic-byte sniffing**. Company auto-ingest still allows `image/svg+xml` (and gif/ico) in `ALLOWED_IMAGE_TYPES` (`src/features/companies/server/companyLogoIngest.ts`). Event-series ingest likewise still allows SVG (`src/features/events/server/eventSeriesLogoIngest.ts`). `extensionForContentType` still maps SVG / unknown → `svg` / `bin` (`companyLogoStorage.ts`). Objects remain on the public `company-logos` bucket.
-- **Acceptance still unmet:** Sniff bytes server-side; disallow SVG (and spoofed SVG-as-PNG) on all write paths that land in public Storage.
+- **Status:** Resolved (2026-08-02) — see Resolution History
+- **Delta (at 2026-07-31 publication):** Partially mitigated on **manual admin upload** paths; residual risk remained at audit time.
+  - **Improved then:** Manual uploads went through `validateCompanyLogoUpload` — PNG/JPEG/WebP MIME allowlist (SVG MIME rejected).
+  - **Still open then:** No magic-byte sniffing; company/event-series ingest still allowed `image/svg+xml`.
+- **Acceptance criteria:** Sniff bytes server-side; disallow SVG (and spoofed SVG-as-PNG) on all write paths that land in public Storage.
 
 ### SEC-003 — SSRF in logo/website ingestion without host allow-listing
 
@@ -83,14 +85,13 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
 - Admin mutations continue to gate on `requireAdminApi`.
 - Open-redirect guard still in use (`src/lib/auth/safeRedirect.ts`).
 - JSON-LD now uses `dangerouslySetInnerHTML` via `JsonLd`, but `serializeJsonLd` escapes `<` (`src/components/seo/JsonLd.tsx`) — treated as a controlled sink, not a new Finding.
-- Manual logo MIME allowlist (PNG/JPG/WebP) is a real reduction of SVG upload risk on the admin file path (insufficient alone to close `SEC-002`).
+- Manual logo MIME allowlist (PNG/JPG/WebP) reduced SVG upload risk on the admin file path at publication; later closed fully via magic-byte validation (`SEC-002` Resolution History).
 
 ### Report-only notes
 
 - **CSRF:** Cookie-authenticated admin mutations still lack an explicit CSRF/Origin check; residual risk remains low under default `SameSite=Lax` unless GET-based state changes or relaxed cookies appear.
 - **Cloudflare / edge:** No WAF/bot/rate-limit configuration evidenced in-repo; edge posture remains an operational claim outside the tree.
-- **Magic-byte gap:** Spoofing `image/png` while uploading SVG bytes is still plausible on manual upload — keep under `SEC-002` rather than a new ID.
-- **Working-tree note:** Immutable `2026-07` / `2026-08` Security reports were missing from the working tree at review start and were restored from `HEAD` so register links resolve; content was not rewritten.
+- **Working-tree note:** At publication, companion Security cycle files were missing from the working tree; this path holds the 2026-09 recurring write-up and subsequent `SEC-002` resolution.
 
 ### Limitations
 
@@ -100,8 +101,25 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
 
 ---
 
+## Resolution History
+
+### 2026-08-02 — SEC-002 resolved
+
+- **Acceptance criteria:** Sniff bytes server-side; disallow SVG (and spoofed SVG-as-PNG) on all write paths that land in public Storage.
+- **Closing evidence (verified 2026-08-02):**
+  - Shared gate `src/lib/companies/logoBinaryValidation.ts` — `validateLogoBinary` accepts PNG/JPEG/WebP by magic bytes only; rejects SVG/HTML/XML markup, GIF, ICO; does not trust client MIME.
+  - Manual upload: `validateCompanyLogoUpload` → `validateLogoBinary` (`companyLogoUploadValidation.ts` + tests).
+  - Storage writers call `validateLogoBinary` before upload: `companyLogoStorage.ts`, `venueLogoStorage.ts`, `eventSeriesLogoStorage.ts`.
+  - Ingest / remote fetch paths validate bytes: `companyLogoIngest.ts`, `venueLogoIngest.ts`, `eventSeriesLogoIngest.ts`, `logo.ts`, `logoDevServer.ts`.
+  - Commit: `54f8bfb` (*fix: validate logo file bytes before storage*).
+- **Why criteria pass:** New logo bytes cannot land in public Storage as SVG or as MIME-spoofed SVG; all primary write paths share the same byte gate.
+- **Residual (not SEC-002):** `SEC-003` SSRF on URL fetch remains Open. Legacy objects already in Storage are out of this Finding’s write-path scope.
+
+---
+
 ## Change log
 
 | Date | Note |
 |------|------|
 | 2026-07-31 | Recurring Security Audit published. Reconciled `SEC-002`/`SEC-003` (both remain `Open` with deltas). Cross-referenced `ARC-001/007/009/015/016/017`. No new Findings; none resolved this cycle. |
+| 2026-08-02 | Resolved `SEC-002` after magic-byte validation shipped. Closing evidence in Resolution History. `SEC-003` remains Open. |

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -79,34 +78,11 @@ describe("getPublicPartnerAlumniForSeriesId", () => {
     assert.equal(await getPublicPartnerAlumniForSeriesId("   "), null);
   });
 
-  it("returns null when program current_version_id is unset", async () => {
-    for (const line of readFileSync(".env.local", "utf8").split("\n")) {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim();
-    }
-
-    const { createAdminClient } = await import("@/src/lib/supabase/admin");
-    const admin = createAdminClient();
-    const { data: program } = await admin
-      .from("event_partner_alumni")
-      .select("event_series_id")
-      .is("current_version_id", null)
-      .limit(1)
-      .maybeSingle();
-
-    if (!program || typeof program.event_series_id !== "string") {
-      return;
-    }
-
-    assert.equal(await getPublicPartnerAlumniForSeriesId(program.event_series_id), null);
-    assert.equal(shouldShowPublicPartnerAlumniTab(null), false);
-  });
-
-  it("returns null when supabase fetch fails instead of throwing", async () => {
+  it("returns null when supabase session client cannot be created", async () => {
     const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://invalid.example.test";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey ?? "test-service-role-key";
+    const previousAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     try {
       assert.equal(
@@ -116,8 +92,8 @@ describe("getPublicPartnerAlumniForSeriesId", () => {
     } finally {
       if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
       else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
-      if (previousKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-      else process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
+      if (previousAnon === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnon;
     }
   });
 });
