@@ -93,7 +93,7 @@ No `PERF` or `DB` Findings exist yet in the register; measured “slow today” 
   - Migration `supabase/migrations/20260731130000_admin_company_ids_matching_alias.sql` — SQL alias filter with `LIMIT` (capped at 1000); `service_role` execute only.
   - Guard test `companyAdminSearch.scale001.test.ts` asserts RPC usage and migration presence.
   - Commit: `a0419fb` (*fix: move admin alias search to database RPC*).
-- **Why criteria pass:** Full active-company directory is never loaded into Node for alias search; matching is server-side with a hard candidate cap. Distinct from `ARC-003` (import full-directory match), which remains Open.
+- **Why criteria pass:** Full active-company directory is never loaded into Node for alias search; matching is server-side with a hard candidate cap. Distinct from retired `ARC-003` (import full-directory match — resolved 2026-08-04).
 
 ---
 

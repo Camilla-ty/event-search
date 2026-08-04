@@ -18,7 +18,9 @@ Second Architecture cycle for EventPixels. Methods: reconcile all open `ARC` Fin
 
 **At publication (2026-07-31):** **0 resolved**, **0 new**, **20 still open**. Highest-severity structural risks included `ARC-001` service-role fail-open on public reads; `ARC-002`/`ARC-003` unbounded catalog scans; `ARC-004` force-dynamic public SSR. Material delta: exhibitor import shipped as a **third** parallel import tree, strengthening `ARC-011` (not a new Finding — same root cause). Strengths from the baseline (feature-modular layout; consistent `requireAdminApi` route shape; transactional SECURITY DEFINER RPCs for critical mutations) still hold.
 
-**After remediation (2026-08-02):** `ARC-001` **Resolved** (Phases 1–6: public marketing reads fail closed on the session client; narrow SELECT-only public views replace service-role aggregation). `ARC-002` **Resolved** (sponsor count helpers use bounded `event_edition_sponsor_counts` — verified same day; shipped with ARC-001 Phase 2). `ARC-005` **Resolved** (PR/`main` GitHub Actions quality gate: typecheck, lint, test, build). `ARC-003`/`ARC-004`/`ARC-006`…`ARC-020` remain Open. Closing evidence in **Resolution History**.
+**After remediation (2026-08-02):** `ARC-001` **Resolved** (Phases 1–6: public marketing reads fail closed on the session client; narrow SELECT-only public views replace service-role aggregation). `ARC-002` **Resolved** (sponsor count helpers use bounded `event_edition_sponsor_counts` — verified same day; shipped with ARC-001 Phase 2). `ARC-005` **Resolved** (PR/`main` GitHub Actions quality gate: typecheck, lint, test, build).
+
+**After remediation (2026-08-04):** `ARC-003` **Resolved** (all four import matchers default to shared candidate loader; full-directory retained only for independent rollback envs). `ARC-004`/`ARC-006`…`ARC-020` remain Open. Closing evidence in **Resolution History**.
 
 ---
 
@@ -26,8 +28,8 @@ Second Architecture cycle for EventPixels. Methods: reconcile all open `ARC` Fin
 
 | Change | Finding IDs | Notes / links |
 |---|---|---|
-| Resolved (removed from register) | `ARC-001`, `ARC-002`, `ARC-005` | Resolved 2026-08-02 — see Resolution History |
-| Still open | `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` | see Findings deltas |
+| Resolved (removed from register) | `ARC-001`, `ARC-002`, `ARC-003`, `ARC-005` | `ARC-001`/`002`/`005` on 2026-08-02; `ARC-003` on 2026-08-04 — see Resolution History |
+| Still open | `ARC-004`, `ARC-006`…`ARC-020` | see Findings deltas |
 | In progress | — | none |
 | Deferred | — | none |
 | New this cycle | — | none |
@@ -54,8 +56,10 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 
 ### ARC-003 — Import matching loads entire `companies` / `company_domains` into memory
 
-- **Status:** Open
-- **Delta:** Same full-directory match pattern in `sponsor-import`, `partner-alumni-import`, **and** `exhibitor-import` `server/matchRows.ts`. Scope of call-sites grew with the third importer (same root cause).
+- **Status:** Resolved (2026-08-04) — see Resolution History
+- **Delta (at publication):** Same full-directory match pattern in `sponsor-import`, `partner-alumni-import`, **and** `exhibitor-import` `server/matchRows.ts`. Scope of call-sites grew with the third importer (same root cause).
+- **Delta (post cutover):** Sponsor, Exhibitor, Partner Alumni Import, and Partner Alumni Bulk production matching default to the shared candidate loader; full-directory pagination remains only behind independent rollback env flags.
+- **Acceptance criteria:** No production import-matching hot path paginates all active `companies` or all `company_domains` by default; each importer defaults to candidate loading from batch/input identity keys; full-directory loaders remain only as intentional rollback; independent rollback envs exist per importer; cutover parity tests require 100% equality vs full-directory; exact-name/alias candidate RPCs remain service_role-only.
 
 ### ARC-004 — Public pages `force-dynamic`; no caching/ISR; no request-level dedup (`React cache()`)
 
@@ -227,6 +231,24 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 - **Why criteria pass:** Repo now has a PR/`main` quality gate that runs all four required commands and fails the job on any failure. Repo-verifiable acceptance is met.
 - **Residual (ops / not ARC-005 code):** GitHub Branch Protection must separately require the CI check (`Typecheck, lint, test, build` / workflow `CI`) — cannot be set from this repo alone. React Compiler eslint rules remain deferred.
 
+### 2026-08-04 — ARC-003 resolved
+
+- **Acceptance criteria:** No production import-matching hot path paginates all active `companies` or all `company_domains` by default; each importer defaults to candidate loading from batch/input identity keys; full-directory loaders remain only as intentional rollback; independent rollback envs exist per importer; cutover parity tests require 100% equality vs full-directory; exact-name/alias candidate RPCs remain service_role-only.
+- **Closing evidence (verified 2026-08-04):**
+  - **Shared foundation (Phases 0–2.5):** Parity harness + fixtures (`importMatchParity`); candidate loader package (`importMatchCandidateLoader`); shadow compare (`importMatchShadow`); exact-key RPCs via migration `20260802180000_import_match_exact_name_alias_keys.sql` (`import_match_company_ids_by_exact_name_keys`, `import_match_company_ids_by_exact_alias_keys`) — EXECUTE confirmed service_role only (anon/authenticated = false).
+  - **Phase 3 — Sponsor Import:** Production default `candidate`; rollback `SPONSOR_IMPORT_MATCH_LOADER=full_directory`; `runBatchMatching` wires identity rows → context. Commit `cb46af3` / merge `1aa4b6d`. Cutover parity test: `sponsorImportCandidateCutover.parity.test.ts`.
+  - **Phase 4 — Exhibitor Import:** Same pattern with `EXHIBITOR_IMPORT_MATCH_LOADER`; live overlay stays `event_exhibitors`. Commit `5bf11ae`. Cutover parity: `exhibitorImportCandidateCutover.parity.test.ts`.
+  - **Phase 5 — Partner Alumni Import:** Same pattern with `PARTNER_ALUMNI_IMPORT_MATCH_LOADER`; version-member overlay / `intended_member_action` preserved. Commit `769857c`. Cutover parity: `partnerAlumniImportCandidateCutover.parity.test.ts`.
+  - **Phase 6 — Partner Alumni Bulk:** Same pattern with `PARTNER_ALUMNI_BULK_MATCH_LOADER`; preview/commit, on_roster, duplicate_in_file, `companyNameById`, display_order preserved. Commit `07dbbd1`. Cutover parity: `partnerAlumniBulkCandidateCutover.parity.test.ts`.
+  - **Real-data parity (100% identical persisted/preview fields, in-memory, no writes):**
+    - Sponsor: Blockchain Life Dubai 2025 Sponsors (170 rows); Bitcoin Las Vegas 2026 Sponsors (264 rows).
+    - Exhibitor: Singapore Fintech Festival 2025 Exhibitors (463 rows).
+    - PA Import: NFT.NYC 2025 partners Sheet3 (461 rows) vs version overlay.
+    - PA Bulk: same NFT.NYC source as Bulk preview vs NFT NYC roster (461 rows; 460 on_roster / 1 review).
+  - **Final verification (2026-08-04):** All four importers default to candidate; full-directory `.from("companies")` / full `company_domains` pagination only inside `loadFullDirectoryMatchContext` behind mode=`full_directory`; production admins/preview call `loadMatchContext` / `loadImportMatchContext` with identity rows. Cutover + Phase 0/1/2 parity: **38** pass. Importer-related suites: **506** pass. `tsc --noEmit` / eslint (matcher hot paths) / full `npm test` (**1988** pass) / `git diff --check` clean. RPCs remain service_role-only.
+- **Why criteria pass:** Default production matching no longer loads the full company/domain directories into memory; candidates are keyed from the batch/upload identity set. Rollback remains available without sharing env flags across importers.
+- **Residual (not ARC-003):** Empty identity-row API default still yields an empty candidate context if mis-called (production paths pass rows). Candidate website host `ilike` / PostgREST chunking remain operational edges covered by parity. Stale “Not wired into production” comments on the candidate loader package are comment debt only. `ARC-011` (parallel import trees) and `ARC-010` (chunked materialize / no durable jobs) remain Open.
+
 ---
 
 ## Change log
@@ -237,3 +259,4 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 | 2026-08-02 | Resolved `ARC-001` after Phases 1–6 public service-role remediation. Closing evidence in Resolution History. `ARC-002`…`ARC-020` remain Open. No companion closeout report (Framework v1.2). |
 | 2026-08-02 | Resolved `ARC-002` after verification that ARC-001 Phase 2 aggregate counts close the full-table count scan. Closing evidence in Resolution History. `ARC-003`…`ARC-020` remain Open. |
 | 2026-08-02 | Resolved `ARC-005` after adding `.github/workflows/ci.yml` quality gate + local green typecheck/lint/test/build. Closing evidence in Resolution History. Branch protection remains an ops step. `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
+| 2026-08-04 | Resolved `ARC-003` after Sponsor / Exhibitor / PA Import / PA Bulk candidate-loader cutovers + real-data parity. Closing evidence in Resolution History. `ARC-004`, `ARC-006`…`ARC-020` remain Open. No companion closeout report (Framework v1.2). |

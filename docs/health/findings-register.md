@@ -20,7 +20,6 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 | ID | Title | Area | Severity | Effort | Status | First seen | Last updated | Source / links |
 |----|-------|------|----------|--------|--------|-----------|--------------|----------------|
-| ARC-003 | Import matching loads entire `companies` / `company_domains` into memory | performance / imports | Critical | Large | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-003](./architecture/2026-07-architecture.md) |
 | ARC-004 | Public pages `force-dynamic`; no caching/ISR; no request-level dedup (`React cache()`) | performance / public-pages | High | Medium | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-004](./architecture/2026-07-architecture.md) |
 | ARC-006 | Untyped database access — no generated `Database` types | db / types | High | Medium | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-006](./architecture/2026-07-architecture.md) |
 | ARC-007 | No rate limiting on public/auth endpoints; no schema-validation library | api / security | High | Small–Medium | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-007](./architecture/2026-07-architecture.md) |
@@ -55,7 +54,7 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 **Security topics owned by Security but tracked under existing IDs (cross-referenced, not duplicated):** retired `ARC-001` (public RLS/service-role fail-open), `ARC-007` (rate limiting + input validation), `ARC-009` (RLS/grant regression tests), `ARC-015` (email enumeration), `ARC-016` (security headers), `ARC-017` (middleware auth). See [Security 2026-07](./security/2026-07-security.md). Open Security Finding: `SEC-003`. Retired SEC: `SEC-001`, `SEC-002`.
 
-**Scalability topics owned by Scalability but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan counts — resolved), `ARC-003` (import full-directory match), `ARC-004` (force-dynamic / no read cache), `ARC-010` (no durable job queue), `ARC-011` (parallel import trees). See [Scalability 2026-07](./scalability/2026-07-scalability.md). Retired SCALE: `SCALE-001`.
+**Scalability topics owned by Scalability but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan counts — resolved), retired `ARC-003` (import full-directory match — resolved), `ARC-004` (force-dynamic / no read cache), `ARC-010` (no durable job queue), `ARC-011` (parallel import trees). See [Scalability 2026-07](./scalability/2026-07-scalability.md). Retired SCALE: `SCALE-001`.
 
 **SEO topics owned by SEO but already tracked under other prefixes (cross-referenced, not duplicated):** `PROD-002` (public `/exhibitors` stub framing / indexability residual), `ARC-004` (force-dynamic crawl/cache cost). See [SEO 2026-07](./seo/2026-07-seo.md).
 
@@ -65,7 +64,7 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 **Database topics owned by Database but already tracked under other prefixes (cross-referenced, not duplicated):** retired `ARC-001` (service-role/RLS fail-open on public reads — resolved), `ARC-009` (RLS/grant regression harness — would have caught retired `DB-001`), `DQ-001`/`002`/`003` (stored-value trust). See [Database 2026-07](./database/2026-07-database.md). Open DB: `DB-002`, `DB-003`. Retired DB: `DB-001`.
 
-**Performance topics owned by Performance but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan sponsor counts — resolved), `ARC-003` (import full-directory match), `ARC-004` (force-dynamic / no request dedup), `ARC-017` (middleware `getUser`), `ARC-018` (sponsor hydration double-path). Baseline [Performance 2026-07](./performance/2026-07-performance.md) opened **no** new `PERF` IDs.
+**Performance topics owned by Performance but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan sponsor counts — resolved), retired `ARC-003` (import full-directory match — resolved), `ARC-004` (force-dynamic / no request dedup), `ARC-017` (middleware `getUser`), `ARC-018` (sponsor hydration double-path). Baseline [Performance 2026-07](./performance/2026-07-performance.md) opened **no** new `PERF` IDs.
 
 ---
 
@@ -75,6 +74,7 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 
 | ID | Title | Resolved in | Notes |
 |----|-------|-------------|-------|
+| ARC-003 | Import matching loads entire `companies` / `company_domains` into memory | [Architecture 2026-07 §ARC-003 / Resolution History](./architecture/2026-07-architecture.md) | Candidate loader default for Sponsor / Exhibitor / PA Import / PA Bulk; independent full_directory rollback envs; resolved 2026-08-04 |
 | ARC-005 | No CI gate (typecheck / lint / test / build) on PRs | [Architecture 2026-07 §ARC-005 / Resolution History](./architecture/2026-07-architecture.md) | `.github/workflows/ci.yml` quality gate; resolved 2026-08-02; Branch Protection still ops |
 | ARC-002 | Hot-path full-table scans for sponsor counts (`getSponsorCountsByEditionIds`) | [Architecture 2026-07 §ARC-002 / Resolution History](./architecture/2026-07-architecture.md) | Bounded `event_edition_sponsor_counts` via ARC-001 Phase 2; verified 2026-08-02 |
 | DB-001 | exhibitor_import_publish_batch executable by anon/authenticated after grant hotfix | [Database 2026-07 §DB-001 / Resolution History](./database/2026-07-database.md) | `__restrict_rpc_execute_to_service_role` on publish RPC; migration `20260802170000_…`; resolved 2026-08-02 |
@@ -124,3 +124,4 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-08-02 | Resolved `DB-001` (removed from open findings; retired). Closing evidence recorded in `database/2026-07-database.md` Resolution History (`__restrict_rpc_execute_to_service_role` on `exhibitor_import_publish_batch`). No new Database report created (Framework v1.2). `DB-002`/`DB-003` remain Open. |
 | 2026-08-02 | Resolved `ARC-002` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (bounded `event_edition_sponsor_counts` via ARC-001 Phase 2; dedicated verification). No new Architecture report created (Framework v1.2). `ARC-003`…`ARC-020` remain Open. |
 | 2026-08-02 | Resolved `ARC-005` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (`.github/workflows/ci.yml` typecheck/lint/test/build gate). Branch Protection requiring the check remains an ops step. No new Architecture report created (Framework v1.2). `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
+| 2026-08-04 | Resolved `ARC-003` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (Sponsor / Exhibitor / PA Import / PA Bulk candidate-loader cutovers + real-data parity). No new Architecture report created (Framework v1.2). `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
