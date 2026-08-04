@@ -7,10 +7,15 @@ import {
   type ImportMatchMethod,
 } from "@/src/lib/companies/companyImportMatching";
 import {
+  createSupabaseImportMatchCandidateSource,
+  loadImportMatchContextFromCandidateSource,
+} from "@/src/lib/companies/importMatchCandidateLoader";
+import {
   fetchAllPaginatedSupabaseRows,
   SUPABASE_DEFAULT_PAGE_SIZE,
 } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ExhibitorImportRowStatus } from "../types";
 
@@ -35,6 +40,11 @@ export type MatchResult = {
   intended_link_action: "create_new_link" | "update_tier" | "skip" | null;
 };
 
+export type MatchableIdentityRow = Pick<
+  MatchableRow,
+  "normalized_domain" | "normalized_website" | "normalized_company_name"
+>;
+
 export const AUTO_READY_MATCH_METHODS: readonly ImportMatchMethod[] = [
   "domain",
   "alias",
@@ -57,6 +67,25 @@ export function matchesAutoReadyBulkAcceptCriteria(row: {
 export const IMPORT_MATCH_CONTEXT_PAGE_SIZE = SUPABASE_DEFAULT_PAGE_SIZE;
 
 export { fetchAllPaginatedSupabaseRows };
+
+/**
+ * ARC-003 Phase 4B loader mode for Exhibitor Import only.
+ * Rollback: set EXHIBITOR_IMPORT_MATCH_LOADER=full_directory (or change default below).
+ */
+export type ExhibitorImportMatchLoaderMode = "candidate" | "full_directory";
+
+export function resolveExhibitorImportMatchLoaderMode(
+  env: Record<string, string | undefined> = process.env,
+): ExhibitorImportMatchLoaderMode {
+  const raw = env.EXHIBITOR_IMPORT_MATCH_LOADER?.trim().toLowerCase();
+  if (raw === "full_directory" || raw === "full-directory") {
+    return "full_directory";
+  }
+  return "candidate";
+}
+
+export const EXHIBITOR_IMPORT_MATCH_LOADER_MODE: ExhibitorImportMatchLoaderMode =
+  resolveExhibitorImportMatchLoaderMode();
 
 type CompanyDirectoryRow = {
   id: unknown;
@@ -160,27 +189,10 @@ export async function matchRow(
   return attachLiveEditionFlags(row, decision, liveByCompanyId);
 }
 
-export async function loadMatchContext(eventEditionId: string): Promise<{
-  matchContext: ImportMatchContext;
-  liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>;
-}> {
-  const supabase = createAdminClient();
-
-  const [companies, companyDomains] = await Promise.all([
-    fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(async ({ from, to }) =>
-      supabase
-        .from("companies")
-        .select("id, name, domain, website, aliases")
-        .eq("status", "active")
-        .range(from, to),
-    ),
-    fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(async ({ from, to }) =>
-      supabase.from("company_domains").select("company_id, domain").range(from, to),
-    ),
-  ]);
-
-  const matchContext = buildImportMatchContextFromDirectory(companies, companyDomains);
-
+async function loadLiveExhibitorsByCompanyId(
+  supabase: SupabaseClient,
+  eventEditionId: string,
+): Promise<Map<string, { id: string; tier_rank: number | null }>> {
   const { data: liveLinks, error: liveError } = await supabase
     .from("event_exhibitors")
     .select("id, company_id, tier_rank")
@@ -198,6 +210,72 @@ export async function loadMatchContext(eventEditionId: string): Promise<{
       tier_rank: typeof link.tier_rank === "number" ? link.tier_rank : null,
     });
   }
+  return liveByCompanyId;
+}
 
+/**
+ * Pre-ARC-003 Phase 4B loader: full active companies + all company_domains.
+ * Kept for rollback via EXHIBITOR_IMPORT_MATCH_LOADER=full_directory.
+ */
+export async function loadFullDirectoryMatchContext(eventEditionId: string): Promise<{
+  matchContext: ImportMatchContext;
+  liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>;
+}> {
+  const supabase = createAdminClient();
+
+  const [companies, companyDomains, liveByCompanyId] = await Promise.all([
+    fetchAllPaginatedSupabaseRows<CompanyDirectoryRow>(async ({ from, to }) =>
+      supabase
+        .from("companies")
+        .select("id, name, domain, website, aliases")
+        .eq("status", "active")
+        .range(from, to),
+    ),
+    fetchAllPaginatedSupabaseRows<CompanyDomainDirectoryRow>(async ({ from, to }) =>
+      supabase.from("company_domains").select("company_id, domain").range(from, to),
+    ),
+    loadLiveExhibitorsByCompanyId(supabase, eventEditionId),
+  ]);
+
+  const matchContext = buildImportMatchContextFromDirectory(companies, companyDomains);
   return { matchContext, liveByCompanyId };
+}
+
+/**
+ * ARC-003 Phase 4B candidate loader: ImportMatchContext from DB-backed candidates only.
+ */
+export async function loadCandidateMatchContext(
+  eventEditionId: string,
+  rows: readonly MatchableIdentityRow[],
+): Promise<{
+  matchContext: ImportMatchContext;
+  liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>;
+}> {
+  const supabase = createAdminClient();
+  const [matchContext, liveByCompanyId] = await Promise.all([
+    loadImportMatchContextFromCandidateSource(
+      createSupabaseImportMatchCandidateSource(supabase),
+      rows,
+    ),
+    loadLiveExhibitorsByCompanyId(supabase, eventEditionId),
+  ]);
+  return { matchContext, liveByCompanyId };
+}
+
+/**
+ * Production entry for Exhibitor Import matching context.
+ * Phase 4B default: candidate loader. Pass batch identity rows for candidate mode.
+ */
+export async function loadMatchContext(
+  eventEditionId: string,
+  rows: readonly MatchableIdentityRow[] = [],
+  mode: ExhibitorImportMatchLoaderMode = EXHIBITOR_IMPORT_MATCH_LOADER_MODE,
+): Promise<{
+  matchContext: ImportMatchContext;
+  liveByCompanyId: Map<string, { id: string; tier_rank: number | null }>;
+}> {
+  if (mode === "full_directory") {
+    return loadFullDirectoryMatchContext(eventEditionId);
+  }
+  return loadCandidateMatchContext(eventEditionId, rows);
 }
