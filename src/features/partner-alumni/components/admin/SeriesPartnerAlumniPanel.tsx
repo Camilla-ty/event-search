@@ -57,7 +57,7 @@ function formatVersionDate(iso: string): string {
   });
 }
 
-function versionListLabel(version: PartnerAlumniVersionSummary): string {
+export function versionListLabel(version: PartnerAlumniVersionSummary): string {
   if (version.version_label && version.version_label.trim() !== "") {
     return version.version_label.trim();
   }
@@ -67,11 +67,77 @@ function versionListLabel(version: PartnerAlumniVersionSummary): string {
   return `Version · ${formatVersionDate(version.created_at)}`;
 }
 
+export type PartnerAlumniSectionSummary = {
+  statusLabel: string;
+};
+
+/** Collapsed-header status for Series Admin Partner Alumni section. */
+export function buildPartnerAlumniSectionSummary(
+  data: PartnerAlumniAdminData,
+  loadError?: string | null,
+): PartnerAlumniSectionSummary {
+  if (typeof loadError === "string" && loadError.trim() !== "") {
+    return { statusLabel: "Could not load" };
+  }
+
+  if (data.versions.length === 0) {
+    return { statusLabel: "No versions yet" };
+  }
+
+  const current = data.versions.find((version) => version.is_current) ?? null;
+  if (current) {
+    const partnerCount = current.member_count;
+    const partnersLabel =
+      partnerCount === 1 ? "1 partner" : `${partnerCount} partners`;
+    return {
+      statusLabel: `Current: ${versionListLabel(current)} · ${partnersLabel}`,
+    };
+  }
+
+  const versionCount = data.versions.length;
+  const versionsLabel =
+    versionCount === 1 ? "1 version" : `${versionCount} versions`;
+  return { statusLabel: `${versionsLabel} · no current version` };
+}
+
+type SeriesPartnerAlumniPanelHeaderProps = {
+  summary: PartnerAlumniSectionSummary;
+  expanded: boolean;
+  onToggle: () => void;
+};
+
+/** Always-visible collapsed/expanded toggle chrome for the Series Admin section. */
+export function SeriesPartnerAlumniPanelHeader({
+  summary,
+  expanded,
+  onToggle,
+}: SeriesPartnerAlumniPanelHeaderProps) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-start justify-between gap-4 rounded-xl px-6 py-5 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2"
+      aria-expanded={expanded}
+      aria-controls="partner-alumni-panel"
+      id="partner-alumni-toggle"
+      onClick={onToggle}
+    >
+      <div className="min-w-0 flex-1 space-y-2">
+        <h2 className="text-lg font-semibold text-slate-900">Partner Alumni</h2>
+        <p className="text-sm text-slate-600">{summary.statusLabel}</p>
+      </div>
+      <span className="shrink-0 pt-1 text-sm font-medium text-brand-primary">
+        {expanded ? "Hide" : "Show"}
+      </span>
+    </button>
+  );
+}
+
 export function SeriesPartnerAlumniPanel({
   seriesId,
   initialData,
   initialLoadError = null,
 }: SeriesPartnerAlumniPanelProps) {
+  const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState(initialData);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     initialData.selected_version?.id ?? null,
@@ -152,6 +218,7 @@ export function SeriesPartnerAlumniPanel({
   const setCurrentPrompt = loadError === null ? partnerAlumniSetCurrentPrompt(data) : null;
   const showSetCurrentPublishPrompt =
     setCurrentPrompt !== null && needsPartnerAlumniSetCurrent(data);
+  const sectionSummary = buildPartnerAlumniSectionSummary(data, loadError);
 
   async function handleSelectVersion(versionId: string) {
     if (versionId === selectedVersionId) return;
@@ -269,24 +336,34 @@ export function SeriesPartnerAlumniPanel({
   }
 
   return (
-    <div className="mt-8 space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Partner Alumni</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Manage versioned partner rosters for this event series. The{" "}
-            <span className="font-medium">current version</span> is shown on public event pages.
-          </p>
-        </div>
-        <button
-          type="button"
-          className={primaryCtaClass}
-          disabled={loadError !== null}
-          onClick={() => setAction({ type: "create-version" })}
+    <section className="mt-8 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <SeriesPartnerAlumniPanelHeader
+        summary={sectionSummary}
+        expanded={expanded}
+        onToggle={() => setExpanded((current) => !current)}
+      />
+
+      {expanded ? (
+        <div
+          id="partner-alumni-panel"
+          role="region"
+          aria-labelledby="partner-alumni-toggle"
+          className="space-y-4 border-t border-slate-100 px-6 pb-6 pt-4"
         >
-          Create New Version
-        </button>
-      </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              Manage versioned partner rosters for this event series. The{" "}
+              <span className="font-medium">current version</span> is shown on public event pages.
+            </p>
+            <button
+              type="button"
+              className={primaryCtaClass}
+              disabled={loadError !== null}
+              onClick={() => setAction({ type: "create-version" })}
+            >
+              Create New Version
+            </button>
+          </div>
 
       {loadError ? (
         <InlineErrorBanner
@@ -574,6 +651,8 @@ export function SeriesPartnerAlumniPanel({
           ) : null}
         </div>
       )}
+        </div>
+      ) : null}
 
       {action?.type === "bulk" && selectedVersionId !== null && selectedVersion ? (
         <PartnerAlumniBulkUploadDrawer
@@ -638,7 +717,7 @@ export function SeriesPartnerAlumniPanel({
           }}
         />
       ) : null}
-    </div>
+    </section>
   );
 }
 
