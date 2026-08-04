@@ -25,9 +25,16 @@ import {
 import {
   buildImportMatchContext,
   matchImportRowIdentity,
+  type ImportMatchableRow,
   type ImportMatchContext,
   type ImportMatchMethod,
 } from "@/src/lib/companies/companyImportMatching";
+import {
+  createSupabaseImportMatchCandidateSource,
+  resolveImportMatchCandidateIdsFromSource,
+  sortImportMatchCompanies,
+  sortImportMatchCompanyDomains,
+} from "@/src/lib/companies/importMatchCandidateLoader";
 import { normalizeDomainFromWebsite } from "@/src/lib/domain/normalizeDomain";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
@@ -72,6 +79,26 @@ export type PartnerAlumniBulkCommitSummary = {
 
 const INSERT_CHUNK_SIZE = 100;
 
+/**
+ * ARC-003 Phase 6 loader mode for Partner Alumni Bulk only.
+ * Rollback: set PARTNER_ALUMNI_BULK_MATCH_LOADER=full_directory (or change default below).
+ * Does not affect Partner Alumni Import, Sponsor, or Exhibitor.
+ */
+export type PartnerAlumniBulkMatchLoaderMode = "candidate" | "full_directory";
+
+export function resolvePartnerAlumniBulkMatchLoaderMode(
+  env: Record<string, string | undefined> = process.env,
+): PartnerAlumniBulkMatchLoaderMode {
+  const raw = env.PARTNER_ALUMNI_BULK_MATCH_LOADER?.trim().toLowerCase();
+  if (raw === "full_directory" || raw === "full-directory") {
+    return "full_directory";
+  }
+  return "candidate";
+}
+
+export const PARTNER_ALUMNI_BULK_MATCH_LOADER_MODE: PartnerAlumniBulkMatchLoaderMode =
+  resolvePartnerAlumniBulkMatchLoaderMode();
+
 type CompanyDirectoryRow = {
   id: unknown;
   name: unknown;
@@ -85,7 +112,50 @@ type CompanyDomainDirectoryRow = {
   domain: unknown;
 };
 
-async function loadImportMatchContext(): Promise<{
+function normalizeWebsiteDomain(website: string | null): string | null {
+  if (website === null || website.trim() === "") return null;
+  try {
+    const domain = normalizeDomainFromWebsite(website.trim());
+    return domain !== "" ? domain.trim().toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+function rowIdentityKey(name: string, domain: string | null): string {
+  return `${normalizeCompanyNameKey(name)}|${domain ?? ""}`;
+}
+
+function previewRowStatus(
+  decision: ReturnType<typeof matchImportRowIdentity>,
+): PartnerAlumniBulkPreviewStatus {
+  if (decision.status === "auto_ready" && decision.proposed_company_id) {
+    return "matched";
+  }
+  if (decision.proposed_company_id) {
+    return "review";
+  }
+  return "create_new";
+}
+
+export function identityRowsFromBulkInput(
+  inputRows: readonly PartnerAlumniBulkInputRow[],
+): ImportMatchableRow[] {
+  return inputRows.map((row) => {
+    const trimmedName = row.name.trim();
+    return {
+      normalized_domain: normalizeWebsiteDomain(row.website),
+      normalized_website: row.website?.trim() ?? null,
+      normalized_company_name: trimmedName !== "" ? trimmedName : null,
+    };
+  });
+}
+
+/**
+ * Pre-ARC-003 Phase 6 loader: full active companies + all company_domains.
+ * Kept for rollback via PARTNER_ALUMNI_BULK_MATCH_LOADER=full_directory.
+ */
+export async function loadFullDirectoryMatchContext(): Promise<{
   matchContext: ImportMatchContext;
   companyNameById: ReadonlyMap<string, string>;
 }> {
@@ -126,68 +196,67 @@ async function loadImportMatchContext(): Promise<{
   };
 }
 
-function normalizeWebsiteDomain(website: string | null): string | null {
-  if (website === null || website.trim() === "") return null;
-  try {
-    const domain = normalizeDomainFromWebsite(website.trim());
-    return domain !== "" ? domain.trim().toLowerCase() : null;
-  } catch {
-    return null;
-  }
-}
-
-function rowIdentityKey(name: string, domain: string | null): string {
-  return `${normalizeCompanyNameKey(name)}|${domain ?? ""}`;
-}
-
-function previewRowStatus(
-  decision: ReturnType<typeof matchImportRowIdentity>,
-): PartnerAlumniBulkPreviewStatus {
-  if (decision.status === "auto_ready" && decision.proposed_company_id) {
-    return "matched";
-  }
-  if (decision.proposed_company_id) {
-    return "review";
-  }
-  return "create_new";
-}
-
-async function loadVersionRosterCompanyIds(versionId: string): Promise<Set<string>> {
+/**
+ * ARC-003 Phase 6 candidate loader: ImportMatchContext from DB-backed candidates only.
+ * companyNameById is built from the hydrated candidate companies (preview name lookup).
+ */
+export async function loadCandidateMatchContext(
+  rows: readonly ImportMatchableRow[],
+): Promise<{
+  matchContext: ImportMatchContext;
+  companyNameById: ReadonlyMap<string, string>;
+}> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("event_partner_alumni_version_companies")
-    .select("company_id")
-    .eq("event_partner_alumni_version_id", versionId);
+  const source = createSupabaseImportMatchCandidateSource(supabase);
+  const candidateIds = await resolveImportMatchCandidateIdsFromSource(source, rows);
+  if (candidateIds.length === 0) {
+    return {
+      matchContext: buildImportMatchContext([], []),
+      companyNameById: new Map(),
+    };
+  }
 
-  if (error) throw new Error(error.message);
-  return new Set((data ?? []).map((row) => String(row.company_id)));
-}
-
-async function loadVersionMemberDisplayOrders(versionId: string): Promise<number[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("event_partner_alumni_version_companies")
-    .select("display_order")
-    .eq("event_partner_alumni_version_id", versionId);
-
-  if (error) throw new Error(error.message);
-  return (data ?? [])
-    .map((row) => (typeof row.display_order === "number" ? row.display_order : null))
-    .filter((order): order is number => order !== null);
-}
-
-export async function previewPartnerAlumniBulkImport(
-  seriesId: string,
-  versionId: string,
-  inputRows: readonly PartnerAlumniBulkInputRow[],
-): Promise<PartnerAlumniBulkPreviewRow[]> {
-  await assertVersionBelongsToSeries(seriesId, versionId);
-
-  const [{ matchContext, companyNameById }, rosterCompanyIds] = await Promise.all([
-    loadImportMatchContext(),
-    loadVersionRosterCompanyIds(versionId),
+  const [companies, companyDomains] = await Promise.all([
+    source.findActiveCompaniesByIds(candidateIds),
+    source.findCompanyDomainsByCompanyIds(candidateIds),
   ]);
 
+  return {
+    matchContext: buildImportMatchContext(
+      sortImportMatchCompanies(companies),
+      sortImportMatchCompanyDomains(companyDomains),
+    ),
+    companyNameById: new Map(companies.map((company) => [company.id, company.name])),
+  };
+}
+
+/**
+ * Production entry for Partner Alumni Bulk matching context.
+ * Phase 6 default: candidate loader. Pass input identity rows for candidate mode.
+ */
+export async function loadImportMatchContext(
+  rows: readonly ImportMatchableRow[] = [],
+  mode: PartnerAlumniBulkMatchLoaderMode = PARTNER_ALUMNI_BULK_MATCH_LOADER_MODE,
+): Promise<{
+  matchContext: ImportMatchContext;
+  companyNameById: ReadonlyMap<string, string>;
+}> {
+  if (mode === "full_directory") {
+    return loadFullDirectoryMatchContext();
+  }
+  return loadCandidateMatchContext(rows);
+}
+
+/**
+ * Pure preview row builder (roster + in-file dups + match decisions).
+ * Exported for Phase 6 cutover parity tests.
+ */
+export function buildPartnerAlumniBulkPreviewRows(
+  inputRows: readonly PartnerAlumniBulkInputRow[],
+  matchContext: ImportMatchContext,
+  companyNameById: ReadonlyMap<string, string>,
+  rosterCompanyIds: ReadonlySet<string>,
+): PartnerAlumniBulkPreviewRow[] {
   const seenIdentityKeys = new Set<string>();
   const seenCompanyIds = new Set<string>();
   const previewRows: PartnerAlumniBulkPreviewRow[] = [];
@@ -311,6 +380,51 @@ export async function previewPartnerAlumniBulkImport(
   }
 
   return previewRows;
+}
+
+async function loadVersionRosterCompanyIds(versionId: string): Promise<Set<string>> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("event_partner_alumni_version_companies")
+    .select("company_id")
+    .eq("event_partner_alumni_version_id", versionId);
+
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((row) => String(row.company_id)));
+}
+
+async function loadVersionMemberDisplayOrders(versionId: string): Promise<number[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("event_partner_alumni_version_companies")
+    .select("display_order")
+    .eq("event_partner_alumni_version_id", versionId);
+
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .map((row) => (typeof row.display_order === "number" ? row.display_order : null))
+    .filter((order): order is number => order !== null);
+}
+
+export async function previewPartnerAlumniBulkImport(
+  seriesId: string,
+  versionId: string,
+  inputRows: readonly PartnerAlumniBulkInputRow[],
+): Promise<PartnerAlumniBulkPreviewRow[]> {
+  await assertVersionBelongsToSeries(seriesId, versionId);
+
+  const identityRows = identityRowsFromBulkInput(inputRows);
+  const [{ matchContext, companyNameById }, rosterCompanyIds] = await Promise.all([
+    loadImportMatchContext(identityRows),
+    loadVersionRosterCompanyIds(versionId),
+  ]);
+
+  return buildPartnerAlumniBulkPreviewRows(
+    inputRows,
+    matchContext,
+    companyNameById,
+    rosterCompanyIds,
+  );
 }
 
 async function resolveCompanyIdForCommitRow(
