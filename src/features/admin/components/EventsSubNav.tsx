@@ -7,9 +7,6 @@ import { adminEventsSubNavItems } from "@/src/lib/constants/navigation";
 import { navItemActiveClass, navItemInactiveClass } from "@/src/lib/design/classes";
 
 function isEventsSubNavActive(pathname: string, href: string): boolean {
-  if (href === "/admin/events") {
-    return pathname === "/admin/events";
-  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

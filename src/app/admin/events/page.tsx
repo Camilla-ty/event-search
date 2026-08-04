@@ -1,60 +1,8 @@
-import Link from "next/link";
-
-import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
-import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
-import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/common";
-import { primaryCtaClass } from "@/src/lib/design/classes";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+/** Events section entry: land on Event Series list (no Overview hub). */
 export default function AdminEventsOverviewPage() {
-  return (
-    <section>
-      <AdminBreadcrumbs
-        items={[{ label: "Admin", href: "/admin" }, { label: "Events" }]}
-      />
-      <AdminPageHeader
-        title="Events"
-        description="Manage event series and event editions before sponsor import."
-        actions={
-          <Link href="/admin/events/editions/new" className={`${primaryCtaClass} h-10`}>
-            Create event edition
-          </Link>
-        }
-      />
-      <EventsSubNav />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Event Series</CardTitle>
-            <CardDescription>Recurring event identities.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/admin/events/series"
-              className="text-sm text-brand-primary hover:underline"
-            >
-              View all event series →
-            </Link>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Event Editions</CardTitle>
-            <CardDescription>Occurrences linked to sponsor imports.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/admin/events/editions"
-              className="text-sm text-brand-primary hover:underline"
-            >
-              View all event editions →
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-  );
+  redirect("/admin/events/series");
 }

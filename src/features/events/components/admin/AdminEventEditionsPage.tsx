@@ -1,14 +1,11 @@
 "use client";
 
-import Link from "next/link";
-
 import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrumbs";
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { InlineErrorBanner, LoadingStatus } from "@/src/components/common";
 import { useAdminEditionsCollection } from "@/src/features/events/client/useAdminEditionsCollection";
 import type { AdminEditionsCollectionResult } from "@/src/features/events/server/adminEditionsCollection";
-import { primaryCtaClass } from "@/src/lib/design/classes";
 
 import { AdminEventEditionsFilterChips } from "./AdminEventEditionsFilterChips";
 import { AdminEventEditionsListTable } from "./AdminEventEditionsListTable";
@@ -32,11 +29,6 @@ export function AdminEventEditionsPage({ initial }: AdminEventEditionsPageProps)
       <AdminPageHeader
         title="Event Editions"
         description="Each occurrence of an event series (event series + year + location). Multiple event editions per event series and year are allowed."
-        actions={
-          <Link href="/admin/events/editions/new" className={`${primaryCtaClass} h-10`}>
-            Create event edition
-          </Link>
-        }
       />
       <EventsSubNav />
 

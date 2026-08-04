@@ -20,7 +20,7 @@ const ADMIN_COPY_FILES = [
     expected: "Create event series",
   },
   {
-    path: "AdminEventEditionsPage.tsx",
+    path: "../../../../app/admin/events/series/[id]/page.tsx",
     expected: "Create event edition",
   },
   {

@@ -2,7 +2,7 @@
 
 **Status:** Approved — reflects shipped v1 including Venues, Organizers, Exhibitors, and company merge
 **Version:** v1
-**Last updated:** 2026-08-02 (Exhibitors edition tab + company merge inventory; DOC-003)
+**Last updated:** 2026-08-04 (Events sub-nav: Series + Editions only; `/admin/events` redirects to series list)
 
 Complete admin IA for day-to-day operations. Synthesizes [Event Admin Workflow](./event-admin-workflow.md), sponsor import workflow, venue admin ([phase-venue-scope.md](./phase-venue-scope.md)), organizer admin ([phase-organizer-scope.md](./phase-organizer-scope.md)), exhibitor admin ([exhibitor-design.md](./exhibitor-design.md)), and approved database/migration design.
 
@@ -30,7 +30,7 @@ Describes navigation and screens; implementation lives in `src/app/admin/` and r
 | Order | Label | Route | Purpose |
 |-------|-------|-------|---------|
 | 1 | **Dashboard** | `/admin` | Work queue + at-a-glance ops |
-| 2 | **Events** | `/admin/events` | Series + editions hub |
+| 2 | **Events** | `/admin/events` | Redirects to Event Series list; Series + Editions sub-nav |
 | 3 | **Sponsor imports** | `/admin/sponsor-imports` | Import list + new import |
 | 4 | **Companies** | `/admin/companies` | Global company directory |
 | 5 | **Venues** | `/admin/venues` | Reusable event locations; archive-only lifecycle |
@@ -42,10 +42,10 @@ Describes navigation and screens; implementation lives in `src/app/admin/` and r
 
 | Label | Route |
 |-------|-------|
-| Overview | `/admin/events` |
-| Editions | `/admin/events/editions` |
-| Series | `/admin/events/series` |
-| Create edition | `/admin/events/editions/new` |
+| Event Series | `/admin/events/series` |
+| Event Editions | `/admin/events/editions` |
+
+`/admin/events` redirects to `/admin/events/series` (no Overview hub). Create actions are contextual: **Create event series** on the series list; **Create event edition** on series detail (`/admin/events/editions/new?seriesId=`). The create-edition route remains available for direct links.
 
 ### 2.3 Contextual sub-nav (edition detail only)
 
@@ -129,7 +129,7 @@ flowchart TB
 
 | ID | Screen | Route |
 |----|--------|-------|
-| E-S01 | Events overview | `/admin/events` |
+| E-S01 | Events entry (redirect) | `/admin/events` → `/admin/events/series` |
 | E-S02 | Series list | `/admin/events/series` |
 | E-S03 | Create series | `/admin/events/series/new` |
 | E-S04 | Series detail / edit | `/admin/events/series/[id]` |
@@ -196,15 +196,14 @@ flowchart TB
 ```
 /admin
 ├── Dashboard (A-01)
-├── /events
-│   ├── Overview (E-S01)
+├── /events  → redirect to /events/series
 │   ├── /series
-│   │   ├── List (E-S02)
+│   │   ├── List (E-S02) — Create event series
 │   │   ├── /new (E-S03)
-│   │   └── /[id] (E-S04)
+│   │   └── /[id] (E-S04) — Create event edition (?seriesId=)
 │   └── /editions
 │       ├── List (E-E01)
-│       ├── /new (E-E02) ──primary──► Sponsor import (pre-filled)
+│       ├── /new (E-E02) — direct/deep link; preferred entry from series detail
 │       └── /[id] (E-E03)
 │           ├── Tab: Profile (includes Organizers section)
 │           ├── Tab: Live sponsors
@@ -739,12 +738,13 @@ In v1 a single **admin account** may perform all personas; there is no separate 
 | Today | v1 target |
 |-------|-----------|
 | `/admin` cards only | Dashboard widgets |
+| `/admin/events` | Redirect → `/admin/events/series` |
 | `/admin/events/new` | `/admin/events/editions/new` |
 | No series admin | `/admin/events/series/*` |
 | No import UI | `/admin/sponsor-imports/*` |
 | `/admin/companies/new` only | `/admin/companies` list + new + detail |
 | No venues admin | `/admin/venues` list + new + detail |
-| 3 flat nav items | 6 primary nav + Events sub-nav |
+| 3 flat nav items | Primary nav + Events sub-nav (Series · Editions) |
 
 ---
 

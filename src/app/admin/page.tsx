@@ -42,9 +42,6 @@ export default async function AdminHomePage() {
             <Link href="/admin/events/series/new" className={`${primaryCtaClass} h-10 text-center`}>
               Create event series
             </Link>
-            <Link href="/admin/events/editions/new" className={`${secondaryCtaClass} h-10 text-center`}>
-              Create event edition
-            </Link>
             <Link href="/admin/companies/new" className={`${secondaryCtaClass} h-10 text-center`}>
               Create company
             </Link>
@@ -57,9 +54,6 @@ export default async function AdminHomePage() {
             <CardDescription>Event series and event editions.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <Link href="/admin/events" className="text-sm text-brand-primary hover:underline">
-              Events overview →
-            </Link>
             <Link
               href="/admin/events/series"
               className="text-sm text-brand-primary hover:underline"

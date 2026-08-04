@@ -37,10 +37,8 @@ export const adminPrimaryNavItems: NavItem[] = [
 
 /** Events section secondary nav (shown under Events routes). */
 export const adminEventsSubNavItems: NavItem[] = [
-  { href: "/admin/events", label: "Overview" },
   { href: "/admin/events/series", label: "Event Series" },
   { href: "/admin/events/editions", label: "Event Editions" },
-  { href: "/admin/events/editions/new", label: "Create event edition" },
 ];
 
 /** @deprecated Use adminPrimaryNavItems */
