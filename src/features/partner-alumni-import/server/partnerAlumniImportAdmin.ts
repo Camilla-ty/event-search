@@ -509,8 +509,6 @@ export async function runBatchMatching(batchId: string, scope: ImportScope, acto
     .update({ processing_phase: "matching", updated_at: new Date().toISOString() })
     .eq("id", batchId);
 
-  const { matchContext, memberByCompanyId } = await loadMatchContext(scope.versionId);
-
   const { data: rows, error } = await supabase
     .from("partner_alumni_import_rows")
     .select(
@@ -519,6 +517,17 @@ export async function runBatchMatching(batchId: string, scope: ImportScope, acto
     .eq("batch_id", batchId);
 
   if (error) throw new Error(error.message);
+
+  const identityRows = (rows ?? []).map((row) => ({
+    normalized_domain: row.normalized_domain as string | null,
+    normalized_website: row.normalized_website as string | null,
+    normalized_company_name: row.normalized_company_name as string | null,
+  }));
+
+  const { matchContext, memberByCompanyId } = await loadMatchContext(
+    scope.versionId,
+    identityRows,
+  );
 
   let matched = 0;
   for (const row of rows ?? []) {
