@@ -87,6 +87,8 @@ describe("AdminSeriesEditionsTable", () => {
 
     assert.match(html, /href="\/admin\/events\/editions\/edition-1"/);
     assert.match(html, /TOKEN2049 Singapore 2026/);
+    assert.match(html, /after:absolute after:inset-0/);
+    assert.match(html, /hover:bg-brand-primary-muted\/50/);
     assert.match(html, /Marina Bay Sands/);
     assert.match(html, /✓/);
     assert.match(html, />12</);
@@ -96,6 +98,18 @@ describe("AdminSeriesEditionsTable", () => {
     assert.match(html, /Future Shell 2025/);
     assert.match(html, /—/);
     assert.match(html, />0</);
+    assert.equal((html.match(/href="\/admin\/events\/editions\//g) ?? []).length, 2);
+  });
+
+  it("uses a single stretched name link per row without nested links", () => {
+    const html = renderToStaticMarkup(
+      <AdminSeriesEditionsTable editions={[editionRow()]} />,
+    );
+
+    assert.match(html, /after:absolute after:inset-0 after:z-\[1\]/);
+    assert.match(html, /focus-visible:ring-2 focus-visible:ring-brand-primary\/25/);
+    assert.doesNotMatch(html, /role="link"/);
+    assert.equal((html.match(/<a /g) ?? []).length, 1);
   });
 
   it("renders the empty state when there are no editions", () => {

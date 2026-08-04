@@ -40,24 +40,36 @@ export function AdminSeriesEditionsTable({ editions }: AdminSeriesEditionsTableP
               </td>
             </tr>
           ) : (
-            editions.map((edition) => (
-              <tr key={edition.id} className="border-b border-slate-100">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/events/editions/${edition.id}`}
-                    className="font-medium text-brand-primary hover:underline"
-                  >
-                    {edition.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">{formatSeriesEditionVenueName(edition.venues)}</td>
-                <td className="px-4 py-3">
-                  {formatSeriesEditionReviewedMark(edition.last_reviewed_at)}
-                </td>
-                <td className="px-4 py-3">{edition.live_sponsor_count}</td>
-                <td className="px-4 py-3">{edition.organizer_count}</td>
-              </tr>
-            ))
+            editions.map((edition) => {
+              const detailHref = `/admin/events/editions/${edition.id}`;
+
+              return (
+                <tr
+                  key={edition.id}
+                  className="relative border-b border-slate-100 last:border-0 hover:bg-brand-primary-muted/50"
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <Link
+                      href={detailHref}
+                      className={[
+                        "text-slate-900 hover:underline",
+                        "after:absolute after:inset-0 after:z-[1] after:content-['']",
+                        "focus-visible:relative focus-visible:z-[2] focus-visible:outline-none",
+                        "focus-visible:ring-2 focus-visible:ring-brand-primary/25 focus-visible:ring-offset-2",
+                      ].join(" ")}
+                    >
+                      {edition.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">{formatSeriesEditionVenueName(edition.venues)}</td>
+                  <td className="px-4 py-3">
+                    {formatSeriesEditionReviewedMark(edition.last_reviewed_at)}
+                  </td>
+                  <td className="px-4 py-3">{edition.live_sponsor_count}</td>
+                  <td className="px-4 py-3">{edition.organizer_count}</td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
