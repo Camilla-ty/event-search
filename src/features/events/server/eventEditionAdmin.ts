@@ -5,6 +5,10 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
 import {
+  getExhibitorCountsByEditionIds,
+  readExhibitorCountForEdition,
+} from "@/src/features/exhibitors/server/eventExhibitorAdmin";
+import {
   getOrganizerCountsByEditionIds,
   readOrganizerCountForEdition,
 } from "@/src/features/organizers/server/eventOrganizerAdmin";
@@ -78,6 +82,7 @@ export type EventEditionListFilters = {
 export type EventEditionListItem = EventEditionAdminRow & {
   live_sponsor_count: number;
   organizer_count: number;
+  exhibitor_count: number;
 };
 
 export async function listEventEditionsAdmin(
@@ -128,15 +133,18 @@ export async function listEventEditionsAdmin(
   if (rows.length === 0) return [];
 
   const editionIds = rows.map((row) => row.id);
-  const [countByEdition, organizerCountByEdition] = await Promise.all([
-    getSponsorCountsByEditionIds(editionIds),
-    getOrganizerCountsByEditionIds(editionIds),
-  ]);
+  const [countByEdition, organizerCountByEdition, exhibitorCountByEdition] =
+    await Promise.all([
+      getSponsorCountsByEditionIds(editionIds),
+      getOrganizerCountsByEditionIds(editionIds),
+      getExhibitorCountsByEditionIds(editionIds),
+    ]);
 
   return rows.map((row) => ({
     ...row,
     live_sponsor_count: readSponsorCountForEdition(countByEdition, row.id),
     organizer_count: readOrganizerCountForEdition(organizerCountByEdition, row.id),
+    exhibitor_count: readExhibitorCountForEdition(exhibitorCountByEdition, row.id),
   }));
 }
 

@@ -37,7 +37,7 @@ regions
 | Dubai | null | `Dubai, United Arab Emirates` |
 | San Francisco | California | `San Francisco, California` |
 
-Singapore has 0 states; United States has 50 states in `states` table.
+Singapore has 0 states; United States has 51 rows in `states` (50 states + District of Columbia).
 
 ---
 

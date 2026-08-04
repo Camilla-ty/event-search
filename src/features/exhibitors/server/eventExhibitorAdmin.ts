@@ -5,6 +5,7 @@ import {
 } from "@/src/features/events/server/eventSponsorReorder";
 import { assertCompanyLinkable } from "@/src/lib/companies/assertCompanyLinkable";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import type {
   EventExhibitorCreatePayload,
   EventExhibitorTierReorderPayload,
@@ -361,4 +362,55 @@ export async function deleteEventExhibitorLinkAdmin(
 
   if (error) throw new Error(error.message);
   return data ? toLinkRow(data as Record<string, unknown>) : null;
+}
+
+function normalizeEditionIdForExhibitorCount(editionId: string): string {
+  return editionId.trim().toLowerCase();
+}
+
+/**
+ * Exhibitor link counts for many editions (one batched query path).
+ * Returns 0 for editions with no `event_exhibitors` rows.
+ */
+export async function getExhibitorCountsByEditionIds(
+  editionIds: readonly string[],
+): Promise<Map<string, number>> {
+  const uniqueEditionIds = [
+    ...new Set(
+      editionIds
+        .map((editionId) => normalizeEditionIdForExhibitorCount(editionId))
+        .filter((editionId) => editionId !== ""),
+    ),
+  ];
+
+  if (uniqueEditionIds.length === 0) {
+    return new Map();
+  }
+
+  const supabase = createAdminClient();
+  const rows = await fetchAllByIdInBatches<{ event_editions_id?: unknown }>(
+    uniqueEditionIds,
+    (batchIds) =>
+      supabase
+        .from("event_exhibitors")
+        .select("event_editions_id")
+        .in("event_editions_id", batchIds),
+  );
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const editionId = normalizeEditionIdForExhibitorCount(
+      String(row.event_editions_id ?? ""),
+    );
+    if (editionId === "") continue;
+    counts.set(editionId, (counts.get(editionId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function readExhibitorCountForEdition(
+  counts: ReadonlyMap<string, number>,
+  editionId: string,
+): number {
+  return counts.get(normalizeEditionIdForExhibitorCount(editionId)) ?? 0;
 }

@@ -29,6 +29,7 @@ function editionRow(overrides: Partial<EventEditionListItem> = {}): EventEdition
     venues: { id: "venue-1", name: "Marina Bay Sands", archived_at: null },
     live_sponsor_count: 12,
     organizer_count: 2,
+    exhibitor_count: 0,
     ...overrides,
   };
 }

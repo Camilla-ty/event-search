@@ -7,7 +7,6 @@ import { buildAdminEditionsApiUrl } from "@/src/features/events/client/fetchAdmi
 import { parseEditionsListParamsFromLocationSearch } from "@/src/features/events/client/editionsListCollectionState";
 import {
   buildEditionsListSearchParams,
-  parseEditionsListParams,
 } from "@/src/features/events/server/editionsListParams";
 import {
   readSearchParamsFromWindow,
@@ -173,8 +172,8 @@ describe("cold-load server behavior", () => {
   });
 });
 
-describe("view navigation remains cross-route", () => {
-  it("AdminEventEditionsListTable still links to edition detail", () => {
+describe("edition detail navigation", () => {
+  it("AdminEventEditionsListTable stretch-links to edition detail", () => {
     const source = readFileSync(
       path.join(
         process.cwd(),
@@ -182,6 +181,9 @@ describe("view navigation remains cross-route", () => {
       ),
       "utf8",
     );
-    assert.match(source, /href=\{`\/admin\/events\/editions\/\$\{edition\.id\}`\}/);
+    assert.match(source, /href=\{detailHref\}/);
+    assert.match(source, /`\/admin\/events\/editions\/\$\{edition\.id\}`/);
+    assert.match(source, /after:absolute after:inset-0/);
+    assert.doesNotMatch(source, />View</);
   });
 });
