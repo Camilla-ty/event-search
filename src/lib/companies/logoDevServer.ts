@@ -3,6 +3,7 @@ import {
   MAX_LOGO_BINARY_BYTES,
   validateLogoBinary,
 } from "@/src/lib/companies/logoBinaryValidation";
+import { safeOutboundFetch } from "@/src/lib/security/safeOutboundFetch";
 
 const LOGO_DEV_IMAGE_HOST = "https://img.logo.dev";
 
@@ -51,20 +52,10 @@ async function fetchWithTimeout(
   init: RequestInit & { timeoutMs?: number } = {},
 ): Promise<Response | null> {
   const { timeoutMs = FETCH_TIMEOUT_MS, ...rest } = init;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
-      ...rest,
-      redirect: "follow",
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  return safeOutboundFetch(url, {
+    timeoutMs,
+    init: rest,
+  });
 }
 
 /**

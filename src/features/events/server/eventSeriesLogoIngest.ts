@@ -4,6 +4,8 @@ import {
   validateLogoBinary,
 } from "@/src/lib/companies/logoBinaryValidation";
 
+import { safeOutboundFetch } from "@/src/lib/security/safeOutboundFetch";
+
 import {
   uploadEventSeriesLogoBytes,
   verifyEventSeriesLogoStorageObject,
@@ -25,19 +27,7 @@ function isAllowedImageContentType(contentType: string): boolean {
 }
 
 async function fetchWithTimeout(url: string): Promise<Response | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, {
-      redirect: "follow",
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  return safeOutboundFetch(url, { timeoutMs: FETCH_TIMEOUT_MS });
 }
 
 async function downloadExternalLogoImage(url: string): Promise<FetchedImage | null> {

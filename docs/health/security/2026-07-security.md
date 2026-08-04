@@ -8,7 +8,7 @@
 **Baseline:** false
 **Status:** Cycle report — remediations update this file; one cycle = one report (do not create separate closeout reports).
 
-> Recurring Security Health Check under Framework v1.1 (lifecycle clarified under Framework v1.2). File path retained as `2026-07-security.md`; cycle token for this write-up is **2026-09**. No new `SEC` IDs. `SEC-002` was later remediated in-repo and resolved in this same report (see **Resolution History**). `SEC-003` remains Open. Security topics already tracked under `ARC` IDs are referenced, not duplicated.
+> Recurring Security Health Check under Framework v1.1 (lifecycle clarified under Framework v1.2). File path retained as `2026-07-security.md`; cycle token for this write-up is **2026-09**. No new `SEC` IDs. `SEC-002` and `SEC-003` were later remediated in-repo and resolved in this same report (see **Resolution History**). Security topics already tracked under `ARC` IDs are referenced, not duplicated.
 
 ---
 
@@ -18,7 +18,9 @@ Second full Security cycle for EventPixels (after the narrow `SEC-001` closeout)
 
 **At publication (2026-07-31):** **0 resolved**, **0 new**, **2 SEC open** (`SEC-002`, `SEC-003`). Manual logo MIME allowlist rejected SVG on admin upload, but client MIME was still trusted without magic-byte sniffing and ingest paths still accepted SVG — `SEC-002` not closed. `SEC-003` unchanged (parse-only URL checks; no private-host blocking). Highest residual application-security risk continues under Architecture IDs — especially `ARC-001`.
 
-**After remediation (2026-08-02):** `SEC-002` **Resolved** (shared `validateLogoBinary` magic-byte gate on upload + ingest/storage write paths). `SEC-003` still Open. Closing evidence in **Resolution History**. Cross-audit: `ARC-001` public fail-open service-role reads later **Resolved** the same day (Architecture Resolution History).
+**After remediation (2026-08-02):** `SEC-002` **Resolved** (shared `validateLogoBinary` magic-byte gate on upload + ingest/storage write paths). `SEC-003` still Open at that step. Closing evidence in **Resolution History**. Cross-audit: `ARC-001` public fail-open service-role reads later **Resolved** the same day (Architecture Resolution History).
+
+**After remediation (2026-08-04):** `SEC-003` **Resolved** (shared `assertSafeOutboundHttpUrl` + hop-checked `safeOutboundFetch` on all live logo-ingest paths). No open `SEC` Findings remain. Closing evidence in **Resolution History**.
 
 ---
 
@@ -26,8 +28,8 @@ Second full Security cycle for EventPixels (after the narrow `SEC-001` closeout)
 
 | Change | Finding IDs | Notes / links |
 |---|---|---|
-| Resolved (removed from register) | `SEC-002` | Resolved 2026-08-02 — see Resolution History (`SEC-001` already retired) |
-| Still open | `SEC-003` | evidence below; SSRF unchanged |
+| Resolved (removed from register) | `SEC-002`, `SEC-003` | `SEC-002` on 2026-08-02; `SEC-003` on 2026-08-04 — see Resolution History (`SEC-001` already retired) |
+| Still open | — | no open SEC Findings |
 | In progress | — | none |
 | Deferred | — | none |
 | New this cycle | — | none |
@@ -66,14 +68,10 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
 
 ### SEC-003 — SSRF in logo/website ingestion without host allow-listing
 
-- **Status:** Open
-- **Delta:** Still present. Server-side `fetch()` follows operator/import-supplied URLs and constructed `https://${domain}/` targets without host allow-listing or private/link-local/metadata IP blocking.
-  - `src/features/companies/server/companyLogoIngest.ts` (`fetchWithTimeout` / homepage & favicon strategies)
-  - `src/features/venues/server/venueLogoIngest.ts`
-  - `src/features/events/server/eventSeriesLogoIngest.ts`
-  - `src/features/companies/server/logo.ts` / `src/lib/companies/logoDevServer.ts` (related remote image fetch)
-  - `src/lib/validation/url.ts` (`isValidHttpUrl` — parseability / hostname non-empty only)
-- **Acceptance still unmet:** Block private, link-local, and cloud-metadata ranges; prefer allow-listed public hosts; do not follow redirects to forbidden targets.
+- **Status:** Resolved (2026-08-04) — see Resolution History
+- **Delta (at publication):** Server-side `fetch()` followed operator/import-supplied URLs and constructed `https://${domain}/` targets without host allow-listing or private/link-local/metadata IP blocking (`companyLogoIngest`, `venueLogoIngest`, `eventSeriesLogoIngest`, `logoDevServer`; parse-only `isValidHttpUrl`).
+- **Delta (post Phase 1–2 / verified 2026-08-04):** Live production logo-ingest fetches use shared `assertSafeOutboundHttpUrl` + `safeOutboundFetch` (manual redirects; every hop re-validated). Unsafe initial URLs and redirect targets are blocked.
+- **Acceptance criteria:** Block private, link-local, and cloud-metadata ranges (and equivalent IPv6 private ranges); fail closed when DNS resolves to blocked addresses; do not follow redirects to forbidden targets; all live production logo-ingest outbound fetches use the shared safe fetch path.
 
 ---
 
@@ -113,7 +111,23 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
   - Ingest / remote fetch paths validate bytes: `companyLogoIngest.ts`, `venueLogoIngest.ts`, `eventSeriesLogoIngest.ts`, `logo.ts`, `logoDevServer.ts`.
   - Commit: `54f8bfb` (*fix: validate logo file bytes before storage*).
 - **Why criteria pass:** New logo bytes cannot land in public Storage as SVG or as MIME-spoofed SVG; all primary write paths share the same byte gate.
-- **Residual (not SEC-002):** `SEC-003` SSRF on URL fetch remains Open. Legacy objects already in Storage are out of this Finding’s write-path scope.
+- **Residual (not SEC-002):** `SEC-003` SSRF on URL fetch remained Open at this step (later resolved 2026-08-04). Legacy objects already in Storage are out of this Finding’s write-path scope.
+
+### 2026-08-04 — SEC-003 resolved
+
+- **Acceptance criteria:** Block private, link-local, and cloud-metadata ranges (and equivalent IPv6 private ranges); fail closed when DNS resolves to blocked addresses; do not follow redirects to forbidden targets; all live production logo-ingest outbound fetches use the shared safe fetch path.
+- **Closing evidence (verified 2026-08-04):**
+  - **Phase 1 — URL guard:** `src/lib/security/safeOutboundUrl.ts` (`assertSafeOutboundHttpUrl`) rejects non-http(s), credentials, localhost/`.localhost`/`.local`/metadata hostnames, loopback, RFC1918, link-local (incl. `169.254.169.254`), IPv6 loopback/ULA/link-local/mapped-private, and DNS results that resolve to blocked IPs (fail closed on DNS errors). Tests: `safeOutboundUrl.test.ts`.
+  - **Phase 2 — Redirect safety:** `src/lib/security/safeOutboundFetch.ts` uses `redirect: "manual"` and re-runs `assertSafeOutboundHttpUrl` on every `Location` hop (max 5). Public→public allowed; public→localhost / `127.0.0.1` / `169.254.169.254` / RFC1918 blocked. Tests: `safeOutboundFetch.test.ts`.
+  - **Live production wiring:** All outbound logo-ingest fetches go through `safeOutboundFetch`:
+    - `companyLogoIngest.ts` (manual URL, favicon, homepage/og:image, Google favicon)
+    - `venueLogoIngest.ts` / `eventSeriesLogoIngest.ts` (manual logo URL)
+    - `logoDevServer.ts` (Logo.dev image URL)
+  - **No live path uses `redirect: "follow"`** in those modules; only `safeOutboundFetch` issues outbound HTTP.
+  - **Out of scope (confirmed non-live):** deprecated `companies/server/logo.ts` (`fetchAndUploadLogoByDomain` — no app imports); `scripts/backfill/resolvers/logoUpload.ts` still uses `redirect: "follow"` offline.
+  - **Final verification:** Focused SEC-003 suites **28** pass; `tsc --noEmit` / eslint (touched paths) / `git diff --check` clean on SEC-003 files.
+- **Why criteria pass:** Live production logo ingest cannot fetch unsafe initial destinations or follow redirects into blocked private/metadata targets; DNS-to-private fails closed.
+- **Residual (not SEC-003):** Offline backfill resolver / deprecated `logo.ts` still lack the shared fetch helper until separately retired. `isValidHttpUrl` remains parse-only for stored website fields (no server page scrape). `ARC-007` rate limiting remains Open.
 
 ---
 
@@ -123,3 +137,4 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-secur
 |------|------|
 | 2026-07-31 | Recurring Security Audit published. Reconciled `SEC-002`/`SEC-003` (both remain `Open` with deltas). Cross-referenced `ARC-001/007/009/015/016/017`. No new Findings; none resolved this cycle. |
 | 2026-08-02 | Resolved `SEC-002` after magic-byte validation shipped. Closing evidence in Resolution History. `SEC-003` remains Open. |
+| 2026-08-04 | Resolved `SEC-003` after shared outbound URL guard + hop-checked `safeOutboundFetch` on live logo-ingest paths. Closing evidence in Resolution History. No open SEC Findings remain. No companion closeout report (Framework v1.2). |

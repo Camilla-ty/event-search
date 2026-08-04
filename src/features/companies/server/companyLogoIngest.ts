@@ -18,6 +18,7 @@ import {
 } from "./companyLogoStorage";
 import type { CompanyLogoIngestResult } from "./companyLogoMetadata";
 import { isAllowedLogoRasterContentType, validateLogoBinary } from "@/src/lib/companies/logoBinaryValidation";
+import { safeOutboundFetch } from "@/src/lib/security/safeOutboundFetch";
 
 const FETCH_TIMEOUT_MS = 5000;
 const HTML_FETCH_TIMEOUT_MS = 6000;
@@ -62,20 +63,10 @@ async function fetchWithTimeout(
   init: RequestInit & { timeoutMs?: number } = {},
 ): Promise<Response | null> {
   const { timeoutMs = FETCH_TIMEOUT_MS, ...rest } = init;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
-      ...rest,
-      redirect: "follow",
-      cache: "no-store",
-      signal: controller.signal,
-    });
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  return safeOutboundFetch(url, {
+    timeoutMs,
+    init: rest,
+  });
 }
 
 async function downloadImage(url: string): Promise<FetchedImage | null> {
