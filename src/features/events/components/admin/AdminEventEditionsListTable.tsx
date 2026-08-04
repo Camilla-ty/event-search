@@ -16,15 +16,22 @@ export function editionHasLastReviewed(
   return Boolean(lastReviewedAt);
 }
 
-export function editionHasSponsors(liveSponsorCount: number): boolean {
-  return liveSponsorCount > 0;
+function StatusSuccessMark({ label }: { label: string }) {
+  return (
+    <span
+      aria-label={label}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-success text-[0.65rem] font-semibold leading-none text-white"
+    >
+      ✓
+    </span>
+  );
 }
 
-export function editionHasExhibitors(exhibitorCount: number): boolean {
-  return exhibitorCount > 0;
+function StatusMissingMark() {
+  return <span className="text-slate-400">—</span>;
 }
 
-function PresenceMark({
+function StatusIndicator({
   present,
   label,
 }: {
@@ -32,14 +39,10 @@ function PresenceMark({
   label: string;
 }) {
   if (!present) {
-    return <span className="text-slate-400">—</span>;
+    return <StatusMissingMark />;
   }
 
-  return (
-    <span className="text-brand-success" aria-label={label}>
-      ✓
-    </span>
-  );
+  return <StatusSuccessMark label={label} />;
 }
 
 type AdminEventEditionsListTableProps = {
@@ -111,30 +114,20 @@ export function AdminEventEditionsListTable({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <PresenceMark
+                    <StatusIndicator
                       present={editionHasAssignedVenue(edition)}
-                      label="Has venue"
+                      label="Venue assigned"
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <PresenceMark
+                    <StatusIndicator
                       present={editionHasLastReviewed(edition.last_reviewed_at)}
-                      label="Has last reviewed date"
+                      label="Last reviewed"
                     />
                   </td>
                   <td className="px-4 py-3 text-slate-600">{edition.organizer_count}</td>
-                  <td className="px-4 py-3">
-                    <PresenceMark
-                      present={editionHasSponsors(edition.live_sponsor_count)}
-                      label="Has sponsors"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <PresenceMark
-                      present={editionHasExhibitors(edition.exhibitor_count)}
-                      label="Has exhibitors"
-                    />
-                  </td>
+                  <td className="px-4 py-3 text-slate-600">{edition.live_sponsor_count}</td>
+                  <td className="px-4 py-3 text-slate-600">{edition.exhibitor_count}</td>
                 </tr>
               );
             })

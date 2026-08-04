@@ -5,9 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   AdminEventEditionsListTable,
   editionHasAssignedVenue,
-  editionHasExhibitors,
   editionHasLastReviewed,
-  editionHasSponsors,
 } from "@/src/features/events/components/admin/AdminEventEditionsListTable";
 import type { EventEditionListItem } from "@/src/features/events/server/eventEditionAdmin";
 
@@ -42,8 +40,8 @@ function editionRow(overrides: Partial<EventEditionListItem> = {}): EventEdition
   };
 }
 
-describe("AdminEventEditionsListTable presence helpers", () => {
-  it("detects venue, reviewed, sponsor, and exhibitor presence", () => {
+describe("AdminEventEditionsListTable status helpers", () => {
+  it("detects venue assignment and last-reviewed presence", () => {
     assert.equal(editionHasAssignedVenue(editionRow()), true);
     assert.equal(
       editionHasAssignedVenue(editionRow({ venue_id: null, venues: null })),
@@ -51,15 +49,11 @@ describe("AdminEventEditionsListTable presence helpers", () => {
     );
     assert.equal(editionHasLastReviewed("2026-06-01T00:00:00.000Z"), true);
     assert.equal(editionHasLastReviewed(null), false);
-    assert.equal(editionHasSponsors(3), true);
-    assert.equal(editionHasSponsors(0), false);
-    assert.equal(editionHasExhibitors(1), true);
-    assert.equal(editionHasExhibitors(0), false);
   });
 });
 
 describe("AdminEventEditionsListTable", () => {
-  it("renders the approved columns with stretch-link rows and presence marks", () => {
+  it("renders numeric role counts and filled success status indicators", () => {
     const html = renderToStaticMarkup(
       <AdminEventEditionsListTable
         editions={[
@@ -90,25 +84,26 @@ describe("AdminEventEditionsListTable", () => {
     assert.doesNotMatch(html, />City</);
     assert.doesNotMatch(html, />Actions</);
     assert.doesNotMatch(html, />View</);
-    assert.doesNotMatch(html, /Live sponsors/i);
 
     assert.match(html, /href="\/admin\/events\/editions\/edition-1"/);
     assert.match(html, /after:absolute after:inset-0/);
-    assert.match(html, /hover:bg-brand-primary-muted\/50/);
     assert.match(html, /TOKEN2049 Singapore 2026/);
-    assert.match(html, /aria-label="Has venue"/);
-    assert.match(html, /aria-label="Has last reviewed date"/);
-    assert.match(html, /aria-label="Has sponsors"/);
-    assert.match(html, /aria-label="Has exhibitors"/);
-    assert.match(html, /text-brand-success/);
+    assert.match(html, /aria-label="Venue assigned"/);
+    assert.match(html, /aria-label="Last reviewed"/);
+    assert.match(html, /rounded-full bg-brand-success[^"]*text-white/);
+    assert.equal((html.match(/aria-label="Venue assigned"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-label="Last reviewed"/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /aria-label="Has sponsors"/);
+    assert.doesNotMatch(html, /aria-label="Has exhibitors"/);
+
     assert.match(html, />2</);
-    assert.doesNotMatch(html, />12</);
-    assert.doesNotMatch(html, />5</);
+    assert.match(html, />12</);
+    assert.match(html, />5</);
 
     assert.match(html, /href="\/admin\/events\/editions\/edition-2"/);
     assert.match(html, /Future Shell 2025/);
-    assert.match(html, />0</);
-    assert.equal((html.match(/text-slate-400[^>]*>—</g) ?? []).length >= 4, true);
+    assert.equal((html.match(/>0</g) ?? []).length >= 3, true);
+    assert.equal((html.match(/text-slate-400[^>]*>—</g) ?? []).length >= 3, true);
   });
 
   it("uses a single stretched name link per row without nested links", () => {
