@@ -44,11 +44,11 @@ These are the primary performance-relevant roots under normal load. PERF adds cu
 
 | ID | Topic | PERF evidence this cycle (observation) |
 |---|---|---|
-| `ARC-002` | Hot-path full-table sponsor counts | Still present: `getSponsorCountsByEditionIds` paginates **all** `event_sponsors` (`event_editions_id` only) then filters in JS (`src/lib/queries/companies.ts`). ~7,342 rows today. Callers include event explorer, discover home, topic hubs, `getTotalSponsorCount` (event detail / metadata). |
+| `ARC-002` | Hot-path full-table sponsor counts | **Resolved 2026-08-02** — bounded `event_edition_sponsor_counts` (see Architecture Resolution History). Not reopened. |
 | `ARC-004` | `force-dynamic`; no ISR; no request dedup | Marketing pages still export `force-dynamic` (home, events, sponsors, hubs, series, venues, topics). Near-zero `React.cache()` under `(marketing)` — exception: `getEventBrandPublicDestinationIndex`. Metadata + page body re-load patterns amplify `ARC-002` on event detail. |
 | `ARC-017` | Middleware `getUser()` breadth | `updateSession` still awaits `supabase.auth.getUser()` on the broad middleware matcher (`src/lib/supabase/middleware.ts`). |
-| `ARC-018` | Double-path sponsor company hydration | `mergeCompaniesOntoEventSponsorLinks` still session batch then admin miss-fill (`companies.ts`) — extra round-trips on public roster paths. |
-| `ARC-003` | Import full-directory match | Unchanged structural cost on sponsor/exhibitor/PA match under normal batch sizes; not re-measured as PERF. |
+| `ARC-018` | Double-path sponsor company hydration | **Resolved 2026-08-04** — admin miss-fill removed; session-only batch in `mergeCompaniesOntoEventSponsorLinks` (see Architecture Resolution History). Not reopened. |
+| `ARC-003` | Import full-directory match | **Resolved 2026-08-04** — candidate loader default (see Architecture Resolution History). Not reopened. |
 | `SCALE-001` | Retired alias full-load | Closed — admin alias search uses RPC; not reopened. |
 
 ---
@@ -93,3 +93,4 @@ Primary hot-path debt is already tracked under Architecture. Minting parallel `P
 | Date | Note |
 |------|------|
 | 2026-08-02 | Baseline Performance Audit published. **0** new `PERF` Findings. Cross-referenced `ARC-002`/`003`/`004`/`017`/`018`; noted retired `SCALE-001`. Cadence Monthly; cycle token `2026-07` as requested. |
+| 2026-08-04 | Cross-ref refresh only (no new PERF IDs): marked retired `ARC-002`/`003`/`018` in the evidence table after Architecture reconciliations. `ARC-004`/`ARC-017` remain the primary open hot-path roots under PERF observation. |

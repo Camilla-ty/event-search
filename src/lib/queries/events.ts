@@ -9,6 +9,11 @@ export const EVENT_EDITION_LIST_SELECT = `
   cities (
     *,
     ${CITY_PUBLIC_EMBED}
+  ),
+  venues (
+    id,
+    name,
+    archived_at
   )
 `;
 

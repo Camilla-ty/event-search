@@ -30,4 +30,18 @@ describe("listEventEditionsAdmin live sponsor count wiring", () => {
     assert.doesNotMatch(body, /\.from\("event_sponsors"\)/);
     assert.doesNotMatch(body, /\.in\("event_editions_id"/);
   });
+
+  it("batches organizer counts with getOrganizerCountsByEditionIds in the same list path", () => {
+    const source = readServerSource("eventEditionAdmin.ts");
+    const body = extractFunctionBody(source, "listEventEditionsAdmin");
+
+    assert.match(body, /getOrganizerCountsByEditionIds\(editionIds\)/);
+    assert.match(
+      body,
+      /readOrganizerCountForEdition\(organizerCountByEdition, row\.id\)/,
+    );
+    assert.match(body, /organizer_count:/);
+    assert.match(body, /Promise\.all\(\[/);
+    assert.doesNotMatch(body, /\.from\("event_edition_organizers"\)/);
+  });
 });

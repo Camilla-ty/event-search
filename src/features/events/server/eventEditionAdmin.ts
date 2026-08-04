@@ -5,6 +5,10 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { fetchAllPaginatedSupabaseRows } from "@/src/lib/supabase/fetchAllPaginatedRows";
 import { CITY_ADMIN_SELECT } from "@/src/lib/location/cityEmbedSelect";
 import {
+  getOrganizerCountsByEditionIds,
+  readOrganizerCountForEdition,
+} from "@/src/features/organizers/server/eventOrganizerAdmin";
+import {
   getSponsorCountsByEditionIds,
   readSponsorCountForEdition,
 } from "@/src/lib/queries/companies";
@@ -73,6 +77,7 @@ export type EventEditionListFilters = {
 
 export type EventEditionListItem = EventEditionAdminRow & {
   live_sponsor_count: number;
+  organizer_count: number;
 };
 
 export async function listEventEditionsAdmin(
@@ -123,11 +128,15 @@ export async function listEventEditionsAdmin(
   if (rows.length === 0) return [];
 
   const editionIds = rows.map((row) => row.id);
-  const countByEdition = await getSponsorCountsByEditionIds(editionIds);
+  const [countByEdition, organizerCountByEdition] = await Promise.all([
+    getSponsorCountsByEditionIds(editionIds),
+    getOrganizerCountsByEditionIds(editionIds),
+  ]);
 
   return rows.map((row) => ({
     ...row,
     live_sponsor_count: readSponsorCountForEdition(countByEdition, row.id),
+    organizer_count: readOrganizerCountForEdition(organizerCountByEdition, row.id),
   }));
 }
 
@@ -137,7 +146,7 @@ export async function getEventEditionAdminById(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("event_editions")
-    .select(`${EVENT_EDITION_LIST_SELECT}, venues ( id, name, archived_at )`)
+    .select(EVENT_EDITION_LIST_SELECT)
     .eq("id", id)
     .maybeSingle();
 

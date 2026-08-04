@@ -1,5 +1,6 @@
 import { computeMoveOrderedLinkIds } from "@/src/features/events/server/eventSponsorReorder";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { shouldAutoTouchOrganizerUpdate } from "@/src/lib/validation/eventOrganizer";
 
 import type {
@@ -310,4 +311,55 @@ export async function reorderEventOrganizerLinkAdmin(
   }
 
   return renumberOrganizerDisplayOrder(supabase, editionId, nextOrder);
+}
+
+function normalizeEditionIdForOrganizerCount(editionId: string): string {
+  return editionId.trim().toLowerCase();
+}
+
+/**
+ * Organizer link counts for many editions (one batched query path).
+ * Returns 0 for editions with no `event_edition_organizers` rows.
+ */
+export async function getOrganizerCountsByEditionIds(
+  editionIds: readonly string[],
+): Promise<Map<string, number>> {
+  const uniqueEditionIds = [
+    ...new Set(
+      editionIds
+        .map((editionId) => normalizeEditionIdForOrganizerCount(editionId))
+        .filter((editionId) => editionId !== ""),
+    ),
+  ];
+
+  if (uniqueEditionIds.length === 0) {
+    return new Map();
+  }
+
+  const supabase = createAdminClient();
+  const rows = await fetchAllByIdInBatches<{ event_editions_id?: unknown }>(
+    uniqueEditionIds,
+    (batchIds) =>
+      supabase
+        .from("event_edition_organizers")
+        .select("event_editions_id")
+        .in("event_editions_id", batchIds),
+  );
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const editionId = normalizeEditionIdForOrganizerCount(
+      String(row.event_editions_id ?? ""),
+    );
+    if (editionId === "") continue;
+    counts.set(editionId, (counts.get(editionId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function readOrganizerCountForEdition(
+  counts: ReadonlyMap<string, number>,
+  editionId: string,
+): number {
+  return counts.get(normalizeEditionIdForOrganizerCount(editionId)) ?? 0;
 }

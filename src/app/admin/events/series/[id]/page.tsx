@@ -6,12 +6,12 @@ import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader
 import { EventsSubNav } from "@/src/features/admin/components/EventsSubNav";
 import { SeriesPartnerAlumniPanel } from "@/src/features/partner-alumni/components/admin/SeriesPartnerAlumniPanel";
 import { loadPartnerAlumniAdminForSeriesPage } from "@/src/features/partner-alumni/server/partnerAlumniAdminPageLoad";
+import { AdminSeriesEditionsTable } from "@/src/features/events/components/admin/AdminSeriesEditionsTable";
 import { EventSeriesForm } from "@/src/features/events/components/admin/EventSeriesForm";
 import { SameBrandCompanyProfileSection } from "@/src/features/events/components/admin/SameBrandCompanyProfileSection";
 import { SeriesKeywordsChips } from "@/src/features/events/components/admin/SeriesKeywordsChips";
 import { getEventSeriesAdminById } from "@/src/features/events/server/eventSeriesAdmin";
 import { primaryCtaClass } from "@/src/lib/design/classes";
-import { formatLocationFromCityEmbed } from "@/src/lib/location/parseLocationEmbed";
 import { listEventEditionsAdmin } from "@/src/features/events/server/eventEditionAdmin";
 import {
   getKeywordsForSeriesId,
@@ -105,47 +105,7 @@ export default async function AdminEventSeriesDetailPage({ params }: PageProps) 
 
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Event Editions</h2>
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Year</th>
-                <th className="px-4 py-3">City</th>
-                <th className="px-4 py-3">Live sponsors</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {editions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                    No event editions for this event series yet.
-                  </td>
-                </tr>
-              ) : (
-                editions.map((edition) => (
-                  <tr key={edition.id} className="border-b border-slate-100">
-                    <td className="px-4 py-3">{edition.name}</td>
-                    <td className="px-4 py-3">{edition.year}</td>
-                    <td className="px-4 py-3">
-                      {formatLocationFromCityEmbed(edition.cities) || "—"}
-                    </td>
-                    <td className="px-4 py-3">{edition.live_sponsor_count}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/events/editions/${edition.id}`}
-                        className="text-brand-primary hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AdminSeriesEditionsTable editions={editions} />
       </div>
     </section>
   );

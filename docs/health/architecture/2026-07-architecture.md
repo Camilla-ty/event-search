@@ -20,7 +20,7 @@ Second Architecture cycle for EventPixels. Methods: reconcile all open `ARC` Fin
 
 **After remediation (2026-08-02):** `ARC-001` **Resolved** (Phases 1–6: public marketing reads fail closed on the session client; narrow SELECT-only public views replace service-role aggregation). `ARC-002` **Resolved** (sponsor count helpers use bounded `event_edition_sponsor_counts` — verified same day; shipped with ARC-001 Phase 2). `ARC-005` **Resolved** (PR/`main` GitHub Actions quality gate: typecheck, lint, test, build).
 
-**After remediation (2026-08-04):** `ARC-003` **Resolved** (all four import matchers default to shared candidate loader; full-directory retained only for independent rollback envs). `ARC-004`/`ARC-006`…`ARC-020` remain Open. Closing evidence in **Resolution History**.
+**After remediation (2026-08-04):** `ARC-003` **Resolved** (all four import matchers default to shared candidate loader; full-directory retained only for independent rollback envs). `ARC-018` **Resolved** (sponsor-link hydration is a single session batch — no admin miss-path / double round-trip). `ARC-004`/`ARC-006`…`ARC-017`/`ARC-019`/`ARC-020` remain Open. Closing evidence in **Resolution History**.
 
 ---
 
@@ -28,8 +28,8 @@ Second Architecture cycle for EventPixels. Methods: reconcile all open `ARC` Fin
 
 | Change | Finding IDs | Notes / links |
 |---|---|---|
-| Resolved (removed from register) | `ARC-001`, `ARC-002`, `ARC-003`, `ARC-005` | `ARC-001`/`002`/`005` on 2026-08-02; `ARC-003` on 2026-08-04 — see Resolution History |
-| Still open | `ARC-004`, `ARC-006`…`ARC-020` | see Findings deltas |
+| Resolved (removed from register) | `ARC-001`, `ARC-002`, `ARC-003`, `ARC-005`, `ARC-018` | `ARC-001`/`002`/`005` on 2026-08-02; `ARC-003`/`018` on 2026-08-04 — see Resolution History |
+| Still open | `ARC-004`, `ARC-006`…`ARC-017`, `ARC-019`, `ARC-020` | see Findings deltas |
 | In progress | — | none |
 | Deferred | — | none |
 | New this cycle | — | none |
@@ -134,8 +134,10 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 
 ### ARC-018 — N+1 / double-path hydration in `mergeCompaniesOntoEventSponsorLinks`
 
-- **Status:** Open
-- **Delta:** Admin miss-path fill removed with ARC-001 Phase 1 (`mergeCompaniesOntoEventSponsorLinks` / session-only batch). Leave Open for residual sponsor-hydration latency / batching shape on edition renders.
+- **Status:** Resolved (2026-08-04) — see Resolution History
+- **Delta (at publication):** `mergeCompaniesOntoEventSponsorLinks` batched by id then did a second admin round for “missing” ids (baseline Issue 11.3).
+- **Delta (post ARC-001 Phase 1 / verified 2026-08-04):** Session-only batch via `getCompaniesByIds` + `attachCompaniesToEventSponsorLinks`; missing companies stay null; no `getCompaniesByIdsAdmin` / `missingCompanyIds` miss-path.
+- **Acceptance criteria:** `mergeCompaniesOntoEventSponsorLinks` must not perform a second admin/service-role round-trip to fill missing company ids; hydration uses a single session/RLS batch (or equivalent) and fails closed for missing rows; wiring/regression tests forbid the admin miss-path.
 
 ### ARC-019 — Manual client server-state (no cache / dedup / retry / abort)
 
@@ -249,6 +251,18 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 - **Why criteria pass:** Default production matching no longer loads the full company/domain directories into memory; candidates are keyed from the batch/upload identity set. Rollback remains available without sharing env flags across importers.
 - **Residual (not ARC-003):** Empty identity-row API default still yields an empty candidate context if mis-called (production paths pass rows). Candidate website host `ilike` / PostgREST chunking remain operational edges covered by parity. Stale “Not wired into production” comments on the candidate loader package are comment debt only. `ARC-011` (parallel import trees) and `ARC-010` (chunked materialize / no durable jobs) remain Open.
 
+### 2026-08-04 — ARC-018 resolved
+
+- **Acceptance criteria:** `mergeCompaniesOntoEventSponsorLinks` must not perform a second admin/service-role round-trip to fill missing company ids; hydration uses a single session/RLS batch (or equivalent) and fails closed for missing rows; wiring/regression tests forbid the admin miss-path.
+- **Closing evidence (verified 2026-08-04):**
+  - Baseline root (Issue 11.3): batch-by-id then a *second* admin round for missing ids on every edition render.
+  - Current `src/lib/queries/companies.ts`: `mergeCompaniesOntoEventSponsorLinks` collects `company_id`s → one `getCompaniesByIds` (session/RLS) → `getEventBrandPublicDestinationIndex` → `attachCompaniesToEventSponsorLinks`. Missing ids stay `null` (comment: “no admin fill”).
+  - `getCompaniesByIdsAdmin` / `missingCompanyIds` miss-path absent from the function body and from the module (removed with ARC-001 Phase 1 commit `56fcc0d`).
+  - Wiring tests: `companies.publicReads.wiring.test.ts` asserts the export does not match `createAdminClient` / `getCompaniesByIdsAdmin` / `missingCompanyIds` and calls `attachCompaniesToEventSponsorLinks`. `companies.arc001.phase1.test.ts` asserts missing companies remain null.
+  - Call site: `publicSponsorRoster.ts` still uses `mergeCompaniesOntoEventSponsorLinks` for hydration (edition-scoped roster path).
+- **Why criteria pass:** The named double-path (session batch + admin miss-fill) is gone; remaining cost is a single bounded company batch plus destination index — not the Issue 11.3 defect.
+- **Residual (not ARC-018):** Public edition SSR cost from `force-dynamic` / undeduped loaders remains `ARC-004`. Destination-index + company batch still run per hydration call (acceptable shape; not a second admin fill).
+
 ---
 
 ## Change log
@@ -260,3 +274,4 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 | 2026-08-02 | Resolved `ARC-002` after verification that ARC-001 Phase 2 aggregate counts close the full-table count scan. Closing evidence in Resolution History. `ARC-003`…`ARC-020` remain Open. |
 | 2026-08-02 | Resolved `ARC-005` after adding `.github/workflows/ci.yml` quality gate + local green typecheck/lint/test/build. Closing evidence in Resolution History. Branch protection remains an ops step. `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
 | 2026-08-04 | Resolved `ARC-003` after Sponsor / Exhibitor / PA Import / PA Bulk candidate-loader cutovers + real-data parity. Closing evidence in Resolution History. `ARC-004`, `ARC-006`…`ARC-020` remain Open. No companion closeout report (Framework v1.2). |
+| 2026-08-04 | Resolved `ARC-018` after reconciliation: Issue 11.3 admin miss-path / double-path hydration absent; session-only batch verified. Closing evidence in Resolution History. `ARC-004`, `ARC-006`…`ARC-017`, `ARC-019`, `ARC-020` remain Open. No companion closeout report (Framework v1.2). |

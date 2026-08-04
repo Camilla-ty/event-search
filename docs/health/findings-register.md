@@ -33,7 +33,6 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 | ARC-015 | Email enumeration via unauthenticated `/api/auth/check-email` | security / auth | Medium | Small | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-015](./architecture/2026-07-architecture.md) |
 | ARC-016 | Thin security headers (no CSP / HSTS / X-Content-Type-Options / frame-ancestors) | security | Medium | Small | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-016](./architecture/2026-07-architecture.md) |
 | ARC-017 | Middleware runs `getUser()` on nearly every non-asset request | auth / performance | Medium | Small | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-017](./architecture/2026-07-architecture.md) |
-| ARC-018 | N+1 / double-path hydration in `mergeCompaniesOntoEventSponsorLinks` | performance / db | Medium | Small | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-018](./architecture/2026-07-architecture.md) |
 | ARC-019 | Manual client server-state (no cache / dedup / retry / abort) | client-state | Low–Medium | Medium | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-019](./architecture/2026-07-architecture.md) |
 | ARC-020 | Thin end-to-end coverage (single Playwright spec) | testing | Low–Medium | Medium | Open | 2026-07 | 2026-08 | [Architecture 2026-07 §ARC-020](./architecture/2026-07-architecture.md) |
 | SEC-003 | SSRF in logo/website ingestion without host allow-listing | security / ssrf | Medium | Medium | Open | 2026-07 | 2026-09 | [Security 2026-07 §SEC-003](./security/2026-07-security.md) |
@@ -64,7 +63,7 @@ When a Finding is **Resolved it is removed from this file**; its resolution is r
 
 **Database topics owned by Database but already tracked under other prefixes (cross-referenced, not duplicated):** retired `ARC-001` (service-role/RLS fail-open on public reads — resolved), `ARC-009` (RLS/grant regression harness — would have caught retired `DB-001`), `DQ-001`/`002`/`003` (stored-value trust). See [Database 2026-07](./database/2026-07-database.md). Open DB: `DB-002`, `DB-003`. Retired DB: `DB-001`.
 
-**Performance topics owned by Performance but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan sponsor counts — resolved), retired `ARC-003` (import full-directory match — resolved), `ARC-004` (force-dynamic / no request dedup), `ARC-017` (middleware `getUser`), `ARC-018` (sponsor hydration double-path). Baseline [Performance 2026-07](./performance/2026-07-performance.md) opened **no** new `PERF` IDs.
+**Performance topics owned by Performance but already tracked under Architecture (cross-referenced, not duplicated):** retired `ARC-002` (full-scan sponsor counts — resolved), retired `ARC-003` (import full-directory match — resolved), `ARC-004` (force-dynamic / no request dedup), `ARC-017` (middleware `getUser`), retired `ARC-018` (sponsor hydration double-path — resolved). Baseline [Performance 2026-07](./performance/2026-07-performance.md) opened **no** new `PERF` IDs.
 
 ---
 
@@ -74,6 +73,7 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 
 | ID | Title | Resolved in | Notes |
 |----|-------|-------------|-------|
+| ARC-018 | N+1 / double-path hydration in `mergeCompaniesOntoEventSponsorLinks` | [Architecture 2026-07 §ARC-018 / Resolution History](./architecture/2026-07-architecture.md) | Session-only batch hydration; admin miss-path removed with ARC-001 Phase 1; reconciled/closed 2026-08-04 |
 | ARC-003 | Import matching loads entire `companies` / `company_domains` into memory | [Architecture 2026-07 §ARC-003 / Resolution History](./architecture/2026-07-architecture.md) | Candidate loader default for Sponsor / Exhibitor / PA Import / PA Bulk; independent full_directory rollback envs; resolved 2026-08-04 |
 | ARC-005 | No CI gate (typecheck / lint / test / build) on PRs | [Architecture 2026-07 §ARC-005 / Resolution History](./architecture/2026-07-architecture.md) | `.github/workflows/ci.yml` quality gate; resolved 2026-08-02; Branch Protection still ops |
 | ARC-002 | Hot-path full-table scans for sponsor counts (`getSponsorCountsByEditionIds`) | [Architecture 2026-07 §ARC-002 / Resolution History](./architecture/2026-07-architecture.md) | Bounded `event_edition_sponsor_counts` via ARC-001 Phase 2; verified 2026-08-02 |
@@ -125,3 +125,4 @@ Permanently used identifiers that must never be reissued. (A retired ID may be *
 | 2026-08-02 | Resolved `ARC-002` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (bounded `event_edition_sponsor_counts` via ARC-001 Phase 2; dedicated verification). No new Architecture report created (Framework v1.2). `ARC-003`…`ARC-020` remain Open. |
 | 2026-08-02 | Resolved `ARC-005` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (`.github/workflows/ci.yml` typecheck/lint/test/build gate). Branch Protection requiring the check remains an ops step. No new Architecture report created (Framework v1.2). `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
 | 2026-08-04 | Resolved `ARC-003` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (Sponsor / Exhibitor / PA Import / PA Bulk candidate-loader cutovers + real-data parity). No new Architecture report created (Framework v1.2). `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
+| 2026-08-04 | Reconciliation across audit domains: resolved `ARC-018` (removed from open findings; retired). Closing evidence recorded in `architecture/2026-07-architecture.md` Resolution History (Issue 11.3 admin miss-path / double-path hydration absent; session-only batch verified). All other Open Findings re-verified against current tree/data and left Open. No new reports created (Framework v1.2). |
