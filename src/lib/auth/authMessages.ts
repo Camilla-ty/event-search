@@ -22,6 +22,8 @@ export const AUTH_NO_SESSION_AFTER_VERIFY =
 
 export const AUTH_GOOGLE_START_FAILED = "Could not start Google sign-in.";
 
+export const AUTH_MICROSOFT_START_FAILED = "Could not start Microsoft sign-in.";
+
 export const AUTH_GO_TO_SIGNUP = "Go to sign up";
 
 export const AUTH_GO_TO_LOGIN = "Log in";

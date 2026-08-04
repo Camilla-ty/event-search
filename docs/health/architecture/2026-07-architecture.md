@@ -80,7 +80,7 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 ### ARC-007 — No rate limiting on public/auth endpoints; no schema-validation library
 
 - **Status:** Open
-- **Delta:** No zod/valibot/yup or rate-limit dependency in app usage. Hand-rolled validation and unthrottled public routes unchanged. (Security continues to observe; ID stays `ARC-007`.)
+- **Delta:** Scope reduced vs the original threat model, but the architectural gap remains. The repository still has no shared application-level abuse-control layer and no zod/valibot/yup-style schema-validation library; validation remains hand-rolled and route-specific. Verified production controls now mitigate the highest-risk auth path operationally: Cloudflare rate limiting protects `POST /api/auth/check-email` (20 requests / minute, Managed Challenge, keyed by IP), Supabase Auth rate limits cover email sends / sign-ins / sign-ups / OTP verification, and auth is email OTP only (no stored passwords). Those controls lower practical abuse risk, but they are infrastructure- and provider-level protections, not a repo-wide application guarantee across public/auth endpoints. (Security continues to observe; ID stays `ARC-007`.)
 
 ### ARC-008 — No observability — no error tracking / structured logging / metrics
 
@@ -120,7 +120,7 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 ### ARC-015 — Email enumeration via unauthenticated `/api/auth/check-email`
 
 - **Status:** Open
-- **Delta:** Route still returns existence boolean for unauthenticated POST; client helper unchanged.
+- **Delta:** Route still returns existence boolean for unauthenticated POST, but the threat model has narrowed. Authentication is email OTP only (no stored passwords; browser calls Supabase Auth directly via `signInWithOtp()`), and `/api/auth/check-email` remains an intentional UX gate for login vs signup. Verified production controls now materially raise abuse cost: Cloudflare rate limiting protects `POST /api/auth/check-email` (20 requests / minute, Managed Challenge), and Supabase Auth rate limits cover email sends (30/hour), sign-ins/sign-ups (30 / 5 minutes), and OTP verification (30 / 5 minutes). Residual risk remains a privacy/account-existence oracle, not a password-spraying accelerator.
 
 ### ARC-016 — Thin security headers (no CSP / HSTS / X-Content-Type-Options / frame-ancestors)
 
@@ -275,3 +275,5 @@ Existing Findings by ID + delta only (canonical bodies remain in [`2026-07-archi
 | 2026-08-02 | Resolved `ARC-005` after adding `.github/workflows/ci.yml` quality gate + local green typecheck/lint/test/build. Closing evidence in Resolution History. Branch protection remains an ops step. `ARC-003`, `ARC-004`, `ARC-006`…`ARC-020` remain Open. |
 | 2026-08-04 | Resolved `ARC-003` after Sponsor / Exhibitor / PA Import / PA Bulk candidate-loader cutovers + real-data parity. Closing evidence in Resolution History. `ARC-004`, `ARC-006`…`ARC-020` remain Open. No companion closeout report (Framework v1.2). |
 | 2026-08-04 | Resolved `ARC-018` after reconciliation: Issue 11.3 admin miss-path / double-path hydration absent; session-only batch verified. Closing evidence in Resolution History. `ARC-004`, `ARC-006`…`ARC-017`, `ARC-019`, `ARC-020` remain Open. No companion closeout report (Framework v1.2). |
+| 2026-08-04 | Re-scoped `ARC-015` to the current OTP-only / rate-limited threat model. Finding remains Open, but residual risk is now primarily privacy/account-existence disclosure under an intentional product UX tradeoff rather than password-auth abuse. |
+| 2026-08-04 | Re-scoped `ARC-007` to the current production posture. Finding remains Open and still covers the missing shared application-level abuse-control layer plus missing schema-validation library, but severity is lowered because the highest-risk auth path is now operationally rate-limited and OTP-only. |

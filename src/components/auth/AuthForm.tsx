@@ -17,6 +17,7 @@ import { applyPostAuthRedirect } from "@/src/lib/auth/resolvePostAuthRedirect";
 import { AuthFormError } from "./AuthFormError";
 import { AuthIntentRedirectOverlay } from "./AuthIntentRedirectOverlay";
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { MicrosoftAuthButton } from "./MicrosoftAuthButton";
 import { useEmailOtpAuth } from "./useEmailOtpAuth";
 
 export type AuthFormProps = {
@@ -106,11 +107,18 @@ export function AuthForm({
 
   return (
     <div className="space-y-5">
-      <GoogleAuthButton
-        redirectTo={redirectTo}
-        flow="signup"
-        disabled={formBusy}
-      />
+      <div className="space-y-2">
+        <GoogleAuthButton
+          redirectTo={redirectTo}
+          flow="signup"
+          disabled={formBusy}
+        />
+        <MicrosoftAuthButton
+          redirectTo={redirectTo}
+          flow="signup"
+          disabled={formBusy}
+        />
+      </div>
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">

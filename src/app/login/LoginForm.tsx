@@ -9,6 +9,7 @@ import { AuthFormError } from "@/src/components/auth/AuthFormError";
 import { AuthIntentRedirectOverlay } from "@/src/components/auth/AuthIntentRedirectOverlay";
 import { AuthOAuthErrorBanner } from "@/src/components/auth/AuthOAuthErrorBanner";
 import { GoogleAuthButton } from "@/src/components/auth/GoogleAuthButton";
+import { MicrosoftAuthButton } from "@/src/components/auth/MicrosoftAuthButton";
 import { useEmailOtpAuth } from "@/src/components/auth/useEmailOtpAuth";
 import { Button } from "@/src/components/common";
 import { BRAND_NAME } from "@/src/lib/design/brand";
@@ -91,7 +92,7 @@ export default function LoginForm() {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-slate-900">Log in with email</h1>
         <p className="text-sm text-slate-600">
-          For existing members only. Use Google or a one-time email code.
+          For existing members only. Use Google, Microsoft, or a one-time email code.
         </p>
       </header>
 
@@ -120,11 +121,18 @@ export default function LoginForm() {
         </div>
       ) : step === "collect" ? (
         <div className="mt-6 space-y-4">
-          <GoogleAuthButton
-            redirectTo={redirectTo}
-            flow="login"
-            disabled={formBusy}
-          />
+          <div className="space-y-2">
+            <GoogleAuthButton
+              redirectTo={redirectTo}
+              flow="login"
+              disabled={formBusy}
+            />
+            <MicrosoftAuthButton
+              redirectTo={redirectTo}
+              flow="login"
+              disabled={formBusy}
+            />
+          </div>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">

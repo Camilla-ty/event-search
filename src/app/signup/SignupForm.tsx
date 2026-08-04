@@ -21,7 +21,7 @@ export default function SignupForm() {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-slate-900">Create your account</h1>
         <p className="text-sm text-slate-600">
-          Sign up with Google or a one-time email code. One account per email.
+          Sign up with Google, Microsoft, or a one-time email code. One account per email.
         </p>
       </header>
 
