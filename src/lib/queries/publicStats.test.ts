@@ -33,6 +33,8 @@ describe("getPublicStats wiring (ARC-001 Phase 3)", () => {
     assert.match(source, /NextResponse\.json\(stats/);
     assert.match(source, /revalidate = 3600/);
     assert.match(source, /Cache-Control.*s-maxage=3600/);
+    assert.match(source, /publicStatsCorsHeaders/);
+    assert.match(source, /export async function OPTIONS/);
     assert.doesNotMatch(source, /createAdminClient/);
     assert.doesNotMatch(source, /ok:\s*true/);
   });
