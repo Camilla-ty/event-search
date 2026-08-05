@@ -43,6 +43,7 @@ export function MicrosoftAuthButton({
         provider: "azure",
         options: {
           redirectTo: callbackUrl,
+          scopes: "openid profile email",
         },
       });
 
