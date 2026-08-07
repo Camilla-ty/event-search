@@ -320,7 +320,7 @@ flowchart LR
 **Actor:** Admin
 
 1. Companies list → search duplicate
-2. Company detail → edit website, logo, description; read-only **Sponsorships** and **Organizer roles** sections
+2. Company detail → edit website, logo; **Domains**; **Related Companies** (add via search modal / remove); read-only **Sponsorships** and **Organizer roles** sections; same-brand Series / Event Brand / visibility as applicable
 3. Or Create company (rare — import usually creates companies)
 
 ---

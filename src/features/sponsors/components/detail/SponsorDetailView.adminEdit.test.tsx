@@ -37,6 +37,7 @@ function makeDetailData(
     eventSeriesGroups: [],
     sameBrandSeriesLink: null,
     sameBrandSeries: null,
+    relatedCompanies: [],
     ...overrides,
   };
 }

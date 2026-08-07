@@ -53,6 +53,7 @@ function sponsorDetailData(
           lifecycle_status: SERIES.lifecycle_status,
         }
       : null,
+    relatedCompanies: [],
   };
 }
 

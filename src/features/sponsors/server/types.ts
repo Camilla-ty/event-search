@@ -48,4 +48,6 @@ export type SponsorDetailData = {
   sameBrandSeriesLink: PublicSameBrandLink | null;
   /** Raw reverse same-brand Series (for ADR-005 indexability / future routing). */
   sameBrandSeries: EventBrandPublicProfileSeriesCandidate | null;
+  /** Public Related Companies (active, non-restricted); empty when none. */
+  relatedCompanies: SponsorDetailCompany[];
 };

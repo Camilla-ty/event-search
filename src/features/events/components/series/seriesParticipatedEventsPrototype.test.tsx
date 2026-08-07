@@ -312,6 +312,7 @@ describe("Series Participated Events refined prototype", () => {
         name: "Singapore Fintech Festival",
         lifecycle_status: "active",
       },
+      relatedCompanies: [],
     };
     const companyHtml = renderToStaticMarkup(
       <SponsorDetailView data={companyData} />,

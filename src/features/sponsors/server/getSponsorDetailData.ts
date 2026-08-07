@@ -1,4 +1,5 @@
 import { loadSameBrandSeriesCandidateForCompany } from "@/src/features/events/server/sameBrandPublicLinks";
+import { listPublicRelatedCompaniesForCompany } from "@/src/lib/companies/listPublicRelatedCompanies";
 import { getCompanyById, getCompanyBySlug } from "@/src/lib/queries/companies";
 import {
   getCompanySponsorStats,
@@ -166,11 +167,12 @@ export async function getSponsorDetailData(
 
   let stats: Awaited<ReturnType<typeof getCompanySponsorStats>> = null;
   let statsUnavailable = false;
-  const [statsResult, sameBrandSeries] = await Promise.all([
+  const [statsResult, sameBrandSeries, relatedCompanies] = await Promise.all([
     getCompanySponsorStats(company.id)
       .then((value) => ({ ok: true as const, value }))
       .catch((error: unknown) => ({ ok: false as const, error })),
     loadSameBrandSeriesCandidateForCompany(company.id),
+    listPublicRelatedCompaniesForCompany(company.id),
   ]);
   if (statsResult.ok) {
     stats = statsResult.value;
@@ -191,6 +193,7 @@ export async function getSponsorDetailData(
       eventSeriesGroups: [],
       sameBrandSeriesLink,
       sameBrandSeries,
+      relatedCompanies,
     };
   }
 
@@ -225,5 +228,6 @@ export async function getSponsorDetailData(
     eventSeriesGroups,
     sameBrandSeriesLink,
     sameBrandSeries,
+    relatedCompanies,
   };
 }

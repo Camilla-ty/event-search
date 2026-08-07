@@ -10,10 +10,12 @@ import { CompanyPublicVisibilitySection } from "@/src/features/companies/compone
 import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
 import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
+import { CompanyRelatedCompaniesSection } from "@/src/features/companies/components/admin/CompanyRelatedCompaniesSection";
 import { CompanySameBrandSeriesSection } from "@/src/features/companies/components/admin/CompanySameBrandSeriesSection";
 import { CompanyEventBrandPublicProfileSection } from "@/src/features/companies/components/admin/CompanyEventBrandPublicProfileSection";
 import { CompanySponsorshipsTable } from "@/src/features/companies/components/admin/CompanySponsorshipsTable";
 import { listCompanyDomainsForAdmin } from "@/src/features/companies/server/companyDomainsAdmin";
+import { listRelatedCompaniesForAdmin } from "@/src/features/companies/server/companyRelatedAdmin";
 import { getCityOptions } from "@/src/features/companies/server/getCityOptions";
 import {
   getCompanyAdminById,
@@ -34,13 +36,14 @@ type PageProps = {
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { logoWarning, merged, merge_id: mergeId } = await searchParams;
-  const [company, cities, sponsorships, organizerRoles, domains, sameBrandSeries] =
+  const [company, cities, sponsorships, organizerRoles, domains, related, sameBrandSeries] =
     await Promise.all([
       getCompanyAdminById(id),
       getCityOptions(),
       listSponsorshipsForCompanyAdmin(id),
       listOrganizerRolesForCompanyAdmin(id),
       listCompanyDomainsForAdmin(id),
+      listRelatedCompaniesForAdmin(id),
       findSeriesByCompanyProfileIdAdmin(id),
     ]);
 
@@ -132,6 +135,12 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
       />
 
       <CompanyDomainsSection companyId={company.id} domains={domains} canAdd={isEditable} />
+
+      <CompanyRelatedCompaniesSection
+        companyId={company.id}
+        related={related}
+        canEdit={isEditable}
+      />
 
       <div className="mt-10">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">
