@@ -8,6 +8,7 @@ import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateR
 import { ExhibitorHistorySection } from "@/src/features/exhibitors/components/detail/ExhibitorHistorySection";
 import type { ExhibitorHistorySeriesGroup } from "@/src/features/exhibitors/server/exhibitorHistoryModel";
 import { companyLogoFieldsFromRow } from "@/src/lib/companies/companyLogoFields";
+import { RelatedCompaniesRail } from "@/src/features/sponsors/components/detail/RelatedCompaniesRail";
 import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 import { buildLoginEntryUrl } from "@/src/lib/auth/buildAuthEntryUrl";
 import { buildCompanySummary } from "@/src/lib/content/factualSummary";
@@ -131,34 +132,6 @@ export function SponsorDetailView({
         </div>
       </header>
 
-      {relatedCompanies.length > 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Related Companies</h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {relatedCompanies.map((related) => {
-              const href = buildSponsorProfilePath(related);
-              if (href === null) return null;
-              return (
-                <li key={related.id}>
-                  <Link
-                    href={href}
-                    className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 transition hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    <CompanyLogo
-                      company={companyLogoFieldsFromRow(related)}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
-                    />
-                    <span className="min-w-0 truncate font-medium text-slate-900">
-                      {related.name}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Sponsorship history</h2>
 
@@ -250,6 +223,8 @@ export function SponsorDetailView({
       </section>
 
       <ExhibitorHistorySection groups={exhibitorHistoryGroups} />
+
+      <RelatedCompaniesRail relatedCompanies={relatedCompanies} />
     </section>
   );
 }

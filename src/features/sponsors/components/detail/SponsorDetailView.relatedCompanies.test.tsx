@@ -9,6 +9,7 @@ import type { SponsorDetailData } from "@/src/features/sponsors/server/types";
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
 const RELATED_ID = "22222222-2222-4222-8222-222222222222";
+const RELATED_ID_B = "33333333-3333-4333-8333-333333333333";
 
 function makeCompany(
   overrides: Partial<SponsorDetailData["company"]> &
@@ -62,7 +63,7 @@ describe("SponsorDetailView related companies", () => {
     assert.doesNotMatch(html, />Related Companies</);
   });
 
-  it("renders logo, name, and public profile link when related companies exist", () => {
+  it("renders a bottom horizontal rail with logo, name, and public links", () => {
     const html = renderToStaticMarkup(
       <SponsorDetailView
         data={makeDetailData({
@@ -72,6 +73,11 @@ describe("SponsorDetailView related companies", () => {
               name: "Acme Labs",
               slug: "acme-labs",
             }),
+            makeCompany({
+              id: RELATED_ID_B,
+              name: "Acme Ventures",
+              slug: "acme-ventures",
+            }),
           ],
         })}
       />,
@@ -79,8 +85,39 @@ describe("SponsorDetailView related companies", () => {
 
     assert.match(html, />Related Companies</);
     assert.match(html, /Acme Labs/);
+    assert.match(html, /Acme Ventures/);
     assert.match(html, /href="\/sponsors\/acme-labs"/);
+    assert.match(html, /href="\/sponsors\/acme-ventures"/);
+    assert.match(html, /overflow-x-auto/);
+    assert.match(html, /snap-x/);
+    assert.match(html, /hover:shadow-md/);
     assert.doesNotMatch(html, /closely related/i);
+
+    const relatedSection = html.slice(html.indexOf('aria-labelledby="related-companies-heading"'));
+    assert.doesNotMatch(relatedSection, /grid-cols/);
+    assert.match(relatedSection, /flex gap-3 overflow-x-auto/);
+
+    const relatedIdx = html.indexOf("Related Companies");
+    const sponsorshipIdx = html.indexOf("Sponsorship history");
+    assert.ok(relatedIdx > -1 && sponsorshipIdx > -1);
+    assert.ok(
+      relatedIdx > sponsorshipIdx,
+      "Related Companies should render after Sponsorship history",
+    );
+  });
+});
+
+describe("RelatedCompaniesRail module", () => {
+  it("is wired from SponsorDetailView", () => {
+    const source = readFileSync(
+      path.join(
+        process.cwd(),
+        "src/features/sponsors/components/detail/SponsorDetailView.tsx",
+      ),
+      "utf8",
+    );
+    assert.match(source, /RelatedCompaniesRail/);
+    assert.match(source, /relatedCompanies/);
   });
 });
 
