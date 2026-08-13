@@ -40,16 +40,16 @@ export function RelatedCompaniesRail({
           return (
             <li
               key={related.id}
-              className="w-[8.75rem] shrink-0 snap-start sm:w-[9.5rem]"
+              className="w-[11rem] shrink-0 snap-start sm:w-[12rem]"
             >
               <Link
                 href={href}
                 className="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-2 text-center shadow-sm transition-shadow hover:shadow-md"
               >
-                {/* Hero logo: ~full card width, square → ~75–80% of card height once caption is added. No inner border. */}
+                {/* Hero logo: wider card (~+25–26%), fixed logo height ≈ prior square so card height stays similar. No inner border. */}
                 <CompanyLogo
                   company={companyLogoFieldsFromRow(related)}
-                  className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-md"
+                  className="flex h-[7.75rem] w-full items-center justify-center overflow-hidden rounded-md sm:h-[8.5rem]"
                   imageClassName="h-full w-full object-contain"
                   monogramClassName="text-4xl font-semibold text-slate-400 sm:text-5xl"
                 />

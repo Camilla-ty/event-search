@@ -96,14 +96,13 @@ describe("SponsorDetailView related companies", () => {
     const relatedSection = html.slice(html.indexOf('aria-labelledby="related-companies-heading"'));
     assert.doesNotMatch(relatedSection, /grid-cols/);
     assert.match(relatedSection, /flex gap-3 overflow-x-auto/);
-    assert.match(relatedSection, /aspect-square/);
+    assert.match(relatedSection, /w-\[11rem\]/);
+    assert.match(relatedSection, /sm:w-\[12rem\]/);
+    assert.match(relatedSection, /h-\[7\.75rem\]/);
     assert.match(relatedSection, /text-xs/);
     assert.match(relatedSection, /text-slate-600/);
     // Logo-first tile: no inner bordered logo box on the hero mark.
-    assert.doesNotMatch(
-      relatedSection,
-      /aspect-square[^"]*border border-slate-200/,
-    );
+    assert.doesNotMatch(relatedSection, /h-\[[^\]]+\][^"]*border border-slate-200/);
 
     const relatedIdx = html.indexOf("Related Companies");
     const sponsorshipIdx = html.indexOf("Sponsorship history");

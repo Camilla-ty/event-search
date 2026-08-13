@@ -303,3 +303,63 @@ describe("EventOverviewSummarySection compact AI-readability overview", () => {
     assert.doesNotMatch(html, /\?tab=exhibitors/);
   });
 });
+
+describe("EventOverviewSummarySection zero-sponsor messaging", () => {
+  it("shows the virtual_covid editorial note when count is 0", () => {
+    const html = renderToStaticMarkup(
+      <EventOverviewSummarySection
+        eventSlug="startmeuphk-festival-2020"
+        lifecycleStatus={null}
+        venue={null}
+        hasVenueId={false}
+        sponsors={[]}
+        totalSponsorCount={0}
+        sponsorNoteType="virtual_covid"
+      />,
+    );
+
+    assert.match(html, /COVID-19 virtual event/i);
+    assert.match(
+      html,
+      /The official website does not provide a sponsor list/i,
+    );
+    assert.doesNotMatch(html, /Sponsor data not yet available/i);
+    assert.doesNotMatch(html, /No sponsors linked to this event yet/i);
+  });
+
+  it("shows the upcoming_pending editorial note when count is 0", () => {
+    const html = renderToStaticMarkup(
+      <EventOverviewSummarySection
+        eventSlug="ethdenver-2027"
+        lifecycleStatus={null}
+        venue={null}
+        hasVenueId={false}
+        sponsors={[]}
+        totalSponsorCount={0}
+        sponsorNoteType="upcoming_pending"
+      />,
+    );
+
+    assert.match(html, /Sponsor list is expected to be finalized after the event concludes/i);
+    assert.doesNotMatch(html, /Sponsor data not yet available/i);
+    assert.doesNotMatch(html, /No sponsors linked to this event yet/i);
+  });
+
+  it("shows the empty-roster message when count is 0 and no sponsor note", () => {
+    const html = renderToStaticMarkup(
+      <EventOverviewSummarySection
+        eventSlug="token2049-singapore-2026"
+        lifecycleStatus={null}
+        venue={null}
+        hasVenueId={false}
+        sponsors={[]}
+        totalSponsorCount={0}
+        sponsorNoteType={null}
+      />,
+    );
+
+    assert.match(html, /No sponsors linked to this event yet/i);
+    assert.doesNotMatch(html, /Sponsor data not yet available/i);
+    assert.doesNotMatch(html, /COVID-19 virtual event/i);
+  });
+});

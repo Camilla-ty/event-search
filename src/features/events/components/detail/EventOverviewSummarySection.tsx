@@ -14,10 +14,15 @@ import type { PublicOrganizerRow } from "@/src/features/events/server/mapPublicO
 import type { PublicVenueSummary } from "@/src/features/events/server/mapPublicVenue";
 import { brandLinkClass } from "@/src/lib/design/classes";
 
+import type { SponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
+
+import { EditionSponsorNote } from "./EditionSponsorNote";
 import { EventStatusHelpPopover } from "./EventStatusHelpPopover";
 import { MetadataRow } from "./MetadataRow";
 import { PublicEditionInPageTabLink } from "./PublicEditionTabNavigation";
 import type { EventSponsorRow } from "./types";
+
+const NO_SPONSORS_LINKED_MESSAGE = "No sponsors linked to this event yet.";
 
 const SPONSOR_PREVIEW_LIMIT = 5;
 
@@ -33,6 +38,7 @@ type EventOverviewSummarySectionProps = {
   hasVenueId: boolean;
   sponsors: EventSponsorRow[];
   totalSponsorCount: number;
+  sponsorNoteType?: SponsorNoteType | null;
   organizers?: PublicOrganizerRow[];
 };
 
@@ -69,6 +75,7 @@ export function EventOverviewSummarySection({
   hasVenueId,
   sponsors,
   totalSponsorCount,
+  sponsorNoteType = null,
   organizers = [],
 }: EventOverviewSummarySectionProps) {
   const historyRows = buildEventHistoryRows({
@@ -80,6 +87,8 @@ export function EventOverviewSummarySection({
 
   const showVenueRow = venue !== null || hasVenueId;
   const hasSponsorData = totalSponsorCount > 0 || sponsors.length > 0;
+  const showSponsorNote =
+    !hasSponsorData && sponsorNoteType !== null && sponsorNoteType !== undefined;
   const logoSponsors = previewLogoSponsors(sponsors);
   const showSponsorEllipsis = totalSponsorCount > logoSponsors.length;
   const organizerNames = organizerDisplayNames(organizers);
@@ -172,8 +181,10 @@ export function EventOverviewSummarySection({
                   </span>
                 ) : null}
               </PublicEditionInPageTabLink>
+            ) : showSponsorNote ? (
+              <EditionSponsorNote sponsorNoteType={sponsorNoteType} />
             ) : (
-              <p className="text-slate-500">Sponsor data not yet available.</p>
+              <p className="text-slate-500">{NO_SPONSORS_LINKED_MESSAGE}</p>
             )}
           </MetadataRow>
         </div>
