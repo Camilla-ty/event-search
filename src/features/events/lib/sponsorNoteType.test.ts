@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   parseSponsorNoteType,
+  shouldShowPublicSponsorsTab,
   sponsorNoteDisplayMessage,
 } from "@/src/features/events/lib/sponsorNoteType";
 
@@ -33,6 +34,48 @@ describe("sponsorNoteDisplayMessage", () => {
     assert.match(
       sponsorNoteDisplayMessage("virtual_covid"),
       /COVID-19 virtual event/i,
+    );
+  });
+});
+
+describe("shouldShowPublicSponsorsTab", () => {
+  it("shows the tab when sponsors exist", () => {
+    assert.equal(
+      shouldShowPublicSponsorsTab({
+        totalSponsorCount: 1,
+        sponsorNoteType: null,
+      }),
+      true,
+    );
+  });
+
+  it("hides the tab for a zero-sponsor upcoming_pending edition", () => {
+    assert.equal(
+      shouldShowPublicSponsorsTab({
+        totalSponsorCount: 0,
+        sponsorNoteType: "upcoming_pending",
+      }),
+      false,
+    );
+  });
+
+  it("hides the tab for a zero-sponsor virtual_covid edition", () => {
+    assert.equal(
+      shouldShowPublicSponsorsTab({
+        totalSponsorCount: 0,
+        sponsorNoteType: "virtual_covid",
+      }),
+      false,
+    );
+  });
+
+  it("shows the tab for a zero-sponsor edition without a note", () => {
+    assert.equal(
+      shouldShowPublicSponsorsTab({
+        totalSponsorCount: 0,
+        sponsorNoteType: null,
+      }),
+      true,
     );
   });
 });

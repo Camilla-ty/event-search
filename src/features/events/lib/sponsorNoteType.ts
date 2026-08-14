@@ -34,3 +34,10 @@ export function parseSponsorNoteType(raw: unknown): SponsorNoteType | null {
 export function sponsorNoteDisplayMessage(type: SponsorNoteType): string {
   return SPONSOR_NOTE_DISPLAY_MESSAGES[type];
 }
+
+export function shouldShowPublicSponsorsTab(input: {
+  totalSponsorCount: number;
+  sponsorNoteType: SponsorNoteType | null;
+}): boolean {
+  return input.totalSponsorCount > 0 || input.sponsorNoteType === null;
+}

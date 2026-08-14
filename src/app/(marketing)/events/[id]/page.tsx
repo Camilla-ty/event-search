@@ -35,7 +35,10 @@ import {
 import { getRelatedEditions } from "@/src/features/events/server/getRelatedEditions";
 import { getProfileRoleForUserId, isAdminRole } from "@/src/lib/auth/appProfile";
 import { getTotalSponsorCount } from "@/src/lib/queries/companies";
-import { parseSponsorNoteType } from "@/src/features/events/lib/sponsorNoteType";
+import {
+  parseSponsorNoteType,
+  shouldShowPublicSponsorsTab,
+} from "@/src/features/events/lib/sponsorNoteType";
 import { getPublicKeywordsForSeriesId } from "@/src/features/events/server/seriesKeywordsPublic";
 import { mapPublicEventSeries } from "@/src/features/events/server/mapPublicEditionRow";
 import {
@@ -205,13 +208,24 @@ export default async function EventDetailPage({
         }),
   ]);
 
+  const sponsorNoteType = parseSponsorNoteType(
+    (edition as { sponsor_note_type?: unknown }).sponsor_note_type,
+  );
+  const showSponsorsTab = shouldShowPublicSponsorsTab({
+    totalSponsorCount,
+    sponsorNoteType,
+  });
   const showPartnerAlumniTab = shouldShowPublicPartnerAlumniTab(partnerAlumni);
   const showExhibitorsTab = shouldShowPublicExhibitorsTab(exhibitors);
   const initialTab = parsePublicEditionTab(requestedTab ?? null, {
+    showSponsorsTab,
     showExhibitorsTab,
     showPartnerAlumniTab,
   });
 
+  if (requestedTab === "sponsors" && !showSponsorsTab) {
+    redirect(`/events/${eventSlug || id}`);
+  }
   if (requestedTab === "partner-alumni" && !showPartnerAlumniTab) {
     redirect(`/events/${eventSlug || id}`);
   }
@@ -243,9 +257,6 @@ export default async function EventDetailPage({
     typeof edition.last_reviewed_at === "string" ? edition.last_reviewed_at : null;
   const primarySourceUrl =
     typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
-  const sponsorNoteType = parseSponsorNoteType(
-    (edition as { sponsor_note_type?: unknown }).sponsor_note_type,
-  );
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
   const eventDisplayName = edition.name?.trim() || "Event";
@@ -406,6 +417,7 @@ export default async function EventDetailPage({
       <PublicEventEditionTabs
         eventSlug={eventSlug}
         initialTab={initialTab}
+        showSponsorsTab={showSponsorsTab}
         showExhibitorsTab={showExhibitorsTab}
         showPartnerAlumniTab={showPartnerAlumniTab}
           overviewPanel={

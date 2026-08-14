@@ -23,6 +23,7 @@ import {
 type PublicEventEditionTabsProps = {
   eventSlug: string;
   initialTab: PublicEditionTabId;
+  showSponsorsTab: boolean;
   showExhibitorsTab: boolean;
   showPartnerAlumniTab: boolean;
   overviewPanel: ReactNode;
@@ -36,6 +37,7 @@ type PublicEventEditionTabsProps = {
 export function PublicEventEditionTabs({
   eventSlug,
   initialTab,
+  showSponsorsTab,
   showExhibitorsTab,
   showPartnerAlumniTab,
   overviewPanel,
@@ -48,10 +50,11 @@ export function PublicEventEditionTabs({
   const readTabFromLocation = useCallback(
     () =>
       parsePublicEditionTab(readTabSearchParamFromWindow(), {
+        showSponsorsTab,
         showExhibitorsTab,
         showPartnerAlumniTab,
       }),
-    [showExhibitorsTab, showPartnerAlumniTab],
+    [showSponsorsTab, showExhibitorsTab, showPartnerAlumniTab],
   );
 
   const { activeTab, handleTabClick, selectTab } = useInstantTabNavigation({
@@ -61,8 +64,10 @@ export function PublicEventEditionTabs({
 
   const tabs: Array<{ id: PublicEditionTabId; label: string }> = [
     { id: "overview", label: "Overview" },
-    { id: "sponsors", label: "Sponsors" },
   ];
+  if (showSponsorsTab) {
+    tabs.push({ id: "sponsors", label: "Sponsors" });
+  }
   if (showExhibitorsTab) {
     tabs.push({ id: "exhibitors", label: "Exhibitors" });
   }

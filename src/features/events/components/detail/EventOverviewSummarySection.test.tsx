@@ -325,6 +325,7 @@ describe("EventOverviewSummarySection zero-sponsor messaging", () => {
     );
     assert.doesNotMatch(html, /Sponsor data not yet available/i);
     assert.doesNotMatch(html, /No sponsors linked to this event yet/i);
+    assert.doesNotMatch(html, /\?tab=sponsors/);
   });
 
   it("shows the upcoming_pending editorial note when count is 0", () => {
@@ -343,6 +344,7 @@ describe("EventOverviewSummarySection zero-sponsor messaging", () => {
     assert.match(html, /Sponsor list is expected to be finalized after the event concludes/i);
     assert.doesNotMatch(html, /Sponsor data not yet available/i);
     assert.doesNotMatch(html, /No sponsors linked to this event yet/i);
+    assert.doesNotMatch(html, /\?tab=sponsors/);
   });
 
   it("shows the empty-roster message when count is 0 and no sponsor note", () => {

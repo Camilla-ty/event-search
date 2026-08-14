@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -13,12 +14,17 @@ import { shouldInterceptTabAnchorClick } from "@/src/features/events/components/
 
 function renderTabs(
   initialTab: "overview" | "sponsors" | "exhibitors" | "venue" | "organizers",
-  options?: { showExhibitorsTab?: boolean; showPartnerAlumniTab?: boolean },
+  options?: {
+    showSponsorsTab?: boolean;
+    showExhibitorsTab?: boolean;
+    showPartnerAlumniTab?: boolean;
+  },
 ) {
   return renderToStaticMarkup(
     React.createElement(PublicEventEditionTabs, {
       eventSlug: "demo-event",
       initialTab,
+      showSponsorsTab: options?.showSponsorsTab ?? true,
       showExhibitorsTab: options?.showExhibitorsTab ?? false,
       showPartnerAlumniTab: options?.showPartnerAlumniTab ?? false,
       overviewPanel: React.createElement("div", { "data-panel": "overview" }, "Overview panel"),
@@ -47,6 +53,7 @@ describe("parsePublicEditionTab", () => {
   it("falls back to overview when partner-alumni tab is hidden", () => {
     assert.equal(
       parsePublicEditionTab("partner-alumni", {
+        showSponsorsTab: true,
         showExhibitorsTab: false,
         showPartnerAlumniTab: false,
       }),
@@ -57,6 +64,7 @@ describe("parsePublicEditionTab", () => {
   it("selects partner-alumni when tab is shown", () => {
     assert.equal(
       parsePublicEditionTab("partner-alumni", {
+        showSponsorsTab: true,
         showExhibitorsTab: false,
         showPartnerAlumniTab: true,
       }),
@@ -67,6 +75,7 @@ describe("parsePublicEditionTab", () => {
   it("falls back to overview when exhibitors tab is hidden", () => {
     assert.equal(
       parsePublicEditionTab("exhibitors", {
+        showSponsorsTab: true,
         showExhibitorsTab: false,
         showPartnerAlumniTab: true,
       }),
@@ -77,6 +86,7 @@ describe("parsePublicEditionTab", () => {
   it("selects exhibitors when tab is shown", () => {
     assert.equal(
       parsePublicEditionTab("exhibitors", {
+        showSponsorsTab: true,
         showExhibitorsTab: true,
         showPartnerAlumniTab: false,
       }),
@@ -87,6 +97,7 @@ describe("parsePublicEditionTab", () => {
   it("preserves other tab ids", () => {
     assert.equal(
       parsePublicEditionTab("sponsors", {
+        showSponsorsTab: true,
         showExhibitorsTab: false,
         showPartnerAlumniTab: false,
       }),
@@ -94,6 +105,7 @@ describe("parsePublicEditionTab", () => {
     );
     assert.equal(
       parsePublicEditionTab("venue", {
+        showSponsorsTab: true,
         showExhibitorsTab: true,
         showPartnerAlumniTab: true,
       }),
@@ -101,6 +113,7 @@ describe("parsePublicEditionTab", () => {
     );
     assert.equal(
       parsePublicEditionTab("organizers", {
+        showSponsorsTab: true,
         showExhibitorsTab: true,
         showPartnerAlumniTab: true,
       }),
@@ -108,6 +121,7 @@ describe("parsePublicEditionTab", () => {
     );
     assert.equal(
       parsePublicEditionTab(null, {
+        showSponsorsTab: true,
         showExhibitorsTab: true,
         showPartnerAlumniTab: true,
       }),
@@ -126,6 +140,35 @@ describe("PublicEventEditionTabs", () => {
     assert.match(html, /aria-selected="true"/);
     assert.match(html, /aria-label="Event sections"/);
     assert.match(html, />Sponsors<\/a>/);
+  });
+
+  it("omits Sponsors and falls back to Overview when the tab is hidden", () => {
+    assert.equal(
+      parsePublicEditionTab("sponsors", {
+        showSponsorsTab: false,
+        showExhibitorsTab: false,
+        showPartnerAlumniTab: false,
+      }),
+      "overview",
+    );
+
+    const html = renderTabs("overview", { showSponsorsTab: false });
+    assert.doesNotMatch(html, />Sponsors<\/a>/);
+    assert.doesNotMatch(html, /data-panel="sponsors"/);
+    assert.match(html, /data-panel="overview"/);
+  });
+
+  it("redirects a direct hidden Sponsors-tab URL to the edition overview", () => {
+    const pageSource = readFileSync(
+      join(process.cwd(), "src/app/(marketing)/events/[id]/page.tsx"),
+      "utf8",
+    );
+
+    assert.match(
+      pageSource,
+      /requestedTab === "sponsors" && !showSponsorsTab/,
+    );
+    assert.match(pageSource, /redirect\(`\/events\/\$\{eventSlug \|\| id\}`\)/);
   });
 
   it("places Exhibitors after Sponsors when the tab is shown", () => {
@@ -237,6 +280,7 @@ describe("PublicEventEditionTabs", () => {
   it("falls back safely when partner alumni is hidden", () => {
     assert.equal(
       parsePublicEditionTab("partner-alumni", {
+        showSponsorsTab: true,
         showExhibitorsTab: true,
         showPartnerAlumniTab: false,
       }),
