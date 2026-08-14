@@ -3,8 +3,13 @@ import Link from "next/link";
 import { formatEventDateRange } from "@/src/features/events/lib/formatEventDateRange";
 import { SeriesLogo } from "@/src/features/events/components/SeriesLogo";
 import type { PublicEditionSummary } from "@/src/features/events/types/publicEdition";
-import { secondaryCtaClass } from "@/src/lib/design/classes";
 import { buildEventDetailPath } from "@/src/lib/routes/explorerUrls";
+
+const editionRowClass = [
+  "flex items-start gap-3 rounded-lg px-2 py-3 transition",
+  "hover:bg-brand-primary-muted/30",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2",
+].join(" ");
 
 type SeriesEditionsListProps = {
   editions: PublicEditionSummary[];
@@ -31,30 +36,36 @@ export function SeriesEditionsList({ editions }: SeriesEditionsListProps) {
           if (dateRange !== "Date TBC") metaParts.push(dateRange);
           if (edition.locationLabel !== "") metaParts.push(edition.locationLabel);
 
-          return (
-            <li
-              key={edition.id}
-              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex min-w-0 items-start gap-3">
-                <SeriesLogo
-                  series={edition.event_series}
-                  fallbackName={edition.name}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
-                  monogramClassName="text-base font-semibold text-slate-400"
-                />
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-900">{edition.name}</p>
-                  {metaParts.length > 0 ? (
-                    <p className="text-xs text-slate-500">{metaParts.join(" · ")}</p>
-                  ) : null}
-                </div>
+          const content = (
+            <>
+              <SeriesLogo
+                series={edition.event_series}
+                fallbackName={edition.name}
+                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+                monogramClassName="text-base font-semibold text-slate-400"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-slate-900">{edition.name}</p>
+                {metaParts.length > 0 ? (
+                  <p className="mt-0.5 text-xs text-slate-500">{metaParts.join(" · ")}</p>
+                ) : null}
               </div>
+            </>
+          );
+
+          return (
+            <li key={edition.id} className="first:pt-0 last:pb-0">
               {href ? (
-                <Link href={href} className={`${secondaryCtaClass} h-9 shrink-0 px-4`}>
-                  View event
+                <Link
+                  href={href}
+                  className={editionRowClass}
+                  aria-label={`View ${edition.name}`}
+                >
+                  {content}
                 </Link>
-              ) : null}
+              ) : (
+                <div className="flex items-start gap-3 px-2 py-3">{content}</div>
+              )}
             </li>
           );
         })}
