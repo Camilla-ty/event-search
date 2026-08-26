@@ -12,7 +12,6 @@ export type CreateEventEditionInput = {
   city_id?: string | null;
   venue_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
 };
 
@@ -29,7 +28,6 @@ export type EventEditionRow = {
   city_id: string | null;
   venue_id: string | null;
   last_reviewed_at: string | null;
-  primary_source_url: string | null;
   sponsor_note_type: string | null;
   created_at?: string | null;
 };
@@ -53,7 +51,6 @@ export async function createEventEdition(
     city_id: input.city_id ?? null,
     venue_id: input.venue_id ?? null,
     last_reviewed_at: null,
-    primary_source_url: input.primary_source_url?.trim() || null,
     sponsor_note_type: input.sponsor_note_type ?? null,
   };
 
@@ -62,7 +59,7 @@ export async function createEventEdition(
     .from("event_editions")
     .insert(insertPayload)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, venue_id, last_reviewed_at, primary_source_url, sponsor_note_type, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, city_id, venue_id, last_reviewed_at, sponsor_note_type, created_at",
     )
     .single();
 
@@ -84,7 +81,6 @@ export async function updateEventEdition(
     city_id?: string | null;
     venue_id?: string | null;
     last_reviewed_at?: string | null;
-    primary_source_url?: string | null;
     sponsor_note_type?: string | null;
   },
 ): Promise<EventEditionRow> {
@@ -106,9 +102,6 @@ export async function updateEventEdition(
   if (input.city_id !== undefined) patch.city_id = input.city_id;
   if (input.venue_id !== undefined) patch.venue_id = input.venue_id;
   if (input.last_reviewed_at !== undefined) patch.last_reviewed_at = input.last_reviewed_at;
-  if (input.primary_source_url !== undefined) {
-    patch.primary_source_url = input.primary_source_url?.trim() || null;
-  }
   if (input.sponsor_note_type !== undefined) {
     patch.sponsor_note_type = input.sponsor_note_type;
   }
@@ -118,7 +111,7 @@ export async function updateEventEdition(
     .update(patch)
     .eq("id", id)
     .select(
-      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, primary_source_url, sponsor_note_type, created_at",
+      "id, series_id, year, name, slug, start_date, end_date, website_url, logo_url, city_id, venue_id, last_reviewed_at, sponsor_note_type, created_at",
     )
     .single();
 

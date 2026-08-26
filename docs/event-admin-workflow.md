@@ -250,7 +250,7 @@ Copy: *Series and year cannot be changed. Create a new edition for a different o
 
 #### Editable fields
 
-`name`, `slug` (with warnings), `website_url`, `start_date`, `end_date`, `city_id`, `venue_id`, **Last reviewed**, **Primary source**
+`name`, `slug` (with warnings), `website_url`, `start_date`, `end_date`, `city_id`, `venue_id`, **Last reviewed**
 
 #### Research metadata — Last reviewed automation
 
@@ -258,7 +258,7 @@ Copy: *Series and year cannot be changed. Create a new edition for a different o
 |------|----------|
 | **Create edition** | `last_reviewed_at` is always `NULL`. Filling website, dates, city, or venue on create does **not** count as review. |
 | **Save profile** | Changing name, slug, dates, website, city, or venue sets **Last reviewed** to the current server time automatically. |
-| **Manual backfill** | Saving **only** Last reviewed and/or Primary source preserves the submitted values (no extra auto-bump). |
+| **Manual backfill** | Saving **only** Last reviewed preserves the submitted value (no extra auto-bump). |
 | **Live sponsors** | Add, remove, or tier rank/label edit on the Live sponsors tab auto-updates **Last reviewed**. |
 | **Organizers** | Add, remove, or role-label edit in the Profile **Organizers** section auto-updates **Last reviewed**. |
 | **Reorder / move** | Same-tier Move Up/Down on Live sponsors or Profile organizers does **not** auto-update **Last reviewed**. |

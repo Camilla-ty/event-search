@@ -23,7 +23,6 @@ const sampleEdition: EventEditionAdminRow = {
   city_id: null,
   venue_id: null,
   last_reviewed_at: null,
-  primary_source_url: null,
   sponsor_note_type: null,
   created_at: null,
   event_series: {

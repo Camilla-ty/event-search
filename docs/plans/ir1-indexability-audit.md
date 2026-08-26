@@ -232,7 +232,7 @@ Last reviewed / dates / location are trust/snippet signals only — not gate inp
 ### Current behavior
 
 - **No** dedicated `/research/...` (or similar) public routes.
-- “Research Information” is a **section** on event edition pages (`ResearchInformationSection`: last reviewed, primary source).
+- “Research Information” is a **section** on event edition pages (`ResearchInformationSection`: last reviewed).
 - Not in sitemap as a page type.
 
 ### Expected behavior

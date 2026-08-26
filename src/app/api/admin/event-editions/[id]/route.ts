@@ -59,7 +59,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     city_id: body.city_id as string | null | undefined,
     venue_id: body.venue_id as string | null | undefined,
     last_reviewed_at: body.last_reviewed_at as string | null | undefined,
-    primary_source_url: body.primary_source_url as string | null | undefined,
     sponsor_note_type: body.sponsor_note_type as string | null | undefined,
     series_id: typeof body.series_id === "string" ? body.series_id : undefined,
     year: body.year as number | string | undefined,
@@ -107,7 +106,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       city_id: validated.patch.city_id as string | null | undefined,
       venue_id: validated.patch.venue_id as string | null | undefined,
       last_reviewed_at: validated.patch.last_reviewed_at as string | null | undefined,
-      primary_source_url: validated.patch.primary_source_url as string | null | undefined,
       sponsor_note_type: validated.patch.sponsor_note_type as string | null | undefined,
     });
     return NextResponse.json({ ok: true, edition });

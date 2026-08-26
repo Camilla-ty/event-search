@@ -31,7 +31,6 @@ export type EventEditionAdminRow = {
   city_id: string | null;
   venue_id: string | null;
   last_reviewed_at: string | null;
-  primary_source_url: string | null;
   sponsor_note_type: string | null;
   created_at: string | null;
   event_series?: {
@@ -54,7 +53,6 @@ export type CreateEventEditionAdminInput = {
   website_url?: string | null;
   city_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
 };
 
@@ -66,7 +64,6 @@ export type UpdateEventEditionAdminInput = {
   website_url?: string | null;
   city_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
 };
 

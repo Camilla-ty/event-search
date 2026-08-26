@@ -14,7 +14,6 @@ export type EditionFormValues = {
   city_id: string;
   venue_id: string;
   last_reviewed_at: string;
-  primary_source_url: string;
   sponsor_note_type: string;
 };
 
@@ -29,7 +28,6 @@ export function buildEditionFormInitialValues(input: {
   city_id?: string | null;
   venue_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
 }): EditionFormValues {
   return {
@@ -43,7 +41,6 @@ export function buildEditionFormInitialValues(input: {
     city_id: input.city_id ?? "",
     venue_id: input.venue_id ?? "",
     last_reviewed_at: toReviewedAtDateInputValue(input.last_reviewed_at),
-    primary_source_url: input.primary_source_url ?? "",
     sponsor_note_type: parseSponsorNoteType(input.sponsor_note_type) ?? "",
   };
 }

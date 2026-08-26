@@ -346,7 +346,7 @@ This section defines **operational** expectations not yet fully automated.
 
 ### 8.2 Edition / series research metadata (related)
 
-Edition `last_reviewed_at` and `primary_source_url` track **event** research provenance. They do not replace company canonical website policy but may cite the URL used to discover sponsors.
+Edition `last_reviewed_at` tracks **event** research provenance. It does not replace company canonical website policy. (An edition `primary_source_url` column also existed for provenance; it was removed on 2026-08-26.)
 
 ### 8.3 Planned automation (non-binding)
 

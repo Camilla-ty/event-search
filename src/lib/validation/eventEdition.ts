@@ -50,7 +50,6 @@ export type EditionCreatePayload = {
   city_id: string | null;
   venue_id: string | null;
   last_reviewed_at: string | null;
-  primary_source_url: string | null;
   sponsor_note_type: string | null;
 };
 
@@ -65,7 +64,6 @@ export function validateEditionCreateBody(body: {
   city_id?: string | null;
   venue_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
 }): { ok: true; data: EditionCreatePayload } | { ok: false; errors: string[] } {
   const seriesId = body.series_id?.trim() ?? "";
@@ -128,17 +126,6 @@ export function validateEditionCreateBody(body: {
     }
   }
 
-  let primarySourceUrl: string | null = null;
-  if (body.primary_source_url !== undefined) {
-    primarySourceUrl =
-      body.primary_source_url === null || body.primary_source_url === ""
-        ? null
-        : body.primary_source_url.trim();
-    if (primarySourceUrl && !isValidHttpUrl(primarySourceUrl)) {
-      errors.push("primary_source_url must be a valid URL");
-    }
-  }
-
   let sponsorNoteType: string | null = null;
   if (body.sponsor_note_type !== undefined) {
     const parsed = parseSponsorNoteType(body.sponsor_note_type);
@@ -166,7 +153,6 @@ export function validateEditionCreateBody(body: {
       city_id: cityId,
       venue_id: venueId,
       last_reviewed_at: lastReviewedAt,
-      primary_source_url: primarySourceUrl,
       sponsor_note_type: sponsorNoteType,
     },
   };
@@ -182,7 +168,6 @@ export function validateEditionUpdateBody(body: {
   city_id?: string | null;
   venue_id?: string | null;
   last_reviewed_at?: string | null;
-  primary_source_url?: string | null;
   sponsor_note_type?: string | null;
   series_id?: string;
   year?: number | string;
@@ -264,17 +249,6 @@ export function validateEditionUpdateBody(body: {
       errors.push("last_reviewed_at must be YYYY-MM-DD");
     } else {
       patch.last_reviewed_at = reviewedAt;
-    }
-  }
-  if (body.primary_source_url !== undefined) {
-    const primarySourceUrl =
-      body.primary_source_url === null || body.primary_source_url === ""
-        ? null
-        : body.primary_source_url.trim();
-    if (primarySourceUrl && !isValidHttpUrl(primarySourceUrl)) {
-      errors.push("primary_source_url must be a valid URL");
-    } else {
-      patch.primary_source_url = primarySourceUrl;
     }
   }
   if (body.sponsor_note_type !== undefined) {

@@ -2,7 +2,9 @@
 
 **Status:** Implemented (Phases 1–3 complete)  
 **Version:** v1  
-**Last updated:** 2026-07-04  
+**Last updated:** 2026-08-26  
+
+> **2026-08-26 — Primary source URL removed.** The edition `primary_source_url` column and its admin/public UI were removed from the product. `last_reviewed_at` is now the only edition research-metadata field, and references to Primary source in this document have been dropped.
 
 Implementation scope for **automatically updating** `event_editions.last_reviewed_at` when meaningful Event Edition data is curated in admin. Defines product policy, write-path coverage, implementation boundaries, verification, and rollout — not application code.
 
@@ -10,7 +12,7 @@ Implementation scope for **automatically updating** `event_editions.last_reviewe
 
 - [Event Series & Edition Admin Workflow](./event-admin-workflow.md) — edition create/edit and sponsor import handoff
 - [Phase — Event Explorer Sort](./phase-event-explorer-sort-scope.md) — `last_reviewed_at` as research-freshness signal for public sort
-- [ADR-002 — Company website canonical identity](./adr/ADR-002-company-website-canonical-identity.md) §8.2 — edition research metadata (`last_reviewed_at`, `primary_source_url`)
+- [ADR-002 — Company website canonical identity](./adr/ADR-002-company-website-canonical-identity.md) §8.2 — edition research metadata (`last_reviewed_at`)
 - Migration `supabase/migrations/20260705120000_event_detail_research_metadata.sql` — column definition
 
 **Permissions:** Admin-only mutations (`profiles.role = admin`). Public site reads `last_reviewed_at` for Event Detail display and Event Explorer client-side sort.
@@ -26,7 +28,7 @@ When an admin meaningfully curates an edition’s profile or live sponsor roster
 - Public **Event Detail → Research Information** reflects recent work.
 - Event Explorer **Recommended** and **Recently Reviewed** sorts surface editions with current, trustworthy data.
 
-Researchers may still set **Last reviewed** and **Primary source** explicitly on the edition form for backfill and provenance.
+Researchers may still set **Last reviewed** explicitly on the edition form for backfill.
 
 ---
 
@@ -38,7 +40,7 @@ Researchers may still set **Last reviewed** and **Primary source** explicitly on
 |------|----------|
 | `last_reviewed_at` | Auto-updates to `now()` on meaningful edition profile saves, live sponsor add/remove/tier edits, organizer add/remove/role-label edits, and qualifying sponsor import publish |
 | Edition create | Always `NULL` — creation is cataloging, not review |
-| Manual research save | PATCH with only `last_reviewed_at` / `primary_source_url` preserves submitted values |
+| Manual research save | PATCH with only `last_reviewed_at` preserves submitted value |
 | Live sponsor reorder/move | Does **not** auto-touch |
 | Organizer reorder | Does **not** auto-touch |
 | Sponsor import draft | Does **not** auto-touch until publish |
@@ -62,7 +64,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 1. Admin creates an edition (minimum identity fields). **`last_reviewed_at` stays NULL** — the edition is cataloged, not yet “reviewed.”
 2. Admin curates the edition: fills profile, assigns venue, adds/edits/removes sponsors, or publishes an import batch.
 3. On each **meaningful** curation action, `last_reviewed_at` is set to **`now()`** (server timestamp, `timestamptz`).
-4. Admin may still set **Last reviewed** to a **past date** or **Primary source URL** on the edition form for explicit provenance; a subsequent meaningful curation action advances the timestamp to `now()`.
+4. Admin may still set **Last reviewed** to a **past date** on the edition form for explicit provenance; a subsequent meaningful curation action advances the timestamp to `now()`.
 5. Public Event Detail shows **Last Reviewed** when the field is non-NULL. Event Explorer sort modes react without further product changes.
 
 ### 3.2 Operational rule (for docs and training)
@@ -74,7 +76,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 | Rule | Value |
 |------|-------|
 | Auto-touch value | Always `now()` at time of meaningful write (never copy form date picker on auto-touch) |
-| Manual-only save | PATCH that changes **only** `last_reviewed_at` and/or `primary_source_url` does **not** trigger a second auto-touch |
+| Manual-only save | PATCH that changes **only** `last_reviewed_at` does **not** trigger a second auto-touch |
 | No-op saves | If a save produces no actual column change, do **not** touch |
 | Creation | `last_reviewed_at = NULL` on insert; **ignore** any `last_reviewed_at` in create body for v1 (or treat as manual override only if product later allows — **out of scope for v1 auto policy**) |
 
@@ -86,7 +88,6 @@ This feature updates **one column on `event_editions`** in response to **meaning
 |------|--------|
 | Changing Event Explorer sort logic | Sort already consumes `last_reviewed_at`; this feature feeds the signal |
 | Changing public Event Detail layout | Research section already exists |
-| Auto-updating `primary_source_url` | Remains manual; only `last_reviewed_at` is automated |
 | Touching editions on **draft** sponsor import steps | Live data unchanged until publish |
 | Touching editions on **series** edits (name, logo, keywords) | Series-level curation; would incorrectly fan out to all child editions |
 | Touching editions on **venue entity** edits (name, address, logo) | Venue record change ≠ edition review; edition `venue_id` assignment **is** in scope |
@@ -116,7 +117,6 @@ This feature updates **one column on `event_editions`** in response to **meaning
 | Save **city_id** | ✅ | Discovery metadata |
 | Save **venue_id** (assign, change, clear) | ✅ | Edition location curation |
 | Save **only** `last_reviewed_at` | ❌ | Explicit researcher input |
-| Save **only** `primary_source_url` | ❌ | Provenance only |
 | Save `last_reviewed_at` **and** profile fields in one request | ✅ | Profile change triggers touch; manual date in same payload is superseded by `now()` on auto-touch (document in UI copy) |
 | Save with **no effective change** | ❌ | Compare before/after patch |
 
@@ -298,7 +298,7 @@ Properties:
 
 - Idempotent: repeated calls same day are fine (latest curation wins).
 - No-op if `editionId` invalid — log/throw per existing server conventions.
-- Does **not** modify `primary_source_url` or `updated_at` unless a separate column exists (none today).
+- Does **not** modify `updated_at` unless a separate column exists (none today).
 
 Optional internal helper:
 
@@ -466,6 +466,7 @@ hasMeaningfulEditionPatch(before, patch): boolean
 | 2026-07-03 | Initial proposed scope from codebase audit |
 | 2026-07-03 | Phases 1–3 implemented; Phase 4 (merge touch, form copy) optional |
 | 2026-07-04 | Organizer write paths (§5.5, §7.5); organizer merge touch implemented |
+| 2026-08-26 | Edition `primary_source_url` removed from the product; references dropped |
 
 ---
 

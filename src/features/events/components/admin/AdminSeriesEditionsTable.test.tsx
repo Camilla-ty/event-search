@@ -23,7 +23,6 @@ function editionRow(overrides: Partial<EventEditionListItem> = {}): EventEdition
     city_id: null,
     venue_id: "venue-1",
     last_reviewed_at: "2026-06-01T00:00:00.000Z",
-    primary_source_url: null,
     sponsor_note_type: null,
     created_at: "2026-01-01T00:00:00.000Z",
     venues: { id: "venue-1", name: "Marina Bay Sands", archived_at: null },

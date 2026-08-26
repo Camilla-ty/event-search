@@ -154,7 +154,6 @@ export function EventEditionForm({
       city_id: values.city_id.trim() || null,
       venue_id: values.venue_id.trim() || null,
       last_reviewed_at: values.last_reviewed_at.trim() || null,
-      primary_source_url: values.primary_source_url.trim() || null,
       sponsor_note_type: values.sponsor_note_type.trim() || null,
     };
     if (mode === "create") {
@@ -434,18 +433,6 @@ export function EventEditionForm({
               </Button>
             </div>
           </div>
-
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-700">Primary source URL</span>
-            <input
-              type="text"
-              value={values.primary_source_url}
-              onChange={(e) => updateField("primary_source_url", e.target.value)}
-              disabled={isSubmitting}
-              className={formInputClass}
-              placeholder="https://…"
-            />
-          </label>
 
           <label className="block space-y-2">
             <span className="text-sm font-medium text-slate-700">Sponsor note</span>

@@ -249,7 +249,6 @@ export default async function AdminEventEditionDetailPage({ params, searchParams
                   city_id: edition.city_id,
                   venue_id: edition.venue_id,
                   last_reviewed_at: edition.last_reviewed_at,
-                  primary_source_url: edition.primary_source_url,
                   sponsor_note_type: edition.sponsor_note_type,
                 })}
                 linkedVenue={

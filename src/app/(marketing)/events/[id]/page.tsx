@@ -255,8 +255,6 @@ export default async function EventDetailPage({
   const seriesBrandLabel = series?.name ?? null;
   const lastReviewedAt =
     typeof edition.last_reviewed_at === "string" ? edition.last_reviewed_at : null;
-  const primarySourceUrl =
-    typeof edition.primary_source_url === "string" ? edition.primary_source_url : null;
   const lifecycleStatus = series?.lifecycle_status ?? null;
   const mergedIntoSeries = series?.merged_into_series ?? null;
   const eventDisplayName = edition.name?.trim() || "Event";
@@ -440,10 +438,7 @@ export default async function EventDetailPage({
                   editions={relatedEditions}
                 />
               ) : null}
-              <ResearchInformationSection
-                lastReviewedAt={lastReviewedAt}
-                primarySourceUrl={primarySourceUrl}
-              />
+              <ResearchInformationSection lastReviewedAt={lastReviewedAt} />
             </div>
           }
           sponsorsPanel={

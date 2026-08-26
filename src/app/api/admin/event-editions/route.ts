@@ -69,7 +69,6 @@ export async function POST(request: Request) {
     city_id: body.city_id as string | null | undefined,
     venue_id: body.venue_id as string | null | undefined,
     last_reviewed_at: body.last_reviewed_at as string | null | undefined,
-    primary_source_url: body.primary_source_url as string | null | undefined,
     sponsor_note_type: body.sponsor_note_type as string | null | undefined,
   });
 
