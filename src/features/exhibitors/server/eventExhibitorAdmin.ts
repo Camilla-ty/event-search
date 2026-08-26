@@ -41,6 +41,8 @@ export type LiveExhibitorRow = {
     name: string | null;
     slug: string | null;
     domain: string | null;
+    logo_url: string | null;
+    logo_source: string | null;
   } | null;
 };
 
@@ -109,7 +111,7 @@ export async function countLiveExhibitorsForEdition(editionId: string): Promise<
   return count ?? 0;
 }
 
-/** Live exhibitor roster for admin — company name/slug/domain only (no logo drawer). */
+/** Live exhibitor roster for admin — company identity plus logo fields for the shared preview. */
 export async function getLiveExhibitorsForEditionAdmin(
   eventEditionId: string,
 ): Promise<LiveExhibitorRow[]> {
@@ -137,14 +139,21 @@ export async function getLiveExhibitorsForEditionAdmin(
 
   const { data: companyRows, error: companyError } = await supabase
     .from("companies")
-    .select("id, name, slug, domain")
+    .select("id, name, slug, domain, logo_url, logo_source")
     .in("id", companyIds);
 
   if (companyError) throw new Error(companyError.message);
 
   const companyById = new Map<
     string,
-    { id: string; name: string | null; slug: string | null; domain: string | null }
+    {
+      id: string;
+      name: string | null;
+      slug: string | null;
+      domain: string | null;
+      logo_url: string | null;
+      logo_source: string | null;
+    }
   >();
   for (const row of companyRows ?? []) {
     companyById.set(companyIdKey(row.id), {
@@ -152,6 +161,8 @@ export async function getLiveExhibitorsForEditionAdmin(
       name: typeof row.name === "string" ? row.name : null,
       slug: typeof row.slug === "string" ? row.slug : null,
       domain: typeof row.domain === "string" ? row.domain : null,
+      logo_url: typeof row.logo_url === "string" ? row.logo_url : null,
+      logo_source: typeof row.logo_source === "string" ? row.logo_source : null,
     });
   }
 

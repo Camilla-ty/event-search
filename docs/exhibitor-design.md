@@ -133,7 +133,7 @@ Peer to **Live sponsors** on edition detail (not Profile embed):
 | Add existing company | Company search picker (`status = active`); disable already-linked exhibitors; require `tier_rank`; optional `tier_label` |
 | Edit tier | Inline or drawer PATCH on the link (sponsor-like validation) |
 | Remove | Confirm modal — removes **exhibitor link only** (does not affect sponsor/organizer links or the company) |
-| Reorder | Move Up / Down **within tier**; server-managed dense `display_order`; no free numeric input |
+| Reorder | Drag-and-drop **within tier**, with Move Up / Down as a fallback; local draft until **Save order**; server-managed dense `display_order`; no free numeric input; cannot drag across tiers |
 | Empty roster | Panel still usable — clear empty state + Add control |
 
 Adding as exhibitor **must not** block or remove sponsor/organizer links, and vice versa.

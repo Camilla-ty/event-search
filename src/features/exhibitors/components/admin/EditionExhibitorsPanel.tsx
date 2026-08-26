@@ -1,18 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@/src/components/common";
 import {
   LiveSponsorOrderSaveFooter,
   type LiveSponsorOrderSaveBarState,
 } from "@/src/features/events/components/admin/LiveSponsorOrderSaveBar";
 import { fetchEditionLiveExhibitors } from "@/src/features/exhibitors/client/fetchEditionLiveExhibitors";
-import {
-  formatExhibitorTierHeading,
-  groupExhibitorsByTier,
-} from "@/src/features/exhibitors/lib/groupExhibitorsByTier";
 import {
   applyExhibitorTierDisplayOrder,
   applyRefetchedExhibitorRoster,
@@ -27,6 +21,7 @@ import type {
 import { primaryCtaClass } from "@/src/lib/design/classes";
 import type { ExhibitorMoveDirection } from "@/src/lib/validation/eventExhibitor";
 
+import { EditionLiveExhibitorsQARoster } from "./EditionLiveExhibitorsQARoster";
 import {
   ExhibitorLinkDrawer,
   type ExhibitorCreateSavedPayload,
@@ -169,10 +164,7 @@ export function EditionExhibitorsPanel({
   );
 
   const sortedDraftRoster = useMemo(() => sortExhibitorRoster(draftRoster), [draftRoster]);
-  const tierGroups = useMemo(
-    () => groupExhibitorsByTier(sortedDraftRoster),
-    [sortedDraftRoster],
-  );
+  const reorderDisabled = isSaving;
 
   function applyRosterPair(next: {
     savedRoster: LiveExhibitorRow[];
@@ -239,6 +231,8 @@ export function EditionExhibitorsPanel({
         name: payload.company.name,
         slug: null,
         domain: payload.company.domain,
+        logo_url: payload.company.logo_url,
+        logo_source: payload.company.logo_source,
       },
     };
     const nextRoster = sortExhibitorRoster([...savedRosterRef.current, next]);
@@ -288,7 +282,7 @@ export function EditionExhibitorsPanel({
   }
 
   function handleMove(row: LiveExhibitorRow, direction: ExhibitorMoveDirection) {
-    if (isSaving) {
+    if (reorderDisabled) {
       return;
     }
 
@@ -386,87 +380,16 @@ export function EditionExhibitorsPanel({
             </button>
           </p>
         ) : (
-          <div className="space-y-6">
-            {tierGroups.map((group) => (
-              <div key={group.tierRank === null ? "null" : String(group.tierRank)}>
-                <h3 className="mb-2 text-sm font-semibold text-slate-800">
-                  {formatExhibitorTierHeading(group)}
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Company</th>
-                        <th className="px-4 py-3 font-medium">Order</th>
-                        <th className="px-4 py-3 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.exhibitors.map((row, index) => {
-                        const company = row.companies;
-                        const isFirst = index === 0;
-                        const isLast = index === group.exhibitors.length - 1;
-
-                        return (
-                          <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                            <td className="px-4 py-3 font-medium text-slate-900">
-                              {company ? (
-                                <Link
-                                  href={`/admin/companies/${company.id}`}
-                                  className="text-brand-primary hover:underline"
-                                >
-                                  {company.name ?? "—"}
-                                </Link>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">{row.display_order ?? "—"}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  variant="secondary"
-                                  className="h-8 px-2 text-xs"
-                                  disabled={isFirst || isSaving}
-                                  onClick={() => handleMove(row, "up")}
-                                >
-                                  Move up
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="h-8 px-2 text-xs"
-                                  disabled={isLast || isSaving}
-                                  onClick={() => handleMove(row, "down")}
-                                >
-                                  Move down
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="h-8 px-2 text-xs"
-                                  disabled={isSaving}
-                                  onClick={() => openDrawer({ kind: "edit", row })}
-                                >
-                                  Edit tier
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  className="h-8 px-2 text-xs !text-red-700"
-                                  disabled={isSaving}
-                                  onClick={() => openRemove(row)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-          </div>
+          <EditionLiveExhibitorsQARoster
+            exhibitors={sortedDraftRoster}
+            onEdit={(row) => openDrawer({ kind: "edit", row })}
+            onRemove={(row) => openRemove(row)}
+            onMove={(row, direction) => handleMove(row, direction)}
+            onReorderTier={(tierRank, orderedLinkIds) =>
+              handleLocalReorderTier(tierRank, orderedLinkIds)
+            }
+            reorderDisabled={reorderDisabled}
+          />
         )}
 
         {drawer.kind === "create" ? (

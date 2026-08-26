@@ -21,8 +21,26 @@ type CompanyOption = {
   id: string;
   name: string;
   domain: string | null;
+  logo_url: string | null;
+  logo_source: string | null;
   matched_alias?: string | null;
 };
+
+export function mapExhibitorDrawerCompanyOption(
+  raw: Record<string, unknown>,
+): CompanyOption {
+  return {
+    id: String(raw.id),
+    name: typeof raw.name === "string" ? raw.name : "—",
+    domain: typeof raw.domain === "string" ? raw.domain : null,
+    logo_url: typeof raw.logo_url === "string" ? raw.logo_url : null,
+    logo_source: typeof raw.logo_source === "string" ? raw.logo_source : null,
+    matched_alias:
+      typeof raw.matched_alias === "string" && raw.matched_alias.trim() !== ""
+        ? raw.matched_alias
+        : null,
+  };
+}
 
 export type ExhibitorCreateSavedPayload = {
   link: EventExhibitorLinkAdminRow;
@@ -263,17 +281,7 @@ function AddExhibitorForm({
           setLastFetchedTerm(term);
           return;
         }
-        setCompanyOptions(
-          data.companies.map((c) => ({
-            id: String(c.id),
-            name: typeof c.name === "string" ? c.name : "—",
-            domain: typeof c.domain === "string" ? c.domain : null,
-            matched_alias:
-              typeof c.matched_alias === "string" && c.matched_alias.trim() !== ""
-                ? c.matched_alias
-                : null,
-          })),
-        );
+        setCompanyOptions(data.companies.map(mapExhibitorDrawerCompanyOption));
         setLastFetchedTerm(term);
       } catch {
         if (!cancelled) {

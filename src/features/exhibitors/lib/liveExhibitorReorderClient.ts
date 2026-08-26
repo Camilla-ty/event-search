@@ -56,6 +56,63 @@ export function computeMoveOrderedLinkIdsForExhibitors(
   );
 }
 
+/** Reorders link IDs after a drag-and-drop within one tier. */
+export function reorderLinkIdsByDrag(
+  orderedLinkIds: readonly string[],
+  activeLinkId: string,
+  overLinkId: string,
+): readonly string[] | null {
+  const oldIndex = orderedLinkIds.indexOf(activeLinkId);
+  const newIndex = orderedLinkIds.indexOf(overLinkId);
+  if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+    return null;
+  }
+
+  const next = [...orderedLinkIds];
+  const [moved] = next.splice(oldIndex, 1);
+  if (moved === undefined) {
+    return null;
+  }
+  next.splice(newIndex, 0, moved);
+  return next;
+}
+
+/**
+ * Resolves a drag-and-drop within the exhibitor roster.
+ * Cross-tier drops, disabled reorder, and missing IDs are no-ops.
+ */
+export function resolveExhibitorDragReorder(input: {
+  exhibitors: readonly LiveExhibitorRow[];
+  activeLinkId: string;
+  overLinkId: string | null;
+  reorderDisabled?: boolean;
+}): { tierRank: number | null; orderedLinkIds: readonly string[] } | null {
+  const { exhibitors, activeLinkId, overLinkId, reorderDisabled = false } = input;
+  if (reorderDisabled || overLinkId === null || activeLinkId === overLinkId) {
+    return null;
+  }
+
+  const active = exhibitors.find((row) => row.id === activeLinkId);
+  const over = exhibitors.find((row) => row.id === overLinkId);
+  if (!active || !over) {
+    return null;
+  }
+  if (!sameExhibitorTierRank(active.tier_rank, over.tier_rank)) {
+    return null;
+  }
+
+  const nextOrder = reorderLinkIdsByDrag(
+    exhibitorsInTier(exhibitors, active.tier_rank).map((row) => row.id),
+    activeLinkId,
+    overLinkId,
+  );
+  if (nextOrder === null) {
+    return null;
+  }
+
+  return { tierRank: active.tier_rank, orderedLinkIds: nextOrder };
+}
+
 export type DirtyExhibitorTierOrder = {
   tier_rank: number | null;
   ordered_link_ids: string[];
