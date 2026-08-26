@@ -75,7 +75,7 @@ describe("topicRegionHubData wiring (ARC-001 Phase 6)", () => {
     const source = readFileSync(sitemapPath, "utf8");
     assert.match(source, /listPublishedResearchPagesPublic/);
     assert.match(source, /getTopicRegionHubPageData/);
-    assert.match(source, /passesGate/);
+    assert.match(source, /getTopicRegionHubIndexability/);
     assert.doesNotMatch(source, /listResearchPagesAdmin/);
   });
 
@@ -122,43 +122,76 @@ describe("hub public helpers preserve output contracts", () => {
         id: "page-1",
         year: 2026,
         published_at: "2026-07-01T00:00:00.000Z",
-        topic_name: "Bitcoin",
-        topic_slug: "bitcoin",
-        region_name: "Asia",
-        region_slug: "asia",
+        topic_name: "Crypto & Blockchain",
+        topic_slug: "crypto-blockchain",
+        location_type: "region",
+        location_name: "Asia",
+        location_slug: "asia",
+      },
+      {
+        id: "page-country",
+        year: 2026,
+        published_at: "2026-06-15T00:00:00.000Z",
+        topic_name: "Crypto & Blockchain",
+        topic_slug: "crypto-blockchain",
+        location_type: "country",
+        location_name: "Singapore",
+        location_slug: "singapore",
       },
       {
         id: "page-all",
         year: null,
         published_at: "2026-06-01T00:00:00.000Z",
-        topic_name: "Bitcoin",
-        topic_slug: "bitcoin",
-        region_name: "Asia",
-        region_slug: "asia",
+        topic_name: "Crypto & Blockchain",
+        topic_slug: "crypto-blockchain",
+        location_type: "region",
+        location_name: "Asia",
+        location_slug: "asia",
       },
       {
         id: "bad",
         topic_slug: "missing-name",
-        region_slug: "asia",
+        location_type: "region",
+        location_slug: "asia",
+      },
+      {
+        id: "bad-location-type",
+        topic_name: "Crypto & Blockchain",
+        topic_slug: "crypto-blockchain",
+        location_type: "city",
+        location_name: "Singapore",
+        location_slug: "singapore",
       },
     ]);
 
     assert.deepEqual(pages, [
       {
         id: "page-1",
-        topicName: "Bitcoin",
-        topicSlug: "bitcoin",
-        regionName: "Asia",
-        regionSlug: "asia",
+        topicName: "Crypto & Blockchain",
+        topicSlug: "crypto-blockchain",
+        locationType: "region",
+        locationName: "Asia",
+        locationSlug: "asia",
         year: 2026,
         publishedAt: "2026-07-01T00:00:00.000Z",
       },
       {
+        id: "page-country",
+        topicName: "Crypto & Blockchain",
+        topicSlug: "crypto-blockchain",
+        locationType: "country",
+        locationName: "Singapore",
+        locationSlug: "singapore",
+        year: 2026,
+        publishedAt: "2026-06-15T00:00:00.000Z",
+      },
+      {
         id: "page-all",
-        topicName: "Bitcoin",
-        topicSlug: "bitcoin",
-        regionName: "Asia",
-        regionSlug: "asia",
+        topicName: "Crypto & Blockchain",
+        topicSlug: "crypto-blockchain",
+        locationType: "region",
+        locationName: "Asia",
+        locationSlug: "asia",
         year: null,
         publishedAt: "2026-06-01T00:00:00.000Z",
       },
@@ -167,13 +200,14 @@ describe("hub public helpers preserve output contracts", () => {
   });
 
   it("preserves year-scoped and all-years public paths", () => {
+    const asia = { type: "region" as const, slug: "asia" };
     assert.equal(
-      formatResearchPagePublicPath("bitcoin", "asia", null),
-      "/events/topics/bitcoin/regions/asia",
+      formatResearchPagePublicPath("crypto-blockchain", asia, null),
+      "/events/topics/crypto-blockchain/regions/asia",
     );
     assert.equal(
-      formatResearchPagePublicPath("bitcoin", "asia", 2026),
-      "/events/topics/bitcoin/regions/asia/years/2026",
+      formatResearchPagePublicPath("crypto-blockchain", asia, 2026),
+      "/events/topics/crypto-blockchain/regions/asia/years/2026",
     );
   });
 

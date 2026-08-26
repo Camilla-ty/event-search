@@ -1,11 +1,20 @@
+import {
+  parseResearchPageLocationType,
+  type ResearchPageLocation,
+  type ResearchPageLocationType,
+} from "@/src/features/research-pages/lib/researchPageLocation";
 import { createClient } from "@/src/lib/supabase/server";
+
+const PUBLISHED_SELECT =
+  "id, year, published_at, topic_name, topic_slug, location_type, location_name, location_slug";
 
 export type PublishedResearchPage = {
   id: string;
   topicName: string;
   topicSlug: string;
-  regionName: string;
-  regionSlug: string;
+  locationType: ResearchPageLocationType;
+  locationName: string;
+  locationSlug: string;
   /** null = All years. */
   year: number | null;
   publishedAt: string | null;
@@ -17,8 +26,9 @@ type PublishedResearchPageRow = {
   published_at?: unknown;
   topic_name?: unknown;
   topic_slug?: unknown;
-  region_name?: unknown;
-  region_slug?: unknown;
+  location_type?: unknown;
+  location_name?: unknown;
+  location_slug?: unknown;
 };
 
 function readYear(raw: unknown): number | null {
@@ -40,16 +50,21 @@ export function mapPublishedResearchPageRows(
     const id = typeof row.id === "string" ? row.id.trim() : "";
     const topicName = typeof row.topic_name === "string" ? row.topic_name.trim() : "";
     const topicSlug = typeof row.topic_slug === "string" ? row.topic_slug.trim() : "";
-    const regionName = typeof row.region_name === "string" ? row.region_name.trim() : "";
-    const regionSlug = typeof row.region_slug === "string" ? row.region_slug.trim() : "";
-    if (!id || !topicName || !topicSlug || !regionName || !regionSlug) continue;
+    const locationName =
+      typeof row.location_name === "string" ? row.location_name.trim() : "";
+    const locationSlug =
+      typeof row.location_slug === "string" ? row.location_slug.trim() : "";
+    const locationType = parseResearchPageLocationType(row.location_type);
+    if (!id || !topicName || !topicSlug || !locationName || !locationSlug) continue;
+    if (locationType === null) continue;
 
     items.push({
       id,
       topicName,
       topicSlug,
-      regionName,
-      regionSlug,
+      locationType,
+      locationName,
+      locationSlug,
       year: readYear(row.year),
       publishedAt:
         typeof row.published_at === "string" ? row.published_at : null,
@@ -60,7 +75,7 @@ export function mapPublishedResearchPageRows(
 }
 
 /**
- * Published Topic × Region research pages for public sitemap / discovery.
+ * Published Topic × Location research pages for public sitemap / discovery.
  * Reads `topic_region_research_pages_published` via the session client
  * (ARC-001 Phase 6). Does not expose draft rows.
  */
@@ -70,9 +85,7 @@ export async function listPublishedResearchPagesPublic(): Promise<
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("topic_region_research_pages_published")
-    .select(
-      "id, year, published_at, topic_name, topic_slug, region_name, region_slug",
-    )
+    .select(PUBLISHED_SELECT)
     .order("published_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -80,25 +93,48 @@ export async function listPublishedResearchPagesPublic(): Promise<
 }
 
 /**
- * Look up a published research page by topic+region (+ optional year).
+ * Published research pages for one topic, for on-page location discovery.
+ * Ordered by location name, then all-years before year-scoped entries.
+ */
+export async function listPublishedResearchPagesByTopicPublic(
+  topicSlug: string,
+): Promise<PublishedResearchPage[]> {
+  const topicKey = topicSlug.trim();
+  if (topicKey === "") return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("topic_region_research_pages_published")
+    .select(PUBLISHED_SELECT)
+    .eq("topic_slug", topicKey)
+    .order("location_name", { ascending: true })
+    .order("year", { ascending: true, nullsFirst: true });
+
+  if (error) throw new Error(error.message);
+  return mapPublishedResearchPageRows((data ?? []) as PublishedResearchPageRow[]);
+}
+
+/**
+ * Look up a published research page by topic + location (+ optional year).
  * year = null → all-years row only (year IS NULL).
  * year = number → exact year-scoped row only.
  */
 export async function getPublishedResearchPageBySlugsPublic(
   topicSlug: string,
-  regionSlug: string,
+  location: ResearchPageLocation,
   year: number | null = null,
 ): Promise<{ id: string } | null> {
   const topicKey = topicSlug.trim();
-  const regionKey = regionSlug.trim();
-  if (topicKey === "" || regionKey === "") return null;
+  const locationKey = location.slug.trim();
+  if (topicKey === "" || locationKey === "") return null;
 
   const supabase = await createClient();
   let query = supabase
     .from("topic_region_research_pages_published")
     .select("id, year")
     .eq("topic_slug", topicKey)
-    .eq("region_slug", regionKey);
+    .eq("location_type", location.type)
+    .eq("location_slug", locationKey);
 
   if (year === null) {
     query = query.is("year", null);

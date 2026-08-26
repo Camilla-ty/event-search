@@ -3,31 +3,32 @@ import { notFound } from "next/navigation";
 
 import { TopicRegionHubView } from "@/src/features/events/components/topic-region/TopicRegionHubView";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
+import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
 import { getPublishedResearchPageBySlugsPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import {
   createNotFoundPageMetadata,
   createPageMetadata,
 } from "@/src/lib/metadata/site";
-import { robotsForIndexability, INDEXABLE, NOINDEX_FOLLOW } from "@/src/lib/seo/indexability";
+import {
+  getTopicRegionHubIndexability,
+  robotsForIndexability,
+} from "@/src/lib/seo/indexability";
 
 export const dynamic = "force-dynamic";
 
 type Params = { topicSlug: string; regionSlug: string };
 
 async function loadPublishedPage(params: Params) {
+  const location = { type: "region" as const, slug: params.regionSlug };
+
   const published = await getPublishedResearchPageBySlugsPublic(
     params.topicSlug,
-    params.regionSlug,
+    location,
     null,
   );
   if (!published) return null;
 
-  const data = await getTopicRegionHubPageData(
-    params.topicSlug,
-    params.regionSlug,
-    null,
-  );
-  return data;
+  return getTopicRegionHubPageData(params.topicSlug, location, null);
 }
 
 export async function generateMetadata({
@@ -39,10 +40,15 @@ export async function generateMetadata({
   const data = await loadPublishedPage({ topicSlug, regionSlug });
 
   if (!data) {
-    return createNotFoundPageMetadata(`/events/topics/${topicSlug}/regions/${regionSlug}`);
+    return createNotFoundPageMetadata(
+      formatResearchPagePublicPath(topicSlug, {
+        type: "region",
+        slug: regionSlug,
+      }),
+    );
   }
 
-  const indexability = data.passesGate ? INDEXABLE : NOINDEX_FOLLOW;
+  const indexability = getTopicRegionHubIndexability(data.facts);
 
   return createPageMetadata({
     title: data.title,

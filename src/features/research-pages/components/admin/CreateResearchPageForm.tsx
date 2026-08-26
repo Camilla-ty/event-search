@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Button, InlineErrorBanner } from "@/src/components/common";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
+import type { ResearchPageLocationType } from "@/src/features/research-pages/lib/researchPageLocation";
 import { formInputClass, feedbackSuccessClass } from "@/src/lib/design/classes";
 
 type SelectOption = { id: string; name: string; slug: string };
@@ -12,6 +13,7 @@ type SelectOption = { id: string; name: string; slug: string };
 type CreateResearchPageFormProps = {
   topics: SelectOption[];
   regions: SelectOption[];
+  countries: SelectOption[];
 };
 
 type ApiResponse = {
@@ -23,10 +25,13 @@ type ApiResponse = {
 export function CreateResearchPageForm({
   topics,
   regions,
+  countries,
 }: CreateResearchPageFormProps) {
   const router = useRouter();
   const [topicId, setTopicId] = useState("");
-  const [regionId, setRegionId] = useState("");
+  const [locationType, setLocationType] =
+    useState<ResearchPageLocationType>("region");
+  const [locationId, setLocationId] = useState("");
   const [yearInput, setYearInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{
@@ -34,8 +39,14 @@ export function CreateResearchPageForm({
     message: string;
   } | null>(null);
 
+  const locationOptions = locationType === "country" ? countries : regions;
   const selectedTopic = topics.find((t) => t.id === topicId);
-  const selectedRegion = regions.find((r) => r.id === regionId);
+  const selectedLocation = locationOptions.find((l) => l.id === locationId);
+
+  function handleLocationTypeChange(next: ResearchPageLocationType) {
+    setLocationType(next);
+    setLocationId("");
+  }
 
   const parsedYear =
     yearInput.trim() === ""
@@ -47,18 +58,21 @@ export function CreateResearchPageForm({
         : undefined;
 
   const previewPath =
-    selectedTopic && selectedRegion && parsedYear !== undefined
+    selectedTopic && selectedLocation && parsedYear !== undefined
       ? formatResearchPagePublicPath(
           selectedTopic.slug,
-          selectedRegion.slug,
+          { type: locationType, slug: selectedLocation.slug },
           parsedYear,
         )
       : null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!topicId || !regionId) {
-      setResult({ ok: false, message: "Select both a topic and a region." });
+    if (!topicId || !locationId) {
+      setResult({
+        ok: false,
+        message: `Select both a topic and a ${locationType}.`,
+      });
       return;
     }
     if (parsedYear === undefined) {
@@ -78,7 +92,8 @@ export function CreateResearchPageForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           topic_keyword_id: topicId,
-          region_id: regionId,
+          location_type: locationType,
+          location_id: locationId,
           year: parsedYear,
         }),
       });
@@ -125,19 +140,42 @@ export function CreateResearchPageForm({
         </select>
       </label>
 
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-slate-700">
+          Location type
+        </legend>
+        <div className="flex gap-4">
+          {(["region", "country"] as const).map((option) => (
+            <label key={option} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="location_type"
+                value={option}
+                checked={locationType === option}
+                onChange={() => handleLocationTypeChange(option)}
+                disabled={isSubmitting}
+              />
+              <span className="capitalize text-slate-700">{option}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <label className="block space-y-2">
-        <span className="text-sm font-medium text-slate-700">Region</span>
+        <span className="text-sm font-medium capitalize text-slate-700">
+          {locationType}
+        </span>
         <select
           required
-          value={regionId}
-          onChange={(e) => setRegionId(e.target.value)}
+          value={locationId}
+          onChange={(e) => setLocationId(e.target.value)}
           disabled={isSubmitting}
           className={formInputClass}
         >
-          <option value="">Select a region…</option>
-          {regions.map((region) => (
-            <option key={region.id} value={region.id}>
-              {region.name}
+          <option value="">Select a {locationType}…</option>
+          {locationOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
             </option>
           ))}
         </select>

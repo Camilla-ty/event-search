@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 
 import { TopicEditionsList } from "@/src/features/events/components/topic/TopicEditionsList";
 import { TopicHubHeader } from "@/src/features/events/components/topic/TopicHubHeader";
+import { TopicLocationLinks } from "@/src/features/events/components/topic/TopicLocationLinks";
 import { TopicSeriesList } from "@/src/features/events/components/topic/TopicSeriesList";
-import { BITCOIN_ASIA_HUB_PATH, BITCOIN_ASIA_TOPIC_SLUG } from "@/src/features/events/lib/bitcoinAsiaHub";
 import { getTopicHubData } from "@/src/features/events/server/topicHubPublic";
+import { listPublishedResearchPagesByTopicPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import { brandLinkClass } from "@/src/lib/design/classes";
 import {
   createNotFoundPageMetadata,
@@ -52,8 +53,9 @@ export default async function TopicHubPage({ params }: TopicHubPageProps) {
     notFound();
   }
 
-  const showBitcoinAsiaLink =
-    data.topic.slug.trim().toLowerCase() === BITCOIN_ASIA_TOPIC_SLUG;
+  const researchPages = await listPublishedResearchPagesByTopicPublic(
+    data.topic.slug,
+  );
 
   return (
     <section className="space-y-6">
@@ -63,18 +65,7 @@ export default async function TopicHubPage({ params }: TopicHubPageProps) {
 
       <TopicHubHeader topic={data.topic} />
 
-      {showBitcoinAsiaLink ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            By region
-          </p>
-          <p className="mt-2 text-sm text-slate-700">
-            <Link href={BITCOIN_ASIA_HUB_PATH} className={brandLinkClass}>
-              Bitcoin events in Asia →
-            </Link>
-          </p>
-        </div>
-      ) : null}
+      <TopicLocationLinks topicName={data.topic.name} pages={researchPages} />
 
       <TopicSeriesList series={data.series} />
       <TopicEditionsList editions={data.editions} />

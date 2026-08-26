@@ -107,7 +107,7 @@ Topic hubs are strategic SEO assets. Empty or unpublished topic shells, if they 
 
 Research-oriented public pages are strategic SEO assets. Exact URL inventory is product-defined; once a research URL is a published public destination, it is indexable and sitemap-eligible.
 
-**Shipped routes (IR4 MVP):** Topic × region hubs at `/events/topics/{topicSlug}/regions/{regionSlug}` and optional year-scoped `/events/topics/{topicSlug}/regions/{regionSlug}/years/{year}`. Published pages render when approved; indexability and sitemap inclusion require the research quality gate. Do **not** invent placeholder `/research` URLs in sitemap or metadata.
+**Shipped routes:** Topic × location hubs at `/events/topics/{topicSlug}/regions/{regionSlug}` and `/events/topics/{topicSlug}/countries/{countrySlug}`, each with an optional year-scoped `/years/{year}` variant, generic over any keyword and either location kind. Published pages render when approved; indexability and sitemap inclusion require the research quality gate, applied through `getTopicRegionHubIndexability` in `src/lib/seo/indexability.ts`. Do **not** invent placeholder `/research` URLs in sitemap or metadata.
 
 ### 3.6 Hubs and other public surfaces
 

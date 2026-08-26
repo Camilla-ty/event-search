@@ -14,12 +14,12 @@ import {
 const BASE = process.env.EVENT_EXPLORER_BASE_URL ?? "http://localhost:3000";
 
 const URLS = [
-  { id: "A", path: "/events?topic=bitcoin" },
-  { id: "B", path: "/events?topic=bitcoin&topic=ai" },
-  { id: "C", path: "/events?topic=bitcoin" },
+  { id: "A", path: "/events?topic=crypto-blockchain" },
+  { id: "B", path: "/events?topic=crypto-blockchain&topic=ai" },
+  { id: "C", path: "/events?topic=crypto-blockchain" },
   { id: "D", path: "/events" },
-  { id: "E", path: "/events?topic=bitcoin" },
-  { id: "B-alt-order", path: "/events?topic=ai&topic=bitcoin" },
+  { id: "E", path: "/events?topic=crypto-blockchain" },
+  { id: "B-alt-order", path: "/events?topic=ai&topic=crypto-blockchain" },
 ];
 
 async function measureUrl(id: string, path: string) {
@@ -41,22 +41,22 @@ async function measureUrl(id: string, path: string) {
 }
 
 function analyzeFilterKeys() {
-  const bitcoinAi = parseEventExplorerFiltersFromSearchParams(
-    new URLSearchParams("topic=bitcoin&topic=ai"),
+  const cryptoAi = parseEventExplorerFiltersFromSearchParams(
+    new URLSearchParams("topic=crypto-blockchain&topic=ai"),
   );
-  const aiBitcoin = parseEventExplorerFiltersFromSearchParams(
-    new URLSearchParams("topic=ai&topic=bitcoin"),
+  const aiCrypto = parseEventExplorerFiltersFromSearchParams(
+    new URLSearchParams("topic=ai&topic=crypto-blockchain"),
   );
 
-  const keyBitcoinAi = buildEventExplorerFilterKey(bitcoinAi);
-  const keyAiBitcoin = buildEventExplorerFilterKey(aiBitcoin);
+  const keyCryptoAi = buildEventExplorerFilterKey(cryptoAi);
+  const keyAiCrypto = buildEventExplorerFilterKey(aiCrypto);
 
   return {
-    bitcoinAiTopics: bitcoinAi.topics,
-    aiBitcoinTopics: aiBitcoin.topics,
-    keyBitcoinAi,
-    keyAiBitcoin,
-    keysEqual: keyBitcoinAi === keyAiBitcoin,
+    cryptoAiTopics: cryptoAi.topics,
+    aiCryptoTopics: aiCrypto.topics,
+    keyCryptoAi,
+    keyAiCrypto,
+    keysEqual: keyCryptoAi === keyAiCrypto,
   };
 }
 

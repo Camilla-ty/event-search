@@ -1,14 +1,20 @@
+import {
+  RESEARCH_PAGE_LOCATION_SEGMENT,
+  type ResearchPageLocation,
+} from "@/src/features/research-pages/lib/researchPageLocation";
+
 /**
  * Shared Research Page public URL path builder.
- * All-years: /events/topics/{topic}/regions/{region}
- * Year-scoped: /events/topics/{topic}/regions/{region}/years/{year}
+ * All-years: /events/topics/{topic}/{regions|countries}/{location}
+ * Year-scoped: /events/topics/{topic}/{regions|countries}/{location}/years/{year}
  */
 export function formatResearchPagePublicPath(
   topicSlug: string,
-  regionSlug: string,
+  location: ResearchPageLocation,
   year: number | null = null,
 ): string {
-  const base = `/events/topics/${topicSlug}/regions/${regionSlug}`;
+  const segment = RESEARCH_PAGE_LOCATION_SEGMENT[location.type];
+  const base = `/events/topics/${topicSlug}/${segment}/${location.slug}`;
   return year === null ? base : `${base}/years/${year}`;
 }
 

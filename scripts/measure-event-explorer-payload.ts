@@ -33,8 +33,8 @@ type Scenario = {
 
 const SCENARIOS: Scenario[] = [
   { label: "no filters", filters: {} },
-  { label: "topic=bitcoin", filters: { topics: ["bitcoin"] } },
-  { label: "topic=bitcoin&topic=ai", filters: { topics: ["bitcoin", "ai"] } },
+  { label: "topic=crypto-blockchain", filters: { topics: ["crypto-blockchain"] } },
+  { label: "topic=crypto-blockchain&topic=ai", filters: { topics: ["crypto-blockchain", "ai"] } },
   { label: "region=United States", filters: { regions: ["United States"] } },
   { label: "q=token", filters: { query: "token" } },
   { label: "topic=unknown-slug-xyz", filters: { topics: ["unknown-slug-xyz"] } },

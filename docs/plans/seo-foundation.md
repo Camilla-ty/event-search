@@ -27,7 +27,7 @@
 | Open Graph / Twitter URLs | Same production origin (no `*.vercel.app`) |
 | Metadata helper | `createPageMetadata` / `rootSiteMetadata` in `src/lib/metadata/site.ts` (supports `robots`) |
 | Indexability (IR1) | **Implemented** in `src/lib/seo/indexability.ts` (company/edition/series/collection/research gates); **residual:** empty topic shells (`SEO-001`) |
-| Research hubs | **Shipped** — `/events/topics/{topic}/regions/{region}` (± `/years/{year}`) with quality gate |
+| Research hubs | **Shipped** — `/events/topics/{topic}/regions/{region}` and `/events/topics/{topic}/countries/{country}` (± `/years/{year}`) with quality gate |
 | JSON-LD | **Partially implemented** — Event + BreadcrumbList on event detail; Organization on sponsor detail (`src/lib/seo/*JsonLd.ts`) |
 | Per-entity social images | Not implemented (shared wordmark) |
 | SEO health admin reporting | Not implemented |

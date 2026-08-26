@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseResearchPageLocationType } from "@/src/features/research-pages/lib/researchPageLocation";
 import {
   createResearchPageDraft,
   listResearchPagesAdmin,
@@ -21,7 +22,8 @@ export async function GET() {
 
 type CreateBody = {
   topic_keyword_id?: string;
-  region_id?: string;
+  location_type?: string;
+  location_id?: string;
   year?: number | null;
 };
 
@@ -40,11 +42,15 @@ export async function POST(request: Request) {
   }
 
   const topicKeywordId = body.topic_keyword_id?.trim() ?? "";
-  const regionId = body.region_id?.trim() ?? "";
+  const locationId = body.location_id?.trim() ?? "";
+  const locationType = parseResearchPageLocationType(body.location_type);
   const errors: string[] = [];
 
   if (!topicKeywordId) errors.push("topic_keyword_id is required");
-  if (!regionId) errors.push("region_id is required");
+  if (locationType === null) {
+    errors.push('location_type must be "region" or "country"');
+  }
+  if (!locationId) errors.push("location_id is required");
 
   let year: number | null = null;
   if (body.year !== undefined && body.year !== null) {
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (errors.length > 0) {
+  if (errors.length > 0 || locationType === null) {
     return NextResponse.json(
       { ok: false, error: errors.join("; ") },
       { status: 400 },
@@ -70,7 +76,8 @@ export async function POST(request: Request) {
   try {
     const result = await createResearchPageDraft({
       topicKeywordId,
-      regionId,
+      locationType,
+      locationId,
       year,
     });
     return NextResponse.json({ ok: true, page: result }, { status: 201 });

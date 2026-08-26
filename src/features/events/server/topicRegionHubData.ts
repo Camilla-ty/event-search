@@ -1,19 +1,19 @@
 /**
  * Generic Topic × Region hub data loader.
- * Extracted from the Bitcoin × Asia MVP loader for reuse by Admin preview.
- * The public Bitcoin × Asia page continues to use getBitcoinAsiaHubPageData,
- * which wraps this loader and enforces the indexability gate.
+ * Shared by the public hub routes, the Admin preview, and sitemap inclusion.
+ * Returns computed data regardless of the quality gate; callers decide how to
+ * treat `passesGate`.
  */
 
 import {
-  buildBitcoinAsiaHubMetaDescription,
-  buildBitcoinAsiaHubSummary,
-  buildBitcoinAsiaHubTitle,
-  formatBitcoinAsiaHubLastReviewed,
-  bitcoinAsiaHubPassesGate,
-  BITCOIN_ASIA_SPONSOR_DISPLAY_LIMIT,
-  type BitcoinAsiaHubFacts,
-} from "@/src/features/events/lib/bitcoinAsiaHub";
+  buildTopicRegionHubMetaDescription,
+  buildTopicRegionHubSummary,
+  buildTopicRegionHubTitle,
+  formatTopicRegionHubLastReviewed,
+  topicRegionHubPassesGate,
+  TOPIC_REGION_HUB_SPONSOR_DISPLAY_LIMIT,
+  type TopicRegionHubFacts,
+} from "@/src/features/events/lib/topicRegionHub";
 import { mapKeywordRow } from "@/src/features/events/server/mapKeywordRow";
 import { readSeriesIdsFromKeywordLinks } from "@/src/features/events/server/topicHubPublic";
 import { formatPublicEventDateRange } from "@/src/lib/date/formatPublicEventDateRange";
@@ -27,6 +27,7 @@ import { fetchAllByIdInBatches } from "@/src/lib/supabase/fetchInBatches";
 import { createClient } from "@/src/lib/supabase/server";
 import { mapPublicLogoUrl } from "@/src/lib/storage/mapPublicLogoUrl";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
+import type { ResearchPageLocation } from "@/src/features/research-pages/lib/researchPageLocation";
 import { buildPublicCompanyRoleHref } from "@/src/lib/companies/eventBrandPublicDestinationIndex";
 import { getEventBrandPublicDestinationIndex } from "@/src/lib/companies/eventBrandPublicDestinationIndex.server";
 
@@ -66,11 +67,12 @@ export type TopicRegionHubPageData = {
   h1: string;
   eyebrow: string;
   topicName: string;
-  regionName: string;
+  locationType: ResearchPageLocation["type"];
+  locationName: string;
   summary: string | null;
   lastReviewedAt: string | null;
   lastReviewedLabel: string | null;
-  facts: BitcoinAsiaHubFacts;
+  facts: TopicRegionHubFacts;
   events: TopicRegionHubEventCard[];
   sponsors: TopicRegionHubSponsorRow[];
   totalSponsorCount: number;
@@ -92,6 +94,7 @@ type EditionRaw = {
   locationLabel: string;
   countryName: string;
   regionSlug: string | null;
+  countrySlug: string | null;
 };
 
 function readNestedRecord(raw: unknown): Record<string, unknown> | null {
@@ -149,6 +152,7 @@ function mapEditionRaw(raw: unknown): EditionRaw | null {
     }),
     countryName,
     regionSlug: readString(regions?.slug),
+    countrySlug: readString(countries?.slug),
   };
 }
 
@@ -178,17 +182,17 @@ function maxLastReviewedAt(values: readonly (string | null)[]): string | null {
 }
 
 /**
- * Generic Topic × Region hub data loader.
+ * Generic Topic × Location hub data loader, where Location is a Region or a Country.
  * Returns computed data even when the indexability gate fails.
- * Returns null only when the topic/region combination has no data at all
- * (missing keyword, no linked series, or no editions in the region).
+ * Returns null only when the topic/location combination has no data at all
+ * (missing keyword, missing location, no linked series, or no editions there).
  *
  * @param year - When set, editions are filtered at the DB with `.eq("year", year)`.
  *   When null/omitted, all years are included (existing behaviour).
  */
 export async function getTopicRegionHubPageData(
   topicSlug: string,
-  regionSlug: string,
+  location: ResearchPageLocation,
   year: number | null = null,
 ): Promise<TopicRegionHubPageData | null> {
   const supabase = await createClient();
@@ -202,14 +206,17 @@ export async function getTopicRegionHubPageData(
   const topic = mapKeywordRow(keywordResult.data);
   if (!topic) return null;
 
-  const regionResult = await supabase
-    .from("regions")
+  const locationTable = location.type === "country" ? "countries" : "regions";
+  const locationResult = await supabase
+    .from(locationTable)
     .select("id, name, slug")
-    .eq("slug", regionSlug)
+    .eq("slug", location.slug)
     .maybeSingle();
-  if (regionResult.error) throw new Error(regionResult.error.message);
-  const region = regionResult.data as { id: string; name: string; slug: string } | null;
-  if (!region) return null;
+  if (locationResult.error) throw new Error(locationResult.error.message);
+  const locationRow = locationResult.data as
+    | { id: string; name: string; slug: string }
+    | null;
+  if (!locationRow) return null;
 
   const seriesLinksResult = await supabase
     .from("event_series_keyword")
@@ -232,19 +239,23 @@ export async function getTopicRegionHubPageData(
 
   if (editionsResult.error) throw new Error(editionsResult.error.message);
 
-  const regionEditions = sortHubEditions(
+  const locationEditions = sortHubEditions(
     (editionsResult.data ?? [])
       .map(mapEditionRaw)
       .filter((edition): edition is EditionRaw => edition !== null)
-      .filter((edition) => edition.regionSlug === regionSlug),
+      .filter((edition) =>
+        location.type === "country"
+          ? edition.countrySlug === location.slug
+          : edition.regionSlug === location.slug,
+      ),
   );
 
-  if (regionEditions.length === 0) return null;
+  if (locationEditions.length === 0) return null;
 
-  const editionIds = regionEditions.map((edition) => edition.id);
+  const editionIds = locationEditions.map((edition) => edition.id);
   const sponsorCounts = await getSponsorCountsByEditionIds(editionIds);
 
-  const eventCards: TopicRegionHubEventCard[] = regionEditions.map((edition) => {
+  const eventCards: TopicRegionHubEventCard[] = locationEditions.map((edition) => {
     const sponsorCount = readSponsorCountForEdition(sponsorCounts, edition.id);
     return {
       id: edition.id,
@@ -260,13 +271,13 @@ export async function getTopicRegionHubPageData(
       seriesSlug: edition.seriesSlug,
       sponsorCount,
       lastReviewedAt: edition.last_reviewed_at,
-      lastReviewedLabel: formatBitcoinAsiaHubLastReviewed(edition.last_reviewed_at),
+      lastReviewedLabel: formatTopicRegionHubLastReviewed(edition.last_reviewed_at),
     };
   });
 
   const indexableEventCount = eventCards.filter((event) => event.sponsorCount >= 1).length;
   const seriesIdSet = new Set(
-    regionEditions.map((edition) => edition.series_id).filter((id) => id !== ""),
+    locationEditions.map((edition) => edition.series_id).filter((id) => id !== ""),
   );
   const years = eventCards
     .map((event) => event.year)
@@ -406,15 +417,15 @@ export async function getTopicRegionHubPageData(
 
   const distinctSponsorCount = sponsors.length;
 
-  const passesGate = bitcoinAsiaHubPassesGate({
+  const passesGate = topicRegionHubPassesGate({
     indexableEventCount,
     distinctSponsorCount,
   });
 
-  const regionName = region.name;
-  const facts: BitcoinAsiaHubFacts = {
+  const locationName = locationRow.name;
+  const facts: TopicRegionHubFacts = {
     topicName: topic.name,
-    regionName,
+    locationName,
     eventCount: eventCards.length,
     indexableEventCount,
     seriesCount: seriesIdSet.size,
@@ -424,30 +435,31 @@ export async function getTopicRegionHubPageData(
     distinctSponsorCount,
   };
 
-  const hubPath = formatResearchPagePublicPath(topicSlug, regionSlug, year);
+  const hubPath = formatResearchPagePublicPath(topicSlug, location, year);
   const hubLastReviewedAt = maxLastReviewedAt(
     eventCards.map((event) => event.lastReviewedAt),
   );
-  const title = buildBitcoinAsiaHubTitle(topic.name, regionName, year);
+  const title = buildTopicRegionHubTitle(topic.name, locationName, year);
   const eyebrow =
     year === null
-      ? `${topic.name} · ${regionName}`
-      : `${topic.name} · ${regionName} · ${year}`;
+      ? `${topic.name} · ${locationName}`
+      : `${topic.name} · ${locationName} · ${year}`;
 
   return {
     path: hubPath,
     title,
-    metaDescription: buildBitcoinAsiaHubMetaDescription(facts),
+    metaDescription: buildTopicRegionHubMetaDescription(facts),
     h1: title,
     eyebrow,
     topicName: topic.name,
-    regionName,
-    summary: buildBitcoinAsiaHubSummary(facts),
+    locationType: location.type,
+    locationName,
+    summary: buildTopicRegionHubSummary(facts),
     lastReviewedAt: hubLastReviewedAt,
-    lastReviewedLabel: formatBitcoinAsiaHubLastReviewed(hubLastReviewedAt),
+    lastReviewedLabel: formatTopicRegionHubLastReviewed(hubLastReviewedAt),
     facts,
     events: eventCards,
-    sponsors: sponsors.slice(0, BITCOIN_ASIA_SPONSOR_DISPLAY_LIMIT),
+    sponsors: sponsors.slice(0, TOPIC_REGION_HUB_SPONSOR_DISPLAY_LIMIT),
     totalSponsorCount: distinctSponsorCount,
     topicHubPath: `/topics/${topicSlug}`,
     passesGate,

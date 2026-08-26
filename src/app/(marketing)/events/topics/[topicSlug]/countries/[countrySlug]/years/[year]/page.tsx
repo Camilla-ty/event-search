@@ -17,14 +17,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type Params = { topicSlug: string; regionSlug: string; year: string };
+type Params = { topicSlug: string; countrySlug: string; year: string };
 
 async function loadPublishedYearPage(params: {
   topicSlug: string;
-  regionSlug: string;
+  countrySlug: string;
   year: number;
 }) {
-  const location = { type: "region" as const, slug: params.regionSlug };
+  const location = { type: "country" as const, slug: params.countrySlug };
 
   const published = await getPublishedResearchPageBySlugsPublic(
     params.topicSlug,
@@ -41,10 +41,9 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const { topicSlug, regionSlug, year: yearRaw } = await params;
+  const { topicSlug, countrySlug, year: yearRaw } = await params;
   const year = parseResearchPageYearParam(yearRaw);
-
-  const location = { type: "region" as const, slug: regionSlug };
+  const location = { type: "country" as const, slug: countrySlug };
 
   if (year === null) {
     return createNotFoundPageMetadata(
@@ -52,7 +51,7 @@ export async function generateMetadata({
     );
   }
 
-  const data = await loadPublishedYearPage({ topicSlug, regionSlug, year });
+  const data = await loadPublishedYearPage({ topicSlug, countrySlug, year });
   if (!data) {
     return createNotFoundPageMetadata(
       formatResearchPagePublicPath(topicSlug, location, year),
@@ -69,18 +68,18 @@ export async function generateMetadata({
   });
 }
 
-export default async function TopicRegionYearHubPage({
+export default async function TopicCountryYearHubPage({
   params,
 }: {
   params: Promise<Params>;
 }) {
-  const { topicSlug, regionSlug, year: yearRaw } = await params;
+  const { topicSlug, countrySlug, year: yearRaw } = await params;
   const year = parseResearchPageYearParam(yearRaw);
   if (year === null) {
     notFound();
   }
 
-  const data = await loadPublishedYearPage({ topicSlug, regionSlug, year });
+  const data = await loadPublishedYearPage({ topicSlug, countrySlug, year });
   if (!data) {
     notFound();
   }

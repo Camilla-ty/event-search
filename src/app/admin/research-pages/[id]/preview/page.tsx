@@ -22,7 +22,7 @@ export default async function AdminResearchPagePreview({
 
   const data = await getTopicRegionHubPageData(
     record.topicSlug,
-    record.regionSlug,
+    { type: record.locationType, slug: record.locationSlug },
     record.year,
   );
 
@@ -32,7 +32,7 @@ export default async function AdminResearchPagePreview({
         items={[
           { label: "Admin", href: "/admin" },
           { label: "Research Pages", href: "/admin/research-pages" },
-          { label: `${record.topicName} × ${record.regionName}` },
+          { label: `${record.topicName} × ${record.locationName}` },
           { label: "Preview" },
         ]}
       />
@@ -72,7 +72,7 @@ export default async function AdminResearchPagePreview({
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
           <p className="text-sm text-slate-500">
-            No computed data available for {record.topicName} × {record.regionName}.
+            No computed data available for {record.topicName} × {record.locationName}.
           </p>
           <p className="mt-1 text-xs text-slate-400">
             This combination has no matching events in the database.

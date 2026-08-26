@@ -1,5 +1,7 @@
 # IR4 Wireframe — Bitcoin Events in Asia
 
+> **Superseded (2026-08-26).** Retained as historical design record. See the note in `docs/plans/ir4-bitcoin-asia-mvp.md`: the hub is now generic over topic × region and the `bitcoin` keyword has been removed.
+
 **Status:** Wireframe only — no implementation  
 **Date:** 2026-07-17  
 **Related:** `docs/plans/ir4-bitcoin-asia-mvp.md`

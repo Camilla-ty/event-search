@@ -2,7 +2,7 @@ import type { EventBrandPublicProfileSeriesCandidate } from "@/src/lib/companies
 import { isEventBrandCompanyPublicProfileSoftRetired } from "@/src/lib/companies/resolvePublicCompanyDestination";
 import type { Metadata } from "next";
 
-import { bitcoinAsiaHubPassesGate } from "@/src/features/events/lib/bitcoinAsiaHub";
+import { topicRegionHubPassesGate } from "@/src/features/events/lib/topicRegionHub";
 
 /**
  * Shared IR1 public-value / indexability decisions.
@@ -134,15 +134,15 @@ export function getTopicIndexability(): IndexabilityDecision {
 }
 
 /**
- * Bitcoin × Asia hub gate (IR4 MVP).
- * Shared source of truth with route availability and sitemap inclusion:
- * uses `bitcoinAsiaHubPassesGate` (≥3 indexable events ∧ ≥5 non-restricted sponsors).
+ * Topic × Region hub gate.
+ * Shared source of truth for hub metadata robots and sitemap inclusion:
+ * uses `topicRegionHubPassesGate` (≥3 indexable events ∧ ≥5 non-restricted sponsors).
  */
-export function getBitcoinAsiaHubIndexability(input: {
+export function getTopicRegionHubIndexability(input: {
   indexableEventCount: number;
   distinctSponsorCount: number;
 }): IndexabilityDecision {
-  return bitcoinAsiaHubPassesGate(input) ? INDEXABLE : NOINDEX_FOLLOW;
+  return topicRegionHubPassesGate(input) ? INDEXABLE : NOINDEX_FOLLOW;
 }
 
 /**

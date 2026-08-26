@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { TopicRegionHubView } from "@/src/features/events/components/topic-region/TopicRegionHubView";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
 import { formatResearchPagePublicPath } from "@/src/features/research-pages/lib/formatResearchPagePublicPath";
-import { parseResearchPageYearParam } from "@/src/features/research-pages/lib/parseResearchPageYearParam";
 import { getPublishedResearchPageBySlugsPublic } from "@/src/features/research-pages/server/researchPagesPublic";
 import {
   createNotFoundPageMetadata,
@@ -17,23 +16,19 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type Params = { topicSlug: string; regionSlug: string; year: string };
+type Params = { topicSlug: string; countrySlug: string };
 
-async function loadPublishedYearPage(params: {
-  topicSlug: string;
-  regionSlug: string;
-  year: number;
-}) {
-  const location = { type: "region" as const, slug: params.regionSlug };
+async function loadPublishedPage(params: Params) {
+  const location = { type: "country" as const, slug: params.countrySlug };
 
   const published = await getPublishedResearchPageBySlugsPublic(
     params.topicSlug,
     location,
-    params.year,
+    null,
   );
   if (!published) return null;
 
-  return getTopicRegionHubPageData(params.topicSlug, location, params.year);
+  return getTopicRegionHubPageData(params.topicSlug, location, null);
 }
 
 export async function generateMetadata({
@@ -41,21 +36,15 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const { topicSlug, regionSlug, year: yearRaw } = await params;
-  const year = parseResearchPageYearParam(yearRaw);
+  const { topicSlug, countrySlug } = await params;
+  const data = await loadPublishedPage({ topicSlug, countrySlug });
 
-  const location = { type: "region" as const, slug: regionSlug };
-
-  if (year === null) {
-    return createNotFoundPageMetadata(
-      formatResearchPagePublicPath(topicSlug, location, null),
-    );
-  }
-
-  const data = await loadPublishedYearPage({ topicSlug, regionSlug, year });
   if (!data) {
     return createNotFoundPageMetadata(
-      formatResearchPagePublicPath(topicSlug, location, year),
+      formatResearchPagePublicPath(topicSlug, {
+        type: "country",
+        slug: countrySlug,
+      }),
     );
   }
 
@@ -69,18 +58,14 @@ export async function generateMetadata({
   });
 }
 
-export default async function TopicRegionYearHubPage({
+export default async function TopicCountryHubPage({
   params,
 }: {
   params: Promise<Params>;
 }) {
-  const { topicSlug, regionSlug, year: yearRaw } = await params;
-  const year = parseResearchPageYearParam(yearRaw);
-  if (year === null) {
-    notFound();
-  }
+  const { topicSlug, countrySlug } = await params;
+  const data = await loadPublishedPage({ topicSlug, countrySlug });
 
-  const data = await loadPublishedYearPage({ topicSlug, regionSlug, year });
   if (!data) {
     notFound();
   }

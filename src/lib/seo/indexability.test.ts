@@ -3,21 +3,21 @@ import { describe, it } from "node:test";
 
 import {
   eventCollectionHasFilterOrSearchParams,
-  getBitcoinAsiaHubIndexability,
   getCollectionIndexability,
   getCompanyIndexability,
   getEventEditionIndexability,
   getSeriesIndexability,
   getTopicIndexability,
+  getTopicRegionHubIndexability,
   normalizeSeriesLifecycle,
   robotsForIndexability,
   sponsorCollectionHasFilterOrSearchParams,
 } from "@/src/lib/seo/indexability";
 import { resolveMergedSeriesSuccessorWithLoader } from "@/src/lib/seo/resolveSeriesPublicAccess";
 
-describe("getBitcoinAsiaHubIndexability", () => {
+describe("getTopicRegionHubIndexability", () => {
   it("indexes when the public-value gate passes", () => {
-    const decision = getBitcoinAsiaHubIndexability({
+    const decision = getTopicRegionHubIndexability({
       indexableEventCount: 3,
       distinctSponsorCount: 5,
     });
@@ -27,7 +27,7 @@ describe("getBitcoinAsiaHubIndexability", () => {
   });
 
   it("noindexes when indexable events are below the gate", () => {
-    const decision = getBitcoinAsiaHubIndexability({
+    const decision = getTopicRegionHubIndexability({
       indexableEventCount: 2,
       distinctSponsorCount: 769,
     });
@@ -37,7 +37,7 @@ describe("getBitcoinAsiaHubIndexability", () => {
   });
 
   it("noindexes when distinct sponsors are below the gate", () => {
-    const decision = getBitcoinAsiaHubIndexability({
+    const decision = getTopicRegionHubIndexability({
       indexableEventCount: 7,
       distinctSponsorCount: 4,
     });
@@ -47,35 +47,35 @@ describe("getBitcoinAsiaHubIndexability", () => {
 
   it("uses inclusive boundary values at the gate thresholds", () => {
     assert.equal(
-      getBitcoinAsiaHubIndexability({
+      getTopicRegionHubIndexability({
         indexableEventCount: 3,
         distinctSponsorCount: 5,
       }).indexable,
       true,
     );
     assert.equal(
-      getBitcoinAsiaHubIndexability({
+      getTopicRegionHubIndexability({
         indexableEventCount: 3,
         distinctSponsorCount: 4,
       }).indexable,
       false,
     );
     assert.equal(
-      getBitcoinAsiaHubIndexability({
+      getTopicRegionHubIndexability({
         indexableEventCount: 2,
         distinctSponsorCount: 5,
       }).indexable,
       false,
     );
     assert.equal(
-      getBitcoinAsiaHubIndexability({
+      getTopicRegionHubIndexability({
         indexableEventCount: 0,
         distinctSponsorCount: 0,
       }).indexable,
       false,
     );
     assert.equal(
-      getBitcoinAsiaHubIndexability({
+      getTopicRegionHubIndexability({
         indexableEventCount: 100,
         distinctSponsorCount: 100,
       }).indexable,

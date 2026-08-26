@@ -1,20 +1,16 @@
 /**
- * Bitcoin × Asia TopicRegionHub — MVP constants and pure copy helpers.
- * Hardcoded to one hub; not a generic topic/region platform.
- * @see docs/plans/ir4-bitcoin-asia-mvp.md
+ * Topic × Region hub — quality-gate thresholds and pure copy helpers.
+ * Shared by the public hub routes, the Admin preview, and sitemap inclusion.
  */
 
-export const BITCOIN_ASIA_TOPIC_SLUG = "bitcoin";
-export const BITCOIN_ASIA_REGION_SLUG = "asia";
-export const BITCOIN_ASIA_HUB_PATH = "/events/topics/bitcoin/regions/asia";
+export const TOPIC_REGION_HUB_MIN_INDEXABLE_EVENTS = 3;
+export const TOPIC_REGION_HUB_MIN_SPONSORS = 5;
+export const TOPIC_REGION_HUB_SPONSOR_DISPLAY_LIMIT = 20;
 
-export const BITCOIN_ASIA_MIN_INDEXABLE_EVENTS = 3;
-export const BITCOIN_ASIA_MIN_SPONSORS = 5;
-export const BITCOIN_ASIA_SPONSOR_DISPLAY_LIMIT = 20;
-
-export type BitcoinAsiaHubFacts = {
+export type TopicRegionHubFacts = {
   topicName: string;
-  regionName: string;
+  /** Region or Country display name, depending on the page's location kind. */
+  locationName: string;
   eventCount: number;
   indexableEventCount: number;
   seriesCount: number;
@@ -24,13 +20,13 @@ export type BitcoinAsiaHubFacts = {
   distinctSponsorCount: number;
 };
 
-export function bitcoinAsiaHubPassesGate(input: {
+export function topicRegionHubPassesGate(input: {
   indexableEventCount: number;
   distinctSponsorCount: number;
 }): boolean {
   return (
-    input.indexableEventCount >= BITCOIN_ASIA_MIN_INDEXABLE_EVENTS &&
-    input.distinctSponsorCount >= BITCOIN_ASIA_MIN_SPONSORS
+    input.indexableEventCount >= TOPIC_REGION_HUB_MIN_INDEXABLE_EVENTS &&
+    input.distinctSponsorCount >= TOPIC_REGION_HUB_MIN_SPONSORS
   );
 }
 
@@ -55,7 +51,9 @@ export function formatYearSpan(
 }
 
 /** Four-sentence factual summary (sponsor-first). */
-export function buildBitcoinAsiaHubSummary(facts: BitcoinAsiaHubFacts): string | null {
+export function buildTopicRegionHubSummary(
+  facts: TopicRegionHubFacts,
+): string | null {
   if (facts.distinctSponsorCount < 1) return null;
 
   const yearSpan = formatYearSpan(facts.yearMin, facts.yearMax);
@@ -68,7 +66,7 @@ export function buildBitcoinAsiaHubSummary(facts: BitcoinAsiaHubFacts): string |
       : ` in ${countries}`;
 
   const sentences = [
-    `${facts.distinctSponsorCount} sponsoring companies are recorded on ${facts.topicName} events in ${facts.regionName} on EventPixels.`,
+    `${facts.distinctSponsorCount} sponsoring companies are recorded on ${facts.topicName} events in ${facts.locationName} on EventPixels.`,
     `They appear across ${facts.eventCount} ${facts.topicName} events (${yearSpan})${brandClause}.`,
     `${facts.indexableEventCount} events have public sponsor rosters.`,
     "Counts reflect EventPixels-recorded sponsorship data.",
@@ -77,26 +75,28 @@ export function buildBitcoinAsiaHubSummary(facts: BitcoinAsiaHubFacts): string |
   return sentences.join(" ");
 }
 
-export function buildBitcoinAsiaHubMetaDescription(facts: BitcoinAsiaHubFacts): string {
+export function buildTopicRegionHubMetaDescription(
+  facts: TopicRegionHubFacts,
+): string {
   const yearSpan = formatYearSpan(facts.yearMin, facts.yearMax) ?? "";
   const countries = joinCountryNames(facts.countryNames);
   const yearPart = yearSpan !== "" ? ` (${yearSpan})` : "";
   const countryPart = countries !== "" ? ` across ${countries}` : "";
 
-  return `EventPixels records ${facts.eventCount} ${facts.topicName} events in ${facts.regionName}${yearPart}${countryPart}, with ${facts.distinctSponsorCount} companies recorded as sponsors of those events.`;
+  return `EventPixels records ${facts.eventCount} ${facts.topicName} events in ${facts.locationName}${yearPart}${countryPart}, with ${facts.distinctSponsorCount} companies recorded as sponsors of those events.`;
 }
 
-export function buildBitcoinAsiaHubTitle(
+export function buildTopicRegionHubTitle(
   topicName: string,
-  regionName: string,
+  locationName: string,
   year?: number | null,
 ): string {
-  const base = `${topicName} Events in ${regionName}`;
+  const base = `${topicName} Events in ${locationName}`;
   return typeof year === "number" ? `${base} (${year})` : base;
 }
 
 /** Hub last-reviewed display: "8 July 2026". */
-export function formatBitcoinAsiaHubLastReviewed(
+export function formatTopicRegionHubLastReviewed(
   value: string | null | undefined,
 ): string | null {
   const trimmed = value?.trim() ?? "";

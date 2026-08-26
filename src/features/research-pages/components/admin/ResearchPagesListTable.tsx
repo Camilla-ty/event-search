@@ -26,7 +26,8 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
           <tr>
             <th className="px-4 py-3 font-medium">Topic</th>
-            <th className="px-4 py-3 font-medium">Region</th>
+            <th className="px-4 py-3 font-medium">Location</th>
+            <th className="px-4 py-3 font-medium">Type</th>
             <th className="px-4 py-3 font-medium">Year</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Public URL</th>
@@ -37,7 +38,7 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
         <tbody>
           {pages.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                 No research pages yet.{" "}
                 <Link
                   href="/admin/research-pages/new"
@@ -51,7 +52,7 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
             pages.map((page) => {
               const publicPath = formatResearchPagePublicPath(
                 page.topicSlug,
-                page.regionSlug,
+                { type: page.locationType, slug: page.locationSlug },
                 page.year,
               );
               // Published pages (all-years and year-scoped) are publicly linkable.
@@ -61,7 +62,10 @@ export function ResearchPagesListTable({ pages }: ResearchPagesListTableProps) {
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {page.topicName}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{page.regionName}</td>
+                  <td className="px-4 py-3 text-slate-600">{page.locationName}</td>
+                  <td className="px-4 py-3 capitalize text-slate-600">
+                    {page.locationType}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">
                     {formatResearchPageYearLabel(page.year)}
                   </td>

@@ -37,7 +37,7 @@ export function TopicRegionHubView({ data }: TopicRegionHubViewProps) {
           <li aria-hidden="true" className="text-slate-400">
             ›
           </li>
-          <li className="font-medium text-slate-900">{data.regionName}</li>
+          <li className="font-medium text-slate-900">{data.locationName}</li>
         </ol>
       </nav>
 
@@ -170,7 +170,7 @@ export function TopicRegionHubView({ data }: TopicRegionHubViewProps) {
               <tr>
                 <th className="px-4 py-3">Company</th>
                 <th className="px-4 py-3">Website</th>
-                <th className="px-4 py-3 text-right">{data.topicName} events in {data.regionName}</th>
+                <th className="px-4 py-3 text-right">{data.topicName} events in {data.locationName}</th>
                 <th className="px-4 py-3 text-right">Total recorded</th>
               </tr>
             </thead>
@@ -241,7 +241,7 @@ export function TopicRegionHubView({ data }: TopicRegionHubViewProps) {
                     )}
                     <p className="text-sm text-slate-600">{sponsor.domain ?? "—"}</p>
                     <p className="text-sm text-slate-600">
-                      {data.topicName} events in {data.regionName}: {sponsor.hubEventCount}
+                      {data.topicName} events in {data.locationName}: {sponsor.hubEventCount}
                     </p>
                     <p className="text-sm text-slate-600">
                       Total recorded: {sponsor.globalEditionCount}

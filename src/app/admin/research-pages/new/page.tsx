@@ -2,6 +2,7 @@ import { AdminBreadcrumbs } from "@/src/features/admin/components/AdminBreadcrum
 import { AdminPageHeader } from "@/src/features/admin/components/AdminPageHeader";
 import { CreateResearchPageForm } from "@/src/features/research-pages/components/admin/CreateResearchPageForm";
 import {
+  listCountryOptionsAdmin,
   listRegionOptionsAdmin,
   listTopicOptionsAdmin,
 } from "@/src/features/research-pages/server/researchPageAdmin";
@@ -9,9 +10,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function AdminCreateResearchPagePage() {
-  const [topics, regions] = await Promise.all([
+  const [topics, regions, countries] = await Promise.all([
     listTopicOptionsAdmin(),
     listRegionOptionsAdmin(),
+    listCountryOptionsAdmin(),
   ]);
 
   return (
@@ -25,9 +27,13 @@ export default async function AdminCreateResearchPagePage() {
       />
       <AdminPageHeader
         title="Create research page"
-        description="Select a Topic and Region combination. The page will be created as Draft and will not be publicly accessible until published."
+        description="Select a Topic and either a Region or a Country. The page will be created as Draft and will not be publicly accessible until published."
       />
-      <CreateResearchPageForm topics={topics} regions={regions} />
+      <CreateResearchPageForm
+        topics={topics}
+        regions={regions}
+        countries={countries}
+      />
     </section>
   );
 }

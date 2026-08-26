@@ -1,5 +1,7 @@
 # IR4 MVP — Keyword + Region Hub: Bitcoin × Asia
 
+> **Superseded (2026-08-26).** Retained as historical design record. The hub shipped and was then generalized: the Bitcoin-specific layer (`bitcoinAsiaHub.ts`, `bitcoinAsiaHubPublic.ts`, `BitcoinAsiaHubView.tsx`) was deleted, and the `bitcoin` keyword no longer exists. Topic × region hubs are now generic over the four-keyword taxonomy (`ai`, `fintech`, `healthtech`, `crypto-blockchain`) via `src/features/events/lib/topicRegionHub.ts` and `src/features/events/server/topicRegionHubData.ts`, gated on a published research page.
+
 **Status:** Design only — no implementation  
 **Date:** 2026-07-17  
 **Phase:** IR4 first ship candidate (`docs/plans/seo-implementation-roadmap.md`)  

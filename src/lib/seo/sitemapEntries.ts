@@ -6,6 +6,7 @@ import {
   getEventEditionIndexability,
   getSeriesIndexability,
   getTopicIndexability,
+  getTopicRegionHubIndexability,
   normalizeSeriesLifecycle,
 } from "@/src/lib/seo/indexability";
 import { getTopicRegionHubPageData } from "@/src/features/events/server/topicRegionHubData";
@@ -363,10 +364,11 @@ export async function fetchResearchPageSitemapEntries(): Promise<
   for (const page of published) {
     const data = await getTopicRegionHubPageData(
       page.topicSlug,
-      page.regionSlug,
+      { type: page.locationType, slug: page.locationSlug },
       page.year,
     );
-    if (!data || !data.passesGate) continue;
+    if (!data) continue;
+    if (!getTopicRegionHubIndexability(data.facts).includeInSitemap) continue;
     entries.push({ url: absoluteUrl(data.path) });
   }
   return entries;

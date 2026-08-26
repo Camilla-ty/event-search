@@ -1,3 +1,7 @@
+import type {
+  ResearchPageLocation,
+  ResearchPageLocationType,
+} from "@/src/features/research-pages/lib/researchPageLocation";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export type ResearchPageStatus = "draft" | "published";
@@ -6,8 +10,9 @@ export type ResearchPageListItem = {
   id: string;
   topicName: string;
   topicSlug: string;
-  regionName: string;
-  regionSlug: string;
+  locationType: ResearchPageLocationType;
+  locationName: string;
+  locationSlug: string;
   /** null = All years. */
   year: number | null;
   status: ResearchPageStatus;
@@ -15,15 +20,32 @@ export type ResearchPageListItem = {
   createdAt: string;
 };
 
+type EmbeddedNamed =
+  | { name: string; slug: string }
+  | { name: string; slug: string }[]
+  | null;
+
 type ResearchPageRow = {
   id: string;
   status: string;
   year: number | null;
   published_at: string | null;
   created_at: string;
-  keyword: { name: string; slug: string } | { name: string; slug: string }[] | null;
-  regions: { name: string; slug: string } | { name: string; slug: string }[] | null;
+  keyword: EmbeddedNamed;
+  regions: EmbeddedNamed;
+  countries: EmbeddedNamed;
 };
+
+const RESEARCH_PAGE_ADMIN_SELECT = `
+  id,
+  status,
+  year,
+  published_at,
+  created_at,
+  keyword:topic_keyword_id ( name, slug ),
+  regions:region_id ( name, slug ),
+  countries:country_id ( name, slug )
+`;
 
 function readEmbedded(raw: unknown): { name: string; slug: string } | null {
   if (raw === null || raw === undefined) return null;
@@ -49,16 +71,19 @@ function readYear(raw: unknown): number | null {
 
 function mapRow(raw: ResearchPageRow): ResearchPageListItem | null {
   const topic = readEmbedded(raw.keyword);
+  const country = readEmbedded(raw.countries);
   const region = readEmbedded(raw.regions);
-  if (!topic || !region) return null;
+  const location = country ?? region;
+  if (!topic || !location) return null;
   if (!isValidStatus(raw.status)) return null;
 
   return {
     id: raw.id,
     topicName: topic.name,
     topicSlug: topic.slug,
-    regionName: region.name,
-    regionSlug: region.slug,
+    locationType: country ? "country" : "region",
+    locationName: location.name,
+    locationSlug: location.slug,
     year: readYear(raw.year),
     status: raw.status,
     publishedAt: raw.published_at,
@@ -70,15 +95,7 @@ export async function listResearchPagesAdmin(): Promise<ResearchPageListItem[]> 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("topic_region_research_pages")
-    .select(`
-      id,
-      status,
-      year,
-      published_at,
-      created_at,
-      keyword:topic_keyword_id ( name, slug ),
-      regions:region_id ( name, slug )
-    `)
+    .select(RESEARCH_PAGE_ADMIN_SELECT)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -93,6 +110,7 @@ export async function listResearchPagesAdmin(): Promise<ResearchPageListItem[]> 
 
 export type TopicOption = { id: string; name: string; slug: string };
 export type RegionOption = { id: string; name: string; slug: string };
+export type CountryOption = { id: string; name: string; slug: string };
 
 export async function listTopicOptionsAdmin(): Promise<TopicOption[]> {
   const supabase = createAdminClient();
@@ -124,21 +142,28 @@ export async function listRegionOptionsAdmin(): Promise<RegionOption[]> {
   }));
 }
 
+export async function listCountryOptionsAdmin(): Promise<CountryOption[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("countries")
+    .select("id, name, slug")
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    name: typeof row.name === "string" ? row.name : "",
+    slug: typeof row.slug === "string" ? row.slug : "",
+  }));
+}
+
 export async function getResearchPageById(
   id: string,
 ): Promise<ResearchPageListItem | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("topic_region_research_pages")
-    .select(`
-      id,
-      status,
-      year,
-      published_at,
-      created_at,
-      keyword:topic_keyword_id ( name, slug ),
-      regions:region_id ( name, slug )
-    `)
+    .select(RESEARCH_PAGE_ADMIN_SELECT)
     .eq("id", id)
     .maybeSingle();
 
@@ -166,38 +191,34 @@ export async function unpublishResearchPage(id: string): Promise<void> {
 }
 
 /**
- * Look up a published research page by topic+region (+ optional year).
+ * Look up a published research page by topic + location (+ optional year).
  * year = null → all-years row only (year IS NULL).
  * year = number → exact year-scoped row only.
  */
 export async function getPublishedResearchPageBySlugs(
   topicSlug: string,
-  regionSlug: string,
+  location: ResearchPageLocation,
   year: number | null = null,
 ): Promise<{ id: string } | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("topic_region_research_pages")
-    .select(`
-      id,
-      year,
-      keyword:topic_keyword_id ( name, slug ),
-      regions:region_id ( name, slug )
-    `)
+    .select(RESEARCH_PAGE_ADMIN_SELECT)
     .eq("status", "published")
     .limit(200);
 
   if (error) throw new Error(error.message);
 
   for (const row of data ?? []) {
-    const kw = readEmbedded(row.keyword as unknown);
-    const rg = readEmbedded(row.regions as unknown);
-    if (kw?.slug !== topicSlug || rg?.slug !== regionSlug) continue;
-    const rowYear = readYear(row.year);
+    const mapped = mapRow(row as unknown as ResearchPageRow);
+    if (!mapped) continue;
+    if (mapped.topicSlug !== topicSlug) continue;
+    if (mapped.locationType !== location.type) continue;
+    if (mapped.locationSlug !== location.slug) continue;
     if (year === null) {
-      if (rowYear === null) return { id: row.id };
-    } else if (rowYear === year) {
-      return { id: row.id };
+      if (mapped.year === null) return { id: mapped.id };
+    } else if (mapped.year === year) {
+      return { id: mapped.id };
     }
   }
   return null;
@@ -205,7 +226,8 @@ export async function getPublishedResearchPageBySlugs(
 
 export async function createResearchPageDraft(input: {
   topicKeywordId: string;
-  regionId: string;
+  locationType: ResearchPageLocationType;
+  locationId: string;
   /** null or omitted = All years. */
   year?: number | null;
 }): Promise<{ id: string }> {
@@ -219,7 +241,8 @@ export async function createResearchPageDraft(input: {
     .from("topic_region_research_pages")
     .insert({
       topic_keyword_id: input.topicKeywordId,
-      region_id: input.regionId,
+      region_id: input.locationType === "region" ? input.locationId : null,
+      country_id: input.locationType === "country" ? input.locationId : null,
       year,
       status: "draft",
     })
@@ -228,10 +251,11 @@ export async function createResearchPageDraft(input: {
 
   if (error) {
     if (error.code === "23505") {
+      const label = input.locationType === "country" ? "Country" : "Region";
       throw new Error(
         year === null
-          ? "This Topic × Region combination already exists."
-          : `This Topic × Region × ${year} combination already exists.`,
+          ? `This Topic × ${label} combination already exists.`
+          : `This Topic × ${label} × ${year} combination already exists.`,
       );
     }
     throw new Error(error.message);

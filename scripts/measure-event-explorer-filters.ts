@@ -32,11 +32,11 @@ type Flow = {
 };
 
 const FLOWS: Flow[] = [
-  { id: "A", label: "topic=bitcoin", topics: ["bitcoin"] },
-  { id: "B", label: "topic=bitcoin&topic=ai", topics: ["bitcoin", "ai"] },
-  { id: "C", label: "remove ai from bitcoin&ai", topics: ["bitcoin"] },
+  { id: "A", label: "topic=crypto-blockchain", topics: ["crypto-blockchain"] },
+  { id: "B", label: "topic=crypto-blockchain&topic=ai", topics: ["crypto-blockchain", "ai"] },
+  { id: "C", label: "remove ai from crypto-blockchain&ai", topics: ["crypto-blockchain"] },
   { id: "D", label: "clear all topics", topics: [] },
-  { id: "E", label: "clear then bitcoin (step 2)", topics: ["bitcoin"] },
+  { id: "E", label: "clear then crypto-blockchain (step 2)", topics: ["crypto-blockchain"] },
 ];
 
 type PhaseTimings = {
@@ -184,7 +184,7 @@ async function main() {
 
   console.log("Comparisons:");
   console.log(
-    `  C (remove ai) vs E (bitcoin after clear): total ${formatMs(c.total)} vs ${formatMs(e.total)} (delta ${formatMs(c.total - e.total)})`,
+    `  C (remove ai) vs E (crypto-blockchain after clear): total ${formatMs(c.total)} vs ${formatMs(e.total)} (delta ${formatMs(c.total - e.total)})`,
   );
   console.log(
     `  C sponsorCounts vs E sponsorCounts: ${formatMs(c.sponsorCounts)} vs ${formatMs(e.sponsorCounts)}`,
