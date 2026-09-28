@@ -171,7 +171,7 @@ describe("resolveCompanyWebsiteIdentity", () => {
     });
   });
 
-  it("treats Instagram, TikTok, and GitHub URLs as no_identity", () => {
+  it("treats Instagram, TikTok, and GitHub profile URLs as no_identity", () => {
     assert.deepEqual(resolveCompanyWebsiteIdentity("https://instagram.com/acme"), {
       status: "no_identity",
     });
@@ -220,6 +220,15 @@ describe("resolveCompanyWebsiteIdentity", () => {
       ["https://www.coinmarketcap.com/", "coinmarketcap.com"],
       ["coingecko.com", "coingecko.com"],
       ["coinmarketcap.com", "coinmarketcap.com"],
+      ["https://github.com/", "github.com"],
+      ["https://www.github.com", "github.com"],
+      ["github.com", "github.com"],
+      ["https://linkedin.com/", "linkedin.com"],
+      ["https://www.linkedin.com/", "linkedin.com"],
+      ["linkedin.com", "linkedin.com"],
+      ["https://youtube.com/", "youtube.com"],
+      ["https://www.youtube.com/", "youtube.com"],
+      ["youtube.com", "youtube.com"],
     ] as const) {
       assert.deepEqual(
         resolveCompanyWebsiteIdentity(url),
@@ -257,19 +266,19 @@ describe("resolveCompanyWebsiteIdentity", () => {
 
     assert.equal(domainFromWebsite("https://www.coingecko.com/"), "coingecko.com");
     assert.equal(domainFromWebsite("https://coinmarketcap.com/"), "coinmarketcap.com");
+    assert.equal(domainFromWebsite("https://github.com/"), "github.com");
+    assert.equal(domainFromWebsite("https://www.linkedin.com/"), "linkedin.com");
+    assert.equal(domainFromWebsite("https://www.youtube.com/"), "youtube.com");
     assert.equal(
       domainFromWebsite("https://coinmarketcap.com/currencies/bitcoin/"),
       null,
     );
     assert.equal(domainFromWebsite("https://www.coingecko.com/en/coins/bitcoin"), null);
+    assert.equal(domainFromWebsite("https://github.com/acme"), null);
   });
 
   it("treats bare social hosts as no_identity but keeps path-aware handles", () => {
-    for (const bare of [
-      "https://x.com",
-      "https://twitter.com/",
-      "https://youtube.com/",
-    ]) {
+    for (const bare of ["https://x.com", "https://twitter.com/"]) {
       assert.deepEqual(
         resolveCompanyWebsiteIdentity(bare),
         { status: "no_identity" },
@@ -414,11 +423,8 @@ describe("resolveCompanyWebsiteIdentity", () => {
     assert.equal(normalizeCompanyIdentityFromWebsite("https://link3.to"), "");
   });
 
-  it("treats LinkedIn personal profiles and bare host as no_identity", () => {
+  it("treats LinkedIn personal profiles as no_identity", () => {
     assert.deepEqual(resolveCompanyWebsiteIdentity("https://www.linkedin.com/in/jane"), {
-      status: "no_identity",
-    });
-    assert.deepEqual(resolveCompanyWebsiteIdentity("https://linkedin.com"), {
       status: "no_identity",
     });
   });
@@ -509,6 +515,9 @@ describe("isCommunityPlatformWebsite", () => {
 
   it("does not match corporate or path-aware hosted identities", () => {
     assert.equal(isCommunityPlatformWebsite("https://acme.com"), false);
+    assert.equal(isCommunityPlatformWebsite("https://github.com/"), false);
+    assert.equal(isCommunityPlatformWebsite("https://www.linkedin.com/"), false);
+    assert.equal(isCommunityPlatformWebsite("https://www.youtube.com/"), false);
     assert.equal(
       isCommunityPlatformWebsite("https://www.linkedin.com/company/atlantic-hpc/"),
       false,
@@ -600,6 +609,9 @@ describe("classifyCompanyWebsiteTier", () => {
   it("classifies official, reference, and hosted URLs", () => {
     assert.equal(classifyCompanyWebsiteTier("https://sorare.com"), 1);
     assert.equal(classifyCompanyWebsiteTier("https://symbiogenesis.app"), 1);
+    assert.equal(classifyCompanyWebsiteTier("https://github.com/"), 1);
+    assert.equal(classifyCompanyWebsiteTier("https://www.linkedin.com/"), 1);
+    assert.equal(classifyCompanyWebsiteTier("https://www.youtube.com/"), 1);
     assert.equal(
       classifyCompanyWebsiteTier("https://www.linkedin.com/company/acme-startup/"),
       2,

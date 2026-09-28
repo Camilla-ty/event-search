@@ -145,7 +145,8 @@ When both Tier 2 directory and Tier 3 hosted URLs exist, prefer **Tier 3** if it
 | Rule | Policy |
 |------|--------|
 | Derived from canonical URL | `companies.domain` is computed from `companies.website` via identity resolution — not independently invented. |
-| No bare shared hosts | Never use a bare multi-tenant hostname (e.g. `crunchbase.com`, `coinmarketcap.com`, `discord.com`) as an identity key. |
+| No bare shared hosts | Never use a bare multi-tenant hostname (e.g. `crunchbase.com`, `discord.com`) as an identity key. |
+| Platform-owner exception | Bare/root URLs on the allowlist (`github.com`, `linkedin.com`, `youtube.com`, `coingecko.com`, `coinmarketcap.com`) **are** the platform company's identity key (Tier 1). Profile, listing, and channel paths on those hosts stay `no_identity` or path-aware per host rules — they must **not** become the platform company's domain. |
 | Path-aware platforms | For allowed platforms (LinkedIn company, X handle, OpenSea collection, etc.), identity key = normalized `host/path`. |
 | `no_identity` | Directory, community, and ambiguous URLs: `companies.domain = NULL`. Matching falls back to **name / alias** (ADR-001 conservative rules). |
 | Never fuzzy | Similar domains, TLD variants, or name similarity **do not** auto-merge (ADR-001 §8). |
@@ -260,6 +261,23 @@ When both Tier 2 directory and Tier 3 hosted URLs exist, prefer **Tier 3** if it
 
 ---
 
+### 5.6 Platform-owner official site vs profile URL
+
+Bare/root URLs on GitHub, LinkedIn, and YouTube are the **platform company's** official website. Profile, company-page, and channel paths on those hosts remain other companies' web presence.
+
+| Sponsor | Website | Identity key | Notes |
+|---------|---------|--------------|-------|
+| GitHub | `https://github.com/` | `github.com` | Platform company — Tier 1 |
+| Acme | `https://github.com/acme` | `NULL` (`no_identity`) | Allowed as Acme's web presence; not GitHub Inc. |
+| LinkedIn | `https://www.linkedin.com/` | `linkedin.com` | Platform company — Tier 1 |
+| Acme | `https://www.linkedin.com/company/acme/` | `linkedin.com/company/acme` | Acme's LinkedIn profile (unchanged path-aware rule) |
+| YouTube | `https://www.youtube.com/` | `youtube.com` | Platform company — Tier 1 |
+| Acme | `https://www.youtube.com/@acme` | `youtube.com/@acme` | Acme's YouTube channel (unchanged path-aware rule) |
+
+Matching and review use the identity key. `github.com/{org}` is **not** a GitHub Inc identity and is **not** a path-aware hosted key.
+
+---
+
 ## 6. Import behavior
 
 Sponsor import uses the canonical identity policy at **validation**, **matching**, and **review** time.
@@ -285,7 +303,7 @@ No auto-accept for:
 
 * `no_identity` rows  
 * Similar domains or names  
-* Bare directory hosts  
+* Bare directory hosts **except** allowlisted platform-owner roots (`github.com`, `linkedin.com`, `youtube.com`, `coingecko.com`, `coinmarketcap.com`)
 
 ### 6.3 Review queue
 
@@ -407,6 +425,7 @@ This policy does **not**:
 | 2026-06-25 | Initial proposed policy — website tiers, selection rules, import/admin behavior, five reference examples |
 | 2026-07-23 | Facebook hosts (`facebook.com`, `fb.com`, `m.facebook.com`) always `no_identity`; LinkedIn `/company/` path keys unchanged |
 | 2026-07-23 | Company Identity Phase 1: Facebook path + `profile.php?id=` match keys; Set Primary preserves full `companies.website`; bare Facebook remains `no_identity` |
+| 2026-09-28 | Platform-owner exception: bare/root `github.com`, `linkedin.com`, and `youtube.com` are the platform company's identity key; profile/channel paths unchanged |
 
 ---
 

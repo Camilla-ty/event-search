@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { SponsorImportRow } from "./client/types";
-import { isEligibleForBulkCreateNew } from "./reviewQueueEligibility";
+import { isEligibleForBulkCreateNew, resolveRowDomain } from "./reviewQueueEligibility";
 
 function baseRow(overrides: Partial<SponsorImportRow>): SponsorImportRow {
   return {
@@ -41,5 +41,124 @@ function baseRow(overrides: Partial<SponsorImportRow>): SponsorImportRow {
 describe("isEligibleForBulkCreateNew", () => {
   it("allows create_new when website is blank but company name is present", () => {
     assert.equal(isEligibleForBulkCreateNew(baseRow({})), true);
+  });
+});
+
+describe("resolveRowDomain", () => {
+  it("shows platform-owner roots as company domains", () => {
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "GitHub",
+          normalized_company_name: "GitHub",
+          normalized_domain: "github.com",
+          normalized_website: "https://github.com/",
+          raw_website: "https://github.com/",
+        }),
+      ),
+      "github.com",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "LinkedIn",
+          normalized_company_name: "LinkedIn",
+          normalized_domain: "linkedin.com",
+          normalized_website: "https://www.linkedin.com/",
+          raw_website: "https://www.linkedin.com/",
+        }),
+      ),
+      "linkedin.com",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "YouTube",
+          normalized_company_name: "YouTube",
+          normalized_domain: "youtube.com",
+          normalized_website: "https://www.youtube.com/",
+          raw_website: "https://www.youtube.com/",
+        }),
+      ),
+      "youtube.com",
+    );
+  });
+
+  it("derives platform-owner domains from website when normalized_domain is still null", () => {
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "GitHub",
+          normalized_company_name: "GitHub",
+          normalized_domain: null,
+          normalized_website: "https://github.com/",
+          raw_website: "https://github.com/",
+        }),
+      ),
+      "github.com",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "LinkedIn",
+          normalized_company_name: "LinkedIn",
+          normalized_domain: null,
+          normalized_website: "https://www.linkedin.com/",
+          raw_website: "https://www.linkedin.com/",
+        }),
+      ),
+      "linkedin.com",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "YouTube",
+          normalized_company_name: "YouTube",
+          normalized_domain: null,
+          normalized_website: "https://www.youtube.com/",
+          raw_website: "https://www.youtube.com/",
+        }),
+      ),
+      "youtube.com",
+    );
+  });
+
+  it("does not treat profile URLs as the platform company's domain", () => {
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "Acme",
+          normalized_company_name: "Acme",
+          normalized_domain: null,
+          normalized_website: "https://github.com/acme",
+          raw_website: "https://github.com/acme",
+        }),
+      ),
+      "",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "Acme",
+          normalized_company_name: "Acme",
+          normalized_domain: "linkedin.com/company/acme",
+          normalized_website: "https://www.linkedin.com/company/acme/",
+          raw_website: "https://www.linkedin.com/company/acme/",
+        }),
+      ),
+      "linkedin.com/company/acme",
+    );
+    assert.equal(
+      resolveRowDomain(
+        baseRow({
+          raw_company_name: "Acme",
+          normalized_company_name: "Acme",
+          normalized_domain: "youtube.com/@acme",
+          normalized_website: "https://www.youtube.com/@acme",
+          raw_website: "https://www.youtube.com/@acme",
+        }),
+      ),
+      "youtube.com/@acme",
+    );
   });
 });

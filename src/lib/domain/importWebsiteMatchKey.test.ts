@@ -61,6 +61,9 @@ describe("bareNoIdentityHost", () => {
     assert.equal(bareNoIdentityHost("https://www.coingecko.com/"), null);
     assert.equal(bareNoIdentityHost("https://coingecko.com"), null);
     assert.equal(bareNoIdentityHost("https://www.coinmarketcap.com/"), null);
+    assert.equal(bareNoIdentityHost("https://github.com/"), null);
+    assert.equal(bareNoIdentityHost("https://www.linkedin.com/"), null);
+    assert.equal(bareNoIdentityHost("https://www.youtube.com/"), null);
   });
 
   it("returns the host for other bare no_identity multi-tenant URLs", () => {
@@ -99,6 +102,9 @@ describe("barePlatformOwnerRootHost", () => {
       barePlatformOwnerRootHost("https://www.coinmarketcap.com/"),
       "coinmarketcap.com",
     );
+    assert.equal(barePlatformOwnerRootHost("https://github.com/"), "github.com");
+    assert.equal(barePlatformOwnerRootHost("https://www.linkedin.com/"), "linkedin.com");
+    assert.equal(barePlatformOwnerRootHost("https://www.youtube.com/"), "youtube.com");
   });
 
   it("returns null for listing paths and unrelated hosts", () => {
@@ -112,6 +118,9 @@ describe("barePlatformOwnerRootHost", () => {
     );
     assert.equal(barePlatformOwnerRootHost("https://discord.com/"), null);
     assert.equal(barePlatformOwnerRootHost("https://acme.com/"), null);
+    assert.equal(barePlatformOwnerRootHost("https://github.com/acme"), null);
+    assert.equal(barePlatformOwnerRootHost("https://linkedin.com/company/acme"), null);
+    assert.equal(barePlatformOwnerRootHost("https://youtube.com/@acme"), null);
   });
 });
 

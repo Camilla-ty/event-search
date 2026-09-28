@@ -2,7 +2,7 @@
 
 **Status:** Approved for implementation planning  
 **Version:** v1  
-**Last updated:** 2026-06-25  
+**Last updated:** 2026-09-28
 
 Implementation scope for **Company Website Canonical Identity** per [ADR-002](./adr/ADR-002-company-website-canonical-identity.md). Compares the proposed policy against the current codebase and defines phased delivery.
 
@@ -60,7 +60,7 @@ Implementation scope for **Company Website Canonical Identity** per [ADR-002](./
 |------|---------|--------|-------|
 | **Tier 1 — Official website** | Hostname identity; prefer when known | **Already implemented** | `resolveCompanyWebsiteIdentity` → `acme.com` |
 | **Tier 2 — Social / directory / reference** | Directories → `no_identity`; LinkedIn company → path key | **Partially implemented** | Crunchbase, Wellfound, AngelList, Discord, Instagram → `no_identity` ✅. **CoinMarketCap / CoinGecko not in denylist** → incorrectly resolves to bare hostname ❌ |
-| **Tier 3 — Hosted platform** | Path-aware keys (X, YouTube, OpenSea, Mirror, substack subdomain) | **Partially implemented** | Social + marketplace paths ✅. **Mirror.xyz** not handled → collapses to `mirror.xyz` ❌. **GitHub** → `no_identity` in code (ADR example mentions GitHub org as Tier 3 home — policy/code tension) |
+| **Tier 3 — Hosted platform** | Path-aware keys (X, YouTube, OpenSea, Mirror, substack subdomain) | **Partially implemented** | Social + marketplace paths ✅. **Mirror.xyz** not handled → collapses to `mirror.xyz` ❌. **GitHub org/user paths** stay `no_identity` (locked). Bare `github.com/` is the GitHub company identity (platform-owner exception). |
 | **Priority order (researcher)** | Tier 1 > 3 > 2 > empty | **No work** | Manual researcher choice; system does not auto-rank URLs in a single row |
 
 ---
@@ -162,7 +162,7 @@ Implementation scope for **Company Website Canonical Identity** per [ADR-002](./
 |---|--------|---------|---------|----------|-------|
 | D1 | Add **token directory hosts** to `no_identity` set: `coinmarketcap.com`, `coingecko.com` (and similar aggregators per locked list) | §5.4, §4.2 | CMC resolves to `coinmarketcap.com` | `no_identity` + `community_website` warning | **Code change** |
 | D2 | Add **Mirror.xyz** rules: path-stable publication URLs → `mirror.xyz/{path}` identity **or** `no_identity` if path not stable | §5.5 | Collapses to `mirror.xyz` | Path-aware or denylist per ADR decision | **Code change** |
-| D3 | Document **GitHub org** policy: code treats all `github.com/*` as `no_identity`; ADR cites GitHub as possible Tier 3 home | §3 Tier 3 | `no_identity` | Either amend ADR to exclude GitHub as identity **or** add `github.com/{org}` path rule | **Documentation only** OR **Code change** (product decision) |
+| D3 | **GitHub org** paths stay `no_identity`; bare `github.com/` is GitHub Inc (platform-owner exception with LinkedIn/YouTube) | §3 Tier 3, §5.6 | Previously all `github.com` was `no_identity` | Locked: `github.com/{org}` is **not** identity; `https://github.com/` → `github.com` | **Done (2026-09-28)** |
 | D4 | Audit **bare marketplace host** collapse (`opensea.io` without path → hostname key) | §3 Tier 3 | Hostname-only key for bare `/` | Confirm ADR intent; may need `no_identity` for bare marketplace roots | **Code change** (if ADR confirms) |
 | D5 | Unit tests for §5 examples (Sorare, CMC, Mirror, LinkedIn) | §5 | Partial coverage in `hostedPlatformWebsite.test.ts` | Example matrix tests | **Code change** |
 
@@ -257,7 +257,7 @@ flowchart TD
 | Update `company-domain-matching-v1.md` status + Phases 7–10 | **Documentation only** | |
 | Update `sponsor-import-database-design.md` §2.5, §10 | **Documentation only** | |
 | Update `project-state.md`, `README.md` | **Documentation only** | |
-| Resolve GitHub Tier 3 policy (D3) in ADR or scope | **Documentation only** | Locked decision recorded |
+| Resolve GitHub Tier 3 policy (D3) in ADR or scope | **Done (2026-09-28)** | Locked: org/user paths `no_identity`; bare `github.com/` is GitHub Inc |
 
 ---
 
@@ -329,6 +329,11 @@ Deploy **detection (Phase 1) before backfill (Phase 4)** so new writes do not re
 - [ ] `https://sorare.com` → `domain: sorare.com`
 - [ ] `https://symbiogenesis.square-enix-games.com` → hostname key
 - [ ] `https://www.linkedin.com/company/acme/` → `linkedin.com/company/acme`
+- [ ] `https://github.com/` → `github.com` (platform owner)
+- [ ] `https://github.com/acme` → `no_identity`
+- [ ] `https://www.linkedin.com/` → `linkedin.com` (platform owner)
+- [ ] `https://www.youtube.com/` → `youtube.com` (platform owner)
+- [ ] `https://www.youtube.com/@acme` → `youtube.com/@acme`
 - [ ] `https://coinmarketcap.com/currencies/example/` → `no_identity`
 - [ ] `https://mirror.xyz/eth/0xabc...` → per locked D2 decision
 

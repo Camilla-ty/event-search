@@ -66,6 +66,36 @@ describe("resolveImportRowMatchReason", () => {
       ),
       { kind: "domain", domain: "coingecko.com" },
     );
+    assert.deepEqual(
+      resolveImportRowMatchReason(
+        baseRow({
+          match_method: "domain",
+          normalized_domain: null,
+          normalized_website: "https://github.com/",
+        }),
+      ),
+      { kind: "domain", domain: "github.com" },
+    );
+    assert.deepEqual(
+      resolveImportRowMatchReason(
+        baseRow({
+          match_method: "domain",
+          normalized_domain: null,
+          normalized_website: "https://www.linkedin.com/",
+        }),
+      ),
+      { kind: "domain", domain: "linkedin.com" },
+    );
+    assert.deepEqual(
+      resolveImportRowMatchReason(
+        baseRow({
+          match_method: "domain",
+          normalized_domain: null,
+          normalized_website: "https://www.youtube.com/",
+        }),
+      ),
+      { kind: "domain", domain: "youtube.com" },
+    );
   });
 
   it("returns website match with normalized website", () => {

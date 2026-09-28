@@ -274,9 +274,9 @@ function matchesNonIdentityPlatform(host: string, pathname: string): boolean {
 }
 
 /**
- * Bare/root URL on an allowlisted platform-owner host (CoinGecko, CoinMarketCap).
- * These hosts are otherwise always no_identity (token listing pages), but the
- * platform company itself may use the bare host as `companies.domain`.
+ * Bare/root URL on an allowlisted platform-owner host (CoinGecko, CoinMarketCap,
+ * GitHub, LinkedIn, YouTube). Listing/profile paths stay no_identity or path-aware;
+ * the platform company itself may use the bare host as `companies.domain`.
  */
 function isBarePlatformOwnerRootUrl(host: string, pathname: string): boolean {
   if (!isBarePlatformOwnerMatchHost(host)) return false;
@@ -352,8 +352,8 @@ export function resolveCompanyWebsiteIdentity(website: string): CompanyWebsiteId
     const facebookIdentity = resolveFacebookWebsiteIdentity(host, parsed);
     if (facebookIdentity) return facebookIdentity;
 
-    // Platform-owner exception: bare/root CoinGecko/CoinMarketCap URLs may be
-    // the platform company's identity key. Listing paths stay no_identity.
+    // Platform-owner exception: bare/root URLs on allowlisted hosts may be
+    // the platform company's identity key. Listing/profile paths stay no_identity.
     if (isBarePlatformOwnerRootUrl(host, parsed.pathname)) {
       return { status: "domain", domain: host };
     }

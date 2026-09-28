@@ -230,6 +230,98 @@ describe("buildImportMatchContextFromDirectory pagination regressions", () => {
     assert.equal(result.conflict_type, null);
   });
 
+  it("auto-readies bare GitHub, LinkedIn, and YouTube URLs via platform-owner fallback", async () => {
+    const cases = [
+      {
+        id: "github-id",
+        name: "GitHub",
+        domain: "github.com",
+        website: "https://github.com/",
+      },
+      {
+        id: "linkedin-id",
+        name: "LinkedIn",
+        domain: "linkedin.com",
+        website: "https://www.linkedin.com/",
+      },
+      {
+        id: "youtube-id",
+        name: "YouTube",
+        domain: "youtube.com",
+        website: "https://www.youtube.com/",
+      },
+    ] as const;
+
+    for (const owner of cases) {
+      const context = buildImportMatchContextFromDirectory(
+        [
+          {
+            id: owner.id,
+            name: owner.name,
+            domain: owner.domain,
+            website: owner.website,
+            aliases: [],
+          },
+        ],
+        [{ company_id: owner.id, domain: owner.domain }],
+      );
+
+      const result = await matchRow(
+        {
+          id: `row-${owner.domain}`,
+          status: "needs_review",
+          normalized_domain: null,
+          normalized_website: owner.website,
+          normalized_company_name: owner.name,
+          mapped_tier_rank: 1,
+          has_blocking_validation: false,
+        },
+        context,
+        new Map(),
+      );
+
+      assert.equal(result.status, "auto_ready", owner.domain);
+      assert.equal(result.match_method, "domain", owner.domain);
+      assert.equal(result.match_confidence, "high", owner.domain);
+      assert.equal(result.proposed_company_id, owner.id, owner.domain);
+      assert.equal(result.conflict_type, null, owner.domain);
+    }
+  });
+
+  it("does not auto-ready GitHub org profile URLs as the GitHub company", async () => {
+    const GITHUB_ID = "github-id";
+    const context = buildImportMatchContextFromDirectory(
+      [
+        {
+          id: GITHUB_ID,
+          name: "GitHub",
+          domain: "github.com",
+          website: "https://github.com/",
+          aliases: [],
+        },
+      ],
+      [{ company_id: GITHUB_ID, domain: "github.com" }],
+    );
+
+    const result = await matchRow(
+      {
+        id: "row-github-org",
+        status: "needs_review",
+        normalized_domain: null,
+        normalized_website: "https://github.com/acme",
+        normalized_company_name: "GitHub",
+        mapped_tier_rank: 1,
+        has_blocking_validation: false,
+      },
+      context,
+      new Map(),
+    );
+
+    assert.equal(result.status, "needs_review");
+    assert.equal(result.match_method, "exact_name");
+    assert.equal(result.proposed_company_id, GITHUB_ID);
+  });
+
   it("excludes merged tombstone company_domains from domain conflicts (Aptos)", async () => {
     const APTOS_ID = "84374a2c-45cb-4ea5-aae3-75c5af47430b";
     const MERGED_TOMBSTONE_ID = "295ba537-ec49-424d-91a7-bdbb816b15fa";

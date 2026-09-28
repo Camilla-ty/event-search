@@ -67,8 +67,9 @@ export function bareNoIdentityHost(website: string): string | null {
 }
 
 /**
- * Bare/root host for allowlisted platform-owner URLs (CoinGecko, CoinMarketCap).
- * Works whether the root resolves as domain identity or legacy no_identity.
+ * Bare/root host for allowlisted platform-owner URLs (CoinGecko, CoinMarketCap,
+ * GitHub, LinkedIn, YouTube). Works whether the root resolves as domain identity
+ * or legacy no_identity.
  */
 export function barePlatformOwnerRootHost(website: string): string | null {
   const parsed = parseWebsiteHostPath(website);

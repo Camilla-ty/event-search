@@ -873,6 +873,101 @@ describe("bare platform owner primary-domain fallback", () => {
     assert.equal(result.proposed_company_id, "cmc-id");
   });
 
+  it("auto_ready on bare GitHub, LinkedIn, and YouTube URLs with exact company name", () => {
+    const cases = [
+      {
+        id: "github-id",
+        name: "GitHub",
+        domain: "github.com",
+        website: "https://github.com/",
+      },
+      {
+        id: "linkedin-id",
+        name: "LinkedIn",
+        domain: "linkedin.com",
+        website: "https://www.linkedin.com/",
+      },
+      {
+        id: "youtube-id",
+        name: "YouTube",
+        domain: "youtube.com",
+        website: "https://www.youtube.com/",
+      },
+    ] as const;
+
+    for (const owner of cases) {
+      const result = matchImportRowIdentity(
+        {
+          normalized_domain: null,
+          normalized_website: owner.website,
+          normalized_company_name: owner.name,
+        },
+        buildImportMatchContext([
+          company({
+            id: owner.id,
+            name: owner.name,
+            domain: owner.domain,
+            website: owner.website,
+            aliases: [],
+          }),
+        ]),
+      );
+
+      assert.equal(result.status, "auto_ready", owner.domain);
+      assert.equal(result.match_method, "domain", owner.domain);
+      assert.equal(result.proposed_company_id, owner.id, owner.domain);
+    }
+  });
+
+  it("does not apply fallback to GitHub org, LinkedIn company, or YouTube channel paths", () => {
+    const cases = [
+      {
+        id: "github-id",
+        name: "GitHub",
+        domain: "github.com",
+        website: "https://github.com/",
+        rowWebsite: "https://github.com/acme",
+      },
+      {
+        id: "linkedin-id",
+        name: "LinkedIn",
+        domain: "linkedin.com",
+        website: "https://www.linkedin.com/",
+        rowWebsite: "https://linkedin.com/company/acme",
+      },
+      {
+        id: "youtube-id",
+        name: "YouTube",
+        domain: "youtube.com",
+        website: "https://www.youtube.com/",
+        rowWebsite: "https://youtube.com/@acme",
+      },
+    ] as const;
+
+    for (const owner of cases) {
+      const result = matchImportRowIdentity(
+        {
+          normalized_domain: null,
+          normalized_website: owner.rowWebsite,
+          normalized_company_name: owner.name,
+        },
+        buildImportMatchContext([
+          company({
+            id: owner.id,
+            name: owner.name,
+            domain: owner.domain,
+            website: owner.website,
+            aliases: [],
+          }),
+        ]),
+      );
+
+      assert.equal(result.status, "needs_review", owner.rowWebsite);
+      assert.equal(result.match_method, "exact_name", owner.rowWebsite);
+      assert.equal(result.proposed_company_id, owner.id, owner.rowWebsite);
+    }
+  });
+
   it("prefers normal domain matching when normalized_domain is present", () => {
     const result = matchImportRowIdentity(
       {

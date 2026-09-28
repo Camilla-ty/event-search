@@ -200,6 +200,97 @@ describe("validateRow", () => {
     assert.equal(opensea.has_blocking_validation, false);
     assert.equal(linkedin.has_blocking_validation, false);
   });
+
+  it("treats platform-owner roots as company domains and profile paths as non-owner", () => {
+    const githubOwner = validateRow({
+      id: "row-github-owner",
+      excel_row_number: 30,
+      raw_company_name: "GitHub",
+      raw_website: "https://github.com/",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const githubProfile = validateRow({
+      id: "row-github-profile",
+      excel_row_number: 31,
+      raw_company_name: "Acme",
+      raw_website: "https://github.com/acme",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const linkedinOwner = validateRow({
+      id: "row-linkedin-owner",
+      excel_row_number: 32,
+      raw_company_name: "LinkedIn",
+      raw_website: "https://www.linkedin.com/",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const linkedinProfile = validateRow({
+      id: "row-linkedin-profile",
+      excel_row_number: 33,
+      raw_company_name: "Acme",
+      raw_website: "https://www.linkedin.com/company/acme/",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const youtubeOwner = validateRow({
+      id: "row-youtube-owner",
+      excel_row_number: 34,
+      raw_company_name: "YouTube",
+      raw_website: "https://www.youtube.com/",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+    const youtubeProfile = validateRow({
+      id: "row-youtube-profile",
+      excel_row_number: 35,
+      raw_company_name: "Acme",
+      raw_website: "https://www.youtube.com/@acme",
+      raw_tier_rank: 7,
+      raw_tier_label: null,
+      status: "needs_review",
+    });
+
+    assert.equal(githubOwner.normalized_domain, "github.com");
+    assert.equal(
+      githubOwner.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+    assert.equal(githubProfile.normalized_domain, null);
+    assert.ok(
+      githubProfile.validation_issues.some(
+        (issue) => issue.type === "community_website" && issue.severity === "warning",
+      ),
+    );
+
+    assert.equal(linkedinOwner.normalized_domain, "linkedin.com");
+    assert.equal(
+      linkedinOwner.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+    assert.equal(linkedinProfile.normalized_domain, "linkedin.com/company/acme");
+    assert.equal(
+      linkedinProfile.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+
+    assert.equal(youtubeOwner.normalized_domain, "youtube.com");
+    assert.equal(
+      youtubeOwner.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+    assert.equal(youtubeProfile.normalized_domain, "youtube.com/@acme");
+    assert.equal(
+      youtubeProfile.validation_issues.some((issue) => issue.type === "community_website"),
+      false,
+    );
+  });
 });
 
 describe("assignDuplicateClusters", () => {
