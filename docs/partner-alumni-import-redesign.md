@@ -536,7 +536,6 @@ Only after sign-off may researchers re-import NFT NYC for production use (Set as
 |----------|------|
 | Partner Alumni design v2 | [partner-alumni-design.md](./partner-alumni-design.md) |
 | Phase scope (PA3′ superseded by this redesign) | [phase-partner-alumni-scope.md](./phase-partner-alumni-scope.md) |
-| Corrupt import cleanup script | [supabase/verify/nft_nyc_pa_corrupt_cleanup.sql](../supabase/verify/nft_nyc_pa_corrupt_cleanup.sql) |
 | Sponsor import (reference implementation) | `src/features/sponsor-import/` |
 | Website identity (shared) | `src/lib/domain/hostedPlatformWebsite.ts` |
 
