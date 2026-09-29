@@ -50,7 +50,7 @@ export async function createEventEdition(
     website_url: input.website_url?.trim() || null,
     city_id: input.city_id ?? null,
     venue_id: input.venue_id ?? null,
-    last_reviewed_at: null,
+    last_reviewed_at: input.last_reviewed_at ?? null,
     sponsor_note_type: input.sponsor_note_type ?? null,
   };
 

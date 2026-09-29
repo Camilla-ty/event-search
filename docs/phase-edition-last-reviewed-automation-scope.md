@@ -61,7 +61,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 
 ### 3.1 Researcher experience
 
-1. Admin creates an edition (minimum identity fields). **`last_reviewed_at` stays NULL** — the edition is cataloged, not yet “reviewed.”
+1. Admin creates an edition (minimum identity fields). **`last_reviewed_at` stays NULL unless Last reviewed is submitted** — cataloging alone is not a review.
 2. Admin curates the edition: fills profile, assigns venue, adds/edits/removes sponsors, or publishes an import batch.
 3. On each **meaningful** curation action, `last_reviewed_at` is set to **`now()`** (server timestamp, `timestamptz`).
 4. Admin may still set **Last reviewed** to a **past date** on the edition form for explicit provenance; a subsequent meaningful curation action advances the timestamp to `now()`.
@@ -78,7 +78,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 | Auto-touch value | Always `now()` at time of meaningful write (never copy form date picker on auto-touch) |
 | Manual-only save | PATCH that changes **only** `last_reviewed_at` does **not** trigger a second auto-touch |
 | No-op saves | If a save produces no actual column change, do **not** touch |
-| Creation | `last_reviewed_at = NULL` on insert; **ignore** any `last_reviewed_at` in create body for v1 (or treat as manual override only if product later allows — **out of scope for v1 auto policy**) |
+| Creation | Persist submitted `last_reviewed_at`; omitted/empty inserts `NULL`. Creation without an explicit date is not a review. |
 
 ---
 
@@ -109,7 +109,7 @@ This feature updates **one column on `event_editions`** in response to **meaning
 
 | Action | Auto-touch? | Notes |
 |--------|-------------|-------|
-| **Create edition** | ❌ | Insert with `last_reviewed_at = NULL`. Creation is cataloging, not review. |
+| **Create edition** | ❌ | Persist submitted `last_reviewed_at`, otherwise `NULL`. Creation without an explicit date is cataloging, not review. |
 | Save **name** | ✅ | Meaningful identity |
 | Save **slug** | ✅ | Meaningful identity + URL impact |
 | Save **start_date** / **end_date** | ✅ | Discovery metadata |
@@ -174,9 +174,9 @@ This feature updates **one column on `event_editions`** in response to **meaning
 
 ### 6.1 Locked rule
 
-**New editions start with `last_reviewed_at = NULL`.**
+**New editions persist a submitted Last reviewed date, or `NULL` if none is provided.**
 
-Creation — even with website, dates, city, or venue filled in — is **not** considered a review event for v1.
+Creation with website, dates, city, or venue alone is **not** treated as a review event. An explicit Last reviewed value on the create form is stored as-is.
 
 ### 6.2 Rationale
 
@@ -188,8 +188,8 @@ Creation — even with website, dates, city, or venue filled in — is **not** c
 
 | Field | On create |
 |-------|-----------|
-| `last_reviewed_at` in request body | **Ignored** for automation policy; persisted as `NULL` unless product explicitly documents manual create-time backfill in a later version |
-| After insert | `last_reviewed_at IS NULL` |
+| `last_reviewed_at` in request body | **Persisted** when provided; omitted/empty becomes `NULL` |
+| After insert | Submitted timestamp, or `NULL` when none was sent |
 
 ### 6.4 First touch triggers
 
@@ -209,7 +209,7 @@ All paths below are the v1 hook surface. Implementation must cover each **✅** 
 
 | Layer | File | Entry point |
 |-------|------|-------------|
-| Server | `src/features/events/server/createEventEdition.ts` | `createEventEdition()` — force `last_reviewed_at: null` on insert |
+| Server | `src/features/events/server/createEventEdition.ts` | `createEventEdition()` — persist `input.last_reviewed_at ?? null` |
 | Server | `src/features/events/server/createEventEdition.ts` | `updateEventEdition()` — after meaningful patch, call touch helper |
 | API | `src/app/api/admin/event-editions/route.ts` | `POST` |
 | API | `src/app/api/admin/event-editions/[id]/route.ts` | `PATCH` |
@@ -356,7 +356,7 @@ hasMeaningfulEditionPatch(before, patch): boolean
 
 | # | Steps | Expected |
 |---|-------|----------|
-| Q1 | Create edition with website, dates, city | `last_reviewed_at` IS NULL |
+| Q1 | Create edition with website, dates, city, no Last reviewed | `last_reviewed_at` IS NULL |
 | Q2 | Edit edition — change name only | `last_reviewed_at` set to ~now |
 | Q3 | Edit edition — set Last reviewed only | Date saved; no double-bump beyond submitted value |
 | Q4 | Edit edition — change name + set Last reviewed past date | `last_reviewed_at` = now (auto-touch wins) |
@@ -475,7 +475,7 @@ hasMeaningfulEditionPatch(before, patch): boolean
 | Topic | v1 value |
 |-------|----------|
 | Auto-touch timestamp | `now()` |
-| Edition create | `last_reviewed_at = NULL`; creation ≠ review |
+| Edition create | Persist submitted `last_reviewed_at`; otherwise `NULL` |
 | Profile fields that touch | name, slug, dates, website, city, venue |
 | Sponsor add/remove/tier | Touch |
 | Sponsor reorder/move | No touch |

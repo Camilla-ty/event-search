@@ -34,19 +34,23 @@ function assertNoAutoTouch(source: string, label: string): void {
 }
 
 describe("edition last reviewed manual-only wiring", () => {
-  it("createEventEdition keeps NULL review timestamp on insert", () => {
+  it("createEventEdition persists submitted last_reviewed_at and defaults missing to NULL", () => {
     const source = readSource("events/server/createEventEdition.ts");
     const body = extractFunctionBody(source, "createEventEdition");
 
-    assert.match(body, /last_reviewed_at:\s*null/);
-    assert.doesNotMatch(body, /last_reviewed_at:\s*input\.last_reviewed_at/);
+    assert.match(body, /last_reviewed_at:\s*input\.last_reviewed_at \?\? null/);
+    assert.doesNotMatch(body, /last_reviewed_at:\s*null,/);
     assertNoAutoTouch(body, "createEventEdition");
   });
 
-  it("updateEventEdition does not apply auto-review policy", () => {
+  it("updateEventEdition writes last_reviewed_at only when provided", () => {
     const source = readSource("events/server/createEventEdition.ts");
     const body = extractFunctionBody(source, "updateEventEdition");
 
+    assert.match(
+      body,
+      /if \(input\.last_reviewed_at !== undefined\) patch\.last_reviewed_at = input\.last_reviewed_at/,
+    );
     assert.match(body, /\.update\(patch\)/);
     assertNoAutoTouch(body, "updateEventEdition");
   });
@@ -61,9 +65,10 @@ describe("edition last reviewed manual-only wiring", () => {
     assertNoAutoTouch(source, "eventOrganizerAdmin");
   });
 
-  it("sponsor import publish does not auto-touch last_reviewed_at", () => {
+  it("sponsor import does not read or write last_reviewed_at", () => {
     const source = readSource("sponsor-import/server/sponsorImportAdmin.ts");
     const body = extractFunctionBody(source, "publishBatch");
+    assert.doesNotMatch(source, /last_reviewed_at/);
     assertNoAutoTouch(body, "publishBatch");
   });
 
