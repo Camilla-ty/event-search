@@ -25,7 +25,19 @@ import {
   CompanyDomainLinkError,
   ensureCompanyDomainFromImportLink,
 } from "@/src/lib/companies/linkCompanyDomainFromImport";
-import { loadMatchContext, matchRow, AUTO_READY_MATCH_METHODS } from "./matchRows";
+import {
+  loadMatchContext,
+  matchRow,
+  AUTO_READY_MATCH_METHODS,
+  type MatchableRow,
+  type MatchResult,
+} from "./matchRows";
+import {
+  isMatchingRunCurrent,
+  MATCHING_INVALIDATING_ACTION_TYPES,
+  resolveMatchClaimFailure,
+  shouldSkipMatchingBecauseAlreadyComplete,
+} from "./matchRunPolicy";
 import { materializeCompaniesChunk } from "./materializeCompanies";
 import { materializeDraftLinksChunk } from "./materializeDraft";
 import {
@@ -462,87 +474,196 @@ export async function runBatchValidation(batchId: string, actorId: string) {
   return { validated_count: validated.length };
 }
 
-export async function runBatchMatching(batchId: string, actorId: string) {
+export type RunBatchMatchingOptions = {
+  /** When true, rematch even if a completed matching_run already exists. API-only; no Review UI control. */
+  force?: boolean;
+};
+
+export type MatchingRunResult = { matched_count: number; skipped: boolean };
+
+export type RunBatchMatchingDeps = {
+  /** True when the newest matching_run is later than any mapping save or validation run. */
+  hasCurrentMatchingRun: () => Promise<boolean>;
+  latestMatchingRunAffectedCount: () => Promise<number>;
+  /** Atomic `processing_phase IS NULL -> matching` claim; true only if this caller won. */
+  claimMatchingPhase: () => Promise<boolean>;
+  readProcessingPhase: () => Promise<string | null>;
+  loadMatchableRows: () => Promise<MatchableRow[]>;
+  createMatcher: (rows: readonly MatchableRow[]) => Promise<(row: MatchableRow) => Promise<MatchResult>>;
+  /** Conditional on the row still being needs_review/auto_ready; false when 0 rows updated. */
+  updateRowIfStillMatchable: (rowId: string, result: MatchResult) => Promise<boolean>;
+  appendMatchingRunLog: (affectedCount: number) => Promise<void>;
+  clearMatchingPhase: () => Promise<void>;
+};
+
+const MATCHABLE_ROW_STATUSES = ["needs_review", "auto_ready"] as const;
+
+export async function runBatchMatchingWithDeps(
+  options: RunBatchMatchingOptions,
+  deps: RunBatchMatchingDeps,
+): Promise<MatchingRunResult> {
+  const force = options.force === true;
+
+  if (shouldSkipMatchingBecauseAlreadyComplete(force, await deps.hasCurrentMatchingRun())) {
+    return { matched_count: await deps.latestMatchingRunAffectedCount(), skipped: true };
+  }
+
+  if (!(await deps.claimMatchingPhase())) {
+    // Another request may have finished matching between the skip check and the claim.
+    if (shouldSkipMatchingBecauseAlreadyComplete(force, await deps.hasCurrentMatchingRun())) {
+      return { matched_count: await deps.latestMatchingRunAffectedCount(), skipped: true };
+    }
+
+    const phase = await deps.readProcessingPhase();
+    if (resolveMatchClaimFailure(phase) === "in_progress") {
+      throw new SponsorImportHttpError(409, "Matching is already in progress.", {
+        processing_phase: phase,
+      });
+    }
+    throw new SponsorImportHttpError(
+      409,
+      "Matching could not start. Refresh the page and try again.",
+      { processing_phase: phase },
+    );
+  }
+
+  let matched = 0;
+  try {
+    const rows = await deps.loadMatchableRows();
+    const match = await deps.createMatcher(rows);
+
+    for (const row of rows) {
+      if (row.status === "resolved" || row.status === "excluded") continue;
+
+      const result = await match(row);
+      // The row may have been resolved/excluded by a reviewer since `rows` was read.
+      if (await deps.updateRowIfStillMatchable(row.id, result)) {
+        matched += 1;
+      }
+    }
+
+    // Log before releasing the claim: while phase is still `matching`, a concurrent
+    // request cannot claim, and once released the completed run is already visible.
+    await deps.appendMatchingRunLog(matched);
+  } catch (error) {
+    try {
+      await deps.clearMatchingPhase();
+    } catch {
+      // Surface the original failure; the claim release error is secondary.
+    }
+    throw error;
+  }
+
+  await deps.clearMatchingPhase();
+  return { matched_count: matched, skipped: false };
+}
+
+export async function runBatchMatching(
+  batchId: string,
+  actorId: string,
+  options: RunBatchMatchingOptions = {},
+): Promise<MatchingRunResult> {
   const batch = await getBatchRow(batchId);
   assertBatchStatus(batch, ["review"]);
 
   const supabase = createAdminClient();
-  await supabase
-    .from("sponsor_import_batches")
-    .update({ processing_phase: "matching", updated_at: new Date().toISOString() })
-    .eq("id", batchId);
 
-  const { data: rows, error } = await supabase
-    .from("sponsor_import_rows")
-    .select(
-      "id, status, normalized_domain, normalized_website, normalized_company_name, mapped_tier_rank, has_blocking_validation",
-    )
-    .eq("batch_id", batchId);
-
-  if (error) throw new Error(error.message);
-
-  const identityRows = (rows ?? []).map((row) => ({
-    normalized_domain: row.normalized_domain as string | null,
-    normalized_website: row.normalized_website as string | null,
-    normalized_company_name: row.normalized_company_name as string | null,
-  }));
-
-  const { matchContext, liveByCompanyId } = await loadMatchContext(
-    String(batch.event_edition_id),
-    identityRows,
-  );
-
-  let matched = 0;
-  for (const row of rows ?? []) {
-    const status = String(row.status);
-    if (status === "resolved" || status === "excluded") continue;
-
-    const result = await matchRow(
-      {
+  return runBatchMatchingWithDeps(options, {
+    hasCurrentMatchingRun: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_admin_action_logs")
+        .select("action_type")
+        .eq("batch_id", batchId)
+        .in("action_type", ["matching_run", ...MATCHING_INVALIDATING_ACTION_TYPES])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return isMatchingRunCurrent(typeof data?.action_type === "string" ? data.action_type : null);
+    },
+    latestMatchingRunAffectedCount: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_admin_action_logs")
+        .select("affected_count")
+        .eq("batch_id", batchId)
+        .eq("action_type", "matching_run")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return typeof data?.affected_count === "number" ? data.affected_count : 0;
+    },
+    claimMatchingPhase: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: "matching", updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .is("processing_phase", null)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return Boolean(data);
+    },
+    readProcessingPhase: async () => (await getBatchRow(batchId)).processing_phase,
+    loadMatchableRows: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .select(
+          "id, status, normalized_domain, normalized_website, normalized_company_name, mapped_tier_rank, has_blocking_validation",
+        )
+        .eq("batch_id", batchId);
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((row) => ({
         id: String(row.id),
-        status: status as ImportRowRecord["status"],
+        status: String(row.status) as ImportRowRecord["status"],
         normalized_domain: row.normalized_domain as string | null,
         normalized_website: row.normalized_website as string | null,
         normalized_company_name: row.normalized_company_name as string | null,
         mapped_tier_rank: row.mapped_tier_rank as number | null,
         has_blocking_validation: Boolean(row.has_blocking_validation),
-      },
-      matchContext,
-      liveByCompanyId,
-    );
-
-    const { error: updateError } = await supabase
-      .from("sponsor_import_rows")
-      .update({
-        status: result.status,
-        match_method: result.match_method,
-        match_confidence: result.match_confidence,
-        proposed_company_id: result.proposed_company_id,
-        conflict_type: result.conflict_type,
-        already_on_live_sponsor_id: result.already_on_live_sponsor_id,
-        already_on_live_tier_rank: result.already_on_live_tier_rank,
-        intended_link_action: result.intended_link_action,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", row.id);
-
-    if (updateError) throw new Error(updateError.message);
-    matched += 1;
-  }
-
-  await supabase
-    .from("sponsor_import_batches")
-    .update({ processing_phase: null, updated_at: new Date().toISOString() })
-    .eq("id", batchId);
-
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "matching_run",
-    affectedCount: matched,
+      }));
+    },
+    createMatcher: async (rows) => {
+      const { matchContext, liveByCompanyId } = await loadMatchContext(
+        String(batch.event_edition_id),
+        rows,
+      );
+      return (row) => matchRow(row, matchContext, liveByCompanyId);
+    },
+    updateRowIfStillMatchable: async (rowId, result) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .update({
+          status: result.status,
+          match_method: result.match_method,
+          match_confidence: result.match_confidence,
+          proposed_company_id: result.proposed_company_id,
+          conflict_type: result.conflict_type,
+          already_on_live_sponsor_id: result.already_on_live_sponsor_id,
+          already_on_live_tier_rank: result.already_on_live_tier_rank,
+          intended_link_action: result.intended_link_action,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rowId)
+        .eq("batch_id", batchId)
+        .in("status", [...MATCHABLE_ROW_STATUSES])
+        .select("id");
+      if (error) throw new Error(error.message);
+      return (data ?? []).length > 0;
+    },
+    appendMatchingRunLog: (affectedCount) =>
+      appendActionLog({ batchId, actorId, actionType: "matching_run", affectedCount }),
+    clearMatchingPhase: async () => {
+      const { error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", "matching");
+      if (error) throw new Error(error.message);
+    },
   });
-
-  return { matched_count: matched };
 }
 
 export async function bulkAcceptDomainMatches(batchId: string, actorId: string) {

@@ -3,6 +3,10 @@ import {
   FINALIZE_IMPORT_TO_DRAFT_TIMEOUT_MS,
 } from "../importToDraftClient";
 import {
+  MATCH_FAILED_MESSAGE,
+  MATCH_TIMEOUT_MS,
+} from "../matchClient";
+import {
   MATERIALIZE_CHUNK_TIMEOUT_MS,
   MATERIALIZE_COMPANIES_FAILED_MESSAGE,
 } from "../materializeCompaniesClient";
@@ -82,11 +86,18 @@ export async function runValidation(batchId: string) {
   return parseJson<ApiOk<{ validated_count: number }>>(res);
 }
 
-export async function runMatching(batchId: string) {
-  const res = await fetch(`/api/admin/sponsor-imports/batches/${batchId}/match`, {
-    method: "POST",
-  });
-  return parseJson<ApiOk<{ matched_count: number }>>(res);
+export async function runMatching(
+  batchId: string,
+  options?: { force?: boolean },
+): Promise<ApiOk<{ matched_count: number; skipped?: boolean }> | ApiErr> {
+  return postSponsorImportJson<ApiOk<{ matched_count: number; skipped?: boolean }>>(
+    `/api/admin/sponsor-imports/batches/${batchId}/match`,
+    {
+      timeoutMs: MATCH_TIMEOUT_MS,
+      retryMessage: MATCH_FAILED_MESSAGE,
+      body: options?.force ? { force: true } : {},
+    },
+  );
 }
 
 export async function bulkAcceptDomains(batchId: string) {

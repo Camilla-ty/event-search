@@ -8,6 +8,7 @@ import { importFilterChipClass } from "@/src/lib/design/classes";
 import {
   bulkAcceptDomains,
   bulkApplyRowDecisions,
+  fetchBatch,
   fetchRows,
   importToDraft,
   materializeCompaniesChunk,
@@ -32,6 +33,7 @@ import {
   runDraftLinkMaterialization,
 } from "../../materializeDraftLinksClient";
 import { IMPORT_PROGRESS } from "../../importProgress";
+import { bootstrapReviewMatching } from "../../reviewMatchBootstrap";
 import {
   getBulkCreateNewButtonState,
   isEligibleForBulkCreateNew,
@@ -140,6 +142,8 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
   const [duplicateConfirmation, setDuplicateConfirmation] = useState(false);
   const [acceptedDomainMatchCount, setAcceptedDomainMatchCount] = useState<number | null>(null);
   const [step1DetailsOpen, setStep1DetailsOpen] = useState(false);
+  const [matchInProgress, setMatchInProgress] = useState(false);
+  const [matchAttempt, setMatchAttempt] = useState(0);
   const skipFilterReload = useRef(true);
   const bulkAcceptInFlight = useRef(false);
   const importToDraftInFlight = useRef(false);
@@ -192,21 +196,33 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
       setError(null);
       skipFilterReload.current = true;
 
-      const matched = await runMatching(batch.id);
-      if (cancelled) return;
-      if (!matched.ok) {
-        setError(matched.error);
-        setLoading(false);
-        setProgressMessage(null);
-        return;
+      try {
+        // Always load persisted rows after the match attempt. A client timeout does not
+        // mean the server stopped; idempotent /match + DB reload recovers safely.
+        const bootstrap = await bootstrapReviewMatching({
+          runMatching: () => runMatching(batch.id),
+          loadRows: () => loadRowsForFilter("needs_review"),
+          readProcessingPhase: async () => {
+            const fetched = await fetchBatch(batch.id);
+            if (!fetched.ok) throw new Error(fetched.error);
+            return fetched.batch.processing_phase;
+          },
+        });
+        if (cancelled) return;
+        setMatchInProgress(bootstrap.matchInProgress);
+        if (bootstrap.matchError && !bootstrap.matchInProgress) {
+          setError(bootstrap.matchError);
+        }
+        if (!bootstrap.rowsLoaded && !bootstrap.matchError) {
+          setError("Could not load import rows after matching.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setProgressMessage(null);
+          skipFilterReload.current = false;
+        }
       }
-
-      await loadRowsForFilter("needs_review");
-      if (cancelled) return;
-
-      setLoading(false);
-      setProgressMessage(null);
-      skipFilterReload.current = false;
     }
 
     void init();
@@ -214,7 +230,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
       cancelled = true;
       setProgressMessage(null);
     };
-  }, [batch.id, batchAlreadyDraft, loadRowsForFilter]);
+  }, [batch.id, batchAlreadyDraft, loadRowsForFilter, matchAttempt]);
 
   useEffect(() => {
     if (skipFilterReload.current) return;
@@ -266,8 +282,11 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
   const createNewSelectedCount = createNewSelectedIds.length;
   const excludeSelectedCount = excludeSelectedIds.length;
 
+  // Rows may be partially matched while the server is still writing results.
+  const reviewLocked = loading || matchInProgress;
+
   const bulkCreateNewState = getBulkCreateNewButtonState(selectedIds, rows, {
-    loading,
+    loading: reviewLocked,
     actionLoading,
   });
 
@@ -504,6 +523,26 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           </p>
         </div>
 
+        {matchInProgress && !loading ? (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          >
+            <p className="min-w-0 flex-1">
+              Company matching is still running on the server. Counts below may be incomplete,
+              so review actions are paused until matching finishes.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setMatchAttempt((attempt) => attempt + 1)}
+            >
+              Check again
+            </Button>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="rounded-md bg-slate-100 px-3 py-1">Total: {summary.total}</span>
           <span className="rounded-md bg-amber-50 px-3 py-1 text-amber-950">
@@ -569,7 +608,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
               <div className="mt-4">
                 <Button
                   onClick={() => void handleBulkAccept()}
-                  disabled={actionLoading || loading}
+                  disabled={actionLoading || reviewLocked}
                 >
                   Bulk accept domain matches ({summary.auto_ready})
                 </Button>
@@ -614,7 +653,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
             <Button
               type="button"
               size="sm"
-              disabled={loading || actionLoading}
+              disabled={reviewLocked || actionLoading}
               onClick={() => void selectAllMatchingFilter()}
             >
               Select all matching filter
@@ -777,7 +816,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  disabled={actionLoading}
+                                  disabled={actionLoading || reviewLocked}
                                   onClick={() => void handleKeepDuplicateRow(row)}
                                 >
                                   Use this row instead
@@ -786,6 +825,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
                                 <Button
                                   size="sm"
                                   variant="secondary"
+                                  disabled={reviewLocked}
                                   onClick={() => setSelectedRow(row)}
                                 >
                                   Decide
@@ -837,7 +877,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           ) : (
             <Button
               onClick={() => void handleImportToDraft()}
-              disabled={!canImportToDraft || actionLoading || loading}
+              disabled={!canImportToDraft || actionLoading || reviewLocked}
               aria-busy={importToDraftInProgress}
             >
               Import to draft →
