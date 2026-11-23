@@ -271,3 +271,84 @@ describe("materializeCompaniesChunkWithDeps", () => {
     assert.equal(store.persisted.size, 3);
   });
 });
+
+describe("materializeCompaniesChunkWithDeps — Review decisions racing the chunk", () => {
+  type RacingRow = MaterializeCompanyRow & { status: string };
+
+  /**
+   * Rows whose company write mirrors `.eq("status", "resolved").is("resolved_company_id", null)`;
+   * `duringResolve` runs while the chunk is creating the row's company, as a Review save would.
+   */
+  function racingDeps(rows: RacingRow[], duringResolve: (row: RacingRow) => void) {
+    const created: string[] = [];
+    return {
+      created,
+      deps: {
+        fetchPendingRows: async () =>
+          rows.filter((row) => row.status === "resolved" && row.resolved_company_id === null).map((row) => ({ ...row })),
+        countProgress: async () => {
+          const resolved = rows.filter((row) => row.status === "resolved");
+          return {
+            total_resolved_rows: resolved.length,
+            rows_with_company_id: resolved.filter((row) => row.resolved_company_id !== null).length,
+          };
+        },
+        persistRowCompanyId: async (rowId: string, companyId: string) => {
+          const row = rows.find((candidate) => candidate.id === rowId);
+          if (!row || row.status !== "resolved" || row.resolved_company_id !== null) return false;
+          row.resolved_company_id = companyId;
+          return true;
+        },
+        resolveCompanyIdForRow: async (row: MaterializeCompanyRow) => {
+          duringResolve(rows.find((candidate) => candidate.id === row.id)!);
+          created.push(row.id);
+          return { companyId: `company-new-${row.id}`, created: true };
+        },
+      },
+    };
+  }
+
+  it("a row switched to another company mid-chunk keeps the reviewer's company", async () => {
+    const rows: RacingRow[] = [
+      { ...makeRow({ id: "row-1", excel_row_number: 10 }), status: "resolved" },
+      { ...makeRow({ id: "row-2", excel_row_number: 20 }), status: "resolved" },
+    ];
+    const { deps } = racingDeps(rows, (row) => {
+      if (row.id === "row-1") {
+        row.decision_type = "choose_different";
+        row.resolved_company_id = "company-chosen";
+      }
+    });
+
+    const result = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0, limit: 50 }, deps);
+
+    assert.equal(rows[0]?.resolved_company_id, "company-chosen", "the Review decision is not overwritten");
+    assert.equal(rows[1]?.resolved_company_id, "company-new-row-2", "other rows still materialize");
+    assert.equal(result.conflict_count, 1);
+    assert.equal(result.materialized_count, 1);
+    assert.equal(result.done, true);
+  });
+
+  it("a row excluded mid-chunk stays excluded with no company", async () => {
+    const rows: RacingRow[] = [{ ...makeRow({ id: "row-1", excel_row_number: 10 }), status: "resolved" }];
+    const { deps } = racingDeps(rows, (row) => {
+      row.status = "excluded";
+    });
+
+    const result = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0, limit: 50 }, deps);
+
+    assert.equal(rows[0]?.status, "excluded");
+    assert.equal(rows[0]?.resolved_company_id, null);
+    assert.equal(result.conflict_count, 1);
+    assert.equal(result.materialized_count, 0);
+  });
+
+  it("callers that persist unconditionally are unaffected", async () => {
+    const store: TestStore = { rows: [makeRow({ id: "row-1", excel_row_number: 10 })], persisted: new Map(), createCalls: [] };
+
+    const result = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0, limit: 50 }, createTestDeps(store));
+
+    assert.equal(result.materialized_count, 1);
+    assert.equal(result.conflict_count, 0);
+  });
+});

@@ -6,6 +6,7 @@ import {
   type DraftLinkMaterializeRow,
   type UpsertDraftLinkForRowResult,
 } from "./materializeDraft";
+import { findDraftLinkInconsistencies } from "./sponsorImportAdmin";
 
 const BATCH_ID = "batch-1";
 const EDITION_ID = "edition-1";
@@ -41,6 +42,8 @@ type TestStore = {
   links: Map<string, DraftLinkRecord>;
   linkedRowIds: Map<string, string>;
   nextLinkId: number;
+  /** Rows a Review decision excluded; every other row is `resolved`. */
+  excluded?: Set<string>;
 };
 
 function createTestDeps(store: TestStore) {
@@ -55,12 +58,41 @@ function createTestDeps(store: TestStore) {
       const withDraftLink = store.rows.filter((row) => row.draft_link_id !== null).length;
       return { total_resolved_rows: total, rows_with_draft_link: withDraftLink };
     },
-    persistRowDraftLinkId: async (rowId: string, linkId: string) => {
-      store.linkedRowIds.set(rowId, linkId);
+    /** Mirrors `.eq("status", "resolved").is("draft_link_id", null).eq("resolved_company_id", companyId)`. */
+    persistRowDraftLinkId: async (rowId: string, linkId: string, companyId: string) => {
       const row = store.rows.find((candidate) => candidate.id === rowId);
-      if (row) {
-        row.draft_link_id = linkId;
+      if (
+        !row ||
+        store.excluded?.has(rowId) ||
+        row.draft_link_id !== null ||
+        row.resolved_company_id !== companyId
+      ) {
+        return false;
       }
+      store.linkedRowIds.set(rowId, linkId);
+      row.draft_link_id = linkId;
+      return true;
+    },
+    reconcileDraftLink: async (linkId: string) => {
+      const entry = [...store.links.entries()].find(([, link]) => link.id === linkId);
+      if (!entry) return;
+      const [companyId, link] = entry;
+      const sources = store.rows.filter(
+        (row) =>
+          row.draft_link_id === linkId &&
+          !store.excluded?.has(row.id) &&
+          row.resolved_company_id === companyId,
+      );
+      if (sources.length === 0) {
+        store.links.delete(companyId);
+        return;
+      }
+      const best = sources.reduce((top, row) =>
+        (row.mapped_tier_rank ?? 0) > (top.mapped_tier_rank ?? 0) ? row : top,
+      );
+      link.tier_rank = best.mapped_tier_rank ?? 0;
+      link.tier_label = best.mapped_tier_label;
+      link.source_import_row_id = best.id;
     },
     upsertDraftLinkForRow: async (params: {
       batchId: string;
@@ -186,11 +218,11 @@ describe("materializeDraftLinksChunkWithDeps", () => {
     const deps = createTestDeps(store);
     const failOnRowTwo = {
       ...deps,
-      persistRowDraftLinkId: async (rowId: string, linkId: string) => {
+      persistRowDraftLinkId: async (rowId: string, linkId: string, companyId: string) => {
         if (rowId === "row-2") {
           throw new Error("simulated persist failure");
         }
-        await deps.persistRowDraftLinkId(rowId, linkId);
+        return deps.persistRowDraftLinkId(rowId, linkId, companyId);
       },
     };
 
@@ -350,5 +382,140 @@ describe("materializeDraftLinksChunkWithDeps", () => {
     assert.equal(second.done, true);
     assert.equal(second.next_cursor, null);
     assert.equal(store.linkedRowIds.size, 3);
+  });
+});
+
+describe("materializeDraftLinksChunkWithDeps — Review decisions racing the chunk", () => {
+  function racingStore(rows: DraftLinkMaterializeRow[], existingLinks: DraftLinkRecord[] = []): TestStore {
+    return {
+      rows,
+      links: new Map(existingLinks.map((link) => [link.company_id, link])),
+      linkedRowIds: new Map(),
+      nextLinkId: 10,
+      excluded: new Set(),
+    };
+  }
+
+  /** Runs `review` once, between the chunk reading the rows and writing `rowId`'s link. */
+  function withReviewBeforeLinking(store: TestStore, rowId: string, review: () => void) {
+    const deps = createTestDeps(store);
+    let reviewed = false;
+    return {
+      ...deps,
+      upsertDraftLinkForRow: async (params: Parameters<typeof deps.upsertDraftLinkForRow>[0]) => {
+        const upsert = await deps.upsertDraftLinkForRow(params);
+        if (!reviewed && params.row.id === rowId) {
+          reviewed = true;
+          review();
+        }
+        return upsert;
+      },
+    };
+  }
+
+  it("a row excluded mid-chunk gets no link, and the link created for it is removed", async () => {
+    const store = racingStore([makeRow({ id: "row-1", excel_row_number: 10 })]);
+    const deps = withReviewBeforeLinking(store, "row-1", () => store.excluded!.add("row-1"));
+
+    const result = await materializeDraftLinksChunkWithDeps(BATCH_ID, EDITION_ID, { cursor: 0, limit: 50 }, deps);
+
+    assert.equal(store.rows[0]?.draft_link_id, null, "the excluded row is not linked");
+    assert.equal(store.links.size, 0, "no link is left without a source row");
+    assert.equal(result.conflict_count, 1);
+    assert.equal(result.rows_linked, 0);
+  });
+
+  it("a row whose higher tier raised a shared link is undone when it is excluded mid-chunk", async () => {
+    const store = racingStore(
+      [
+        makeRow({ id: "row-1", excel_row_number: 10, mapped_tier_rank: 2, mapped_tier_label: "Gold", draft_link_id: "link-1" }),
+        makeRow({ id: "row-2", excel_row_number: 20, mapped_tier_rank: 5, mapped_tier_label: "Platinum" }),
+      ],
+      [{ id: "link-1", company_id: "company-1", tier_rank: 2, tier_label: "Gold", source_import_row_id: "row-1" }],
+    );
+    const deps = withReviewBeforeLinking(store, "row-2", () => store.excluded!.add("row-2"));
+
+    const result = await materializeDraftLinksChunkWithDeps(BATCH_ID, EDITION_ID, { cursor: 0, limit: 50 }, deps);
+
+    const link = store.links.get("company-1");
+    assert.equal(link?.tier_rank, 2, "the link reflects only rows still pointing at it");
+    assert.equal(link?.tier_label, "Gold");
+    assert.equal(link?.source_import_row_id, "row-1");
+    assert.equal(store.rows[1]?.draft_link_id, null);
+    assert.equal(result.conflict_count, 1);
+  });
+
+  it("a row switched to another company mid-chunk is rescanned and linked to that company", async () => {
+    const store = racingStore([
+      makeRow({ id: "row-1", excel_row_number: 10 }),
+      makeRow({ id: "row-2", excel_row_number: 20, resolved_company_id: "company-2" }),
+    ]);
+    const deps = withReviewBeforeLinking(store, "row-1", () => {
+      store.rows[0]!.resolved_company_id = "company-chosen";
+    });
+
+    const first = await materializeDraftLinksChunkWithDeps(BATCH_ID, EDITION_ID, { cursor: 0, limit: 50 }, deps);
+
+    assert.equal(first.conflict_count, 1);
+    assert.equal(first.done, false);
+    assert.equal(first.next_cursor, 0, "the conflicted range is rescanned");
+    assert.equal(store.links.has("company-1"), false, "the link made for the old company is removed");
+
+    const second = await materializeDraftLinksChunkWithDeps(
+      BATCH_ID,
+      EDITION_ID,
+      { cursor: first.next_cursor ?? 0, limit: 50 },
+      deps,
+    );
+
+    assert.equal(second.done, true);
+    assert.equal(store.rows[0]?.draft_link_id, store.links.get("company-chosen")?.id);
+  });
+});
+
+describe("findDraftLinkInconsistencies — finalize-time check", () => {
+  const link = (id: string, company_id: string) => ({ id, company_id });
+  const row = (id: string, status: string, resolved_company_id: string | null, draft_link_id: string | null) => ({
+    id,
+    status,
+    resolved_company_id,
+    draft_link_id,
+  });
+
+  it("accepts links that each have a resolved source row for the same company", () => {
+    const result = findDraftLinkInconsistencies(
+      [link("link-1", "company-1"), link("link-2", "company-2")],
+      [
+        row("row-1", "resolved", "company-1", "link-1"),
+        row("row-2", "resolved", "company-1", "link-1"),
+        row("row-3", "resolved", "company-2", "link-2"),
+      ],
+    );
+
+    assert.deepEqual(result, { unbacked_link_ids: [], excluded_linked_row_ids: [] });
+  });
+
+  it("rejects a link with no source row", () => {
+    const result = findDraftLinkInconsistencies([link("link-1", "company-1")], []);
+
+    assert.deepEqual(result.unbacked_link_ids, ["link-1"]);
+  });
+
+  it("rejects a link whose only source row now resolves to another company", () => {
+    const result = findDraftLinkInconsistencies(
+      [link("link-1", "company-1")],
+      [row("row-1", "resolved", "company-other", "link-1")],
+    );
+
+    assert.deepEqual(result.unbacked_link_ids, ["link-1"]);
+  });
+
+  it("rejects an excluded row that still carries a draft link", () => {
+    const result = findDraftLinkInconsistencies(
+      [link("link-1", "company-1")],
+      [row("row-1", "resolved", "company-1", "link-1"), row("row-2", "excluded", "company-1", "link-1")],
+    );
+
+    assert.deepEqual(result, { unbacked_link_ids: [], excluded_linked_row_ids: ["row-2"] });
   });
 });

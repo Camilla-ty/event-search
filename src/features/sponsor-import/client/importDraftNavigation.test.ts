@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 
 import {
   buildImportDraftStepHref,
+  isImportToDraftStepRunning,
   shouldRedirectReviewToDraft,
   shouldShowImportToDraftButton,
   shouldSkipImportToDraftMaterialization,
@@ -120,5 +121,26 @@ describe("duplicate safety during materialization", () => {
       "utf8",
     );
     assert.match(source, /draft_link_id IS NULL|draft_link_id", null|is\("draft_link_id", null\)/);
+  });
+});
+
+describe("Import to draft button while an import step is running", () => {
+  it("treats only the two import chunk phases as a running import", () => {
+    assert.equal(isImportToDraftStepRunning("materializing_companies"), true);
+    assert.equal(isImportToDraftStepRunning("importing_to_draft"), true);
+    for (const phase of [null, "parsing", "validating", "matching"] as const) {
+      assert.equal(isImportToDraftStepRunning(phase), false, String(phase));
+    }
+  });
+
+  it("disables the Import button and passes each chunk's claim token to the next", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/features/sponsor-import/components/steps/ReviewQueueStep.tsx"),
+      "utf8",
+    );
+    assert.match(source, /const importRunningElsewhere = isImportToDraftStepRunning\(batch\.processing_phase\);/);
+    assert.match(source, /disabled=\{!canImportToDraft \|\| importRunningElsewhere \|\|/);
+    assert.match(source, /materializeCompaniesChunk\(batch\.id, \{ cursor, claim_token: claimToken \}\)/);
+    assert.match(source, /materializeDraftLinksChunk\(batch\.id, \{ cursor, claim_token: claimToken \}\)/);
   });
 });

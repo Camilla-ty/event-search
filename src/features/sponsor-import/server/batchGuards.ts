@@ -4,6 +4,7 @@ import type {
   RowSummary,
 } from "../types";
 import { SponsorImportHttpError } from "./errors";
+import { parseUtcTimestampMs } from "./matchRunPolicy";
 
 export type BatchRow = {
   id: string;
@@ -14,8 +15,12 @@ export type BatchRow = {
   updated_at?: string | null;
 };
 
-/** Orphaned import processing claims older than this may be auto-cleared when no draft links exist. */
-export const STALE_IMPORT_TO_DRAFT_MS = 5 * 60 * 1000;
+/**
+ * Orphaned import processing claims older than this may be auto-cleared. Each chunk refreshes
+ * the claim when it starts; the margin stays well above the chunk routes' 300s maxDuration, so
+ * a chunk that is still running is never judged stale.
+ */
+export const STALE_IMPORT_TO_DRAFT_MS = 10 * 60 * 1000;
 
 const STALE_RECOVERABLE_PROCESSING_PHASES = new Set([
   "importing_to_draft",
@@ -36,7 +41,31 @@ export function isStaleImportProcessingPhaseClaim(
   if (!updatedAt) {
     return true;
   }
-  return nowMs - new Date(updatedAt).getTime() >= STALE_IMPORT_TO_DRAFT_MS;
+  // `updated_at` is a zone-less UTC timestamp; parsing it as local time would age every claim
+  // by the host's UTC offset. Unparseable values are never stale.
+  const claimedAtMs = parseUtcTimestampMs(updatedAt);
+  if (Number.isNaN(claimedAtMs)) return false;
+  return nowMs - claimedAtMs >= STALE_IMPORT_TO_DRAFT_MS;
+}
+
+/**
+ * An import chunk claim not refreshed for this long can have no chunk still running: each
+ * chunk refreshes the claim when it starts, and the chunk routes' maxDuration is 300s. A
+ * request without the claim token may take it over after this (the 30s is clock-skew margin).
+ */
+export const IMPORT_CHUNK_TAKEOVER_MS = 330 * 1000;
+
+export function isAbandonedImportChunkClaim(
+  batch: Pick<BatchRow, "processing_phase" | "updated_at">,
+  nowMs: number,
+): boolean {
+  if (!batch.processing_phase || !STALE_RECOVERABLE_PROCESSING_PHASES.has(batch.processing_phase)) {
+    return false;
+  }
+  if (!batch.updated_at) return true;
+  const claimedAtMs = parseUtcTimestampMs(batch.updated_at);
+  if (Number.isNaN(claimedAtMs)) return false;
+  return nowMs - claimedAtMs >= IMPORT_CHUNK_TAKEOVER_MS;
 }
 
 export function isStaleImportToDraftClaim(
@@ -77,6 +106,75 @@ export function assertBatchStatus(batch: BatchRow, allowed: SponsorImportBatchSt
       `Batch status must be one of ${allowed.join(", ")} (current: ${batch.status}).`,
       { status: batch.status },
     );
+  }
+}
+
+/**
+ * A `parsing` claim (column mapping save) not released after this long is treated as abandoned.
+ * Mapping saves take seconds; the margin stays well above any platform request limit.
+ */
+export const STALE_PARSING_CLAIM_MS = 10 * 60 * 1000;
+
+/**
+ * A `validating` claim not released after this long is treated as abandoned. Validation has no
+ * heartbeat; it takes seconds, and the margin stays well above any platform request limit.
+ */
+export const STALE_VALIDATING_CLAIM_MS = 10 * 60 * 1000;
+
+type PhaseClaim = { processing_phase: string | null; updated_at: string | null };
+
+/** Unknown or unparseable timestamps are never stale, so a live claim is never taken over. */
+function isStaleClaimInPhase(claim: PhaseClaim, phase: string, staleAfterMs: number, nowMs: number): boolean {
+  if (claim.processing_phase !== phase || !claim.updated_at) return false;
+  const claimedAtMs = parseUtcTimestampMs(claim.updated_at);
+  if (Number.isNaN(claimedAtMs)) return false;
+  return nowMs - claimedAtMs >= staleAfterMs;
+}
+
+export function isStaleParsingClaim(claim: PhaseClaim, nowMs: number): boolean {
+  return isStaleClaimInPhase(claim, "parsing", STALE_PARSING_CLAIM_MS, nowMs);
+}
+
+export function isStaleValidatingClaim(claim: PhaseClaim, nowMs: number): boolean {
+  return isStaleClaimInPhase(claim, "validating", STALE_VALIDATING_CLAIM_MS, nowMs);
+}
+
+export const MATCHING_IN_PROGRESS_MUTATION_MESSAGE =
+  "Company matching is in progress. Wait for it to finish, then try again.";
+
+/** Review mutations would race the matcher's row writes; reject them while it holds the claim. */
+export function assertNotMatching(batch: Pick<BatchRow, "processing_phase">): void {
+  if (batch.processing_phase === "matching") {
+    throw new SponsorImportHttpError(409, MATCHING_IN_PROGRESS_MUTATION_MESSAGE, {
+      processing_phase: batch.processing_phase,
+    });
+  }
+}
+
+export const MAPPING_IN_PROGRESS_REVIEW_MESSAGE =
+  "Column mapping is being saved. Review decisions cannot change until it finishes.";
+
+export const VALIDATION_IN_PROGRESS_REVIEW_MESSAGE =
+  "Validation is in progress. Review decisions cannot change until it finishes.";
+
+export const IMPORT_IN_PROGRESS_REVIEW_MESSAGE =
+  "Import to draft is in progress. Review decisions cannot change until it finishes.";
+
+const REVIEW_BLOCKING_PHASE_MESSAGES: Record<string, string> = {
+  matching: MATCHING_IN_PROGRESS_MUTATION_MESSAGE,
+  parsing: MAPPING_IN_PROGRESS_REVIEW_MESSAGE,
+  validating: VALIDATION_IN_PROGRESS_REVIEW_MESSAGE,
+  materializing_companies: IMPORT_IN_PROGRESS_REVIEW_MESSAGE,
+  importing_to_draft: IMPORT_IN_PROGRESS_REVIEW_MESSAGE,
+};
+
+/** Review decisions would race whichever workflow is rewriting or reading the batch's rows. */
+export function assertNoActiveProcessingPhase(batch: Pick<BatchRow, "processing_phase">): void {
+  const phase = batch.processing_phase;
+  if (phase && Object.hasOwn(REVIEW_BLOCKING_PHASE_MESSAGES, phase)) {
+    throw new SponsorImportHttpError(409, REVIEW_BLOCKING_PHASE_MESSAGES[phase], {
+      processing_phase: phase,
+    });
   }
 }
 

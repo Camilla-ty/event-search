@@ -34,11 +34,15 @@ export type RunDraftLinkMaterializationResult =
 /**
  * Drive the chunked draft-link materialization endpoint to completion.
  *
- * Reuses server-side chunk/resume logic. Rows that already have draft_link_id
+ * Reuses server-side chunk/resume logic, forwarding the claim token so the server
+ * lets only this run continue the step. Rows that already have draft_link_id
  * are skipped, so a fresh retry resumes safely from where it stopped.
  */
 export async function runDraftLinkMaterialization(
-  chunkFn: (cursor: number | undefined) => Promise<MaterializeDraftLinksChunkResponse>,
+  chunkFn: (
+    cursor: number | undefined,
+    claimToken: string | undefined,
+  ) => Promise<MaterializeDraftLinksChunkResponse>,
   options?: {
     onProgress?: (progress: DraftLinkMaterializeProgress) => void;
     maxIterations?: number;
@@ -46,10 +50,11 @@ export async function runDraftLinkMaterialization(
 ): Promise<RunDraftLinkMaterializationResult> {
   const maxIterations = options?.maxIterations ?? MATERIALIZE_MAX_CHUNK_ITERATIONS;
   let cursor: number | undefined;
+  let claimToken: string | undefined;
   let last: MaterializeDraftLinksChunkResult | null = null;
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-    const response = await chunkFn(cursor);
+    const response = await chunkFn(cursor, claimToken);
     if (!response.ok) {
       return {
         ok: false,
@@ -74,6 +79,7 @@ export async function runDraftLinkMaterialization(
     }
 
     cursor = result.next_cursor ?? cursor;
+    claimToken = result.claim_token ?? undefined;
   }
 
   void last;

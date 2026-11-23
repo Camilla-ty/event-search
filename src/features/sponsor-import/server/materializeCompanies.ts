@@ -202,7 +202,12 @@ export type MaterializeCompaniesChunkDeps = {
   countProgress: (
     batchId: string,
   ) => Promise<{ total_resolved_rows: number; rows_with_company_id: number }>;
-  persistRowCompanyId: (rowId: string, companyId: string) => Promise<void>;
+  /**
+   * Only while the row is still `resolved` with no company: false if a Review decision changed
+   * it after it was read, in which case nothing is written. Callers that write unconditionally
+   * return nothing.
+   */
+  persistRowCompanyId: (rowId: string, companyId: string) => Promise<boolean | void>;
   resolveCompanyIdForRow?: (
     row: MaterializeCompanyRow,
     caches: CompanyResolutionCaches,
@@ -260,13 +265,17 @@ async function persistResolvedCompanyId(
   supabase: SupabaseClient,
   rowId: string,
   companyId: string,
-): Promise<void> {
-  const { error } = await supabase
+): Promise<boolean> {
+  const { data, error } = await supabase
     .from("sponsor_import_rows")
     .update({ resolved_company_id: companyId, updated_at: new Date().toISOString() })
-    .eq("id", rowId);
+    .eq("id", rowId)
+    .eq("status", "resolved")
+    .is("resolved_company_id", null)
+    .select("id");
 
   if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
 }
 
 function clampChunkLimit(limit: number | undefined): number {
@@ -300,6 +309,7 @@ export async function materializeCompaniesChunkWithDeps(
   let skippedCount = 0;
   let materializedCount = 0;
   let companiesCreated = 0;
+  let conflictCount = 0;
   let lastExaminedRowNumber: number | null = null;
 
   for (const row of rows) {
@@ -313,7 +323,11 @@ export async function materializeCompaniesChunkWithDeps(
     }
 
     const { companyId, created } = await resolveRow(row, caches);
-    await deps.persistRowCompanyId(row.id, companyId);
+    if ((await deps.persistRowCompanyId(row.id, companyId)) === false) {
+      // The reviewer's later decision stands; a company created for it is kept unused.
+      conflictCount += 1;
+      continue;
+    }
     materializedCount += 1;
     if (row.decision_type === "create_new" && created) {
       companiesCreated += 1;
@@ -330,8 +344,10 @@ export async function materializeCompaniesChunkWithDeps(
     companies_created: companiesCreated,
     total_resolved_rows: progress.total_resolved_rows,
     rows_with_company_id: progress.rows_with_company_id,
+    conflict_count: conflictCount,
     done,
     next_cursor: done ? null : (lastExaminedRowNumber ?? cursor),
+    claim_token: null,
   };
 }
 

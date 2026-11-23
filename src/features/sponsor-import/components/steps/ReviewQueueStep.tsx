@@ -17,6 +17,7 @@ import {
   runMatching,
 } from "../../client/api";
 import {
+  isImportToDraftStepRunning,
   shouldShowImportToDraftButton,
   shouldSkipImportToDraftMaterialization,
 } from "../../client/importDraftNavigation";
@@ -431,8 +432,8 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
       setProgressMessage(IMPORT_PROGRESS.materializingCompanies);
 
       const materialized = await runCompanyMaterialization(
-        (cursor) =>
-          materializeCompaniesChunk(batch.id, cursor === undefined ? {} : { cursor }),
+        (cursor, claimToken) =>
+          materializeCompaniesChunk(batch.id, { cursor, claim_token: claimToken }),
         {
           onProgress: (progress) =>
             setProgressMessage(materializeCompaniesProgressLabel(progress)),
@@ -444,8 +445,8 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
       }
 
       const linked = await runDraftLinkMaterialization(
-        (cursor) =>
-          materializeDraftLinksChunk(batch.id, cursor === undefined ? {} : { cursor }),
+        (cursor, claimToken) =>
+          materializeDraftLinksChunk(batch.id, { cursor, claim_token: claimToken }),
         {
           onProgress: (progress) =>
             setProgressMessage(materializeDraftLinksProgressLabel(progress)),
@@ -506,7 +507,10 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
   const pendingBulkCount =
     pendingBulk === "create_new" ? createNewSelectedCount : excludeSelectedCount;
 
-  const importStatus = importStatusMessage(summary, canImportToDraft);
+  const importRunningElsewhere = isImportToDraftStepRunning(batch.processing_phase);
+  const importStatus = importRunningElsewhere
+    ? "Import to draft is already running for this import, possibly in another window. Refresh this page in a few minutes."
+    : importStatusMessage(summary, canImportToDraft);
   const importToDraftInProgress =
     actionLoading &&
     (progressMessage?.startsWith("Creating companies") ||
@@ -530,7 +534,8 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           >
             <p className="min-w-0 flex-1">
               Company matching is still running on the server. Counts below may be incomplete,
-              so review actions are paused until matching finishes.
+              so review actions are paused until matching finishes. If matching was interrupted,
+              Check again restarts it after about 10 minutes.
             </p>
             <Button
               type="button"
@@ -866,7 +871,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           <Button
             variant="secondary"
             onClick={() => goToStep("validation")}
-            disabled={actionLoading}
+            disabled={actionLoading || reviewLocked}
           >
             Back
           </Button>
@@ -877,7 +882,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
           ) : (
             <Button
               onClick={() => void handleImportToDraft()}
-              disabled={!canImportToDraft || actionLoading || reviewLocked}
+              disabled={!canImportToDraft || importRunningElsewhere || actionLoading || reviewLocked}
               aria-busy={importToDraftInProgress}
             >
               Import to draft →

@@ -59,6 +59,24 @@ describe("runDraftLinkMaterialization", () => {
     assert.deepEqual(calls, [undefined]);
   });
 
+  it("sends no claim token first, then the token returned by the previous chunk", async () => {
+    const tokens: Array<string | undefined> = [];
+    const responses: MaterializeDraftLinksChunkResponse[] = [
+      chunk({ examined_count: 50, total_resolved_rows: 120, rows_with_draft_link: 50, done: false, next_cursor: 50, claim_token: "token-1" }),
+      chunk({ examined_count: 50, total_resolved_rows: 120, rows_with_draft_link: 100, done: false, next_cursor: 100, claim_token: "token-2" }),
+      chunk({ examined_count: 20, total_resolved_rows: 120, rows_with_draft_link: 120, done: true, claim_token: null }),
+    ];
+
+    let index = 0;
+    const result = await runDraftLinkMaterialization((_cursor, claimToken) => {
+      tokens.push(claimToken);
+      return Promise.resolve(responses[index++]);
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(tokens, [undefined, "token-1", "token-2"]);
+  });
+
   it("resumes across chunks by forwarding next_cursor", async () => {
     const calls: Array<number | undefined> = [];
     const responses: MaterializeDraftLinksChunkResponse[] = [

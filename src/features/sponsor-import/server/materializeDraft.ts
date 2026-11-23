@@ -214,7 +214,16 @@ export type MaterializeDraftLinksChunkDeps = {
   countProgress: (
     batchId: string,
   ) => Promise<{ total_resolved_rows: number; rows_with_draft_link: number }>;
-  persistRowDraftLinkId: (rowId: string, linkId: string) => Promise<void>;
+  /**
+   * Only while the row is still `resolved`, unlinked, and resolved to `companyId`: false if a
+   * Review decision changed it after it was read, in which case nothing is written.
+   */
+  persistRowDraftLinkId: (rowId: string, linkId: string, companyId: string) => Promise<boolean>;
+  /**
+   * Re-derives a link this chunk created or changed from the rows that actually point to it,
+   * deleting it if none do, so a row that conflicted leaves no trace on the draft.
+   */
+  reconcileDraftLink: (linkId: string) => Promise<void>;
   upsertDraftLinkForRow: (params: {
     batchId: string;
     eventEditionId: string;
@@ -271,6 +280,67 @@ async function countDraftLinkMaterializationProgress(
   };
 }
 
+async function persistRowDraftLinkIdIfUnchanged(
+  supabase: SupabaseClient,
+  rowId: string,
+  linkId: string,
+  companyId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("sponsor_import_rows")
+    .update({ draft_link_id: linkId, updated_at: new Date().toISOString() })
+    .eq("id", rowId)
+    .eq("status", "resolved")
+    .is("draft_link_id", null)
+    .eq("resolved_company_id", companyId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}
+
+async function reconcileDraftLinkWithRows(supabase: SupabaseClient, linkId: string): Promise<void> {
+  const { data: link, error: linkError } = await supabase
+    .from("sponsor_import_draft_links")
+    .select("id, company_id")
+    .eq("id", linkId)
+    .maybeSingle();
+  if (linkError) throw new Error(linkError.message);
+  if (!link) return;
+
+  const { data: rows, error: rowsError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id, mapped_tier_rank, mapped_tier_label")
+    .eq("draft_link_id", linkId)
+    .eq("status", "resolved")
+    .eq("resolved_company_id", String(link.company_id))
+    .order("excel_row_number", { ascending: true });
+  if (rowsError) throw new Error(rowsError.message);
+
+  let best: { id: string; tier: number; tierLabel: string | null } | null = null;
+  for (const row of rows ?? []) {
+    const tier = Number(row.mapped_tier_rank);
+    if (best === null || tier > best.tier) {
+      best = {
+        id: String(row.id),
+        tier,
+        tierLabel: typeof row.mapped_tier_label === "string" ? row.mapped_tier_label : null,
+      };
+    }
+  }
+
+  if (best === null) {
+    const { error } = await supabase.from("sponsor_import_draft_links").delete().eq("id", linkId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await updateDraftLink(supabase, linkId, {
+    tier: best.tier,
+    tierLabel: best.tierLabel,
+    sourceRowId: best.id,
+  });
+}
+
 async function persistRowDraftLinkId(
   supabase: SupabaseClient,
   rowId: string,
@@ -299,6 +369,7 @@ export async function materializeDraftLinksChunkWithDeps(
   let linksCreated = 0;
   let linksUpdated = 0;
   let rowsLinked = 0;
+  let conflictCount = 0;
   let lastExaminedRowNumber: number | null = null;
 
   for (const row of rows) {
@@ -318,7 +389,14 @@ export async function materializeDraftLinksChunkWithDeps(
       companyId,
       tier,
     });
-    await deps.persistRowDraftLinkId(row.id, upsert.linkId);
+    if (!(await deps.persistRowDraftLinkId(row.id, upsert.linkId, companyId))) {
+      // The reviewer's later decision stands: undo what this row did to the link.
+      conflictCount += 1;
+      if (upsert.linkCreated || upsert.linkUpdated) {
+        await deps.reconcileDraftLink(upsert.linkId);
+      }
+      continue;
+    }
 
     if (upsert.linkCreated) linksCreated += 1;
     if (upsert.linkUpdated) linksUpdated += 1;
@@ -336,8 +414,12 @@ export async function materializeDraftLinksChunkWithDeps(
     rows_linked: rowsLinked,
     total_resolved_rows: progress.total_resolved_rows,
     rows_with_draft_link: progress.rows_with_draft_link,
+    conflict_count: conflictCount,
     done,
-    next_cursor: done ? null : (lastExaminedRowNumber ?? cursor),
+    // A row that conflicted may still need a link (e.g. it now resolves to another company), so
+    // the next chunk rescans this range; rows linked meanwhile are filtered out.
+    next_cursor: done ? null : conflictCount > 0 ? cursor : (lastExaminedRowNumber ?? cursor),
+    claim_token: null,
   };
 }
 
@@ -352,8 +434,9 @@ export async function materializeDraftLinksChunk(
     fetchPendingRows: (id, cursor, limit) =>
       fetchPendingDraftLinkRows(supabase, id, cursor, limit),
     countProgress: (id) => countDraftLinkMaterializationProgress(supabase, id),
-    persistRowDraftLinkId: (rowId, linkId) =>
-      persistRowDraftLinkId(supabase, rowId, linkId),
+    persistRowDraftLinkId: (rowId, linkId, companyId) =>
+      persistRowDraftLinkIdIfUnchanged(supabase, rowId, linkId, companyId),
+    reconcileDraftLink: (linkId) => reconcileDraftLinkWithRows(supabase, linkId),
     upsertDraftLinkForRow: (params) =>
       upsertDraftLinkForRow(supabase, params),
   });

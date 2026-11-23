@@ -104,8 +104,12 @@ export type MaterializeCompaniesChunkResult = {
   companies_created: number;
   total_resolved_rows: number;
   rows_with_company_id: number;
+  /** Rows whose Review decision changed under the chunk; left as Review set them. */
+  conflict_count?: number;
   done: boolean;
   next_cursor: number | null;
+  /** Send with the next chunk request to continue this import step; null once it is done. */
+  claim_token?: string | null;
 };
 
 export type MaterializeDraftLinksChunkResult = {
@@ -116,6 +120,10 @@ export type MaterializeDraftLinksChunkResult = {
   rows_linked: number;
   total_resolved_rows: number;
   rows_with_draft_link: number;
+  /** Rows whose Review decision changed under the chunk; left unlinked as Review set them. */
+  conflict_count?: number;
   done: boolean;
   next_cursor: number | null;
+  /** Send with the next chunk request to continue this import step; null once it is done. */
+  claim_token?: string | null;
 };

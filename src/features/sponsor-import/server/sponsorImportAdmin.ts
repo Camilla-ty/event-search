@@ -6,6 +6,7 @@ import type {
   ImportToDraftResult,
   MaterializeCompaniesChunkResult,
   MaterializeDraftLinksChunkResult,
+  ParsedSpreadsheetRow,
   PublishResult,
   RowSummary,
   SponsorImportBatchStatus,
@@ -15,7 +16,13 @@ import { appendActionLog } from "./actionLog";
 import {
   assertBatchStatus,
   assertImportToDraftGuards,
+  assertNoActiveProcessingPhase,
+  assertNotMatching,
+  isAbandonedImportChunkClaim,
   isStaleImportProcessingPhaseClaim,
+  isStaleParsingClaim,
+  isStaleValidatingClaim,
+  MATCHING_IN_PROGRESS_MUTATION_MESSAGE,
   summarizeRows,
   type BatchRow,
   type ImportRowRecord,
@@ -33,7 +40,9 @@ import {
   type MatchResult,
 } from "./matchRows";
 import {
+  isMatchingHeartbeatDue,
   isMatchingRunCurrent,
+  isStaleMatchingClaim,
   MATCHING_INVALIDATING_ACTION_TYPES,
   resolveMatchClaimFailure,
   shouldSkipMatchingBecauseAlreadyComplete,
@@ -73,6 +82,19 @@ export type DuplicateClusterDecisionPatch = {
   patch: Record<string, unknown>;
   role: "survivor" | "excluded_sibling";
 };
+
+/** The row fields an excluded-sibling patch writes; read beforehand so the write can be undone. */
+export const DUPLICATE_SIBLING_PATCH_FIELDS = [
+  "status",
+  "decision_type",
+  "decision_source",
+  "resolved_company_id",
+  "decision_by",
+  "decision_at",
+  "decision_notes",
+  "duplicate_resolution",
+  "updated_at",
+] as const;
 
 export function buildDuplicateClusterKeepPatches(params: {
   clusterRows: readonly DuplicateClusterDecisionRow[];
@@ -320,6 +342,155 @@ export async function createBatchFromUpload(input: {
   return { batch, rowCount: rows.length };
 }
 
+export const COLUMN_MAPPING_IN_PROGRESS_MESSAGE =
+  "Column mapping is already being saved. Wait a moment, then try again.";
+
+export const VALIDATION_IN_PROGRESS_MESSAGE =
+  "Validation is in progress. Wait for it to finish, then try again.";
+
+export const IMPORT_IN_PROGRESS_MAPPING_MESSAGE =
+  "Import to draft is in progress. Column mapping cannot change until it finishes.";
+
+export const IMPORT_IN_PROGRESS_VALIDATION_MESSAGE =
+  "Import to draft is in progress. Validation cannot run until it finishes.";
+
+export const VALIDATION_SUPERSEDED_MESSAGE =
+  "Validation was interrupted by another change to this import. Run validation again.";
+
+export const MAPPING_AFTER_DRAFT_LINKS_MESSAGE =
+  "Column mapping cannot change after Import to draft has created draft links. Finish Import to draft, or discard this import and upload the file again.";
+
+export const COLUMN_MAPPING_SUPERSEDED_MESSAGE =
+  "Column mapping was interrupted by another change to this import. Save the mapping again.";
+
+/** Abandoned claims a mapping save may take over once they are stale. */
+export type StaleMappingTakeoverPhase = "parsing" | "validating";
+
+/**
+ * While `processing_phase = parsing`, the batch `updated_at` is the claim token, as for
+ * matching: only its holder may release the claim, and matching cannot claim the batch.
+ */
+export type SaveColumnMappingDeps<TBatch> = {
+  /** Atomic `processing_phase IS NULL -> parsing`; the claim token, or null if any workflow holds the batch. */
+  claimParsingPhase: () => Promise<string | null>;
+  readParsingClaim: () => Promise<{ processing_phase: string | null; updated_at: string | null }>;
+  /**
+   * Atomic takeover of an abandoned `phase` claim still holding `staleToken`, leaving the batch
+   * in `parsing`; the new token, or null.
+   */
+  takeOverStaleClaim: (phase: StaleMappingTakeoverPhase, staleToken: string) => Promise<string | null>;
+  /** Read while the claim is held, so no draft-link chunk can add links concurrently. */
+  countDraftLinks: () => Promise<number>;
+  downloadSourceFile: () => Promise<ArrayBuffer>;
+  parseRows: (buffer: ArrayBuffer) => { rows: ParsedSpreadsheetRow[]; sheetName: string | null };
+  deleteRows: () => Promise<void>;
+  insertRows: (rows: readonly ParsedSpreadsheetRow[]) => Promise<void>;
+  /**
+   * Only while `token` still holds the claim: saves the mapping and releases the claim in one
+   * update. Null if the claim was lost, in which case nothing is written.
+   */
+  saveMappingAndReleaseClaim: (
+    token: string,
+    input: { sheetName: string | null; rowCount: number },
+  ) => Promise<TBatch | null>;
+  /** Releases the claim only while `token` still holds it. */
+  releaseParsingClaim: (token: string) => Promise<void>;
+  logMappingSaved: (rowCount: number) => Promise<void>;
+  now: () => number;
+};
+
+async function claimParsingPhaseOrThrow<TBatch>(
+  deps: SaveColumnMappingDeps<TBatch>,
+): Promise<string> {
+  const token = await deps.claimParsingPhase();
+  if (token !== null) return token;
+
+  let claim = await deps.readParsingClaim();
+  const stalePhase: StaleMappingTakeoverPhase | null = isStaleParsingClaim(claim, deps.now())
+    ? "parsing"
+    : isStaleValidatingClaim(claim, deps.now())
+      ? "validating"
+      : null;
+  if (stalePhase !== null && claim.updated_at) {
+    const takenOverToken = await deps.takeOverStaleClaim(stalePhase, claim.updated_at);
+    if (takenOverToken !== null) return takenOverToken;
+    // Another request changed the batch first; report what holds it now.
+    claim = await deps.readParsingClaim();
+  }
+
+  if (claim.processing_phase === "matching") {
+    throw new SponsorImportHttpError(409, MATCHING_IN_PROGRESS_MUTATION_MESSAGE, {
+      processing_phase: claim.processing_phase,
+    });
+  }
+  if (claim.processing_phase === "parsing") {
+    throw new SponsorImportHttpError(409, COLUMN_MAPPING_IN_PROGRESS_MESSAGE, {
+      processing_phase: claim.processing_phase,
+    });
+  }
+  if (claim.processing_phase === "validating") {
+    throw new SponsorImportHttpError(409, VALIDATION_IN_PROGRESS_MESSAGE, {
+      processing_phase: claim.processing_phase,
+    });
+  }
+  if (
+    claim.processing_phase === "materializing_companies" ||
+    claim.processing_phase === "importing_to_draft"
+  ) {
+    throw new SponsorImportHttpError(409, IMPORT_IN_PROGRESS_MAPPING_MESSAGE, {
+      processing_phase: claim.processing_phase,
+    });
+  }
+  throw new SponsorImportHttpError(
+    409,
+    "Column mapping could not start. Refresh the page and try again.",
+    { processing_phase: claim.processing_phase },
+  );
+}
+
+export async function saveColumnMappingWithDeps<TBatch>(
+  deps: SaveColumnMappingDeps<TBatch>,
+): Promise<TBatch> {
+  const token = await claimParsingPhaseOrThrow(deps);
+
+  let saved: TBatch;
+  let released = false;
+  let claimLost = false;
+  try {
+    // Draft links reference the rows a mapping save would delete.
+    if ((await deps.countDraftLinks()) > 0) {
+      throw new SponsorImportHttpError(409, MAPPING_AFTER_DRAFT_LINKS_MESSAGE);
+    }
+    const buffer = await deps.downloadSourceFile();
+    const { rows, sheetName } = deps.parseRows(buffer);
+    await deps.deleteRows();
+    if (rows.length > 0) {
+      await deps.insertRows(rows);
+    }
+    const savedBatch = await deps.saveMappingAndReleaseClaim(token, { sheetName, rowCount: rows.length });
+    if (savedBatch === null) {
+      // A stale takeover gave the batch to another workflow, which may since have moved it on
+      // (e.g. finalized it to draft); this save must not write the mapping or status over it.
+      claimLost = true;
+      throw new SponsorImportHttpError(409, COLUMN_MAPPING_SUPERSEDED_MESSAGE);
+    }
+    saved = savedBatch;
+    released = true;
+    await deps.logMappingSaved(rows.length);
+  } catch (error) {
+    if (!released && !claimLost) {
+      try {
+        await deps.releaseParsingClaim(token);
+      } catch {
+        // Surface the original failure; the claim release error is secondary.
+      }
+    }
+    throw error;
+  }
+
+  return saved;
+}
+
 export async function saveColumnMapping(
   batchId: string,
   actorId: string,
@@ -328,114 +499,235 @@ export async function saveColumnMapping(
 ) {
   const batch = await getBatchRow(batchId);
   assertBatchStatus(batch, ["uploaded", "review"]);
+  assertNotMatching(batch);
 
   const supabase = createAdminClient();
-  const { data: fileData, error: downloadError } = await supabase.storage
-    .from(SPONSOR_IMPORT_BUCKET)
-    .download(batch.source_file_storage_path as string);
-
-  if (downloadError || !fileData) {
-    throw new Error(downloadError?.message ?? "Failed to download source file.");
-  }
-
-  const buffer = await fileData.arrayBuffer();
-  const { rows, sheetName } = parseWithColumnMapping(buffer, mapping);
-
-  await supabase.from("sponsor_import_rows").delete().eq("batch_id", batchId);
-
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase.from("sponsor_import_rows").insert(
-      rows.map((r) => ({
-        batch_id: batchId,
-        excel_row_number: r.excelRowNumber,
-        raw_company_name: r.rawCompanyName,
-        raw_website: r.rawWebsite,
-        raw_tier_rank: r.rawTierRank,
-        raw_tier_label: r.rawTierLabel,
-        status: "needs_review",
-        validation_issues: [],
-        has_blocking_validation: false,
-      })),
-    );
-    if (insertError) throw new Error(insertError.message);
-  }
-
   const nextStatus: SponsorImportBatchStatus = transitionToReview ? "review" : batch.status;
 
-  const { data: updated, error: updateError } = await supabase
-    .from("sponsor_import_batches")
-    .update({
-      column_mapping: mapping,
-      source_sheet_name: sheetName,
-      source_row_count: rows.length,
-      status: nextStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", batchId)
-    .select(BATCH_SELECT)
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "column_mapping_saved",
-    payload: { mapping, row_count: rows.length },
-    affectedCount: rows.length,
+  return saveColumnMappingWithDeps({
+    claimParsingPhase: async () => {
+      const token = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: "parsing", updated_at: token })
+        .eq("id", batchId)
+        .in("status", ["uploaded", "review"])
+        .is("processing_phase", null)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    readParsingClaim: async () => {
+      const current = await getBatchRow(batchId);
+      return {
+        processing_phase: current.processing_phase,
+        updated_at: typeof current.updated_at === "string" ? current.updated_at : null,
+      };
+    },
+    takeOverStaleClaim: async (phase, staleToken) => {
+      const token = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: "parsing", updated_at: token })
+        .eq("id", batchId)
+        .in("status", ["uploaded", "review"])
+        .eq("processing_phase", phase)
+        .eq("updated_at", staleToken)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    countDraftLinks: async () => {
+      const { count, error } = await supabase
+        .from("sponsor_import_draft_links")
+        .select("id", { count: "exact", head: true })
+        .eq("batch_id", batchId);
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    downloadSourceFile: async () => {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from(SPONSOR_IMPORT_BUCKET)
+        .download(batch.source_file_storage_path as string);
+      if (downloadError || !fileData) {
+        throw new Error(downloadError?.message ?? "Failed to download source file.");
+      }
+      return fileData.arrayBuffer();
+    },
+    parseRows: (buffer) => parseWithColumnMapping(buffer, mapping),
+    deleteRows: async () => {
+      const { error } = await supabase.from("sponsor_import_rows").delete().eq("batch_id", batchId);
+      if (error) throw new Error(error.message);
+    },
+    insertRows: async (rows) => {
+      const { error: insertError } = await supabase.from("sponsor_import_rows").insert(
+        rows.map((r) => ({
+          batch_id: batchId,
+          excel_row_number: r.excelRowNumber,
+          raw_company_name: r.rawCompanyName,
+          raw_website: r.rawWebsite,
+          raw_tier_rank: r.rawTierRank,
+          raw_tier_label: r.rawTierLabel,
+          status: "needs_review",
+          validation_issues: [],
+          has_blocking_validation: false,
+        })),
+      );
+      if (insertError) throw new Error(insertError.message);
+    },
+    saveMappingAndReleaseClaim: async (token, { sheetName, rowCount }) => {
+      const { data: released, error: releaseError } = await supabase
+        .from("sponsor_import_batches")
+        .update({
+          column_mapping: mapping,
+          source_sheet_name: sheetName,
+          source_row_count: rowCount,
+          status: nextStatus,
+          processing_phase: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", batchId)
+        .eq("processing_phase", "parsing")
+        .eq("updated_at", token)
+        .select(BATCH_SELECT)
+        .maybeSingle();
+      if (releaseError) throw new Error(releaseError.message);
+      return released ?? null;
+    },
+    releaseParsingClaim: async (token) => {
+      const { error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("processing_phase", "parsing")
+        .eq("updated_at", token);
+      if (error) throw new Error(error.message);
+    },
+    logMappingSaved: (rowCount) =>
+      appendActionLog({
+        batchId,
+        actorId,
+        actionType: "column_mapping_saved",
+        payload: { mapping, row_count: rowCount },
+        affectedCount: rowCount,
+      }),
+    now: () => Date.now(),
   });
-
-  return updated;
 }
 
-export async function runBatchValidation(batchId: string, actorId: string) {
-  const batch = await getBatchRow(batchId);
-  assertBatchStatus(batch, ["uploaded", "review"]);
+export type ValidationSourceRow = {
+  id: string;
+  excel_row_number: number;
+  raw_company_name: string | null;
+  raw_website: string | null;
+  raw_tier_rank: number | null;
+  raw_tier_label: string | null;
+  status: string;
+};
 
-  const supabase = createAdminClient();
-  await supabase
-    .from("sponsor_import_batches")
-    .update({ processing_phase: "validating", updated_at: new Date().toISOString() })
-    .eq("id", batchId);
+const VALIDATION_CLAIMABLE_STATUSES: readonly string[] = ["uploaded", "review"];
 
-  const { data: rawRows, error } = await supabase
-    .from("sponsor_import_rows")
-    .select(
-      "id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, raw_tier_label, status",
-    )
-    .eq("batch_id", batchId)
-    .order("excel_row_number", { ascending: true });
+export const VALIDATION_AFTER_DRAFT_LINKS_MESSAGE =
+  "Validation cannot run after Import to draft has created draft links. Finish Import to draft, then use Exclude from publish in the Draft step.";
 
-  if (error) throw new Error(error.message);
+/**
+ * While `processing_phase = validating`, the batch `updated_at` is the claim token: validation
+ * clears only its own claim, never one a later workflow took.
+ */
+export type RunBatchValidationDeps = {
+  /**
+   * Atomic claim of an `uploaded`/`review` batch that is idle or held by an earlier validation;
+   * the claim token, or null.
+   */
+  claimValidatingPhase: () => Promise<string | null>;
+  readClaimState: () => Promise<{ status: string; processing_phase: string | null }>;
+  /** Read while the claim is held, so no draft-link chunk can add links concurrently. */
+  countDraftLinks: () => Promise<number>;
+  loadRows: () => Promise<ValidationSourceRow[]>;
+  /**
+   * Only while the row still has the status validation read: false if the row changed (e.g. a
+   * reviewer decision) or no longer exists, in which case nothing is written.
+   */
+  updateRowIfStatusUnchanged: (
+    rowId: string,
+    readStatus: string,
+    patch: Record<string, unknown>,
+  ) => Promise<boolean>;
+  /**
+   * Only while `token` still holds the claim on an `uploaded`/`review` batch: sets status
+   * `review` and clears the phase in one update. False otherwise, in which case nothing is written.
+   */
+  finishValidation: (token: string) => Promise<boolean>;
+  /** Clears the phase only while `token` still holds the `validating` claim. */
+  releaseValidatingClaim: (token: string) => Promise<void>;
+  logValidationRun: (validatedCount: number) => Promise<void>;
+};
 
-  const validated = assignDuplicateClusters(
-    (rawRows ?? []).map((r) => {
-      const v = validateRow({
-        id: String(r.id),
-        excel_row_number: Number(r.excel_row_number),
-        raw_company_name: r.raw_company_name as string | null,
-        raw_website: r.raw_website as string | null,
-        raw_tier_rank: r.raw_tier_rank as number | null,
-        raw_tier_label: r.raw_tier_label as string | null,
-        status: String(r.status),
+export async function runBatchValidationWithDeps(
+  deps: RunBatchValidationDeps,
+): Promise<{ validated_count: number }> {
+  const token = await deps.claimValidatingPhase();
+  if (token === null) {
+    const { status, processing_phase: phase } = await deps.readClaimState();
+    if (!VALIDATION_CLAIMABLE_STATUSES.includes(status)) {
+      throw new SponsorImportHttpError(
+        409,
+        `Validation cannot run because this import is already ${status}.`,
+        { status, processing_phase: phase },
+      );
+    }
+    if (phase === "matching") {
+      throw new SponsorImportHttpError(409, MATCHING_IN_PROGRESS_MUTATION_MESSAGE, {
+        processing_phase: phase,
       });
-      return { ...v, id: String(r.id), excel_row_number: Number(r.excel_row_number), status: String(r.status) };
-    }),
-  );
+    }
+    if (phase === "parsing") {
+      throw new SponsorImportHttpError(409, COLUMN_MAPPING_IN_PROGRESS_MESSAGE, {
+        processing_phase: phase,
+      });
+    }
+    if (phase === "materializing_companies" || phase === "importing_to_draft") {
+      throw new SponsorImportHttpError(409, IMPORT_IN_PROGRESS_VALIDATION_MESSAGE, {
+        processing_phase: phase,
+      });
+    }
+    throw new SponsorImportHttpError(
+      409,
+      "Validation could not start. Refresh the page and try again.",
+      { processing_phase: phase },
+    );
+  }
 
-  for (const row of validated) {
-    const prior = rawRows?.find((x) => String(x.id) === row.id);
-    const priorStatus = prior ? String(prior.status) : "needs_review";
-    const nextStatus =
-      row.duplicate_resolution === "excluded" || priorStatus === "excluded"
-        ? "excluded"
-        : row.has_blocking_validation
-          ? "needs_review"
-          : priorStatus;
+  let finished = false;
+  let claimLost = false;
+  try {
+    // Revalidating would rewrite the statuses of rows the draft links were built from.
+    if ((await deps.countDraftLinks()) > 0) {
+      throw new SponsorImportHttpError(409, VALIDATION_AFTER_DRAFT_LINKS_MESSAGE);
+    }
 
-    const { error: rowError } = await supabase
-      .from("sponsor_import_rows")
-      .update({
+    const rawRows = await deps.loadRows();
+
+    const validated = assignDuplicateClusters(
+      rawRows.map((r) => {
+        const v = validateRow(r);
+        return { ...v, id: r.id, excel_row_number: r.excel_row_number, status: r.status };
+      }),
+    );
+
+    for (const row of validated) {
+      const prior = rawRows.find((x) => x.id === row.id);
+      const priorStatus = prior ? prior.status : "needs_review";
+      const nextStatus =
+        row.duplicate_resolution === "excluded" || priorStatus === "excluded"
+          ? "excluded"
+          : row.has_blocking_validation
+            ? "needs_review"
+            : priorStatus;
+
+      const updated = await deps.updateRowIfStatusUnchanged(row.id, row.status, {
         normalized_company_name: row.normalized_company_name,
         normalized_website: row.normalized_website,
         normalized_domain: row.normalized_domain,
@@ -450,28 +742,131 @@ export async function runBatchValidation(batchId: string, actorId: string) {
         duplicate_resolution: row.duplicate_resolution,
         status: nextStatus,
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", row.id);
-    if (rowError) throw new Error(rowError.message);
+      });
+      if (!updated) {
+        // Writing `nextStatus` (derived from the stale read) would undo the concurrent change;
+        // a re-run reads the current status. The claim is released below if still held.
+        throw new SponsorImportHttpError(409, VALIDATION_SUPERSEDED_MESSAGE);
+      }
+    }
+
+    if (!(await deps.finishValidation(token))) {
+      // A newer validation or a mapping save (stale takeover) owns the batch; this run's
+      // results may describe replaced rows, so it must not set the status or log a run.
+      claimLost = true;
+      throw new SponsorImportHttpError(409, VALIDATION_SUPERSEDED_MESSAGE);
+    }
+    finished = true;
+    await deps.logValidationRun(validated.length);
+    return { validated_count: validated.length };
+  } catch (error) {
+    if (!finished && !claimLost) {
+      try {
+        await deps.releaseValidatingClaim(token);
+      } catch {
+        // Surface the original failure; the claim release error is secondary.
+      }
+    }
+    throw error;
   }
+}
 
-  await supabase
-    .from("sponsor_import_batches")
-    .update({
-      status: "review",
-      processing_phase: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", batchId);
+export async function runBatchValidation(batchId: string, actorId: string) {
+  const batch = await getBatchRow(batchId);
+  assertBatchStatus(batch, ["uploaded", "review"]);
+  assertNotMatching(batch);
 
-  await appendActionLog({
-    batchId,
-    actorId,
-    actionType: "validation_run",
-    affectedCount: validated.length,
+  const supabase = createAdminClient();
+
+  return runBatchValidationWithDeps({
+    claimValidatingPhase: async () => {
+      const token = new Date().toISOString();
+      // Only an idle batch or an earlier validation may be claimed, so matching, a mapping
+      // save, and import claims (materializing_companies, importing_to_draft) are never displaced;
+      // a batch finalized to draft since the status check above is never claimed.
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: "validating", updated_at: token })
+        .eq("id", batchId)
+        .in("status", ["uploaded", "review"])
+        .or("processing_phase.is.null,processing_phase.eq.validating")
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    readClaimState: async () => {
+      const current = await getBatchRow(batchId);
+      return { status: current.status, processing_phase: current.processing_phase };
+    },
+    countDraftLinks: async () => {
+      const { count, error } = await supabase
+        .from("sponsor_import_draft_links")
+        .select("id", { count: "exact", head: true })
+        .eq("batch_id", batchId);
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    loadRows: async () => {
+      const { data: rawRows, error } = await supabase
+        .from("sponsor_import_rows")
+        .select(
+          "id, excel_row_number, raw_company_name, raw_website, raw_tier_rank, raw_tier_label, status",
+        )
+        .eq("batch_id", batchId)
+        .order("excel_row_number", { ascending: true });
+      if (error) throw new Error(error.message);
+      return (rawRows ?? []).map((r) => ({
+        id: String(r.id),
+        excel_row_number: Number(r.excel_row_number),
+        raw_company_name: r.raw_company_name as string | null,
+        raw_website: r.raw_website as string | null,
+        raw_tier_rank: r.raw_tier_rank as number | null,
+        raw_tier_label: r.raw_tier_label as string | null,
+        status: String(r.status),
+      }));
+    },
+    updateRowIfStatusUnchanged: async (rowId, readStatus, patch) => {
+      const { data, error: rowError } = await supabase
+        .from("sponsor_import_rows")
+        .update(patch)
+        .eq("id", rowId)
+        .eq("batch_id", batchId)
+        .eq("status", readStatus)
+        .select("id");
+      if (rowError) throw new Error(rowError.message);
+      return (data ?? []).length > 0;
+    },
+    finishValidation: async (token) => {
+      const { data: released, error: releaseError } = await supabase
+        .from("sponsor_import_batches")
+        .update({ status: "review", processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .in("status", ["uploaded", "review"])
+        .eq("processing_phase", "validating")
+        .eq("updated_at", token)
+        .select("id")
+        .maybeSingle();
+      if (releaseError) throw new Error(releaseError.message);
+      return Boolean(released);
+    },
+    releaseValidatingClaim: async (token) => {
+      const { error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("processing_phase", "validating")
+        .eq("updated_at", token);
+      if (error) throw new Error(error.message);
+    },
+    logValidationRun: (validatedCount) =>
+      appendActionLog({
+        batchId,
+        actorId,
+        actionType: "validation_run",
+        affectedCount: validatedCount,
+      }),
   });
-
-  return { validated_count: validated.length };
 }
 
 export type RunBatchMatchingOptions = {
@@ -481,80 +876,178 @@ export type RunBatchMatchingOptions = {
 
 export type MatchingRunResult = { matched_count: number; skipped: boolean };
 
+export type MatchingClaimState = { processing_phase: string | null; updated_at: string | null };
+
+/**
+ * While `processing_phase = matching`, the batch `updated_at` is the claim token: only the
+ * holder of that exact value may renew (heartbeat) or release the claim.
+ */
 export type RunBatchMatchingDeps = {
+  readMatchingClaim: () => Promise<MatchingClaimState>;
   /** True when the newest matching_run is later than any mapping save or validation run. */
   hasCurrentMatchingRun: () => Promise<boolean>;
   latestMatchingRunAffectedCount: () => Promise<number>;
-  /** Atomic `processing_phase IS NULL -> matching` claim; true only if this caller won. */
-  claimMatchingPhase: () => Promise<boolean>;
-  readProcessingPhase: () => Promise<string | null>;
+  /** `payload.claim_token` of the newest matching_run; null for logs written without one. */
+  latestMatchingRunClaimToken: () => Promise<string | null>;
+  /** Atomic `processing_phase IS NULL -> matching`; the new claim token, or null if another caller won. */
+  claimMatchingPhase: () => Promise<string | null>;
+  /** Atomic token swap while still `matching`; the new token, or null if `token` no longer holds the claim. */
+  renewMatchingClaim: (token: string) => Promise<string | null>;
+  /** Atomic `matching -> null` only while `token` still holds the claim; false otherwise. */
+  releaseMatchingClaim: (token: string) => Promise<boolean>;
   loadMatchableRows: () => Promise<MatchableRow[]>;
   createMatcher: (rows: readonly MatchableRow[]) => Promise<(row: MatchableRow) => Promise<MatchResult>>;
   /** Conditional on the row still being needs_review/auto_ready; false when 0 rows updated. */
   updateRowIfStillMatchable: (rowId: string, result: MatchResult) => Promise<boolean>;
-  appendMatchingRunLog: (affectedCount: number) => Promise<void>;
-  clearMatchingPhase: () => Promise<void>;
+  appendMatchingRunLog: (input: {
+    affectedCount: number;
+    claimToken: string;
+    recoveredStaleClaim: boolean;
+  }) => Promise<void>;
+  now: () => number;
 };
 
 const MATCHABLE_ROW_STATUSES = ["needs_review", "auto_ready"] as const;
+
+/** Re-evaluations allowed after losing a claim race or releasing a finished run's claim. */
+const MAX_MATCHING_DECISION_PASSES = 3;
+
+export const MATCHING_CLAIM_LOST_MESSAGE =
+  "Matching was taken over by another request. Refresh the page to see the latest results.";
+
+function matchingClaimConflict(phase: string | null): SponsorImportHttpError {
+  if (resolveMatchClaimFailure(phase) === "in_progress") {
+    return new SponsorImportHttpError(409, "Matching is already in progress.", {
+      processing_phase: phase,
+    });
+  }
+  return new SponsorImportHttpError(
+    409,
+    "Matching could not start. Refresh the page and try again.",
+    { processing_phase: phase },
+  );
+}
 
 export async function runBatchMatchingWithDeps(
   options: RunBatchMatchingOptions,
   deps: RunBatchMatchingDeps,
 ): Promise<MatchingRunResult> {
   const force = options.force === true;
+  let lastPhase: string | null = null;
 
-  if (shouldSkipMatchingBecauseAlreadyComplete(force, await deps.hasCurrentMatchingRun())) {
-    return { matched_count: await deps.latestMatchingRunAffectedCount(), skipped: true };
-  }
+  for (let pass = 0; pass < MAX_MATCHING_DECISION_PASSES; pass += 1) {
+    const claim = await deps.readMatchingClaim();
+    lastPhase = claim.processing_phase;
+    // An active claim is checked before matching_run freshness: an older matching_run must
+    // not make an in-progress (e.g. forced) rematch look complete.
+    if (claim.processing_phase === "matching") {
+      const finishedRunToken = await deps.latestMatchingRunClaimToken();
+      if (finishedRunToken !== null && (await deps.releaseMatchingClaim(finishedRunToken))) {
+        continue;
+      }
 
-  if (!(await deps.claimMatchingPhase())) {
-    // Another request may have finished matching between the skip check and the claim.
+      if (claim.updated_at && isStaleMatchingClaim(claim, deps.now())) {
+        const takenOverToken = await deps.renewMatchingClaim(claim.updated_at);
+        if (takenOverToken !== null) {
+          // The abandoned run may have rewritten some rows, so rematch even if a
+          // matching_run looks current.
+          return runClaimedBatchMatching(takenOverToken, true, deps);
+        }
+        continue;
+      }
+
+      throw matchingClaimConflict(claim.processing_phase);
+    }
+
+    // Rows are being replaced or revalidated, so even a current matching_run may describe
+    // rows that no longer exist.
+    if (claim.processing_phase === "parsing") {
+      throw new SponsorImportHttpError(409, COLUMN_MAPPING_IN_PROGRESS_MESSAGE, {
+        processing_phase: claim.processing_phase,
+      });
+    }
+    if (claim.processing_phase === "validating") {
+      throw new SponsorImportHttpError(409, VALIDATION_IN_PROGRESS_MESSAGE, {
+        processing_phase: claim.processing_phase,
+      });
+    }
+
     if (shouldSkipMatchingBecauseAlreadyComplete(force, await deps.hasCurrentMatchingRun())) {
       return { matched_count: await deps.latestMatchingRunAffectedCount(), skipped: true };
     }
 
-    const phase = await deps.readProcessingPhase();
-    if (resolveMatchClaimFailure(phase) === "in_progress") {
-      throw new SponsorImportHttpError(409, "Matching is already in progress.", {
-        processing_phase: phase,
-      });
+    if (claim.processing_phase !== null) {
+      throw matchingClaimConflict(claim.processing_phase);
     }
-    throw new SponsorImportHttpError(
-      409,
-      "Matching could not start. Refresh the page and try again.",
-      { processing_phase: phase },
-    );
+
+    const token = await deps.claimMatchingPhase();
+    if (token !== null) {
+      return runClaimedBatchMatching(token, false, deps);
+    }
   }
+
+  throw matchingClaimConflict(lastPhase);
+}
+
+async function runClaimedBatchMatching(
+  claimToken: string,
+  recoveredStaleClaim: boolean,
+  deps: RunBatchMatchingDeps,
+): Promise<MatchingRunResult> {
+  let token = claimToken;
+  let claimLost = false;
+  let lastHeartbeatAt = deps.now();
+  let rowsSinceHeartbeat = 0;
+
+  const renewClaimOrAbort = async () => {
+    const renewed = await deps.renewMatchingClaim(token);
+    if (renewed === null) {
+      claimLost = true;
+      throw new SponsorImportHttpError(409, MATCHING_CLAIM_LOST_MESSAGE);
+    }
+    token = renewed;
+    lastHeartbeatAt = deps.now();
+    rowsSinceHeartbeat = 0;
+  };
 
   let matched = 0;
   try {
     const rows = await deps.loadMatchableRows();
     const match = await deps.createMatcher(rows);
+    await renewClaimOrAbort();
 
     for (const row of rows) {
       if (row.status === "resolved" || row.status === "excluded") continue;
+
+      if (isMatchingHeartbeatDue(rowsSinceHeartbeat, deps.now() - lastHeartbeatAt)) {
+        await renewClaimOrAbort();
+      }
 
       const result = await match(row);
       // The row may have been resolved/excluded by a reviewer since `rows` was read.
       if (await deps.updateRowIfStillMatchable(row.id, result)) {
         matched += 1;
       }
+      rowsSinceHeartbeat += 1;
     }
 
-    // Log before releasing the claim: while phase is still `matching`, a concurrent
-    // request cannot claim, and once released the completed run is already visible.
-    await deps.appendMatchingRunLog(matched);
+    // Fence, then log the exact token left on the batch: if the release below fails, a later
+    // request recognises this run as finished and releases the claim with that token.
+    await renewClaimOrAbort();
+    await deps.appendMatchingRunLog({ affectedCount: matched, claimToken: token, recoveredStaleClaim });
   } catch (error) {
-    try {
-      await deps.clearMatchingPhase();
-    } catch {
-      // Surface the original failure; the claim release error is secondary.
+    // A lost claim belongs to the run that took over; never release it.
+    if (!claimLost) {
+      try {
+        await deps.releaseMatchingClaim(token);
+      } catch {
+        // Surface the original failure; the claim release error is secondary.
+      }
     }
     throw error;
   }
 
-  await deps.clearMatchingPhase();
+  await deps.releaseMatchingClaim(token);
   return { matched_count: matched, skipped: false };
 }
 
@@ -569,6 +1062,13 @@ export async function runBatchMatching(
   const supabase = createAdminClient();
 
   return runBatchMatchingWithDeps(options, {
+    readMatchingClaim: async () => {
+      const current = await getBatchRow(batchId);
+      return {
+        processing_phase: current.processing_phase,
+        updated_at: typeof current.updated_at === "string" ? current.updated_at : null,
+      };
+    },
     hasCurrentMatchingRun: async () => {
       const { data, error } = await supabase
         .from("sponsor_import_admin_action_logs")
@@ -593,19 +1093,59 @@ export async function runBatchMatching(
       if (error) throw new Error(error.message);
       return typeof data?.affected_count === "number" ? data.affected_count : 0;
     },
+    latestMatchingRunClaimToken: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_admin_action_logs")
+        .select("payload")
+        .eq("batch_id", batchId)
+        .eq("action_type", "matching_run")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      const claimToken = (data?.payload as { claim_token?: unknown } | null | undefined)?.claim_token;
+      return typeof claimToken === "string" ? claimToken : null;
+    },
     claimMatchingPhase: async () => {
+      const token = new Date().toISOString();
       const { data, error } = await supabase
         .from("sponsor_import_batches")
-        .update({ processing_phase: "matching", updated_at: new Date().toISOString() })
+        .update({ processing_phase: "matching", updated_at: token })
         .eq("id", batchId)
         .eq("status", "review")
         .is("processing_phase", null)
         .select("id")
         .maybeSingle();
       if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    renewMatchingClaim: async (token) => {
+      const nextToken = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ updated_at: nextToken })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", "matching")
+        .eq("updated_at", token)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? nextToken : null;
+    },
+    releaseMatchingClaim: async (token) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", "matching")
+        .eq("updated_at", token)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
       return Boolean(data);
     },
-    readProcessingPhase: async () => (await getBatchRow(batchId)).processing_phase,
     loadMatchableRows: async () => {
       const { data, error } = await supabase
         .from("sponsor_import_rows")
@@ -652,23 +1192,20 @@ export async function runBatchMatching(
       if (error) throw new Error(error.message);
       return (data ?? []).length > 0;
     },
-    appendMatchingRunLog: (affectedCount) =>
-      appendActionLog({ batchId, actorId, actionType: "matching_run", affectedCount }),
-    clearMatchingPhase: async () => {
-      const { error } = await supabase
-        .from("sponsor_import_batches")
-        .update({ processing_phase: null, updated_at: new Date().toISOString() })
-        .eq("id", batchId)
-        .eq("status", "review")
-        .eq("processing_phase", "matching");
-      if (error) throw new Error(error.message);
-    },
+    appendMatchingRunLog: ({ affectedCount, claimToken, recoveredStaleClaim }) =>
+      appendActionLog({
+        batchId,
+        actorId,
+        actionType: "matching_run",
+        affectedCount,
+        payload: { claim_token: claimToken, recovered_stale_claim: recoveredStaleClaim },
+      }),
+    now: () => Date.now(),
   });
 }
 
 export async function bulkAcceptDomainMatches(batchId: string, actorId: string) {
-  const batch = await getBatchRow(batchId);
-  assertBatchStatus(batch, ["review"]);
+  await prepareReviewMutation(batchId);
 
   const supabase = createAdminClient();
 
@@ -786,8 +1323,7 @@ export async function bulkApplyRowDecisions(
     row_ids: string[];
   },
 ) {
-  const batch = await getBatchRow(batchId);
-  assertBatchStatus(batch, ["review"]);
+  await prepareReviewMutation(batchId);
 
   const uniqueIds = Array.from(new Set(input.row_ids.map((id) => id.trim()).filter(Boolean)));
   if (uniqueIds.length === 0) {
@@ -982,32 +1518,77 @@ async function maybeLinkReviewedImportDomain(
   }
 }
 
-export async function patchRowDecision(
-  batchId: string,
-  rowId: string,
-  actorId: string,
-  input: {
+export const LINKED_ROW_DECISION_MESSAGE =
+  "This row already has a draft link from Import to draft, so its decision can no longer change. Finish Import to draft, then use Exclude from publish in the Draft step.";
+
+export const ROW_DECISION_CONFLICT_MESSAGE =
+  "This row changed while your decision was being saved. Refresh the page and try again.";
+
+export type RowDecisionInput = {
+  decision_type: SponsorImportDecisionType;
+  resolved_company_id?: string | null;
+  decision_notes?: string | null;
+  duplicate_resolution?: "kept" | "excluded" | "pending" | null;
+};
+
+export type RowDecisionTargetRow = {
+  id: string;
+  proposed_company_id: string | null;
+  duplicate_cluster_key: string | null;
+  normalized_domain: string | null;
+  draft_link_id: string | null;
+};
+
+export type RowDecisionClusterRow = DuplicateClusterDecisionRow & {
+  draft_link_id: string | null;
+  /** The row's `DUPLICATE_SIBLING_PATCH_FIELDS` values when it was read. */
+  previous: Record<string, unknown>;
+};
+
+/**
+ * A row with a draft link is already part of the draft that will be published, and the link is
+ * shared per company; changing the row's decision would leave the link describing the old one.
+ */
+export type PatchRowDecisionDeps<TSaved, TResult> = {
+  loadRow: () => Promise<RowDecisionTargetRow | null>;
+  loadClusterRows: (clusterKey: string) => Promise<RowDecisionClusterRow[]>;
+  linkReviewedDomain: (input: {
     decision_type: SponsorImportDecisionType;
     resolved_company_id?: string | null;
-    decision_notes?: string | null;
-    duplicate_resolution?: "kept" | "excluded" | "pending" | null;
-  },
-) {
-  const batch = await getBatchRow(batchId);
-  assertBatchStatus(batch, ["review"]);
+    proposed_company_id: string | null;
+    normalized_domain: string | null;
+  }) => Promise<void>;
+  /** Only while the row still has no draft link; the updated row, or null if nothing matched. */
+  updateUnlinkedRow: (rowId: string, patch: Record<string, unknown>) => Promise<TSaved | null>;
+  /** Only while the row still has no draft link; false if nothing matched. */
+  updateUnlinkedSibling: (rowId: string, patch: Record<string, unknown>) => Promise<boolean>;
+  /**
+   * Puts back a sibling's `previous` values, only while it still has this request's write
+   * (`updated_at = writtenAt`) and no draft link; false if nothing matched.
+   */
+  restoreSibling: (rowId: string, previous: Record<string, unknown>, writtenAt: string) => Promise<boolean>;
+  present: (row: TSaved) => Promise<TResult>;
+  now: () => string;
+};
 
-  const supabase = createAdminClient();
-  const { data: row, error: rowError } = await supabase
-    .from("sponsor_import_rows")
-    .select("id, proposed_company_id, duplicate_role, duplicate_cluster_key, normalized_domain")
-    .eq("batch_id", batchId)
-    .eq("id", rowId)
-    .maybeSingle();
+function assertNoDraftLinkedRows(rows: ReadonlyArray<{ id: string; draft_link_id: string | null }>): void {
+  const linkedRowIds = rows.filter((row) => row.draft_link_id !== null).map((row) => row.id);
+  if (linkedRowIds.length > 0) {
+    throw new SponsorImportHttpError(409, LINKED_ROW_DECISION_MESSAGE, { linked_row_ids: linkedRowIds });
+  }
+}
 
-  if (rowError) throw new Error(rowError.message);
+export async function patchRowDecisionWithDeps<TSaved, TResult>(
+  rowId: string,
+  actorId: string,
+  input: RowDecisionInput,
+  deps: PatchRowDecisionDeps<TSaved, TResult>,
+): Promise<TResult> {
+  const row = await deps.loadRow();
   if (!row) throw new SponsorImportHttpError(404, "Row not found.");
+  assertNoDraftLinkedRows([row]);
 
-  const now = new Date().toISOString();
+  const now = deps.now();
   const patch: Record<string, unknown> = {
     decision_type: input.decision_type,
     decision_source: "admin_manual",
@@ -1042,84 +1623,160 @@ export async function patchRowDecision(
     patch.resolved_company_id = null;
   }
 
-  await maybeLinkReviewedImportDomain(supabase, {
-    decision_type: input.decision_type,
-    resolved_company_id: input.resolved_company_id,
-    proposed_company_id:
-      typeof row.proposed_company_id === "string" ? row.proposed_company_id : null,
-    normalized_domain:
-      typeof row.normalized_domain === "string" ? row.normalized_domain : null,
-  });
-
-  const duplicateClusterKey =
-    typeof row.duplicate_cluster_key === "string" ? row.duplicate_cluster_key.trim() : "";
+  const duplicateClusterKey = row.duplicate_cluster_key?.trim() ?? "";
   const resolvesDuplicateCluster =
     duplicateClusterKey !== "" &&
     input.duplicate_resolution === "kept" &&
     input.decision_type !== "exclude";
 
+  // Every row the decision would write is checked before anything (including the company
+  // domain link) is written.
+  const clusterRows = resolvesDuplicateCluster ? await deps.loadClusterRows(duplicateClusterKey) : [];
+  assertNoDraftLinkedRows(clusterRows);
+
+  await deps.linkReviewedDomain({
+    decision_type: input.decision_type,
+    resolved_company_id: input.resolved_company_id,
+    proposed_company_id: row.proposed_company_id,
+    normalized_domain: row.normalized_domain,
+  });
+
   if (resolvesDuplicateCluster) {
-    const { data: clusterRows, error: clusterError } = await supabase
-      .from("sponsor_import_rows")
-      .select("id, duplicate_cluster_key")
-      .eq("batch_id", batchId)
-      .eq("duplicate_cluster_key", duplicateClusterKey);
-
-    if (clusterError) throw new Error(clusterError.message);
-
     const patches = buildDuplicateClusterKeepPatches({
-      clusterRows: ((clusterRows ?? []) as DuplicateClusterDecisionRow[]).map((clusterRow) => ({
-        id: String(clusterRow.id),
-        duplicate_cluster_key:
-          typeof clusterRow.duplicate_cluster_key === "string"
-            ? clusterRow.duplicate_cluster_key
-            : null,
-      })),
+      clusterRows,
       selectedRowId: rowId,
       selectedPatch: patch,
       actorId,
       now,
     });
-
-    let updatedSelected:
-      | (Record<string, unknown> & { proposed_company_id: string | null })
-      | null = null;
-    for (const item of patches) {
-      const query = supabase
-        .from("sponsor_import_rows")
-        .update(item.patch)
-        .eq("id", item.id);
-
-      if (item.role === "survivor") {
-        const { data: updated, error: updateError } = await query.select(ROW_SELECT).single();
-        if (updateError) throw new Error(updateError.message);
-        updatedSelected = updated as Record<string, unknown> & {
-          proposed_company_id: string | null;
-        };
-      } else {
-        const { error: updateError } = await query;
-        if (updateError) throw new Error(updateError.message);
-      }
-    }
-
-    if (!updatedSelected) {
+    const survivor = patches.find((item) => item.role === "survivor");
+    if (!survivor) {
       throw new SponsorImportHttpError(404, "Selected duplicate row not found.");
     }
 
-    const [enrichedRow] = await enrichImportRowsWithProposedCompanies([updatedSelected]);
-    return enrichedRow ?? updatedSelected;
+    // Siblings first and the survivor last, so a failure never leaves a kept row beside
+    // siblings that were not excluded; siblings already excluded are then put back.
+    const excludedSiblings: RowDecisionClusterRow[] = [];
+    let updatedSelected: TSaved;
+    try {
+      for (const item of patches) {
+        if (item.role !== "excluded_sibling") continue;
+        if (!(await deps.updateUnlinkedSibling(item.id, item.patch))) {
+          throw new SponsorImportHttpError(409, ROW_DECISION_CONFLICT_MESSAGE, { row_id: item.id });
+        }
+        excludedSiblings.push(clusterRows.find((clusterRow) => clusterRow.id === item.id)!);
+      }
+      const saved = await deps.updateUnlinkedRow(survivor.id, survivor.patch);
+      if (saved === null) {
+        throw new SponsorImportHttpError(409, ROW_DECISION_CONFLICT_MESSAGE, { row_id: survivor.id });
+      }
+      updatedSelected = saved;
+    } catch (error) {
+      for (const sibling of excludedSiblings.reverse()) {
+        try {
+          if (!(await deps.restoreSibling(sibling.id, sibling.previous, now))) {
+            console.error(`[sponsor-import] duplicate sibling ${sibling.id} changed before it could be restored`);
+          }
+        } catch (restoreError) {
+          console.error(`[sponsor-import] failed to restore duplicate sibling ${sibling.id}:`, restoreError);
+        }
+      }
+      throw error;
+    }
+    return deps.present(updatedSelected);
   }
 
-  const { data: updated, error: updateError } = await supabase
-    .from("sponsor_import_rows")
-    .update(patch)
-    .eq("id", rowId)
-    .select(ROW_SELECT)
-    .single();
+  const updated = await deps.updateUnlinkedRow(rowId, patch);
+  if (updated === null) {
+    throw new SponsorImportHttpError(409, ROW_DECISION_CONFLICT_MESSAGE, { row_id: rowId });
+  }
+  return deps.present(updated);
+}
 
-  if (updateError) throw new Error(updateError.message);
-  const [enrichedRow] = await enrichImportRowsWithProposedCompanies([updated]);
-  return enrichedRow ?? updated;
+export async function patchRowDecision(
+  batchId: string,
+  rowId: string,
+  actorId: string,
+  input: RowDecisionInput,
+) {
+  await prepareReviewMutation(batchId);
+
+  const supabase = createAdminClient();
+  return patchRowDecisionWithDeps(rowId, actorId, input, {
+    loadRow: async () => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .select("id, proposed_company_id, duplicate_cluster_key, normalized_domain, draft_link_id")
+        .eq("batch_id", batchId)
+        .eq("id", rowId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+      return {
+        id: String(data.id),
+        proposed_company_id: typeof data.proposed_company_id === "string" ? data.proposed_company_id : null,
+        duplicate_cluster_key: typeof data.duplicate_cluster_key === "string" ? data.duplicate_cluster_key : null,
+        normalized_domain: typeof data.normalized_domain === "string" ? data.normalized_domain : null,
+        draft_link_id: typeof data.draft_link_id === "string" ? data.draft_link_id : null,
+      };
+    },
+    loadClusterRows: async (clusterKey) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .select(`id, duplicate_cluster_key, draft_link_id, ${DUPLICATE_SIBLING_PATCH_FIELDS.join(", ")}`)
+        .eq("batch_id", batchId)
+        .eq("duplicate_cluster_key", clusterKey);
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as unknown as Array<Record<string, unknown>>).map((clusterRow) => ({
+        id: String(clusterRow.id),
+        duplicate_cluster_key:
+          typeof clusterRow.duplicate_cluster_key === "string" ? clusterRow.duplicate_cluster_key : null,
+        draft_link_id: typeof clusterRow.draft_link_id === "string" ? clusterRow.draft_link_id : null,
+        previous: Object.fromEntries(DUPLICATE_SIBLING_PATCH_FIELDS.map((field) => [field, clusterRow[field] ?? null])),
+      }));
+    },
+    linkReviewedDomain: (linkInput) => maybeLinkReviewedImportDomain(supabase, linkInput),
+    updateUnlinkedRow: async (targetRowId, patch) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .update(patch)
+        .eq("id", targetRowId)
+        .eq("batch_id", batchId)
+        .is("draft_link_id", null)
+        .select(ROW_SELECT)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ?? null;
+    },
+    updateUnlinkedSibling: async (targetRowId, patch) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .update(patch)
+        .eq("id", targetRowId)
+        .eq("batch_id", batchId)
+        .is("draft_link_id", null)
+        .select("id");
+      if (error) throw new Error(error.message);
+      return (data ?? []).length > 0;
+    },
+    restoreSibling: async (targetRowId, previous, writtenAt) => {
+      const { data, error } = await supabase
+        .from("sponsor_import_rows")
+        .update(previous)
+        .eq("id", targetRowId)
+        .eq("batch_id", batchId)
+        .eq("updated_at", writtenAt)
+        .is("draft_link_id", null)
+        .select("id");
+      if (error) throw new Error(error.message);
+      return (data ?? []).length > 0;
+    },
+    present: async (saved) => {
+      const [enrichedRow] = await enrichImportRowsWithProposedCompanies([saved]);
+      return enrichedRow ?? saved;
+    },
+    now: () => new Date().toISOString(),
+  });
 }
 
 function parseImportToDraftResultPayload(payload: unknown): ImportToDraftResult | null {
@@ -1208,30 +1865,30 @@ async function resolveIdempotentImportToDraftResult(
   return (await loadImportToDraftResultFromLog(batchId)) ?? summarizeImportToDraftFromDb(batchId);
 }
 
-/** Clear orphaned import processing when a prior attempt died mid-flight (e.g. serverless timeout). */
-async function recoverStaleImportProcessingPhase(
-  batchId: string,
-  batch: BatchRow,
+export type RecoverStaleImportProcessingPhaseDeps = {
+  countDraftLinks: () => Promise<number>;
+  /**
+   * Atomic `phase -> null` only while the batch is still in review, in `phase`, and still has
+   * the `updated_at` that was judged stale; false otherwise.
+   */
+  clearStaleClaim: (phase: string, staleUpdatedAt: string | null) => Promise<boolean>;
+  now: () => number;
+};
+
+export async function recoverStaleImportProcessingPhaseWithDeps(
+  batch: Pick<BatchRow, "processing_phase" | "status" | "updated_at">,
+  deps: RecoverStaleImportProcessingPhaseDeps,
 ): Promise<boolean> {
-  if (!isStaleImportProcessingPhaseClaim(batch)) {
+  if (!isStaleImportProcessingPhaseClaim(batch, deps.now())) {
     return false;
   }
 
-  const supabase = createAdminClient();
   const phase = batch.processing_phase;
 
   // Company materialization should not leave draft links behind; if any exist,
   // do not auto-clear a stale materializing_companies claim.
-  if (phase === "materializing_companies") {
-    const { count, error: countError } = await supabase
-      .from("sponsor_import_draft_links")
-      .select("id", { count: "exact", head: true })
-      .eq("batch_id", batchId);
-
-    if (countError) throw new Error(countError.message);
-    if ((count ?? 0) > 0) {
-      return false;
-    }
+  if (phase === "materializing_companies" && (await deps.countDraftLinks()) > 0) {
+    return false;
   }
 
   // importing_to_draft may legitimately have partial draft links after a timeout;
@@ -1240,17 +1897,225 @@ async function recoverStaleImportProcessingPhase(
     return false;
   }
 
+  // A chunk that re-claimed or touched the batch since it was read is live; leave it alone.
+  return deps.clearStaleClaim(phase, batch.updated_at ?? null);
+}
+
+/** Clear orphaned import processing when a prior attempt died mid-flight (e.g. serverless timeout). */
+async function recoverStaleImportProcessingPhase(
+  batchId: string,
+  batch: BatchRow,
+): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  return recoverStaleImportProcessingPhaseWithDeps(batch, {
+    countDraftLinks: async () => {
+      const { count, error } = await supabase
+        .from("sponsor_import_draft_links")
+        .select("id", { count: "exact", head: true })
+        .eq("batch_id", batchId);
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    clearStaleClaim: async (phase, staleUpdatedAt) => {
+      let query = supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: null, updated_at: new Date().toISOString() })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", phase);
+      query = staleUpdatedAt === null ? query.is("updated_at", null) : query.eq("updated_at", staleUpdatedAt);
+      const { data, error } = await query.select("id").maybeSingle();
+      if (error) throw new Error(error.message);
+      return Boolean(data);
+    },
+    now: () => Date.now(),
+  });
+}
+
+export const IMPORT_CHUNK_IN_PROGRESS_MESSAGE =
+  "Another request is already running this import step. Wait a few minutes, then try again.";
+
+export const IMPORT_CHUNK_CLAIM_LOST_MESSAGE =
+  "This import step was taken over by another request. Refresh the page and try again.";
+
+type ImportChunkPhase = "materializing_companies" | "importing_to_draft";
+
+/**
+ * While an import step holds `processing_phase`, the batch `updated_at` is its claim token:
+ * the request that wrote it returns it to the client, which presents it with the next chunk.
+ */
+export type AcquireImportChunkClaimDeps = {
+  readBatch: () => Promise<BatchRow>;
+  /** Atomic `processing_phase IS NULL -> phase` on a review batch; the new token, or null. */
+  claimFromIdle: () => Promise<string | null>;
+  /** Atomic refresh only while `token` still holds the `phase` claim; the new token, or null. */
+  continueClaim: (token: string) => Promise<string | null>;
+  /**
+   * Atomic takeover of an abandoned `phase` claim only while it still has the `updated_at`
+   * that was judged abandoned; the new token, or null.
+   */
+  takeOverClaim: (abandonedUpdatedAt: string | null) => Promise<string | null>;
+  now: () => number;
+};
+
+/**
+ * A chunk may process rows only after this succeeds, and then it alone owns the step until its
+ * token is presented again or the claim is abandoned. A request without the current token (a
+ * second tab, a page reload, a retry after a lost response) is rejected while a chunk could still
+ * be running. When another workflow holds the batch, its state is returned for the caller's
+ * phase-specific response.
+ */
+export async function acquireImportChunkClaimWithDeps(
+  phase: ImportChunkPhase,
+  batch: BatchRow,
+  presentedToken: string | null,
+  deps: AcquireImportChunkClaimDeps,
+): Promise<{ acquired: true; token: string } | { acquired: false; batch: BatchRow }> {
+  if (presentedToken !== null) {
+    const token = await deps.continueClaim(presentedToken);
+    if (token !== null) return { acquired: true, token };
+  }
+
+  let current = batch;
+  if (current.processing_phase !== phase) {
+    const token = await deps.claimFromIdle();
+    if (token !== null) return { acquired: true, token };
+    current = await deps.readBatch();
+    if (current.processing_phase !== phase) return { acquired: false, batch: current };
+  }
+
+  if (isAbandonedImportChunkClaim(current, deps.now())) {
+    const token = await deps.takeOverClaim(current.updated_at ?? null);
+    if (token !== null) return { acquired: true, token };
+  }
+  throw new SponsorImportHttpError(
+    409,
+    presentedToken !== null ? IMPORT_CHUNK_CLAIM_LOST_MESSAGE : IMPORT_CHUNK_IN_PROGRESS_MESSAGE,
+    { processing_phase: phase },
+  );
+}
+
+function acquireImportChunkClaim(
+  batchId: string,
+  phase: ImportChunkPhase,
+  batch: BatchRow,
+  presentedToken: string | null,
+): ReturnType<typeof acquireImportChunkClaimWithDeps> {
+  const supabase = createAdminClient();
+  return acquireImportChunkClaimWithDeps(phase, batch, presentedToken, {
+    readBatch: () => getBatchRow(batchId),
+    claimFromIdle: async () => {
+      const token = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ processing_phase: phase, updated_at: token })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .is("processing_phase", null)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    continueClaim: async (heldToken) => {
+      const token = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("sponsor_import_batches")
+        .update({ updated_at: token })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", phase)
+        .eq("updated_at", heldToken)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    takeOverClaim: async (abandonedUpdatedAt) => {
+      const token = new Date().toISOString();
+      let query = supabase
+        .from("sponsor_import_batches")
+        .update({ updated_at: token })
+        .eq("id", batchId)
+        .eq("status", "review")
+        .eq("processing_phase", phase);
+      query =
+        abandonedUpdatedAt === null
+          ? query.is("updated_at", null)
+          : query.eq("updated_at", abandonedUpdatedAt);
+      const { data, error } = await query.select("id").maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? token : null;
+    },
+    now: () => Date.now(),
+  });
+}
+
+/**
+ * After a chunk: a finished step is released only by the token that owns it (a request that lost
+ * the claim gets 409 and leaves the new owner's claim alone); an unfinished step keeps the claim
+ * and hands its token back for the next chunk.
+ */
+export async function completeImportChunkWithDeps<TResult extends { done: boolean }>(
+  phase: ImportChunkPhase,
+  token: string,
+  result: TResult,
+  release: (token: string) => Promise<boolean>,
+): Promise<TResult & { claim_token: string | null }> {
+  if (!result.done) return { ...result, claim_token: token };
+  if (!(await release(token))) {
+    throw new SponsorImportHttpError(409, IMPORT_CHUNK_CLAIM_LOST_MESSAGE, { processing_phase: phase });
+  }
+  return { ...result, claim_token: null };
+}
+
+/** Ends an import step only while `token` still owns it; false if it no longer does. */
+async function releaseImportChunkClaim(
+  batchId: string,
+  phase: ImportChunkPhase,
+  token: string,
+): Promise<boolean> {
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("sponsor_import_batches")
     .update({ processing_phase: null, updated_at: new Date().toISOString() })
     .eq("id", batchId)
     .eq("status", "review")
     .eq("processing_phase", phase)
+    .eq("updated_at", token)
     .select("id")
     .maybeSingle();
-
   if (error) throw new Error(error.message);
   return Boolean(data);
+}
+
+export type PrepareReviewMutationDeps = {
+  readBatch: () => Promise<BatchRow>;
+  recoverStaleImportClaim: (batch: BatchRow) => Promise<boolean>;
+};
+
+/**
+ * The batch a Review decision may write to: in review, with no live workflow claim. An import
+ * claim abandoned by a failed chunk is recovered once stale, so the reviewer can fix the row
+ * that made it fail; a live claim, of any workflow, is left untouched and rejected with 409.
+ */
+export async function prepareReviewMutationWithDeps(deps: PrepareReviewMutationDeps): Promise<BatchRow> {
+  let batch = await deps.readBatch();
+  assertBatchStatus(batch, ["review"]);
+  if (await deps.recoverStaleImportClaim(batch)) {
+    batch = await deps.readBatch();
+    assertBatchStatus(batch, ["review"]);
+  }
+  assertNoActiveProcessingPhase(batch);
+  return batch;
+}
+
+function prepareReviewMutation(batchId: string): Promise<BatchRow> {
+  return prepareReviewMutationWithDeps({
+    readBatch: () => getBatchRow(batchId),
+    recoverStaleImportClaim: (batch) => recoverStaleImportProcessingPhase(batchId, batch),
+  });
 }
 
 /** @deprecated Use recoverStaleImportProcessingPhase */
@@ -1293,15 +2158,24 @@ export async function buildCompletedDraftLinksMaterializationResult(
     rows_linked: 0,
     total_resolved_rows: total,
     rows_with_draft_link: linkedTotal,
+    conflict_count: 0,
     done: true,
     next_cursor: null,
+    claim_token: null,
   };
 }
+
+export type ImportChunkOptions = {
+  cursor?: number;
+  limit?: number;
+  /** The `claim_token` the previous chunk of this import step returned. */
+  claimToken?: string | null;
+};
 
 async function executeRunMaterializeCompaniesChunk(
   batchId: string,
   actorId: string,
-  options: { cursor?: number; limit?: number } = {},
+  options: ImportChunkOptions = {},
 ): Promise<MaterializeCompaniesChunkResult> {
   let batch = await getBatchRow(batchId);
   if (batch.status === "draft") {
@@ -1326,80 +2200,37 @@ async function executeRunMaterializeCompaniesChunk(
     );
   }
 
-  const supabase = createAdminClient();
-  const now = new Date().toISOString();
-
-  if (batch.processing_phase !== "materializing_companies") {
-    const { data: initialClaim, error: claimError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ processing_phase: "materializing_companies", updated_at: now })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .is("processing_phase", null)
-      .select("id")
-      .maybeSingle();
-
-    if (claimError) throw new Error(claimError.message);
-    let claimed = initialClaim;
-
-    if (!claimed) {
-      batch = await getBatchRow(batchId);
-      if (
-        batch.processing_phase === "materializing_companies" &&
-        (await recoverStaleImportProcessingPhase(batchId, batch))
-      ) {
-        const reclaim = await supabase
-          .from("sponsor_import_batches")
-          .update({
-            processing_phase: "materializing_companies",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", batchId)
-          .eq("status", "review")
-          .is("processing_phase", null)
-          .select("id")
-          .maybeSingle();
-        if (reclaim.error) throw new Error(reclaim.error.message);
-        claimed = reclaim.data;
+  const claim = await acquireImportChunkClaim(
+    batchId,
+    "materializing_companies",
+    batch,
+    options.claimToken ?? null,
+  );
+  if (!claim.acquired) {
+    batch = claim.batch;
+    if (batch.processing_phase === "importing_to_draft") {
+      if (await isCompanyMaterializationComplete(batchId)) {
+        return buildCompletedCompanyMaterializationResult(batchId);
       }
-      if (!claimed && batch.processing_phase !== "materializing_companies") {
-        if (batch.processing_phase === "importing_to_draft") {
-          if (await isCompanyMaterializationComplete(batchId)) {
-            return buildCompletedCompanyMaterializationResult(batchId);
-          }
-          throw new SponsorImportHttpError(
-            409,
-            "Import-to-draft is already in progress.",
-          );
-        }
-        throw new SponsorImportHttpError(
-          409,
-          "Company materialization could not start. Refresh the page and try again.",
-          { status: batch.status, processing_phase: batch.processing_phase },
-        );
-      }
+      throw new SponsorImportHttpError(
+        409,
+        "Import-to-draft is already in progress.",
+      );
     }
-  } else {
-    const { error: touchError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ updated_at: now })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .eq("processing_phase", "materializing_companies");
-    if (touchError) throw new Error(touchError.message);
+    throw new SponsorImportHttpError(
+      409,
+      "Company materialization could not start. Refresh the page and try again.",
+      { status: batch.status, processing_phase: batch.processing_phase },
+    );
   }
 
-  const result = await materializeCompaniesChunk(batchId, options);
-
-  if (result.done) {
-    const { error: clearError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ processing_phase: null, updated_at: new Date().toISOString() })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .eq("processing_phase", "materializing_companies");
-    if (clearError) throw new Error(clearError.message);
-  }
+  const chunk = await materializeCompaniesChunk(batchId, {
+    cursor: options.cursor,
+    limit: options.limit,
+  });
+  const result = await completeImportChunkWithDeps("materializing_companies", claim.token, chunk, (token) =>
+    releaseImportChunkClaim(batchId, "materializing_companies", token),
+  );
 
   await appendActionLog({
     batchId,
@@ -1415,7 +2246,7 @@ async function executeRunMaterializeCompaniesChunk(
 export async function runMaterializeCompaniesChunk(
   batchId: string,
   actorId: string,
-  options: { cursor?: number; limit?: number } = {},
+  options: ImportChunkOptions = {},
 ): Promise<MaterializeCompaniesChunkResult> {
   return withImportToDraftPipelineLog(
     {
@@ -1463,8 +2294,10 @@ export async function buildCompletedCompanyMaterializationResult(
     companies_created: 0,
     total_resolved_rows: total,
     rows_with_company_id: total,
+    conflict_count: 0,
     done: true,
     next_cursor: null,
+    claim_token: null,
   };
 }
 
@@ -1512,7 +2345,86 @@ async function assertAllResolvedRowsLinked(batchId: string): Promise<void> {
   }
 }
 
-function assertImportToDraftNotBlockedByProcessingPhase(batch: BatchRow): void {
+export const DRAFT_LINKS_INCONSISTENT_MESSAGE =
+  "Import to draft cannot finish because some draft links no longer match the reviewed rows. Discard this import and start again.";
+
+export type DraftLinkConsistencyLink = { id: string; company_id: string };
+export type DraftLinkConsistencyRow = {
+  id: string;
+  status: string;
+  resolved_company_id: string | null;
+  draft_link_id: string | null;
+};
+
+/**
+ * Publishing reads draft links only, so before a batch becomes a draft every link must be backed
+ * by a resolved row of the same company, and no excluded row may still point at a link.
+ */
+export function findDraftLinkInconsistencies(
+  links: readonly DraftLinkConsistencyLink[],
+  rows: readonly DraftLinkConsistencyRow[],
+): { unbacked_link_ids: string[]; excluded_linked_row_ids: string[] } {
+  const backedLinkIds = new Set(
+    rows
+      .filter((row) => row.status === "resolved" && row.draft_link_id !== null)
+      .flatMap((row) => {
+        const link = links.find((candidate) => candidate.id === row.draft_link_id);
+        return link && link.company_id === row.resolved_company_id ? [link.id] : [];
+      }),
+  );
+  return {
+    unbacked_link_ids: links.filter((link) => !backedLinkIds.has(link.id)).map((link) => link.id),
+    excluded_linked_row_ids: rows
+      .filter((row) => row.status === "excluded" && row.draft_link_id !== null)
+      .map((row) => row.id),
+  };
+}
+
+async function assertDraftLinksMatchRows(batchId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { data: links, error: linksError } = await supabase
+    .from("sponsor_import_draft_links")
+    .select("id, company_id")
+    .eq("batch_id", batchId);
+  if (linksError) throw new Error(linksError.message);
+
+  const { data: rows, error: rowsError } = await supabase
+    .from("sponsor_import_rows")
+    .select("id, status, resolved_company_id, draft_link_id")
+    .eq("batch_id", batchId)
+    .not("draft_link_id", "is", null);
+  if (rowsError) throw new Error(rowsError.message);
+
+  const inconsistencies = findDraftLinkInconsistencies(
+    (links ?? []).map((link) => ({ id: String(link.id), company_id: String(link.company_id) })),
+    (rows ?? []).map((row) => ({
+      id: String(row.id),
+      status: String(row.status),
+      resolved_company_id: typeof row.resolved_company_id === "string" ? row.resolved_company_id : null,
+      draft_link_id: typeof row.draft_link_id === "string" ? row.draft_link_id : null,
+    })),
+  );
+  if (inconsistencies.unbacked_link_ids.length > 0 || inconsistencies.excluded_linked_row_ids.length > 0) {
+    throw new SponsorImportHttpError(409, DRAFT_LINKS_INCONSISTENT_MESSAGE, inconsistencies);
+  }
+}
+
+export function assertImportToDraftNotBlockedByProcessingPhase(
+  batch: Pick<BatchRow, "processing_phase">,
+): void {
+  assertNotMatching(batch);
+  if (batch.processing_phase === "validating") {
+    throw new SponsorImportHttpError(
+      409,
+      "Validation is in progress. Wait for it to finish before import-to-draft.",
+    );
+  }
+  if (batch.processing_phase === "parsing") {
+    throw new SponsorImportHttpError(
+      409,
+      "Column mapping is being saved. Wait for it to finish before import-to-draft.",
+    );
+  }
   if (batch.processing_phase === "materializing_companies") {
     throw new SponsorImportHttpError(
       409,
@@ -1530,7 +2442,7 @@ function assertImportToDraftNotBlockedByProcessingPhase(batch: BatchRow): void {
 async function executeRunMaterializeDraftLinksChunk(
   batchId: string,
   actorId: string,
-  options: { cursor?: number; limit?: number } = {},
+  options: ImportChunkOptions = {},
 ): Promise<MaterializeDraftLinksChunkResult> {
   let batch = await getBatchRow(batchId);
   if (batch.status === "draft") {
@@ -1553,81 +2465,34 @@ async function executeRunMaterializeDraftLinksChunk(
   assertImportToDraftGuards(rows);
   await assertCompanyMaterializationComplete(batchId);
 
-  const supabase = createAdminClient();
-  const now = new Date().toISOString();
-
-  if (batch.processing_phase !== "importing_to_draft") {
-    const { data: initialClaim, error: claimError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ processing_phase: "importing_to_draft", updated_at: now })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .is("processing_phase", null)
-      .select("id")
-      .maybeSingle();
-
-    if (claimError) throw new Error(claimError.message);
-    let claimed = initialClaim;
-
-    if (!claimed) {
-      batch = await getBatchRow(batchId);
-      if (
-        batch.processing_phase === "importing_to_draft" &&
-        (await recoverStaleImportProcessingPhase(batchId, batch))
-      ) {
-        const reclaim = await supabase
-          .from("sponsor_import_batches")
-          .update({
-            processing_phase: "importing_to_draft",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", batchId)
-          .eq("status", "review")
-          .is("processing_phase", null)
-          .select("id")
-          .maybeSingle();
-        if (reclaim.error) throw new Error(reclaim.error.message);
-        claimed = reclaim.data;
-      }
-      if (!claimed && batch.processing_phase !== "importing_to_draft") {
-        if (batch.processing_phase === "materializing_companies") {
-          throw new SponsorImportHttpError(
-            409,
-            "Company materialization is in progress. Wait for it to finish before creating draft links.",
-          );
-        }
-        throw new SponsorImportHttpError(
-          409,
-          "Draft-link materialization could not start. Refresh the page and try again.",
-          { status: batch.status, processing_phase: batch.processing_phase },
-        );
-      }
-    }
-  } else {
-    const { error: touchError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ updated_at: now })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .eq("processing_phase", "importing_to_draft");
-    if (touchError) throw new Error(touchError.message);
-  }
-
-  const result = await materializeDraftLinksChunk(
+  const claim = await acquireImportChunkClaim(
     batchId,
-    String(batch.event_edition_id),
-    options,
+    "importing_to_draft",
+    batch,
+    options.claimToken ?? null,
   );
-
-  if (result.done) {
-    const { error: clearError } = await supabase
-      .from("sponsor_import_batches")
-      .update({ processing_phase: null, updated_at: new Date().toISOString() })
-      .eq("id", batchId)
-      .eq("status", "review")
-      .eq("processing_phase", "importing_to_draft");
-    if (clearError) throw new Error(clearError.message);
+  if (!claim.acquired) {
+    batch = claim.batch;
+    if (batch.processing_phase === "materializing_companies") {
+      throw new SponsorImportHttpError(
+        409,
+        "Company materialization is in progress. Wait for it to finish before creating draft links.",
+      );
+    }
+    throw new SponsorImportHttpError(
+      409,
+      "Draft-link materialization could not start. Refresh the page and try again.",
+      { status: batch.status, processing_phase: batch.processing_phase },
+    );
   }
+
+  const chunk = await materializeDraftLinksChunk(batchId, String(batch.event_edition_id), {
+    cursor: options.cursor,
+    limit: options.limit,
+  });
+  const result = await completeImportChunkWithDeps("importing_to_draft", claim.token, chunk, (token) =>
+    releaseImportChunkClaim(batchId, "importing_to_draft", token),
+  );
 
   await appendActionLog({
     batchId,
@@ -1643,7 +2508,7 @@ async function executeRunMaterializeDraftLinksChunk(
 export async function runMaterializeDraftLinksChunk(
   batchId: string,
   actorId: string,
-  options: { cursor?: number; limit?: number } = {},
+  options: ImportChunkOptions = {},
 ): Promise<MaterializeDraftLinksChunkResult> {
   return withImportToDraftPipelineLog(
     {
@@ -1683,6 +2548,7 @@ async function executeImportBatchToDraft(
   assertImportToDraftGuards(rows);
   await assertCompanyMaterializationComplete(batchId);
   await assertAllResolvedRowsLinked(batchId);
+  await assertDraftLinksMatchRows(batchId);
 
   const supabase = createAdminClient();
   const result = await summarizeImportToDraftFromDb(batchId);
@@ -1696,6 +2562,8 @@ async function executeImportBatchToDraft(
     })
     .eq("id", batchId)
     .eq("status", "review")
+    // A workflow that claimed after the guard above (e.g. validation) is never displaced.
+    .is("processing_phase", null)
     .select("id")
     .maybeSingle();
 

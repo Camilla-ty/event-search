@@ -203,6 +203,7 @@ describe("ReviewQueueStep while matching is still running", () => {
     assert.equal(findButton(view, "Select all matching filter").disabled, true);
     assert.equal(findButton(view, "Decide").disabled, true);
     assert.equal(findButton(view, "Import to draft").disabled, true);
+    assert.equal(findButton(view, "Back").disabled, true, "Back would rerun validation mid-match");
   });
 
   it("unlocks review after Check again once the server reports matching complete", async () => {
@@ -236,5 +237,6 @@ describe("ReviewQueueStep while matching is still running", () => {
     assert.equal(server.matchCalls, 2);
     assert.equal(findButton(view, "Bulk accept domain matches").disabled, false);
     assert.equal(findButton(view, "Decide").disabled, false);
+    assert.equal(findButton(view, "Back").disabled, false);
   });
 });

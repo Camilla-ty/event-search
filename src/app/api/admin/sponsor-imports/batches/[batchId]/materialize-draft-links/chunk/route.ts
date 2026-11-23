@@ -11,6 +11,7 @@ type RouteContext = { params: Promise<{ batchId: string }> };
 type ChunkBody = {
   cursor?: number;
   limit?: number;
+  claimToken?: string;
 };
 
 function parseChunkBody(raw: unknown): ChunkBody {
@@ -26,7 +27,11 @@ function parseChunkBody(raw: unknown): ChunkBody {
     typeof body.limit === "number" && Number.isFinite(body.limit) && body.limit > 0
       ? Math.floor(body.limit)
       : undefined;
-  return { cursor, limit };
+  const claimToken =
+    typeof body.claim_token === "string" && body.claim_token.length > 0 && body.claim_token.length <= 64
+      ? body.claim_token
+      : undefined;
+  return { cursor, limit, claimToken };
 }
 
 export async function POST(request: Request, context: RouteContext) {

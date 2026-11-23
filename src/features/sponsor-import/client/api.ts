@@ -160,7 +160,7 @@ export async function patchRowDecision(
 
 export async function materializeCompaniesChunk(
   batchId: string,
-  body: { cursor?: number; limit?: number } = {},
+  body: { cursor?: number; limit?: number; claim_token?: string } = {},
 ): Promise<ApiOk<{ result: MaterializeCompaniesChunkResult }> | ApiErr> {
   return postSponsorImportJson<ApiOk<{ result: MaterializeCompaniesChunkResult }>>(
     `/api/admin/sponsor-imports/batches/${batchId}/materialize-companies/chunk`,
@@ -174,7 +174,7 @@ export async function materializeCompaniesChunk(
 
 export async function materializeDraftLinksChunk(
   batchId: string,
-  body: { cursor?: number; limit?: number } = {},
+  body: { cursor?: number; limit?: number; claim_token?: string } = {},
 ): Promise<ApiOk<{ result: MaterializeDraftLinksChunkResult }> | ApiErr> {
   return postSponsorImportJson<ApiOk<{ result: MaterializeDraftLinksChunkResult }>>(
     `/api/admin/sponsor-imports/batches/${batchId}/materialize-draft-links/chunk`,

@@ -1,8 +1,11 @@
 import type { ApiErr, ApiOk } from "./client/types";
 import type { MaterializeCompaniesChunkResult } from "./types";
 
-/** Per-chunk client timeout (below the route's 300s maxDuration). */
-export const MATERIALIZE_CHUNK_TIMEOUT_MS = 150_000;
+/**
+ * Per-chunk client timeout, longer than the chunk routes' 300s maxDuration: by the time the
+ * client gives up and offers a retry, the timed-out request can no longer be running.
+ */
+export const MATERIALIZE_CHUNK_TIMEOUT_MS = 310_000;
 
 /** Safety cap so a non-progressing server can never spin the client forever. */
 export const MATERIALIZE_MAX_CHUNK_ITERATIONS = 1000;
@@ -36,11 +39,15 @@ export type RunCompanyMaterializationResult =
  *
  * Reuses the server-side chunk/resume logic: each call processes one chunk and
  * returns `done` + `next_cursor`. The loop forwards the cursor to avoid
- * rescanning already-materialized rows. Already-resolved rows are skipped
+ * rescanning already-materialized rows, and the claim token so the server lets
+ * only this run continue the step. Already-resolved rows are skipped
  * server-side, so a fresh retry resumes safely from where it stopped.
  */
 export async function runCompanyMaterialization(
-  chunkFn: (cursor: number | undefined) => Promise<MaterializeChunkResponse>,
+  chunkFn: (
+    cursor: number | undefined,
+    claimToken: string | undefined,
+  ) => Promise<MaterializeChunkResponse>,
   options?: {
     onProgress?: (progress: MaterializeProgress) => void;
     maxIterations?: number;
@@ -48,10 +55,11 @@ export async function runCompanyMaterialization(
 ): Promise<RunCompanyMaterializationResult> {
   const maxIterations = options?.maxIterations ?? MATERIALIZE_MAX_CHUNK_ITERATIONS;
   let cursor: number | undefined;
+  let claimToken: string | undefined;
   let last: MaterializeCompaniesChunkResult | null = null;
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-    const response = await chunkFn(cursor);
+    const response = await chunkFn(cursor, claimToken);
     if (!response.ok) {
       return {
         ok: false,
@@ -77,6 +85,7 @@ export async function runCompanyMaterialization(
     }
 
     cursor = result.next_cursor ?? cursor;
+    claimToken = result.claim_token ?? undefined;
   }
 
   void last;

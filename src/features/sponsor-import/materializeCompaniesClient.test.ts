@@ -1,13 +1,33 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import {
+  MATERIALIZE_CHUNK_TIMEOUT_MS,
   MATERIALIZE_COMPANIES_FAILED_MESSAGE,
   materializeCompaniesProgressLabel,
   runCompanyMaterialization,
   type MaterializeChunkResponse,
 } from "./materializeCompaniesClient";
 import type { MaterializeCompaniesChunkResult } from "./types";
+
+describe("chunk timeout vs route maxDuration", () => {
+  for (const route of ["materialize-companies/chunk", "materialize-draft-links/chunk"]) {
+    it(`outlasts the ${route} route, so a retry never overlaps a running chunk`, () => {
+      const source = readFileSync(
+        join(process.cwd(), "src/app/api/admin/sponsor-imports/batches/[batchId]", route, "route.ts"),
+        "utf8",
+      );
+      const maxDuration = Number(/export const maxDuration = (\d+);/.exec(source)?.[1]);
+      assert.ok(maxDuration > 0, `expected a numeric maxDuration in ${route}`);
+      assert.ok(
+        MATERIALIZE_CHUNK_TIMEOUT_MS > maxDuration * 1000,
+        `client timeout ${MATERIALIZE_CHUNK_TIMEOUT_MS}ms must exceed ${maxDuration}s`,
+      );
+    });
+  }
+});
 
 function chunk(
   overrides: Partial<MaterializeCompaniesChunkResult>,
@@ -56,6 +76,24 @@ describe("runCompanyMaterialization", () => {
 
     assert.equal(result.ok, true);
     assert.deepEqual(calls, [undefined]);
+  });
+
+  it("sends no claim token first, then the token returned by the previous chunk", async () => {
+    const tokens: Array<string | undefined> = [];
+    const responses: MaterializeChunkResponse[] = [
+      chunk({ examined_count: 50, total_resolved_rows: 120, rows_with_company_id: 50, done: false, next_cursor: 50, claim_token: "token-1" }),
+      chunk({ examined_count: 50, total_resolved_rows: 120, rows_with_company_id: 100, done: false, next_cursor: 100, claim_token: "token-2" }),
+      chunk({ examined_count: 20, total_resolved_rows: 120, rows_with_company_id: 120, done: true, claim_token: null }),
+    ];
+
+    let index = 0;
+    const result = await runCompanyMaterialization((_cursor, claimToken) => {
+      tokens.push(claimToken);
+      return Promise.resolve(responses[index++]);
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(tokens, [undefined, "token-1", "token-2"]);
   });
 
   it("resumes across chunks by forwarding next_cursor", async () => {
