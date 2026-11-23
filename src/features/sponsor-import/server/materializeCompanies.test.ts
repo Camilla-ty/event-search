@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  MATERIALIZE_COMPANIES_DEFAULT_CHUNK,
+  MATERIALIZE_COMPANIES_MAX_CHUNK,
   materializeCompaniesChunkWithDeps,
   type MaterializeCompanyRow,
 } from "./materializeCompanies";
@@ -350,5 +352,198 @@ describe("materializeCompaniesChunkWithDeps — Review decisions racing the chun
 
     assert.equal(result.materialized_count, 1);
     assert.equal(result.conflict_count, 0);
+  });
+});
+
+function makeCreateNewRows(count: number): MaterializeCompanyRow[] {
+  return Array.from({ length: count }, (_, index) =>
+    makeRow({
+      id: `row-${index + 1}`,
+      excel_row_number: index + 1,
+      normalized_company_name: `Company ${index + 1}`,
+      normalized_website: `https://company-${index + 1}.example`,
+      proposed_slug: `company-${index + 1}`,
+    }),
+  );
+}
+
+/**
+ * Remembers a company by name the way production does before insert, so a retry of a
+ * name that was already created returns that company instead of creating another.
+ */
+function rememberingCreateDeps(store: TestStore) {
+  const companiesByName = new Map<string, string>();
+  const deps = createTestDeps(store);
+  return {
+    ...deps,
+    resolveCompanyIdForRow: async (row: MaterializeCompanyRow) => {
+      const nameKey = row.normalized_company_name?.trim().toLowerCase() ?? row.id;
+      const existing = companiesByName.get(nameKey);
+      if (existing) {
+        return { companyId: existing, created: false };
+      }
+      const companyId = `company-${nameKey}`;
+      companiesByName.set(nameKey, companyId);
+      store.createCalls.push(nameKey);
+      return { companyId, created: true };
+    },
+  };
+}
+
+describe("materializeCompaniesChunkWithDeps — 15-company chunks", () => {
+  it("processes 15 companies when no limit is given", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(20),
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const requestedLimits: number[] = [];
+    const deps = rememberingCreateDeps(store);
+    const result = await materializeCompaniesChunkWithDeps(BATCH_ID, {}, {
+      ...deps,
+      fetchPendingRows: async (batchId, cursor, limit) => {
+        requestedLimits.push(limit);
+        return deps.fetchPendingRows(batchId, cursor, limit);
+      },
+    });
+
+    assert.equal(MATERIALIZE_COMPANIES_DEFAULT_CHUNK, 15);
+    assert.deepEqual(requestedLimits, [15]);
+    assert.equal(result.examined_count, 15);
+    assert.equal(result.companies_created, 15);
+    assert.equal(result.done, false);
+    assert.equal(result.next_cursor, 15);
+  });
+
+  it("caps a larger requested limit at 20", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(25),
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const requestedLimits: number[] = [];
+    const deps = rememberingCreateDeps(store);
+    const result = await materializeCompaniesChunkWithDeps(
+      BATCH_ID,
+      { limit: 100 },
+      {
+        ...deps,
+        fetchPendingRows: async (batchId, cursor, limit) => {
+          requestedLimits.push(limit);
+          return deps.fetchPendingRows(batchId, cursor, limit);
+        },
+      },
+    );
+
+    assert.equal(MATERIALIZE_COMPANIES_MAX_CHUNK, 20);
+    assert.deepEqual(requestedLimits, [20]);
+    assert.equal(result.examined_count, 20);
+    assert.equal(result.done, false);
+  });
+
+  it("retries a partial chunk without creating a duplicate company", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(16),
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const deps = rememberingCreateDeps(store);
+    let failRow8 = true;
+    const flaky = {
+      ...deps,
+      persistRowCompanyId: async (rowId: string, companyId: string) => {
+        if (failRow8 && rowId === "row-8") {
+          failRow8 = false;
+          throw new Error("simulated persist failure");
+        }
+        await deps.persistRowCompanyId(rowId, companyId);
+      },
+    };
+
+    await assert.rejects(
+      () => materializeCompaniesChunkWithDeps(BATCH_ID, {}, flaky),
+      /simulated persist failure/,
+    );
+
+    assert.equal(store.persisted.size, 7);
+    assert.equal(store.createCalls.length, 8);
+    assert.equal(store.rows[7]?.resolved_company_id, null);
+
+    const resume = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0 }, flaky);
+
+    assert.equal(store.createCalls.filter((name) => name === "company 8").length, 1);
+    assert.equal(store.persisted.get("row-8"), "company-company 8");
+    assert.equal(store.createCalls.length, 16);
+    assert.equal(resume.companies_created, 8);
+    assert.equal(resume.materialized_count, 9);
+    assert.equal(resume.done, true);
+    assert.equal(resume.next_cursor, null);
+  });
+
+  it("a retry from the start skips companies the previous request already created", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(18),
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const deps = rememberingCreateDeps(store);
+
+    const first = await materializeCompaniesChunkWithDeps(BATCH_ID, {}, deps);
+    assert.equal(first.examined_count, 15);
+    assert.equal(first.done, false);
+    assert.equal(store.createCalls.length, 15);
+
+    const retry = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0 }, deps);
+
+    assert.equal(retry.examined_count, 3);
+    assert.equal(retry.companies_created, 3);
+    assert.equal(store.createCalls.length, 18);
+    assert.equal(retry.done, true);
+    assert.equal(store.persisted.size, 18);
+  });
+
+  it("finishes the import when fewer than 15 rows remain", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(18),
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const deps = rememberingCreateDeps(store);
+
+    const first = await materializeCompaniesChunkWithDeps(BATCH_ID, {}, deps);
+    assert.equal(first.examined_count, 15);
+    assert.equal(first.next_cursor, 15);
+    assert.equal(first.done, false);
+
+    const last = await materializeCompaniesChunkWithDeps(
+      BATCH_ID,
+      { cursor: first.next_cursor ?? 0 },
+      deps,
+    );
+
+    assert.equal(last.examined_count, 3);
+    assert.equal(last.companies_created, 3);
+    assert.equal(last.done, true);
+    assert.equal(last.next_cursor, null);
+    assert.equal(store.persisted.size, 18);
+  });
+
+  it("completes in one request when the whole batch is smaller than 15", async () => {
+    const store: TestStore = {
+      rows: makeCreateNewRows(10),
+      persisted: new Map(),
+      createCalls: [],
+    };
+
+    const result = await materializeCompaniesChunkWithDeps(
+      BATCH_ID,
+      {},
+      rememberingCreateDeps(store),
+    );
+
+    assert.equal(result.examined_count, 10);
+    assert.equal(result.companies_created, 10);
+    assert.equal(result.done, true);
+    assert.equal(result.next_cursor, null);
   });
 });

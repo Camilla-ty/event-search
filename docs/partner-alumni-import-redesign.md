@@ -351,7 +351,7 @@ Both timestamps logged in batch + action log.
 
 ### 12.1 Chunked pipeline
 
-1. **Materialize companies** — reuse sponsor chunk pattern (`MATERIALIZE_COMPANIES_DEFAULT_CHUNK = 50`); only rows with explicit decisions
+1. **Materialize companies** — reuse the sponsor chunk pattern (`MATERIALIZE_COMPANIES_DEFAULT_CHUNK = 15`, `MATERIALIZE_COMPANIES_MAX_CHUNK = 20`; originally 50 and 100). Only rows with explicit decisions are materialized. The smaller company chunk keeps each HTTP request inside Cloudflare's 100-second limit.
 2. **Materialize version members** — insert/update `event_partner_alumni_version_companies`
    - Respect `UNIQUE (version_id, company_id)`
    - Assign `display_order`: row value → else append after max existing
