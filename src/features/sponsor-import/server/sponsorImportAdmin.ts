@@ -1,3 +1,4 @@
+import { DUPLICATE_NAME_IMPORT_STOPPED_MESSAGE } from "@/src/lib/companies/duplicateCompanyName";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type {
@@ -2228,6 +2229,17 @@ async function executeRunMaterializeCompaniesChunk(
     cursor: options.cursor,
     limit: options.limit,
   });
+  if ((chunk.duplicate_name_review_count ?? 0) > 0) {
+    await releaseImportChunkClaim(batchId, "materializing_companies", claim.token);
+    await appendActionLog({
+      batchId,
+      actorId,
+      actionType: "materialize_companies_chunk",
+      payload: chunk,
+      affectedCount: chunk.materialized_count,
+    });
+    throw new SponsorImportHttpError(409, DUPLICATE_NAME_IMPORT_STOPPED_MESSAGE);
+  }
   const result = await completeImportChunkWithDeps("materializing_companies", claim.token, chunk, (token) =>
     releaseImportChunkClaim(batchId, "materializing_companies", token),
   );

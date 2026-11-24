@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { duplicateNameReviewPatch } from "@/src/lib/companies/duplicateCompanyName";
 import {
   createCompanyResolutionCaches,
   materializeCompaniesChunkWithDeps,
@@ -18,7 +19,7 @@ export {
 } from "@/src/features/sponsor-import/server/materializeCompanies";
 
 const MATERIALIZE_COMPANY_ROW_SELECT =
-  "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug";
+  "id, excel_row_number, decision_type, decision_source, conflict_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug";
 
 async function fetchPendingCompanyRows(
   supabase: SupabaseClient,
@@ -74,7 +75,11 @@ async function persistResolvedCompanyId(
 ): Promise<void> {
   const { error } = await supabase
     .from("partner_alumni_import_rows")
-    .update({ resolved_company_id: companyId, updated_at: new Date().toISOString() })
+    .update({
+      resolved_company_id: companyId,
+      import_error: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", rowId);
 
   if (error) throw new Error(error.message);
@@ -99,6 +104,15 @@ export async function materializePartnerAlumniCompaniesChunk(
     countProgress: (id) => countCompanyMaterializationProgress(supabase, id),
     persistRowCompanyId: (rowId, companyId) =>
       persistResolvedCompanyId(supabase, rowId, companyId),
+    deferDuplicateNameRow: async (rowId, resolution) => {
+      const { error } = await supabase
+        .from("partner_alumni_import_rows")
+        .update(duplicateNameReviewPatch(resolution))
+        .eq("id", rowId)
+        .eq("status", "resolved")
+        .is("resolved_company_id", null);
+      if (error) throw new Error(error.message);
+    },
     resolveCompanyIdForRow: async (row, caches) => {
       if (row.decision_type !== "create_new" && row.resolved_company_id) {
         return { companyId: row.resolved_company_id, created: false };

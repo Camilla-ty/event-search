@@ -107,6 +107,8 @@ export type MaterializeCompaniesChunkResult = {
   companies_created: number;
   total_resolved_rows: number;
   rows_with_company_id: number;
+  /** Shared names returned to review. The import step stops so they are not skipped. */
+  duplicate_name_review_count?: number;
   done: boolean;
   next_cursor: number | null;
 };

@@ -106,6 +106,8 @@ export type MaterializeCompaniesChunkResult = {
   rows_with_company_id: number;
   /** Rows whose Review decision changed under the chunk; left as Review set them. */
   conflict_count?: number;
+  /** Shared names returned to review. The import step stops so they are not skipped. */
+  duplicate_name_review_count?: number;
   done: boolean;
   next_cursor: number | null;
   /** Send with the next chunk request to continue this import step; null once it is done. */

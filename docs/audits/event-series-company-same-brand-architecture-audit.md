@@ -108,7 +108,7 @@ Live illustration (case-insensitive `lower(trim(name))` match between non-merged
 
 #### `companies`
 
-- Identity: `name` (unique; constraint still named `sponsors_name_key` — legacy), `slug` (unique), `website`, `domain` (unique when set), `aliases[]`, logo metadata.
+- Identity: `name` (not unique; legacy unique constraint `sponsors_name_key` is dropped by `supabase/migrations/20261124120000_companies_name_not_unique.sql`), `slug` (unique), `website`, `domain` (unique when set), `aliases[]`, logo metadata. Companies that share a name are distinguished by slug and domain.
 - Lifecycle column: `status` (`company_status` enum) `active` \| `merged`; `merged_into_company_id`, `merged_at`, `merged_by`.
 - Public policy: optional `restricted_at` (CHECK: restricted only when `status = active`).
 - **No** `type` / `org_type` / `entity_type` column — breadth of “what a Company is” is semantic, not typed.

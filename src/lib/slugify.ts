@@ -7,6 +7,17 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * A slug the admin typed is saved as itself.
+ * The name is used only when no slug was provided, so an existing
+ * name-derived slug does not replace a different valid slug.
+ */
+export function resolveManualCompanySlug(name: string, requestedSlug: string): string {
+  const requested = slugify(requestedSlug);
+  if (requested !== "") return requested;
+  return slugify(name);
+}
+
 function slugAlreadyEndsWithYear(slug: string, year: number): boolean {
   const yearStr = String(year);
   return slug === yearStr || slug.endsWith(`-${yearStr}`);

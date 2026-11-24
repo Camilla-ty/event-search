@@ -1,14 +1,22 @@
 import {
   createCompany,
   enrichCompanyLogo,
-  normalizeDomainFromWebsite,
 } from "@/src/features/companies/server/createCompanyWithLogo";
+import {
+  duplicateNameReviewMessage,
+  duplicateNameReviewPatch,
+  isCompanyCreateNeedsReview,
+  isExplicitDuplicateNameCreate,
+  lookupCompanyNameAndDomain,
+  resolveCompanyCreate,
+  type CompanyCreateResolution,
+} from "@/src/lib/companies/duplicateCompanyName";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { slugify } from "@/src/lib/slugify";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { MaterializeCompaniesChunkResult } from "../types";
-import { isUniqueViolation, SponsorImportHttpError } from "./errors";
+import { SponsorImportHttpError } from "./errors";
 
 export const MATERIALIZE_COMPANIES_DEFAULT_CHUNK = 15;
 export const MATERIALIZE_COMPANIES_MAX_CHUNK = 20;
@@ -23,16 +31,14 @@ export type MaterializeCompanyRow = {
   normalized_website: string | null;
   proposed_slug: string | null;
   draft_link_id?: string | null;
+  decision_source?: string | null;
+  conflict_type?: string | null;
 };
 
 export type CompanyResolutionCaches = {
   createdByRowId: Map<string, string>;
   createNewByNameKey: Map<string, string>;
 };
-
-export function normalizeCompanyNameKey(name: string): string {
-  return name.trim().toLowerCase();
-}
 
 export function createCompanyResolutionCaches(): CompanyResolutionCaches {
   return {
@@ -67,27 +73,8 @@ export async function findExistingCompanyId(
   name: string,
   website: string | null,
 ): Promise<string | null> {
-  const { data: byName, error: nameError } = await supabase
-    .from("companies")
-    .select("id")
-    .eq("name", name)
-    .maybeSingle();
-  if (nameError) throw new Error(nameError.message);
-  if (byName?.id) return String(byName.id);
-
-  if (website) {
-    const domain = normalizeDomainFromWebsite(website);
-    if (domain) {
-      const { data: byDomain, error: domainError } = await supabase
-        .from("companies")
-        .select("id")
-        .eq("domain", domain)
-        .maybeSingle();
-      if (domainError) throw new Error(domainError.message);
-      if (byDomain?.id) return String(byDomain.id);
-    }
-  }
-
+  const found = await lookupCompanyNameAndDomain(supabase, name, website);
+  if (found.domain && found.sameDomainCompanyId) return found.sameDomainCompanyId;
   return null;
 }
 
@@ -95,7 +82,7 @@ export async function resolveCreateNewCompanyId(
   supabase: SupabaseClient,
   row: MaterializeCompanyRow,
   createNewByNameKey: Map<string, string>,
-): Promise<{ companyId: string; created: boolean }> {
+): Promise<CompanyCreateResolution> {
   const name = row.normalized_company_name?.trim();
   if (!name) {
     throw new SponsorImportHttpError(422, `Row ${row.excel_row_number} missing company name.`);
@@ -103,43 +90,29 @@ export async function resolveCreateNewCompanyId(
 
   const websiteRaw = row.normalized_website?.trim() ?? "";
   const website = websiteRaw !== "" ? websiteRaw : null;
-  const nameKey = normalizeCompanyNameKey(name);
 
-  const cachedByName = createNewByNameKey.get(nameKey);
-  if (cachedByName) {
-    return { companyId: cachedByName, created: false };
-  }
-
-  const existingId = await findExistingCompanyId(supabase, name, website);
-  if (existingId) {
-    createNewByNameKey.set(nameKey, existingId);
-    return { companyId: existingId, created: false };
-  }
-
-  const slug = await uniqueSlug(row.proposed_slug ?? name, supabase);
   try {
-    const company = await createCompany({ name, website, slug, city_id: null });
-    createNewByNameKey.set(nameKey, company.id);
-    if (website) {
-      void enrichCompanyLogo(company.id, website);
-    }
-    return { companyId: company.id, created: true };
+    return await resolveCompanyCreate({
+      supabase,
+      name,
+      website,
+      explicitCreate: isExplicitDuplicateNameCreate(row),
+      cache: createNewByNameKey,
+      create: async () => {
+        const slug = await uniqueSlug(row.proposed_slug ?? name, supabase);
+        const company = await createCompany({ name, website, slug, city_id: null });
+        if (website) {
+          void enrichCompanyLogo(company.id, website);
+        }
+        return { id: company.id };
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (!isUniqueViolation(message)) {
-      throw error instanceof Error ? error : new Error(message);
-    }
-
-    const racedId = await findExistingCompanyId(supabase, name, website);
-    if (!racedId) {
-      throw new SponsorImportHttpError(
-        409,
-        `Could not create company "${name}" for row ${row.excel_row_number}: ${message}`,
-      );
-    }
-
-    createNewByNameKey.set(nameKey, racedId);
-    return { companyId: racedId, created: false };
+    throw new SponsorImportHttpError(
+      409,
+      `Could not create company "${name}" for row ${row.excel_row_number}: ${message}`,
+    );
   }
 }
 
@@ -148,7 +121,7 @@ export async function resolveCompanyIdForRow(
   row: MaterializeCompanyRow,
   createdByRowId: Map<string, string>,
   createNewByNameKey: Map<string, string>,
-): Promise<{ companyId: string; created: boolean }> {
+): Promise<CompanyCreateResolution> {
   const cached = createdByRowId.get(row.id);
   if (cached) return { companyId: cached, created: false };
 
@@ -183,7 +156,9 @@ export async function resolveCompanyIdForRow(
 
   if (row.decision_type === "create_new") {
     const result = await resolveCreateNewCompanyId(supabase, row, createNewByNameKey);
-    createdByRowId.set(row.id, result.companyId);
+    if (!isCompanyCreateNeedsReview(result)) {
+      createdByRowId.set(row.id, result.companyId);
+    }
     return result;
   }
 
@@ -191,7 +166,7 @@ export async function resolveCompanyIdForRow(
 }
 
 const MATERIALIZE_COMPANY_ROW_SELECT =
-  "id, excel_row_number, decision_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, draft_link_id";
+  "id, excel_row_number, decision_type, decision_source, conflict_type, resolved_company_id, proposed_company_id, normalized_company_name, normalized_website, proposed_slug, draft_link_id";
 
 export type MaterializeCompaniesChunkDeps = {
   fetchPendingRows: (
@@ -211,7 +186,11 @@ export type MaterializeCompaniesChunkDeps = {
   resolveCompanyIdForRow?: (
     row: MaterializeCompanyRow,
     caches: CompanyResolutionCaches,
-  ) => Promise<{ companyId: string; created: boolean }>;
+  ) => Promise<CompanyCreateResolution>;
+  deferDuplicateNameRow?: (
+    rowId: string,
+    resolution: Extract<CompanyCreateResolution, { needsReview: true }>,
+  ) => Promise<void>;
 };
 
 async function fetchPendingCompanyRows(
@@ -268,7 +247,11 @@ async function persistResolvedCompanyId(
 ): Promise<boolean> {
   const { data, error } = await supabase
     .from("sponsor_import_rows")
-    .update({ resolved_company_id: companyId, updated_at: new Date().toISOString() })
+    .update({
+      resolved_company_id: companyId,
+      import_error: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", rowId)
     .eq("status", "resolved")
     .is("resolved_company_id", null)
@@ -310,6 +293,7 @@ export async function materializeCompaniesChunkWithDeps(
   let materializedCount = 0;
   let companiesCreated = 0;
   let conflictCount = 0;
+  let duplicateNameReviewCount = 0;
   let lastExaminedRowNumber: number | null = null;
 
   for (const row of rows) {
@@ -322,7 +306,17 @@ export async function materializeCompaniesChunkWithDeps(
       continue;
     }
 
-    const { companyId, created } = await resolveRow(row, caches);
+    const resolved = await resolveRow(row, caches);
+    if (isCompanyCreateNeedsReview(resolved)) {
+      if (!deps.deferDuplicateNameRow) {
+        throw new SponsorImportHttpError(409, duplicateNameReviewMessage(resolved.reason));
+      }
+      await deps.deferDuplicateNameRow(row.id, resolved);
+      conflictCount += 1;
+      duplicateNameReviewCount += 1;
+      continue;
+    }
+    const { companyId, created } = resolved;
     if ((await deps.persistRowCompanyId(row.id, companyId)) === false) {
       // The reviewer's later decision stands; a company created for it is kept unused.
       conflictCount += 1;
@@ -345,6 +339,7 @@ export async function materializeCompaniesChunkWithDeps(
     total_resolved_rows: progress.total_resolved_rows,
     rows_with_company_id: progress.rows_with_company_id,
     conflict_count: conflictCount,
+    duplicate_name_review_count: duplicateNameReviewCount,
     done,
     next_cursor: done ? null : (lastExaminedRowNumber ?? cursor),
     claim_token: null,
@@ -363,5 +358,21 @@ export async function materializeCompaniesChunk(
     countProgress: (id) => countCompanyMaterializationProgress(supabase, id),
     persistRowCompanyId: (rowId, companyId) =>
       persistResolvedCompanyId(supabase, rowId, companyId),
+    deferDuplicateNameRow: (rowId, resolution) =>
+      deferDuplicateNameRow(supabase, rowId, resolution),
   });
+}
+
+async function deferDuplicateNameRow(
+  supabase: SupabaseClient,
+  rowId: string,
+  resolution: Extract<CompanyCreateResolution, { needsReview: true }>,
+): Promise<void> {
+  const { error } = await supabase
+    .from("sponsor_import_rows")
+    .update(duplicateNameReviewPatch(resolution))
+    .eq("id", rowId)
+    .eq("status", "resolved")
+    .is("resolved_company_id", null);
+  if (error) throw new Error(error.message);
 }

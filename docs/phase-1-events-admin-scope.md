@@ -226,7 +226,7 @@ Read-only table — no create/edit in phase 1.
 
 | Field | DB column | Required | Notes |
 |-------|-----------|----------|-------|
-| Company name | `companies.name` | **Yes** | Unique |
+| Company name | `companies.name` | **Yes** | Not unique. Distinct companies may share a name. Slug and domain stay unique. |
 | Website | `companies.website` | **Yes** | Drives `domain` server-side |
 | City | `companies.city_id` | No | Select; default empty |
 | Slug | `companies.slug` | **Yes** | Auto from name; **editable with warnings** on change |
@@ -237,7 +237,7 @@ Read-only table — no create/edit in phase 1.
 
 | Field | DB column | Editable | Notes |
 |-------|-----------|----------|-------|
-| Name | `companies.name` | Yes | Unique |
+| Name | `companies.name` | Yes | Not unique. Distinct companies may share a name. |
 | Website | `companies.website` | Yes | May update domain |
 | Slug | `companies.slug` | Yes | Unique; **editable with warnings** (slug change modal) |
 | City | `companies.city_id` | Yes | |
@@ -291,7 +291,7 @@ Read-only table — no create/edit in phase 1.
 | Rule | Type | Message |
 |------|------|---------|
 | Name non-empty | Error | Required |
-| Name unique | Error | Company name already exists |
+| Name may match an existing company | Allowed | Slug and website domain stay unique |
 | Website non-empty | Error | Required |
 | Website → valid domain | Error | Invalid website (server) |
 | Slug unique | Error | Slug already in use |

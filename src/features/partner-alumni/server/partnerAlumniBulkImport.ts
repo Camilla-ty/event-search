@@ -15,9 +15,14 @@ import {
 } from "@/src/features/partner-alumni/server/partnerAlumniAdmin";
 import {
   createCompanyResolutionCaches,
-  findExistingCompanyId,
   uniqueSlug,
 } from "@/src/features/sponsor-import/server/materializeCompanies";
+import {
+  companyNameDomainCacheKey,
+  decideCompanyCreate,
+  duplicateNameReviewMessage,
+  lookupCompanyNameAndDomain,
+} from "@/src/lib/companies/duplicateCompanyName";
 import {
   normalizeCompanyNameKey,
   parseCompanyAliasesFromRow,
@@ -445,16 +450,28 @@ async function resolveCompanyIdForCommitRow(
   }
 
   if (shouldCreateCompanyOnPartnerAlumniBulkImport(row)) {
-    const nameKey = normalizeCompanyNameKey(trimmedName);
-    const cached = caches.createNewByNameKey.get(nameKey);
-    if (cached) {
-      return { companyId: cached, created: false };
+    const domain = websiteOrNull ? normalizeDomainFromWebsite(websiteOrNull) : null;
+    const cacheKey = companyNameDomainCacheKey(trimmedName, domain);
+    if (cacheKey) {
+      const cached = caches.createNewByNameKey.get(cacheKey);
+      if (cached) {
+        return { companyId: cached, created: false };
+      }
     }
 
-    const existingId = await findExistingCompanyId(supabase, trimmedName, websiteOrNull);
-    if (existingId) {
-      caches.createNewByNameKey.set(nameKey, existingId);
-      return { companyId: existingId, created: false };
+    const found = await lookupCompanyNameAndDomain(supabase, trimmedName, websiteOrNull);
+    const decision = decideCompanyCreate({
+      domain: found.domain,
+      sameNameCompanyIds: found.sameNameCompanyIds,
+      sameDomainCompanyId: found.sameDomainCompanyId,
+      explicitCreate: false,
+    });
+    if (decision.action === "reuse") {
+      if (cacheKey) caches.createNewByNameKey.set(cacheKey, decision.companyId);
+      return { companyId: decision.companyId, created: false };
+    }
+    if (decision.action === "review") {
+      throw new Error(`${duplicateNameReviewMessage(decision.reason)} (${trimmedName})`);
     }
 
     const slug = await uniqueSlug(trimmedName, supabase);
@@ -464,7 +481,7 @@ async function resolveCompanyIdForCommitRow(
       slug,
       city_id: null,
     });
-    caches.createNewByNameKey.set(nameKey, company.id);
+    if (cacheKey) caches.createNewByNameKey.set(cacheKey, company.id);
     if (websiteOrNull) {
       void enrichCompanyLogo(company.id, websiteOrNull);
     }

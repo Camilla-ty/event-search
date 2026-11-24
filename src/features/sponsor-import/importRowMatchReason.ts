@@ -14,7 +14,8 @@ export type ImportRowMatchReasonKind =
   | "exact_name"
   | "alias"
   | "domain_name_mismatch"
-  | "multiple_candidates";
+  | "multiple_candidates"
+  | "uniqueness_violation";
 
 export type ImportRowMatchReasonView = {
   kind: ImportRowMatchReasonKind;
@@ -55,6 +56,10 @@ export function getImportRowMatchedAlias(row: SponsorImportRow): string | null {
 export function resolveImportRowMatchReason(
   row: SponsorImportRow,
 ): ImportRowMatchReasonView | null {
+  if (row.conflict_type === "uniqueness_violation") {
+    return { kind: "uniqueness_violation" };
+  }
+
   if (row.conflict_type === "domain_name_mismatch") {
     const domain = resolveRowDomain(row);
     const importName = resolveRowCompanyName(row);

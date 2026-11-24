@@ -5,6 +5,8 @@ import { assertCompanyLinkable } from "@/src/lib/companies/assertCompanyLinkable
 
 import type { ImportToDraftResult, MaterializeDraftLinksChunkResult } from "../types";
 import { isUniqueViolation, ExhibitorImportHttpError } from "./errors";
+import { isCompanyCreateNeedsReview, duplicateNameReviewMessage } from "@/src/lib/companies/duplicateCompanyName";
+
 import {
   resolveCompanyIdForRow,
   type MaterializeCompanyRow,
@@ -390,12 +392,16 @@ export async function materializeDraftLinks(
 
   const rowCompanyIds = new Map<string, string>();
   for (const row of rows) {
-    const { companyId, created } = await resolveCompanyIdForRow(
+    const resolved = await resolveCompanyIdForRow(
       supabase,
       row,
       createdByRowId,
       createNewByNameKey,
     );
+    if (isCompanyCreateNeedsReview(resolved)) {
+      throw new ExhibitorImportHttpError(409, duplicateNameReviewMessage(resolved.reason));
+    }
+    const { companyId, created } = resolved;
     if (row.decision_type === "create_new" && created) {
       companiesCreated += 1;
     }

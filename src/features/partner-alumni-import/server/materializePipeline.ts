@@ -1,3 +1,4 @@
+import { DUPLICATE_NAME_IMPORT_STOPPED_MESSAGE } from "@/src/lib/companies/duplicateCompanyName";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 import type { ImportCompletionSummary, MaterializeCompaniesChunkResult, MaterializeVersionMembersChunkResult } from "../types";
@@ -268,7 +269,7 @@ export async function runMaterializeCompaniesChunk(
 
   const result = await materializePartnerAlumniCompaniesChunk(batchId, options);
 
-  if (result.done) {
+  if (result.done || (result.duplicate_name_review_count ?? 0) > 0) {
     const { error: clearError } = await supabase
       .from("partner_alumni_import_batches")
       .update({ processing_phase: null, updated_at: new Date().toISOString() })
@@ -285,6 +286,10 @@ export async function runMaterializeCompaniesChunk(
     payload: result,
     affectedCount: result.materialized_count,
   });
+
+  if ((result.duplicate_name_review_count ?? 0) > 0) {
+    throw new PartnerAlumniImportHttpError(409, DUPLICATE_NAME_IMPORT_STOPPED_MESSAGE);
+  }
 
   return result;
 }

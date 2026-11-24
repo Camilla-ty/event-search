@@ -93,6 +93,12 @@ export function ImportRowMatchReason({
           Multiple companies match. Please verify manually.
         </p>
       ) : null}
+
+      {reason?.kind === "uniqueness_violation" ? (
+        <p className={warningClass}>
+          A company with this name already exists. Choose that company or create a new one.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -546,4 +546,49 @@ describe("materializeCompaniesChunkWithDeps — 15-company chunks", () => {
     assert.equal(result.done, true);
     assert.equal(result.next_cursor, null);
   });
+
+  it("returns a duplicate name to review and links only when the admin chooses a company", async () => {
+    const store: TestStore = {
+      rows: [
+        makeRow({ id: "row-review", excel_row_number: 10 }),
+        makeRow({
+          id: "row-link",
+          excel_row_number: 20,
+          decision_type: "use_matched",
+          proposed_company_id: "existing-co",
+        }),
+      ],
+      persisted: new Map(),
+      createCalls: [],
+    };
+    const deferred: string[] = [];
+    const deps = createTestDeps(store);
+
+    const review = await materializeCompaniesChunkWithDeps(BATCH_ID, { cursor: 0, limit: 1 }, {
+      ...deps,
+      resolveCompanyIdForRow: async () => ({
+        needsReview: true,
+        reason: "same_name_different_domain" as const,
+        candidateIds: ["existing-co"],
+      }),
+      deferDuplicateNameRow: async (rowId: string) => {
+        deferred.push(rowId);
+      },
+    });
+
+    assert.deepEqual(deferred, ["row-review"]);
+    assert.equal(review.materialized_count, 0);
+    assert.equal(review.conflict_count, 1);
+    assert.equal(review.duplicate_name_review_count, 1);
+    assert.equal(store.persisted.has("row-review"), false);
+
+    const linked = await materializeCompaniesChunkWithDeps(
+      BATCH_ID,
+      { cursor: 10, limit: 1 },
+      deps,
+    );
+    assert.equal(linked.materialized_count, 1);
+    assert.equal(store.persisted.get("row-link"), "existing-co");
+    assert.equal(store.createCalls.length, 0);
+  });
 });

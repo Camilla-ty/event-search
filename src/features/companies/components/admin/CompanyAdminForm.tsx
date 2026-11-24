@@ -16,7 +16,7 @@ import {
 import type { CityOption } from "@/src/features/companies/server/getCityOptions";
 import { AdminCitySelect } from "@/src/features/locations/components/AdminCitySelect";
 import { feedbackSuccessClass, feedbackWarningClass, formInputClass } from "@/src/lib/design/classes";
-import { slugify } from "@/src/lib/slugify";
+import { resolveManualCompanySlug, slugify } from "@/src/lib/slugify";
 
 const MAX_LOGO_UPLOAD_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_UPLOAD_MIME_TYPES = [
@@ -254,7 +254,7 @@ export function CompanyAdminForm({
           name: values.name,
           website: values.website,
           city_id: values.city_id.trim() || null,
-          slug: effectiveSlug,
+          slug: resolveManualCompanySlug(values.name, slugTouched ? values.slug : ""),
         }),
       });
       return (await response.json()) as ApiResponse;
