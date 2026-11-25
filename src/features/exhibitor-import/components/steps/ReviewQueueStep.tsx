@@ -413,7 +413,7 @@ export function ReviewQueueStep({ initialSummary }: ReviewQueueStepProps) {
 
       const materialized = await runCompanyMaterialization(
         (cursor) =>
-          materializeCompaniesChunk(batch.id, cursor === undefined ? {} : { cursor }),
+          materializeCompaniesChunk(batch.id, { cursor, limit: 15 }),
         {
           onProgress: (progress) =>
             setProgressMessage(materializeCompaniesProgressLabel(progress)),

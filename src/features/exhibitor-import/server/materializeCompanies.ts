@@ -18,8 +18,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MaterializeCompaniesChunkResult } from "../types";
 import { ExhibitorImportHttpError } from "./errors";
 
-export const MATERIALIZE_COMPANIES_DEFAULT_CHUNK = 50;
-export const MATERIALIZE_COMPANIES_MAX_CHUNK = 100;
+export const MATERIALIZE_COMPANIES_DEFAULT_CHUNK = 15;
+export const MATERIALIZE_COMPANIES_MAX_CHUNK = 20;
 
 export type MaterializeCompanyRow = {
   id: string;
