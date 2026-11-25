@@ -78,10 +78,17 @@ export async function findExistingCompanyId(
   return null;
 }
 
+export type ImportCompanyCreator = (input: {
+  name: string;
+  website: string | null;
+  slug: string;
+}) => Promise<{ id: string }>;
+
 export async function resolveCreateNewCompanyId(
   supabase: SupabaseClient,
   row: MaterializeCompanyRow,
   createNewByNameKey: Map<string, string>,
+  createCompanyForImport?: ImportCompanyCreator,
 ): Promise<CompanyCreateResolution> {
   const name = row.normalized_company_name?.trim();
   if (!name) {
@@ -100,6 +107,9 @@ export async function resolveCreateNewCompanyId(
       cache: createNewByNameKey,
       create: async () => {
         const slug = await uniqueSlug(row.proposed_slug ?? name, supabase);
+        if (createCompanyForImport) {
+          return createCompanyForImport({ name, website, slug });
+        }
         const company = await createCompany({ name, website, slug, city_id: null });
         if (website) {
           void enrichCompanyLogo(company.id, website);
@@ -121,6 +131,7 @@ export async function resolveCompanyIdForRow(
   row: MaterializeCompanyRow,
   createdByRowId: Map<string, string>,
   createNewByNameKey: Map<string, string>,
+  createCompanyForImport?: ImportCompanyCreator,
 ): Promise<CompanyCreateResolution> {
   const cached = createdByRowId.get(row.id);
   if (cached) return { companyId: cached, created: false };
@@ -155,7 +166,12 @@ export async function resolveCompanyIdForRow(
   }
 
   if (row.decision_type === "create_new") {
-    const result = await resolveCreateNewCompanyId(supabase, row, createNewByNameKey);
+    const result = await resolveCreateNewCompanyId(
+      supabase,
+      row,
+      createNewByNameKey,
+      createCompanyForImport,
+    );
     if (!isCompanyCreateNeedsReview(result)) {
       createdByRowId.set(row.id, result.companyId);
     }

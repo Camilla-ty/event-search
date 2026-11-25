@@ -11,6 +11,7 @@ import { resolveManualCompanySlug } from "../slugify";
 import {
   companyNameDomainCacheKey,
   decideCompanyCreate,
+  isExplicitDuplicateNameCreate,
   resolveCompanyCreate,
 } from "./duplicateCompanyName";
 
@@ -44,6 +45,33 @@ function lookupClient(state: {
     },
   } as unknown as SupabaseClient;
 }
+
+describe("isExplicitDuplicateNameCreate", () => {
+  it("treats a saved create_new decision as confirmation without a conflict flag", () => {
+    assert.equal(
+      isExplicitDuplicateNameCreate({ decision_type: "create_new", conflict_type: null }),
+      true,
+    );
+    assert.equal(
+      isExplicitDuplicateNameCreate({
+        decision_type: "create_new",
+        conflict_type: "uniqueness_violation",
+      }),
+      true,
+    );
+    assert.equal(
+      isExplicitDuplicateNameCreate({ decision_type: "use_matched", conflict_type: null }),
+      false,
+    );
+    assert.equal(
+      isExplicitDuplicateNameCreate({
+        decision_type: null,
+        conflict_type: "uniqueness_violation",
+      }),
+      false,
+    );
+  });
+});
 
 describe("decideCompanyCreate", () => {
   it("reuses a company with the same name and the same domain", () => {

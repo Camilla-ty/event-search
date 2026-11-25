@@ -69,14 +69,15 @@ export function decideCompanyCreate(input: {
   return { action: "create" };
 }
 
+/**
+ * A saved Create new decision is the administrator's confirmation.
+ * A later matching refresh may clear conflict_type; that does not cancel the decision.
+ */
 export function isExplicitDuplicateNameCreate(row: {
   decision_type?: string | null;
   conflict_type?: string | null;
 }): boolean {
-  return (
-    row.decision_type === "create_new" &&
-    row.conflict_type === DUPLICATE_COMPANY_NAME_CONFLICT
-  );
+  return row.decision_type === "create_new";
 }
 
 export const DUPLICATE_NAME_IMPORT_STOPPED_MESSAGE =
