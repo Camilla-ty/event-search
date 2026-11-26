@@ -21,6 +21,7 @@ export function mapCompanyListItemToAdminRow(company: CompanyListItem): AdminCom
     logo_source: company.logo_source,
     logo_status: company.logo_status,
     sponsor_link_count: company.sponsor_link_count,
+    event_link_count: company.event_link_count,
     matched_alias: company.matched_alias ?? null,
   };
 }

@@ -80,6 +80,7 @@ export type CompanyAdminRow = {
 
 export type CompanyListItem = CompanyAdminRow & {
   sponsor_link_count: number;
+  event_link_count: number;
   matched_alias?: string | null;
 };
 
@@ -203,32 +204,175 @@ export function countSponsorLinksByCompany(
   return countByCompany;
 }
 
-async function loadSponsorLinkCounts(): Promise<Map<string, number>> {
+function relationshipId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * Distinct Event Editions for the Companies list.
+ * Sponsor, exhibitor, and organizer rows contribute their edition.
+ * Partner Alumni is stored on the event series, so a current roster
+ * membership contributes every edition of that series. A series with no
+ * editions contributes nothing. Several roles on one edition count once.
+ */
+export function countEventLinksByCompany(input: {
+  editionLinks: readonly { company_id: unknown; event_edition_id: unknown }[];
+  partnerAlumniSeriesLinks: readonly { company_id: unknown; event_series_id: unknown }[];
+  editions: readonly { id: unknown; series_id: unknown }[];
+}): Map<string, number> {
+  const editionsBySeries = new Map<string, string[]>();
+  for (const edition of input.editions) {
+    const editionId = relationshipId(edition.id);
+    const seriesId = relationshipId(edition.series_id);
+    if (!editionId || !seriesId) continue;
+    const list = editionsBySeries.get(seriesId) ?? [];
+    list.push(editionId);
+    editionsBySeries.set(seriesId, list);
+  }
+
+  const editionsByCompany = new Map<string, Set<string>>();
+  function addEdition(companyId: string, editionId: string) {
+    const editionsForCompany = editionsByCompany.get(companyId) ?? new Set<string>();
+    editionsForCompany.add(editionId);
+    editionsByCompany.set(companyId, editionsForCompany);
+  }
+
+  for (const link of input.editionLinks) {
+    const companyId = relationshipId(link.company_id);
+    const editionId = relationshipId(link.event_edition_id);
+    if (!companyId || !editionId) continue;
+    addEdition(companyId, editionId);
+  }
+
+  for (const link of input.partnerAlumniSeriesLinks) {
+    const companyId = relationshipId(link.company_id);
+    const seriesId = relationshipId(link.event_series_id);
+    if (!companyId || !seriesId) continue;
+    for (const editionId of editionsBySeries.get(seriesId) ?? []) {
+      addEdition(companyId, editionId);
+    }
+  }
+
+  const counts = new Map<string, number>();
+  for (const [companyId, editionsForCompany] of editionsByCompany) {
+    counts.set(companyId, editionsForCompany.size);
+  }
+  return counts;
+}
+
+/** Current Partner Alumni roster only. Older versions are not live event links. */
+export function currentPartnerAlumniSeriesLinks(
+  programs: readonly { event_series_id: unknown; current_version_id: unknown }[],
+  members: readonly { company_id: unknown; event_partner_alumni_version_id: unknown }[],
+): { company_id: string; event_series_id: string }[] {
+  const seriesByCurrentVersion = new Map<string, string>();
+  for (const program of programs) {
+    const versionId = relationshipId(program.current_version_id);
+    const seriesId = relationshipId(program.event_series_id);
+    if (!versionId || !seriesId) continue;
+    seriesByCurrentVersion.set(versionId, seriesId);
+  }
+
+  const links: { company_id: string; event_series_id: string }[] = [];
+  for (const member of members) {
+    const companyId = relationshipId(member.company_id);
+    const versionId = relationshipId(member.event_partner_alumni_version_id);
+    if (!companyId || !versionId) continue;
+    const seriesId = seriesByCurrentVersion.get(versionId);
+    if (!seriesId) continue;
+    links.push({ company_id: companyId, event_series_id: seriesId });
+  }
+  return links;
+}
+
+type CompanyRelationshipCounts = {
+  sponsorLinkCountByCompany: Map<string, number>;
+  eventLinkCountByCompany: Map<string, number>;
+};
+
+async function loadCompanyRelationshipCounts(): Promise<CompanyRelationshipCounts> {
   const supabase = createAdminClient();
-  const links = await fetchAllPaginatedSupabaseRows<{ company_id: unknown }>(
-    async ({ from, to }) =>
-      supabase.from("event_sponsors").select("company_id").range(from, to),
-  );
-  return countSponsorLinksByCompany(links);
+  const [sponsorRows, exhibitorRows, organizerRows, programs, members, editions] =
+    await Promise.all([
+      fetchAllPaginatedSupabaseRows<{ company_id: unknown; event_editions_id: unknown }>(
+        async ({ from, to }) =>
+          supabase
+            .from("event_sponsors")
+            .select("company_id, event_editions_id")
+            .range(from, to),
+      ),
+      fetchAllPaginatedSupabaseRows<{ company_id: unknown; event_editions_id: unknown }>(
+        async ({ from, to }) =>
+          supabase
+            .from("event_exhibitors")
+            .select("company_id, event_editions_id")
+            .range(from, to),
+      ),
+      fetchAllPaginatedSupabaseRows<{ company_id: unknown; event_editions_id: unknown }>(
+        async ({ from, to }) =>
+          supabase
+            .from("event_edition_organizers")
+            .select("company_id, event_editions_id")
+            .range(from, to),
+      ),
+      fetchAllPaginatedSupabaseRows<{
+        event_series_id: unknown;
+        current_version_id: unknown;
+      }>(async ({ from, to }) =>
+        supabase
+          .from("event_partner_alumni")
+          .select("event_series_id, current_version_id")
+          .range(from, to),
+      ),
+      fetchAllPaginatedSupabaseRows<{
+        company_id: unknown;
+        event_partner_alumni_version_id: unknown;
+      }>(async ({ from, to }) =>
+        supabase
+          .from("event_partner_alumni_version_companies")
+          .select("company_id, event_partner_alumni_version_id")
+          .range(from, to),
+      ),
+      fetchAllPaginatedSupabaseRows<{ id: unknown; series_id: unknown }>(
+        async ({ from, to }) =>
+          supabase.from("event_editions").select("id, series_id").range(from, to),
+      ),
+    ]);
+
+  return {
+    sponsorLinkCountByCompany: countSponsorLinksByCompany(sponsorRows),
+    eventLinkCountByCompany: countEventLinksByCompany({
+      editionLinks: [...sponsorRows, ...exhibitorRows, ...organizerRows].map((row) => ({
+        company_id: row.company_id,
+        event_edition_id: row.event_editions_id,
+      })),
+      partnerAlumniSeriesLinks: currentPartnerAlumniSeriesLinks(programs, members),
+      editions,
+    }),
+  };
 }
 
 function toCompanyListItems(
   companies: CompanyAdminRow[],
-  countByCompany: Map<string, number>,
+  counts: CompanyRelationshipCounts,
 ): CompanyListItem[] {
   return companies.map((company) => ({
     ...company,
-    sponsor_link_count: countByCompany.get(company.id) ?? 0,
+    sponsor_link_count: counts.sponsorLinkCountByCompany.get(company.id) ?? 0,
+    event_link_count: counts.eventLinkCountByCompany.get(company.id) ?? 0,
   }));
 }
 
 function searchHitsToCompanyListItems(
   hits: readonly AdminCompanySearchHit[],
-  countByCompany: Map<string, number>,
+  counts: CompanyRelationshipCounts,
 ): CompanyListItem[] {
   return hits.map((hit) => ({
     ...hit,
-    sponsor_link_count: countByCompany.get(hit.id) ?? 0,
+    sponsor_link_count: counts.sponsorLinkCountByCompany.get(hit.id) ?? 0,
+    event_link_count: counts.eventLinkCountByCompany.get(hit.id) ?? 0,
   }));
 }
 
@@ -251,30 +395,35 @@ export async function listCompaniesAdmin(
 ): Promise<CompanyListItem[]> {
   const filter = options?.filter ?? "all";
   const term = options?.search?.trim() ?? "";
-  const countByCompany = await loadSponsorLinkCounts();
+  const countsPromise = loadCompanyRelationshipCounts();
 
   if (term !== "") {
-    const hits = await searchCompaniesAdmin({ query: term });
+    const [counts, hits] = await Promise.all([
+      countsPromise,
+      searchCompaniesAdmin({ query: term }),
+    ]);
     const filtered = applyCompanyListFilter(filterActiveAdminCompanies(hits), filter);
-    return searchHitsToCompanyListItems(filtered, countByCompany);
+    return searchHitsToCompanyListItems(filtered, counts);
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("companies")
-    .select(COMPANY_ADMIN_SELECT)
-    .eq("status", "active")
-    .order("name", { ascending: true });
-
-  if (error) throw new Error(error.message);
+  const [counts, companyResult] = await Promise.all([
+    countsPromise,
+    supabase
+      .from("companies")
+      .select(COMPANY_ADMIN_SELECT)
+      .eq("status", "active")
+      .order("name", { ascending: true }),
+  ]);
+  if (companyResult.error) throw new Error(companyResult.error.message);
 
   const companies = applyCompanyListFilter(
-    (data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>)),
+    (companyResult.data ?? []).map((row) => mapCompanyAdminRow(row as Record<string, unknown>)),
     filter,
   );
   if (companies.length === 0) return [];
 
-  return toCompanyListItems(companies, countByCompany);
+  return toCompanyListItems(companies, counts);
 }
 
 export async function getCompanyAdminById(id: string): Promise<CompanyAdminRow | null> {

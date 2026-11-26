@@ -16,6 +16,7 @@ export type AdminCompaniesListRow = {
   logo_source: string | null;
   logo_status: string | null;
   sponsor_link_count: number;
+  event_link_count: number;
   matched_alias?: string | null;
 };
 
@@ -86,7 +87,7 @@ function AdminCompaniesListTableRow({
           {company.website ?? "—"}
         </td>
       ) : null}
-      <td className="px-4 py-3 text-slate-600">{company.sponsor_link_count}</td>
+      <td className="px-4 py-3 text-slate-600">{company.event_link_count}</td>
     </tr>
   );
 }
