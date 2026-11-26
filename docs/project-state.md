@@ -60,7 +60,7 @@ Roster reads use `getCompaniesByEventEdition`: `tier_rank ASC NULLS LAST, displa
 - Same-tier ordering: Move Up / Down (server-managed `display_order`; no manual numeric input).
 - Import-conflict banner when an active import batch exists.
 
-**Admin — companies** — Read-only Sponsorships section (edition + series links, tier label, rank). Read-only Exhibitor history when the company has ≥1 exhibitor link (section omitted when empty). Restrict / unrestrict for public-policy companies.
+**Admin — companies** — Read-only Sponsorships, Exhibitors, and Organizer roles (edition + series links). Exhibitors and Organizer roles stay visible with an empty state when the company has none. Current Partner Alumni rosters show the series and its editions, with no invented edition when the series has none. Restrict / unrestrict for public-policy companies.
 
 **Admin — sponsor imports** — Full Excel pipeline through atomic publish and history. Spreadsheet columns: Sponsor Tier (`tier_rank`), Sponsor Label (`tier_label`), Name, Website. Publish writes both rank and label from draft links; blank spreadsheet labels publish as NULL. Qualifying publish auto-updates edition `last_reviewed_at`.
 

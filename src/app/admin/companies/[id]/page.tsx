@@ -9,7 +9,9 @@ import { CompanyAdminStatusBadge } from "@/src/features/companies/components/adm
 import { CompanyPublicVisibilitySection } from "@/src/features/companies/components/admin/CompanyPublicVisibilitySection";
 import { CompanyDomainsSection } from "@/src/features/companies/components/admin/CompanyDomainsSection";
 import { CompanyMergeSuccessBanner } from "@/src/features/companies/components/admin/CompanyMergeSuccessBanner";
+import { CompanyExhibitorsTable } from "@/src/features/companies/components/admin/CompanyExhibitorsTable";
 import { CompanyOrganizerRolesTable } from "@/src/features/companies/components/admin/CompanyOrganizerRolesTable";
+import { CompanyPartnerAlumniTable } from "@/src/features/companies/components/admin/CompanyPartnerAlumniTable";
 import { CompanyRelatedCompaniesSection } from "@/src/features/companies/components/admin/CompanyRelatedCompaniesSection";
 import { CompanySameBrandSeriesSection } from "@/src/features/companies/components/admin/CompanySameBrandSeriesSection";
 import { CompanyEventBrandPublicProfileSection } from "@/src/features/companies/components/admin/CompanyEventBrandPublicProfileSection";
@@ -22,6 +24,8 @@ import {
   isCompanyAdminEditable,
 } from "@/src/features/companies/server/companyAdmin";
 import { listOrganizerRolesForCompanyAdmin } from "@/src/features/organizers/server/companyOrganizerAdmin";
+import { listExhibitorsForCompanyAdmin } from "@/src/features/companies/server/companyExhibitorAdmin";
+import { listPartnerAlumniForCompanyAdmin } from "@/src/features/companies/server/companyPartnerAlumniAdmin";
 import { listSponsorshipsForCompanyAdmin } from "@/src/features/companies/server/companySponsorshipAdmin";
 import { findSeriesByCompanyProfileIdAdmin } from "@/src/features/events/server/eventSeriesAdmin";
 import { feedbackWarningClass } from "@/src/lib/design/classes";
@@ -36,16 +40,27 @@ type PageProps = {
 export default async function AdminCompanyDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { logoWarning, merged, merge_id: mergeId } = await searchParams;
-  const [company, cities, sponsorships, organizerRoles, domains, related, sameBrandSeries] =
-    await Promise.all([
-      getCompanyAdminById(id),
-      getCityOptions(),
-      listSponsorshipsForCompanyAdmin(id),
-      listOrganizerRolesForCompanyAdmin(id),
-      listCompanyDomainsForAdmin(id),
-      listRelatedCompaniesForAdmin(id),
-      findSeriesByCompanyProfileIdAdmin(id),
-    ]);
+  const [
+    company,
+    cities,
+    sponsorships,
+    exhibitors,
+    organizerRoles,
+    partnerAlumni,
+    domains,
+    related,
+    sameBrandSeries,
+  ] = await Promise.all([
+    getCompanyAdminById(id),
+    getCityOptions(),
+    listSponsorshipsForCompanyAdmin(id),
+    listExhibitorsForCompanyAdmin(id),
+    listOrganizerRolesForCompanyAdmin(id),
+    listPartnerAlumniForCompanyAdmin(id),
+    listCompanyDomainsForAdmin(id),
+    listRelatedCompaniesForAdmin(id),
+    findSeriesByCompanyProfileIdAdmin(id),
+  ]);
 
   if (!company) notFound();
 
@@ -155,6 +170,17 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
 
       <div className="mt-10">
         <h2 className="mb-3 text-lg font-semibold text-slate-900">
+          Exhibitors ({exhibitors.length})
+        </h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Read-only. Exhibitor links are added and edited on each event&apos;s Exhibitors
+          tab.
+        </p>
+        <CompanyExhibitorsTable exhibitors={exhibitors} />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
           Organizer roles ({organizerRoles.length})
         </h2>
         <p className="mb-3 text-sm text-slate-500">
@@ -162,6 +188,17 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: P
           tab.
         </p>
         <CompanyOrganizerRolesTable organizerRoles={organizerRoles} />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold text-slate-900">
+          Partner Alumni ({partnerAlumni.length})
+        </h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Read-only. Shows the current roster only. Partner Alumni is managed on the
+          Event Series.
+        </p>
+        <CompanyPartnerAlumniTable partnerAlumni={partnerAlumni} />
       </div>
 
       <CompanySameBrandSeriesSection series={sameBrandSeries} />

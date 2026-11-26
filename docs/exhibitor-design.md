@@ -140,7 +140,7 @@ Adding as exhibitor **must not** block or remove sponsor/organizer links, and vi
 
 ### 4.2 Company admin
 
-Read-only **Exhibitor history** on company detail when the company has ≥1 exhibitor link; **omit the section entirely when empty** (stricter than Sponsorships / Organizer roles empty-state pattern).
+Read-only **Exhibitors** on company detail for every company. The section lists each `event_exhibitors` row with edition, year, series, and tier, and links to that edition’s Exhibitors tab. An empty roster shows an empty state, matching Sponsorships and Organizer roles.
 
 ### 4.3 Linkability (locked)
 
